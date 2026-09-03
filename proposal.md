@@ -1,459 +1,785 @@
-
 # Capstone Proposal
-## Multi-Agent RAG Under Misinformation: Do Verification Architectures Improve Abstention or Amplify Poisoned Evidence?
-### Proposed by: Dr. Amir Jafari
-#### Email: ajafari@gwu.edu
-#### Advisor: Amir Jafari
-#### The George Washington University, Washington DC  
+
+## SAE-MAS: Causal Analysis of Feedback Uptake in Solver-Critic Multi-Agent LLM Systems
+
+### Proposed by: Josh Schechter
+
+#### Advisor: Dr. Amir Jafari
+
+#### The George Washington University, Washington DC
+
 #### Data Science Program
 
+---
 
-## 1 Objective:  
-
-            The objective of this project is to systematically evaluate whether different forms of multi-agent reasoning improve robustness to poisoned retrieved evidence compared with a single-agent RAG baseline. The central 
-            research question is:
-            
-            When retrieved evidence is missing, do multi-agent verification architectures improve appropriate abstention compared with single-agent RAG, or do they amplify and create misinformation into confident 
-            consensus? Does this hold when testing against different multi-agent forms? Does multi-hop reasoning worsen the odds of hallucinating missing evidence?
-            
-            The study will construct controlled RAG evaluation conditions using paired clean and poisoned versions of MuSiQue questions. The underlying question and ground-truth answer will remain fixed while critical
-            retrieved evidence is manipulated to support a plausible but incorrect conclusion. This paired design will allow the effect of evidence poisoning to be measured independently of question difficulty.
-            A single-agent RAG system will serve as the experimental baseline. Three families of multi-agent architectures will then be evaluated, representing different mechanisms through which multiple agents might 
-            improve or degrade robustness:
-            - Critique-based architectures, in which a solver's answer and supporting evidence are evaluated by a critic before revision or abstention.
-            - Independent-agent architectures, in which multiple agents reason separately before their answers are combined through voting or another aggregation mechanism.
-            - Interactive architectures, in which agents exchange information through discussion, debate, or consensus formation before producing a final answer.
-            These architectures test three distinct mechanisms for multi-agent verification: explicit critique, independent reasoning and redundancy, and inter-agent communication. Comparing them under the same clean and 
-            missing evidence conditions will allow the study to investigate not only whether multi-agent systems are more robust than single-agent RAG, but which forms of multi-agent interaction are responsible for robustness 
-            or misinformation amplification.
-            Another design feature, will be the systematic manipulation of what evidence is removed. That meaning, sometimes the entire evidence bit will be removed, while other times we may break the multi-hop chain so the model can't
-            actually find the piece of evidence within the evidence documents.
-            The primary outcomes will be answer correctness, missing-evidence adoption, and appropriate abstention. Secondary outcomes will include unsupported-answer rate, agent agreement and disagreement, evidence attribution, 
-            and the frequency with which multiple agents converge on the same incorrect answer. For interactive architectures, changes in agent answers before and after communication will also be measured to determine whether 
-            interaction corrects or propagates misinformation. We also will track if certain methods for removing evidence are more likely to lead to hallucinations or incorrect consensus.
-            Key Objectives:
-            1. Build a reproducible paired benchmark in which MuSiQue retrieval evidence can be systematically removed while preserving the original question and known ground-truth answer.
-            2. Establish a single-agent RAG baseline for measuring the effect of missing retrieval evidence.
-            3. Evaluate critique-based multi-agent architectures to determine whether explicit verification and revision improve robustness to missing evidence.
-            4. Evaluate independent-agent architectures to determine whether independent reasoning and aggregation reduce correlated errors and missing-answer adoption.
-            5. Evaluate interactive multi-agent architectures to determine whether communication and consensus help agents correct misinformation or cause incorrect beliefs to propagate between agents when evidence is missing.
-            6. Compare the three multi-agent architecture families against the single-agent baseline under identical clean and missing evidence conditions.
-            7. Measure missing evidence amplification by determining whether multi-agent interaction increases the frequency, consistency, or convergence of incorrect answers supported by missing evidence.
-            8. Analyze which architectural mechanisms -- critique, independent reasoning, voting or aggregation, and inter-agent communication -- are associated with greater robustness or greater susceptibility to missing 
-            evidence.
-            9. Determine which evidence removal strategies are most likely to induce hallucinations or incorrect consensus.
-            10. Produce practical design recommendations for multi-agent RAG systems operating in environments where retrieved evidence may be unreliable or adversarially manipulated.
-            
-
-![Figure 1: Example figure](2026_Fall_8.png)
-*Figure 1: Caption*
-
-## 2 Dataset:  
-
-            The project will use MuSiQue (Multi-hop Questions via Single-hop Question Composition) as the primary evaluation dataset. MuSiQue is a multi-hop question-answering benchmark containing 
-            questions that require reasoning across multiple supporting facts. Its question-answer structure and associated supporting evidence make it well suited for controlled experiments in which 
-            evidence can be modified while the underlying question and ground-truth answer remain fixed.
-
-            TIER 1 -- CLEAN MUSIQUE DATASET:
-              1. The original MuSiQue examples will provide the clean evaluation condition. Each selected example contains a question with a known ground-truth answer and evidence needed to answer the question.
-              2. The clean condition will preserve the original factual evidence associated with each question. This establishes the baseline for measuring whether single-agent and multi-agent RAG architectures can correctly answer questions when reliable evidence is available.
-              3. A fixed subset of eligible MuSiQue questions will be selected using documented filtering criteria and random seeds. The same questions will subsequently be used to construct the poisoned condition, creating paired clean and poisoned examples.
-
-            TIER 2 -- MISSING MUSIQUE DATASET:
-              4. A corresponding missing-evidence version of the selected MuSiQue examples will be constructed by removing critical evidence while preserving the original question. If we determine this is unneeded and we can just exclude evidence from the dataset we will determine that as we get more into the project.
-              5. Missing-evidence examples will omit one or more evidence passages necessary for deriving the correct answer. Controlled transformations may include removing entities, dates, quantities, locations, relationships, or other facts necessary for deriving the correct answer.
-              6. Each missing-evidence example will preserve the original ground-truth answer while additionally recording the incorrect answer or conclusion supported by the missing evidence. This allows the experiment to determine whether a system follows the missing evidence, retains the correct answer, produces an unrelated hallucination, or appropriately abstains.
-              7. Missing-evidence procedures will be standardized and reproducible so that evidence removal is applied consistently across the evaluation set rather than manually introducing arbitrary gaps.
-
-            TIER 3 -- PAIRED EVALUATION SET:
-              8. Every selected question will have both a clean and poisoned condition. The question itself and underlying ground truth remain fixed while the reliability of the available evidence changes.
-              9. This paired design controls for question difficulty and allows the effect of poisoned evidence to be measured directly within the same questions.
-              10. Single-agent RAG and each multi-agent verification architecture will be evaluated on the same paired examples, ensuring that differences in performance can be attributed to the architecture and evidence condition rather than differences in the underlying questions.
-
-            DATASET / PIPELINE PREPARATION:
-              - Download and preprocess MuSiQue into a standardized representation containing the question, ground-truth answer, supporting evidence, and relevant metadata.
-              - Select a fixed evaluation subset using documented filtering criteria and random seeds.
-              - Generate a poisoned counterpart for each selected clean example using a reproducible evidence-transformation pipeline.
-              - Store explicit metadata identifying the evidence condition (clean or poisoned), original ground-truth answer, and, for poisoned examples, the false answer supported by the manipulated evidence.
-              - Validate the poisoned examples to ensure that the modified evidence genuinely supports the intended false conclusion while remaining relevant and plausible within the context of the question.
-              - Use identical paired clean/poisoned examples across the single-agent and multi-agent experimental conditions.
-              - Cache the finalized evaluation dataset locally so that all experiments operate on a fixed benchmark and do not depend on changing external information during evaluation.
-            
-
-## 3 Rationale:  
-
-            This problem becomes especially important for multi-agent systems. Verification architectures commonly use multiple agents to independently solve a task, critique another agent’s reasoning,
-            debate alternatives, or reach a consensus. These mechanisms can potentially improve reliability by introducing redundancy and disagreement detection. At the same time, they introduce a second 
-            possibility: if multiple agents rely on the same misleading retrieval context, their interactions may reinforce the false evidence. A critic may validate an incorrect answer because it is 
-            supported by the poisoned documents, and a consensus mechanism may transform several correlated errors into a highly confident final response.
-
-            The important distinction is therefore not simply whether multi-agent systems achieve higher average accuracy. The more consequential question is whether they behave correctly when the evidence itself is not 
-            trustworthy. A robust system should recognize when its available evidence is insufficient or inconsistent and abstain rather than manufacture certainty. This makes appropriate abstention and confidence 
-            calibration central evaluation targets rather than treating every question as requiring an answer.
-
-            The proposed project is designed around this failure mode. By controlling the evidence presented to the system, the experiment can directly compare behavior under clean, missing, conflicting, and poisoned 
-            retrieval while keeping the task and ground truth fixed. This allows the effect of the verification architecture to be separated from the underlying difficulty of the question.
-
-            The project is also practically relevant. Agentic RAG systems are increasingly used in research, enterprise search, automated analysis, and decision-support workflows where multiple LLM calls are combined 
-            specifically to increase trustworthiness. If additional agents merely increase confidence in retrieval errors, then architectural redundancy alone is not a meaningful safety mechanism. Conversely, if particular 
-            verification structures reliably increase abstention or identify corrupted evidence, that provides an actionable design principle for agentic RAG systems.
-
-            The contribution of this project is therefore an empirical characterization of when multi-agent verification helps and when it hurts under adversarial or unreliable retrieval. Rather than asking whether 
-            multi-agent systems are generally better than single agents, the study focuses on a narrower and more defensible question: whether verification architectures improve epistemic behavior when the system’s own 
-            evidence is misleading. The result can be useful regardless of direction. Evidence that multi-agent systems improve abstention would identify architectures that are more robust to retrieval failures, while 
-            evidence of misinformation amplification would expose an important reliability limitation in current agentic RAG designs.
-            
-
-## 4 Approach:  
-
-            Phase 1: Foundations & Experimental Design — Weeks 1–2
-
-            Week 1: Project Setup & Background Research
-
-              - Set up the GitHub repository and basic project structure.
-              - Finalize the proposal, central research question, and scope.
-              - Conduct targeted literature review on multi-agent verification/debate/critique, RAG robustness and retrieval poisoning, hallucination and abstention, and misinformation amplification/correlated agent errors.
-              - Identify the strongest existing work and clarify how this experiment differs.
-              - Download and inspect MuSiQue.
-              - Define the initial experimental variables: single-agent vs. multi-agent, clean vs. poisoned evidence, shared vs. independent retrieval, and verification/aggregation strategy.
-              - Define what appropriate abstention and misinformation amplification mean operationally, even if the exact metrics are not finalized yet.
-              
-
-            Week 2: MuSiQue Analysis, Dataset Construction, and Experimental Design/Conceptualization
-
-              - Perform exploratory data analysis of dataset size and splits, question/answer structure, number of reasoning hops, supporting vs. distractor passages, answer types, and evidence structure.
-              - Trace several examples manually from question → supporting evidence → answer.
-              - Determine which MuSiQue examples are suitable for controlled poisoning.
-              - Design the poisoning methodology, including what part of the evidence gets changed, how a false answer is selected, how much evidence is poisoned, and how to ensure poisoned evidence plausibly supports the false answer.
-              - Manually create a small pilot set of paired clean/poisoned examples and inspect them for validity.
-              - Define the standardized example schema that the later RAG pipeline will consume.
-
-
-            Phase 2: Dataset Construction & Single-Agent RAG Baseline (Weeks 3-5)
-
-            Week 3: Clean/Poisoned Dataset Construction
-
-            - Finalize the MuSiQue subset used for the main experiments.
-            - Implement the clean/poisoned dataset generation pipeline.
-            - Ensure that we successfully implement different strategies for evidence removal, including complete removal and breaking multi-hop chains.
-            - Define reproducible poisoning rules for modifying critical supporting evidence.
-            - Generate paired clean and poisoned examples for the selected MuSiQue questions.
-            - Store metadata for each example, including but not limited to:
-                - question,
-                - ground-truth answer,
-                - clean evidence,
-                - poisoned evidence,
-                - poisoned/false answer,
-                - reasoning-hop structure,
-                - poisoning location/type,
-                - evidence removal strategy (complete removal vs. breaking multi-hop chains).
-            - Manually validate a sample of generated missing-evidence examples.
-            - Revise evidence removal rules if examples are ambiguous, implausible, or do not actually support the intended missing-evidence scenario.
-
-            Weeks 4 and 5: Single-Agent RAG Baseline
-
-            - Implement the baseline single-agent RAG pipeline.
-            - Standardize prompting and model configuration.
-            - Evaluate the baseline on clean MuSiQue examples.
-            - Verify that the baseline achieves reasonable performance before introducing poisoned evidence.
-            - Run the same baseline on poisoned examples.
-            - Log the model answer, supporting evidence used, abstention behavior, and relevant model outputs needed for later analysis.
-            - Identify obvious pipeline or dataset failures before proceeding to multi-agent experiments.
-
-            - Finalize the primary evaluation metrics.
-            - Implement automated evaluation for:
-                - answer correctness,
-                - missing-evidence adoption,
-                - appropriate abstention,
-                - unsupported hallucination,
-                - confidence/certainty where measurable.
-            - Define the operational criteria for missing-evidence amplification.
-            - Compare single-agent performance between paired clean and poisoned conditions.
-            - Analyze how frequently poisoned evidence changes a previously correct answer into an incorrect answer.
-            - Establish the single-agent baseline that all later multi-agent architectures will be compared against.
-            - Freeze the main dataset generation procedure and baseline evaluation protocol before beginning the multi-agent phase.
-            
-            - Should also begin working on multi-agent architectures as well -> this is important to get ahead of the pipeline runs.
-
-
-            Phase 3: Multi-Agent Architecture Implementation (Weeks 5-9)
-
-            Weeks 5 and 6: Core Multi-Agent Pipeline
-
-            - Implement a common agent interface so all architectures use the same underlying model, prompts, dataset inputs, and output format where applicable.
-            - Implement the first multi-agent verification architecture using a solver-critic design:
-                - solver produces an answer from retrieved evidence,
-                - critic evaluates the answer and supporting evidence,
-                - solver revises or abstains based on the critique.
-            - Repeat the above step for all other agent architectures we plan to test (will test at least 3 different architectures including the single-agent baseline).
-            - Implement structured logging of each agent's initial answer, critique, revised answer, final answer, and abstention decision. This will be a working progress, the more information we log the better.
-            - Run the architecture on a small clean/poisoned development subset.
-            - Verify that agent communication and decision logic behave as intended.
-            - Compare preliminary behavior against the single-agent baseline and identify implementation issues.
-
-            Weeks 7 and 8: Additional Architectures & Controlled Variants
-
-            - Implement additional multi-agent verification strategies needed for the main comparison.
-            - Implement an independent-agent architecture in which multiple agents reason separately before their outputs are aggregated.
-            - Implement voting and/or consensus-based aggregation between independent agents.
-            - Implement shared-evidence and independent-evidence variants where appropriate.
-            - Ensure all architectures use matched model configurations, questions, evidence conditions, and evaluation procedures.
-            - Run clean and poisoned development experiments across all architectures.
-            - Validate that each architecture produces the outputs required by the evaluation pipeline.
-            - Finalize and freeze the multi-agent architectures that will be used in the main experiments.
-            
-            - Important that in these 2 weeks we closely validate that the experiment is working as expected. The earlier we validate this works, the smoother the actual experimental pipeline will go.
-
-
-            Phase 4: Main Experimental Evaluation (Weeks 9-11)
-
-            Weeks 9 and 10: Full Clean vs. Poisoned Evaluation
-
-            - Run the single-agent baseline and all finalized multi-agent architectures on the full paired MuSiQue evaluation set.
-            - Evaluate each architecture under both clean and poisoned evidence conditions.
-            - Use identical model settings, prompts, dataset examples, and evaluation procedures across architectures.
-            - Record all agent-level and system-level outputs needed for later analysis.
-            - Measure:
-                - answer correctness,
-                - poisoned-answer adoption,
-                - appropriate abstention,
-                - unsupported hallucination,
-                - agreement/disagreement between agents,
-                - final consensus behavior.
-                - any other metrics that we think of along the way that could improve our experimental question
-            - Check for failed runs, malformed outputs, or logging inconsistencies before beginning analysis.
-
-            Week 11: Architecture Comparison and Robustness Analysis
-
-            - Compare each multi-agent architecture against the single-agent baseline.
-            - Measure how much performance changes when moving from clean to poisoned evidence. Note we expect it to be worse, but abstention rate is the important factor here.
-            - Analyze whether multi-agent verification reduces or increases poisoned-answer adoption.
-            - Compare appropriate abstention rates across architectures.
-            - Evaluate whether agent disagreement is associated with better detection of poisoned evidence.
-            - Compare shared-retrieval and independent-retrieval conditions where applicable.
-            - Compare critique, voting, and consensus mechanisms where applicable.
-            - Identify architectures that appear more robust to poisoned evidence and architectures that amplify it.
-
-            Week 12: Missing evidence Amplification and Error Analysis
-
-            - Define and compute the final missing-evidence amplification metrics.
-            - Identify cases where multi-agent interaction causes agents to converge on an incorrect missing-evidence answer.
-            - Compare initial agent responses with final system decisions to determine whether communication corrected or reinforced errors.
-            - Categorize common failure modes, such as:
-                - all agents independently trusting the missing-evidence,
-                - one incorrect agent influencing initially correct agents,
-                - critique reinforcing rather than correcting an incorrect answer,
-                - voting producing a confident incorrect majority,
-                - consensus suppressing legitimate disagreement.
-            - Perform qualitative analysis on representative examples.
-            - Run appropriate statistical comparisons on the main metrics.
-            - Determine which architectural properties are most strongly associated with robustness versus misinformation amplification.
-
-
-            Phase 5: Robustness, Ablations, and Generalization (Weeks 12-13)
-
-            Week 12: Ablation and Sensitivity Experiments
-
-            - Run targeted ablation experiments based on the main Phase 4 findings.
-            - Vary the proportion or severity of missing-evidence to determine how architectures respond as evidence quality degrades.
-            - Compare shared-retrieval and independent-retrieval configurations while holding the agent architecture constant.
-            - Remove or modify individual verification components, such as critique or voting, to determine whether they are responsible for observed robustness or amplification.
-            - Test whether increasing the number of agents improves robustness or simply increases agreement on missing-evidence answers.
-            - Measure the effect of each experimental change using the same primary metrics established in Phase 4.
-            - Prioritize ablations that directly explain the main experimental results rather than exhaustively testing every possible configuration.
-
-            Week 13: Robustness and Generalization Checks
-
-            - Can we test this pipeline on other underlying models? Original experiment performed on one model, but if done on mutiple models this could be a more robust claim.
-            - Repeat key experiments across multiple random seeds or repeated runs to quantify variability from stochastic model outputs.
-            - Test whether the main findings remain consistent across different MuSiQue question characteristics, such as reasoning-hop count or poisoning type.
-            - Evaluate whether results are driven by specific subsets of questions or represent a broader pattern across the evaluation set.
-            - Test a second model where computationally feasible to determine whether the observed behavior is specific to the primary LLM.
-            - Perform statistical comparisons and uncertainty estimation for the primary results.
-            - Revisit representative failure cases and verify that measured misinformation amplification reflects genuine system behavior rather than dataset or evaluation artifacts.
-            - Finalize the set of results that directly support or contradict the project's hypotheses.
-
-
-            Phase 6: Final Analysis, Writing, and Presentation (Weeks 14-16)
-
-            Weeks 14 and 15: Final Results and Analysis
-
-            - Complete any remaining experimental runs or targeted follow-up experiments.
-            - Consolidate results from the baseline, multi-agent, and robustness experiments.
-            - Generate final tables and figures for the primary evaluation metrics.
-            - Perform final statistical analyses and uncertainty estimates.
-            - Determine which hypotheses are supported, contradicted, or remain inconclusive.
-            - Summarize the primary findings regarding whether multi-agent verification reduces or amplifies the effects of poisoned evidence.
-            - Identify the architectural properties most strongly associated with robustness or misinformation amplification.
-
-            Week 16: Paper Drafting
-
-            - Write the methodology and experimental design sections.
-            - Document the MuSiQue poisoning procedure and evaluation protocol.
-            - Write the results section using finalized experiments.
-            - Write the discussion section interpreting the results and their implications for multi-agent RAG systems.
-            - Document limitations, potential confounders, and threats to validity.
-            - Update the related-work section based on the final scope of the project.
-
-            Weeks 15 and 16: Paper Revision and Final Validation
-
-            - Complete the full paper draft.
-            - Review all reported results against experiment outputs for accuracy.
-            - Verify that figures, tables, metrics, and statistical results are reproducible from saved experiment outputs.
-            - Perform any small follow-up analyses required to address gaps discovered during writing.
-            - Revise the paper based on advisor and team feedback.
-            - Finalize the GitHub repository, documentation, configuration files, and reproducibility instructions.
-
-            Week 17: Final Deliverables and Presentation
-
-            - Finalize and submit the capstone paper.
-            - Create the final presentation and supporting visualizations.
-            - Present the research question, experimental design, main findings, and practical implications.
-            - Clearly distinguish observed results from interpretations and limitations.
-            - Prepare examples illustrating representative cases of successful verification and misinformation amplification.
-            - Complete final repository cleanup and archive experiment configurations and results.
-
-            
-
-## 5 Timeline:  
-
-            Week 1:    Prepare proposal, lit review, github repository setup, initial project plan drafted, background research, and dataset loaded
-            Week 2:    Have datasets cleaned, repository ready to go, environments set up, versions all standardized, and eda completed
-            Week 3:    Finalize and clean the dataset. Dataloaders in order, setup for data pipeline initialization complete
-            Week 4:    Single-agent baseline with RAG implementation should start this week. Ideally have a working pipeline by end of week
-            Week 5:    Finish up single agent RAG baseline run. Output results and initial analysis. Start implementing multi-agent if haven't done so yet
-            Week 6:    Core multi-agent pipeline should be worked on extensively.
-            Week 7-8:    Continue improving multi-agent pipeline, robust benchmarking is necessary so no major issues arise one experiment is ready
-            Weeks 9-11:    Run the experiments for multi-agent pipeline
-            Week 12:   Error analysis and debugging of the multi-agent pipeline
-            Week 13:   Robustness check
-            Week 14-16: Work on paper and presentation
-
-            TOTAL: 16 weeks (one semester)
-
-            KEY MILESTONES:
-            - Week 4:  Single agent RAG baseline complete
-            - Week 8:  Multi-agent pipeline should mostly have taken shape
-            - Week 11: Run multi-agent experiments
-            - Week 16: Paper and presentation submission
-
-            DELIVERABLES BY WEEK 16:
-            - Benchmark for multi-agent pipeline performance with poisoned information
-            - Research paper draft (8-10 pages)
-            - Open-source repository with reproducible notebooks
-            
-
-
-## 6 Expected Number Students:  
-
-            RECOMMENDED: 3 students
-            ROLE DISTRIBUTION
-
-              STUDENT 1: CRITIQUE-BASED MULTI-AGENT MODELING
-              - Help construct and validate the paired clean/poisoned MuSiQue dataset.
-              - Implement the single-agent RAG baseline used across the project.
-              - Implement the critique-based multi-agent architecture (solver-critic).
-              - Design and test different critique and revision strategies.
-              - Run clean and poisoned evidence experiments for the critique-based architecture.
-              - Perform ablations such as removing the critic, modifying revision behavior, or varying critique rounds.
-              - Analyze when critique successfully corrects poisoned answers versus reinforces misinformation.
-              - Contribute to shared statistical analysis, error analysis, and paper writing.
-
-              Primary Research Question:
-              Does explicit critique and revision improve robustness to poisoned retrieval evidence?
-
-              STUDENT 2: INDEPENDENT-AGENT / ENSEMBLE MODELING
-              - Help construct and validate the paired clean/poisoned MuSiQue dataset.
-              - Implement the independent-agent architecture in which multiple agents reason separately.
-              - Implement voting or other aggregation mechanisms for combining independent agent responses.
-              - Run clean and poisoned evidence experiments for the independent-agent architecture.
-              - Compare shared versus independently retrieved evidence where appropriate.
-              - Perform ablations such as varying the number of agents or aggregation strategy.
-              - Analyze whether independent reasoning reduces correlated errors and poisoned-answer adoption.
-              - Contribute to shared statistical analysis, error analysis, and paper writing.
-
-              Primary Research Question:
-              Does independent multi-agent reasoning provide useful redundancy against poisoned retrieval evidence?
-
-              STUDENT 3: INTERACTIVE / CONSENSUS MULTI-AGENT MODELING
-              - Help construct and validate the paired clean/poisoned MuSiQue dataset.
-              - Implement an interactive multi-agent architecture using discussion, debate, or consensus formation.
-              - Track individual agent answers before and after communication.
-              - Run clean and poisoned evidence experiments for the interactive architecture.
-              - Perform ablations such as varying communication rounds or consensus requirements.
-              - Measure whether initially correct agents change to poisoned answers after interacting with other agents.
-              - Analyze when communication corrects misinformation versus propagates misinformation through the group.
-              - Contribute to shared statistical analysis, error analysis, and paper writing.
-
-              Primary Research Question:
-              Does inter-agent communication correct misinformation, or does it cause misinformation to propagate and produce incorrect consensus?
-
-              SHARED RESPONSIBILITIES
-              - Finalize the research question and hypotheses.
-              - Design the MuSiQue poisoning methodology.
-              - Implement the missing-evidence poisoning methodology, and come up with evidence removal plans and scenarios and ensure that we can track this effectively.
-              - Build and validate the clean/poisoned evaluation dataset.
-              - Develop common RAG and agent infrastructure.
-              - Standardize model configurations, prompts, retrieval conditions, and logging.
-              - Define evaluation metrics and misinformation amplification criteria.
-              - Run and verify final experiments.
-              - Perform statistical comparisons across architectures.
-              - Conduct qualitative error analysis.
-              - Interpret results across all three modeling approaches.
-              - Write the final paper and prepare the presentation.
-            
-
-## 7 Possible Issues:  
-
-            TECHNICAL CHALLENGES AND SOLUTIONS:
-
-            1. Parametric Knowledge May Allow the Model to Answer Without Retrieved Evidence:
-            - ISSUE: Because MuSiQue questions are based on factual information, the underlying LLM may already know some answers from pretraining. If a required evidence passage is removed, the model could still answer correctly from memory rather than from the retrieved evidence.
-            - SOLUTION: Run a separate closed-book diagnostic in which the same question is presented without retrieved context and the model is allowed to answer from internal knowledge. Questions answered correctly closed-book will be flagged and analyzed separately rather than automatically treated as evidence-grounded successes. During the actual RAG experiments, agents will be instructed to answer only from the provided evidence and log the evidence IDs supporting their answers so unsupported responses can be identified even when the final answer happens to be factually correct.
-
-            2. Missing-Evidence Examples May Still Be Answerable:
-            - ISSUE: Removing one supporting passage or reasoning hop may not actually make a question unsupported. Remaining passages, distractors, or indirect clues may still provide enough information to derive the answer.
-            - SOLUTION: Validate the evidence-removal procedure on a development subset before the main experiment. Confirm that the removed information is necessary for completing the reasoning chain and record the evidence-removal strategy for each example.
-
-            3. Appropriate Abstention May Be Difficult to Measure Reliably:
-            - ISSUE: Models may express uncertainty in many different ways rather than returning a standardized abstention response, making automated evaluation inconsistent.
-            - SOLUTION: Use a structured output format requiring every agent to return both its answer and an explicit answer-or-abstain decision. Validate automated abstention scoring against a manually reviewed subset before applying it to the full evaluation.
-
-            4. Multiple Agents May Produce Correlated Unsupported Answers:
-            - ISSUE: Adding more agents does not guarantee independent verification. Agents using the same model, prompts, and incomplete evidence may produce the same unsupported answer, creating false consensus.
-            - SOLUTION: Record every agent's response before aggregation or communication and measure agreement and disagreement at the agent level. Compare the frequency of false consensus across critique-based, independent-agent, and interactive architectures.
-
-            5. Agent Communication May Reinforce Rather Than Correct Errors:
-            - ISSUE: In interactive architectures, an unsupported answer from one agent may influence other agents during discussion or debate, causing the group to converge on an answer that is not supported by the available evidence.
-            - SOLUTION: Store agent responses before and after communication. Measure whether initially abstaining or disagreeing agents move toward an unsupported answer after interaction and compare these transitions across communication strategies.
-
-            6. Architecture Comparisons May Be Confounded by Unequal Compute:
-            - ISSUE: Multi-agent architectures naturally require more model calls, tokens, and inference time than the single-agent baseline. Any performance improvement could therefore result from additional inference effort rather than the architecture itself.
-            - SOLUTION: Keep the underlying model, retrieval inputs, temperature, dataset examples, and other applicable settings consistent across architectures. Report model-call count, token usage, and latency alongside accuracy, abstention, and false-consensus metrics.
-
-            7. Experimental Run Count May Exceed the Available Semester Budget:
-            - ISSUE: Testing several architectures, evidence-removal strategies, agent counts, random seeds, and models could produce more experimental runs than can reasonably be completed during the semester.
-            - SOLUTION: Define and freeze the primary experiment matrix before the main evaluation. Prioritize one primary model, a fixed MuSiQue subset, clean and missing-evidence conditions, and the core architecture comparisons. Additional models and ablations will be extensions if time and compute permit.
-
-            8. Library, Dataset, and Model Version Drift May Affect Reproducibility:
-            - ISSUE: Changes to dataset, transformer, retrieval, or agent-framework libraries during the semester could alter experimental behavior or break the pipeline.
-            - SOLUTION: Pin tested dependency versions, record model and dataset revisions, use fixed random seeds, save prompts and experiment configurations, and cache the finalized evaluation dataset used for the main experiments.
-
-            9. The Backbone Model May Not Reliably Perform Specialized Agent Roles:
-            - ISSUE: The selected model may not faithfully perform critic, debater, verifier, or aggregation roles. For example, a critic may always agree with the solver or debate agents may never meaningfully revise their answers, causing architectures to appear equivalent for the wrong reason.
-            - SOLUTION: Measure critic-agreement rate, answer-change rate, role-compliance rate, and non-convergence on the development subset before the main experiment. Cap interaction rounds with an explicit stopping rule and report these diagnostics alongside the primary metrics. If specialized verification behavior is weak at the selected model scale, that will be reported as a limitation or finding rather than silently treated as evidence that architectures are equivalent.
-
-            RISK MITIGATION TIMELINE:
-            - Early setup: Validate MuSiQue structure, the missing-evidence construction process, the closed-book diagnostic, and the standardized evaluation schema.
-            - Baseline development: Validate the single-agent pipeline and confirm that missing-evidence examples genuinely test insufficient support and abstention.
-            - Multi-agent development: Validate each architecture on a development subset and inspect agent-level logs for correlated errors, false consensus, role compliance, and malformed outputs.
-            - Main experiments: Monitor run completion, model-call counts, token usage, latency, and failed runs while preserving intermediate outputs.
-            - Final analysis: Perform statistical comparisons and manual error analysis to verify that measured abstention and false consensus reflect genuine system behavior rather than evaluation artifacts.
-            - Final repository freeze: Pin tested dependencies, dataset revisions, model configurations, prompts, and experiment outputs needed for reproducibility.
-            
-
-
-## Contact
-- Author: Amir Jafari
-- Email: [ajafari@gwu.edu](mailto:ajafari@gwu.edu)
-- GitHub: [](https://github.com/)
+## 1 Objective:
+
+Large language model systems increasingly use multiple agents that critique, revise, or verify one another's outputs. A common architecture consists of a **Solver** that produces an initial answer and a **Critic** that evaluates the answer and provides feedback. The Solver can then revise its answer based on the Critic's response.
+
+Although these systems are designed around the assumption that feedback can improve reasoning, considerably less is understood about **what changes internally within the Solver when it receives feedback and decides whether to accept or reject it**.
+
+Sparse Autoencoders (SAEs) provide a potential mechanism for studying this process. SAEs decompose dense LLM activations into high-dimensional sparse feature representations. These sparse representations can be analyzed to identify features associated with particular model behaviors and, importantly, can be manipulated and decoded back into the LLM activation space to test whether those features are causally involved in the behavior.
+
+The primary research question of this project is:
+
+> **What internal representations change when an LLM Solver receives critic feedback, which sparse features predict whether the Solver accepts or rejects that feedback, and are those features causally involved in feedback uptake?**
+
+The project will study this question using a controlled Solver-Critic system. The same initial Solver response will, where possible, be exposed to controlled correct and incorrect critic feedback. Solver activations will be collected before and after feedback, represented using Sparse Autoencoders, and analyzed using interpretable linear probe models.
+
+Candidate SAE features identified by the predictive analysis will then be directly manipulated during subsequent Solver forward passes. If manipulating a feature systematically changes whether the Solver accepts or rejects critic feedback, this provides evidence that the feature is not merely correlated with feedback uptake but is causally involved in the mechanism.
+
+A secondary objective is to compare a **general pretrained SAE** against an **interaction-specific SAE trained on activations collected during Solver-Critic interactions**. This tests whether an SAE trained specifically on the activation distribution produced during feedback processing better isolates features associated with feedback uptake.
+
+### Key Objectives:
+
+1. **Build a controlled Solver-Critic interaction pipeline and activation dataset.**
+   - Run benchmark questions through a Solver-Critic-Solver interaction.
+   - Cache selected Solver activations before and after critic feedback.
+   - Generate controlled correct and incorrect critic feedback using known benchmark ground truth.
+   - Record behavioral outcomes including feedback acceptance, answer changes, and final correctness.
+   - Record labels such that we have 4 potential classes:
+     - 0: Critic feedback helpful, solver accepts
+     - 1: Critic feedback helpful, solver rejects
+     - 2: Critic feedback harmful, solver accepts
+     - 3: Critic feedback harmful, solver rejects
+
+2. **Represent Solver activations using Sparse Autoencoders.**
+   <!-- - Load a compatible pretrained SAE for the selected LLM and activation site. -->
+   - Train an interaction-specific SAE on cached Solver activations from the Solver-Critic dataset.
+   - Evaluate SAE reconstruction quality and sparsity before using the representation for downstream analysis.
+
+3. **Identify sparse features predictive of feedback uptake.**
+   - Encode Solver activations into SAE latent feature vectors.
+   - Train regularized linear probe models using the latent feature vectors to classify which classes (described in 1) the Solver will yield (basically only cares about accepting or rejecting).
+   - Use probe coefficients and held-out validation to select a small set of candidate features associated with feedback uptake (how the solver incorporates the critics feedback).
+   - Compare predictive structure discovered by the pretrained and interaction-trained SAEs.
+
+4. **Test whether selected sparse features are causally involved in feedback uptake.**
+   - Suppress or amplify selected SAE features during the Solver's processing of critic feedback.
+   - Decode the modified SAE representation back into the LLM activation space.
+   - Continue the Solver forward pass using the modified activation.
+   - Measure whether the intervention changes the probability that the Solver accepts critic feedback.
+
+5. **Characterize when feedback-related internal mechanisms produce useful versus harmful behavior.**
+   - Compare interventions under correct and incorrect critic feedback.
+   - Determine whether selected features correspond to useful correction uptake, general willingness to revise, resistance to feedback, or other feedback-related behavior.
+   - Package the interaction pipeline, activation collection, SAE training/loading, probe analysis, and causal intervention experiments into a reproducible repository.
+
+---
+
+## 2 Dataset:
+
+The project requires two related forms of data:
+
+1. an existing benchmark containing questions with objectively known answers, and
+2. a generated Solver-Critic interaction dataset containing behavioral outcomes and Solver activations.
+
+The interaction dataset will be generated by the project rather than obtained from an existing multi-agent benchmark.
+
+### TIER 1 -- BASE REASONING DATASET:
+
+**MuSiQue**
+
+MuSiQue is a multi-hop question-answering benchmark that requires models to combine information across multiple reasoning steps.
+
+Dataset:
+
+https://huggingface.co/datasets/dgslibisey/MuSiQue
+
+MuSiQue provides the underlying questions and known answers required to objectively evaluate the Solver's initial and revised responses.
+
+Additional objectively scored reasoning datasets may be considered if pilot experiments show that MuSiQue does not produce sufficient variation in Solver correctness or feedback acceptance. The final benchmark set should be frozen after the initial pilot.
+
+### TIER 2 -- GENERATED SOLVER-CRITIC INTERACTION DATASET:
+
+Each benchmark question will first be passed through the Solver to generate an initial answer. The same initial Solver response will then be reused across multiple Critic conditions where possible. This creates matched interactions in which the question, initial answer, and initial Solver reasoning remain fixed while the feedback provided to the Solver changes.
+
+The dataset will contain one natural Solver-Critic condition and two controlled feedback conditions.
+
+#### Condition A -- Natural Critic Feedback
+
+The Critic independently evaluates the Solver's initial response and provides whatever feedback it determines is appropriate. The Critic is not instructed to agree or disagree with the Solver and is not given a predetermined answer to advocate.
+
+This condition represents the normal Solver-Critic interaction and will serve as the project's primary observational dataset.
+
+After the interaction, the known benchmark ground truth will be used to determine whether the Critic's feedback was correct/helpful or incorrect/harmful. The Solver's second response will then be evaluated to determine whether it accepted or rejected the Critic's feedback.
+
+This produces naturally occurring examples of:
+
+1. Correct/helpful feedback + Solver accepts
+2. Correct/helpful feedback + Solver rejects
+3. Incorrect/harmful feedback + Solver accepts
+4. Incorrect/harmful feedback + Solver rejects
+
+These interactions will be used to investigate which internal Solver representations are associated with feedback acceptance and rejection under normal multi-agent behavior.
+
+#### Condition B -- Controlled Correct Feedback
+
+The same initial Solver response will be provided to a Critic instructed to advocate for the known ground-truth answer.
+
+This creates a controlled condition in which the feedback presented to the Solver is known to support the correct answer.
+
+This condition measures how the Solver responds when exposed to useful feedback and provides a controlled comparison against the natural Critic condition.
+
+#### Condition C -- Controlled Incorrect Feedback
+
+The same initial Solver response will be provided to a Critic instructed to advocate for a deliberately incorrect answer.
+
+This creates a controlled condition in which the feedback presented to the Solver is known to support an incorrect answer.
+
+This condition measures the Solver's susceptibility to misleading feedback and provides a matched comparison with the controlled correct-feedback condition.
+
+### Paired Experimental Design
+
+Where technically feasible, all three Critic conditions will branch from the same initial Solver response:
+
+`Solver Attempt 1 → Natural Critic → Solver Attempt 2A`
+
+`Solver Attempt 1 → Controlled Correct Critic → Solver Attempt 2B`
+
+`Solver Attempt 1 → Controlled Incorrect Critic → Solver Attempt 2C`
+
+This design holds the original question and Solver Attempt 1 constant while changing the feedback presented to the Solver.
+
+The natural condition provides the primary dataset for studying feedback behavior as it occurs organically within the Solver-Critic system. The controlled conditions provide experimental comparisons that allow the project to determine how feedback correctness affects the Solver's behavior and internal representations.
+
+### Interaction Record
+
+Each feedback event will contain at minimum:
+
+- `question_id`
+- `question`
+- `ground_truth`
+- `solver_attempt_1`
+- `solver_attempt_1_correct`
+- `critic_condition`
+- `critic_feedback`
+- `critic_feedback_correct`
+- `solver_attempt_2`
+- `solver_attempt_2_correct`
+- `solver_changed_answer`
+- `solver_accepted_feedback`
+- `activation_attempt_1`
+- `activation_attempt_2`
+
+The primary behavioral target will be:
+
+`solver_accepted_feedback ∈ {0,1}`
+
+Critic correctness will be recorded separately rather than being combined with Solver acceptance into the primary target. This allows the project to distinguish **whether the Solver accepts feedback** from **whether accepting that feedback was appropriate**.
+
+_Important_: The four combinations (2 x 2 table) of feedback correctness and Solver acceptance will still be retained for descriptive analysis:
+
+1. Correct feedback + Solver accepts
+2. Correct feedback + Solver rejects
+3. Incorrect feedback + Solver accepts
+4. Incorrect feedback + Solver rejects
+
+### TIER 3 -- ACTIVATION DATASET:
+
+Selected internal Solver activations will be cached during:
+
+1. **Solver Attempt 1:** before critic feedback
+2. **Solver Attempt 2:** while the Solver processes critic feedback and produces its revised answer
+
+The exact transformer layer and activation site will be selected during the initial technical feasibility stage.
+
+The project will initially target **one activation site at one layer**. A second layer may be added only if compute and schedule permit.
+
+These cached activations serve two purposes:
+
+- training the interaction-specific SAE;
+- generating SAE latent representations for predictive analysis.
+
+Because both pre-feedback and post-feedback activations are collected, the project can additionally investigate changes in sparse representation such as:
+
+`Δz = z_after_feedback - z_before_feedback`
+
+This provides a direct representation of how the Solver's internal state changes after exposure to critic feedback.
+
+### DATA SPLITS:
+
+Questions must be divided into separate experimental splits before feature selection:
+
+- **Discovery / training split:** SAE training and probe-based feature discovery
+- **Validation split:** confirmation that selected features predict feedback uptake on unseen interactions
+- **Intervention / test split:** causal intervention experiments
+
+Questions from the intervention/test split must not be used to select candidate SAE features.
+
+This separation prevents the causal experiment from being evaluated on the same interactions used to discover the candidate features.
+
+---
+
+## 3 Rationale:
+
+Multi-agent LLM systems commonly rely on interaction patterns such as critique, debate, verification, and revision. These architectures assume that exposing one model to another agent's feedback can improve the final response.
+
+However, observing that a Solver changes its answer after criticism does not explain **how the feedback is internally processed**.
+
+The Solver may:
+
+- recognize that the critic has identified an error;
+- detect disagreement and reconsider its previous reasoning;
+- defer to another agent regardless of whether that agent is correct;
+- resist external feedback;
+- or respond through a distributed mechanism that cannot be represented by a small number of interpretable features.
+
+Behavioral evaluation alone cannot distinguish these possibilities.
+
+Sparse Autoencoders provide a useful framework for investigating this question because they transform dense transformer activations into sparse latent feature representations. Instead of attempting to interpret thousands of dense activation dimensions directly, the project can analyze which sparse features change during feedback processing and which features are predictive of subsequent Solver behavior.
+
+However, **predictive association is not sufficient to establish mechanism**.
+
+A sparse feature may reliably predict feedback acceptance without causing it. The feature could be downstream of the actual mechanism or correlated with another internal process.
+
+The central methodological contribution of this project is therefore the transition from:
+
+> **feature detection:** "This sparse feature is predictive of feedback acceptance."
+
+to:
+
+> **causal intervention:** "Manipulating this sparse feature changes the Solver's probability of accepting feedback."
+
+This distinction is critical for mechanistic interpretability.
+
+The controlled correct-versus-incorrect feedback design further allows the project to distinguish different possible interpretations of a candidate feature.
+
+For example, suppose amplifying a feature increases acceptance of **both correct and incorrect feedback**. The feature may represent general deference or willingness to revise rather than the ability to recognize useful feedback.
+
+Conversely, if manipulating a feature selectively changes acceptance of correct criticism while having little effect on false criticism, the feature may be associated with a more discriminative feedback-evaluation mechanism.
+
+### PRETRAINED SAE VS. INTERACTION-SPECIFIC SAE:
+
+A secondary research question concerns whether general-purpose SAE representations are sufficient for studying multi-agent interactions.
+
+A pretrained SAE has been trained on a broad activation distribution and may already contain features relevant to disagreement, revision, confidence, or correction.
+
+The interaction-specific SAE will instead be trained directly on Solver activations generated during the controlled feedback experiment.
+
+Importantly, this SAE remains **unsupervised**. It is not explicitly trained to identify "feedback acceptance." Rather, it learns a sparse dictionary over the activation distribution produced while the Solver participates in Solver-Critic interactions.
+
+The comparison therefore asks:
+
+> **Does an interaction-specific SAE produce sparse representations that better isolate feedback-related behavioral structure than a general pretrained SAE?**
+
+The same downstream probe and causal intervention protocol can be applied to both representations.
+
+### EXPECTED CONTRIBUTION:
+
+The project aims to provide:
+
+1. An analysis of sparse internal features associated with feedback acceptance and rejection.
+2. A comparison between general pretrained and interaction-specific SAE representations.
+3. Controlled causal evidence testing whether selected SAE features actually influence feedback uptake.
+4. A reproducible framework for studying internal mechanisms of agent-to-agent feedback in multi-agent LLM systems.
+
+A negative result remains scientifically meaningful.
+
+---
+
+## 4 Approach:
+
+### PHASE 1: PROJECT CONCEPTUALIZATION & EXPLORATORY ANALYSIS
+
+#### [Weeks 1-2: Research Design, Literature Review, and Dataset Exploration]
+
+- Finalize the primary research question and experimental objectives.
+- Review relevant literature on:
+  - Sparse Autoencoders and mechanistic interpretability;
+  - SAE feature intervention and causal validation;
+  - Solver-Critic and multi-agent LLM systems;
+  - LLM response to external feedback and critique.
+- Define the Solver-Critic architecture and interaction protocol at a conceptual level.
+- Define the primary behavioral outcome: whether the Solver accepts or rejects Critic feedback.
+- Define the 2 × 2 behavioral outcome matrix:
+
+|                               | Solver Accepts Feedback | Solver Rejects Feedback |
+| ----------------------------- | ----------------------- | ----------------------- |
+| **Correct Critic Feedback**   | Correct + Accept        | Correct + Reject        |
+| **Incorrect Critic Feedback** | Incorrect + Accept      | Incorrect + Reject      |
+
+- Define the three primary Critic conditions:
+  - natural/uncontrolled Critic feedback;
+  - controlled correct feedback;
+  - controlled incorrect feedback.
+- Perform exploratory analysis of MuSiQue and determine:
+  - dataset size and structure;
+  - available ground-truth fields;
+  - question and answer formats;
+  - whether answers can be scored reliably;
+  - whether the dataset is appropriate for generating controlled incorrect answers;
+  - preprocessing or filtering requirements.
+- Identify candidate open-weight LLMs based on:
+  - instruction-following capability;
+  - availability of compatible pretrained SAEs;
+  - ability to extract and intervene on internal activations;
+  - computational requirements.
+- Identify candidate pretrained SAEs and compatible activation sites.
+- Define the initial experimental controls, evaluation metrics, and dataset-splitting strategy.
+- Produce the finalized experimental design and initial system architecture.
+
+**Milestone:** By the end of Week 2, the research question, experimental design, dataset, behavioral outcomes, candidate model/SAE configuration, and evaluation strategy should be sufficiently defined to begin implementation.
+
+---
+
+### PHASE 2: PARALLEL SYSTEM DEVELOPMENT
+
+#### [Weeks 3-5: Solver-Critic and SAE Development]
+
+Following completion of the experimental design, development will proceed through two parallel workstreams.
+
+#### Workstream A -- Solver-Critic System and Activation Collection
+
+Two team members will focus on implementing the multi-agent experimental system and the pipeline required to collect the internal activations that will eventually be used to train and evaluate the SAEs.
+
+- Implement reusable Solver and Critic components.
+- Implement the basic interaction:
+
+  `Question → Solver Attempt 1 → Critic Feedback → Solver Attempt 2`
+
+- Implement the three Critic conditions:
+  - natural/uncontrolled Critic feedback;
+  - controlled correct feedback;
+  - controlled incorrect feedback.
+- Implement benchmark loading, preprocessing, and answer scoring.
+- Implement interaction logging and behavioral labeling.
+- Implement forward hooks for extracting Solver activations from the selected model layer and activation site.
+- Verify activation collection during Solver Attempt 1 and Solver Attempt 2.
+- Develop the pipeline for storing activation tensors separately from interaction metadata.
+- Integrate the selected pretrained SAE.
+- Verify that Solver activations can be encoded and reconstructed using the pretrained SAE.
+- Measure reconstruction error.
+- Develop the mechanism required to inject reconstructed activations back into the Solver.
+- Perform an initial SAE intervention proof of concept:
+
+  `Solver Activation → SAE Encode → Modify Latent → SAE Decode → Inject Activation → Continue Generation`
+
+#### Workstream B -- Interaction-Specific SAE Development
+
+One team member will simultaneously develop the custom SAE and its training infrastructure.
+
+- Implement the selected SAE architecture.
+- Implement:
+  - SAE encoding;
+  - SAE decoding;
+  - reconstruction loss;
+  - sparsity regularization;
+  - training and validation loops;
+  - checkpointing;
+  - experiment configuration;
+  - training diagnostics.
+- Develop metrics for monitoring:
+  - reconstruction error;
+  - sparsity;
+  - dead-feature rate;
+  - feature activation frequency;
+  - training stability.
+- Test the SAE pipeline using temporary or sample activation tensors with the same expected dimensionality as the final Solver activations.
+- Establish initial SAE hyperparameters and training configuration.
+- Implement efficient loading of activation vectors generated by the Solver-Critic pipeline.
+- Prepare the SAE training pipeline so that training can begin once sufficient real Solver activations have been collected.
+- If there are available activations, we can start training immediately.
+
+The custom SAE will remain an **unsupervised representation-learning model**. Feedback-acceptance labels will not be used during SAE training.
+
+#### Integration
+
+As the two workstreams mature, the custom SAE pipeline will be tested on a small sample of actual Solver activations.
+
+This integration will verify:
+
+- activation dimensionality and formatting;
+- SAE input compatibility;
+- reconstruction behavior;
+- activation storage and loading;
+- end-to-end SAE encoding and decoding.
+
+**Milestone:** By the end of Week 5, the Solver-Critic activation pipeline and custom SAE training pipeline should both be operational and compatible. The team should also have demonstrated that SAE-based activation intervention is technically feasible using the selected model and activation site.
+
+---
+
+### PHASE 3: FULL INTERACTION & ACTIVATION DATASET GENERATION
+
+#### [Week 6: Integreation Full Forward-Pass Data Collection]
+
+Run the finalized Solver-Critic experiment across the selected benchmark questions and Critic conditions.
+
+For each benchmark question:
+
+1. Generate Solver Attempt 1.
+2. Evaluate the initial Solver answer against ground truth.
+3. Cache the selected Solver activations.
+4. Run the natural/uncontrolled Critic condition.
+5. Generate and evaluate the corresponding Solver Attempt 2.
+6. Run the controlled correct-feedback condition using the same initial Solver response.
+7. Generate and evaluate the corresponding Solver Attempt 2.
+8. Run the controlled incorrect-feedback condition using the same initial Solver response.
+9. Generate and evaluate the corresponding Solver Attempt 2.
+10. Cache the required post-feedback Solver activations.
+11. Record Critic correctness, feedback acceptance/rejection, answer changes, and final correctness.
+12. Assign each interaction to the appropriate cell of the 2 × 2 behavioral outcome matrix.
+
+Behavioral metadata will be stored separately from high-dimensional activation tensors and linked through stable episode identifiers.
+
+The resulting activation data will provide the inputs required for both the pretrained SAE analysis and interaction-specific SAE training.
+
+Only activation data belonging to the **discovery/training split** will be used to train the custom SAE.
+
+---
+
+### PHASE 5: INTERACTION-SPECIFIC SAE TRAINING & REPRESENTATION GENERATION
+
+#### [Weeks 7-10: SAE Training and Validation]
+
+Once sufficient Solver activations have been collected, training of the interaction-specific SAE will begin using the training infrastructure developed during Weeks 3-5.
+
+#### Interaction-Specific SAE
+
+- Train the SAE on Solver activation vectors from the discovery/training split.
+- Monitor:
+  - training and validation reconstruction loss;
+  - sparsity;
+  - dead-feature rate;
+  - feature activation frequency;
+  - training stability.
+- Tune SAE hyperparameters where necessary.
+- Save intermediate checkpoints and training diagnostics.
+- Evaluate reconstruction quality on held-out activation data.
+- Generate sparse representations for the collected Solver-Critic interactions.
+
+The experimental sequence will remain explicitly separated:
+
+`Unsupervised SAE Training → Supervised Feature Discovery → Causal Intervention`
+
+**Milestone:** By the end of Week 10, the team should have a validated interaction-specific SAE and corresponding sparse representations from both the pretrained and interaction-specific SAEs. This concludes the SAE modeling component.
+
+---
+
+### PHASE 6: PREDICTIVE FEATURE DISCOVERY
+
+#### [Weeks 10-11: Predictive Modeling and Feature Selection]
+
+Use the sparse SAE representations to identify internal features associated with whether the Solver accepts or rejects Critic feedback.
+
+The primary behavioral target will be:
+
+`solver_accepted_feedback ∈ {0,1}`
+
+Critic feedback correctness will remain a separate experimental variable rather than being combined with acceptance into a four-class prediction target.
+
+- Train regularized linear classifiers, such as L1 or elastic-net logistic regression, using SAE latent activations as input features.
+- Evaluate predictive performance using:
+  - AUROC;
+  - F1 score;
+  - balanced accuracy.
+- Analyze predictive performance:
+  - across all interactions;
+  - under correct feedback;
+  - under incorrect feedback;
+  - under natural Critic feedback.
+- Compare predictive performance between:
+  - pretrained SAE features;
+  - interaction-specific SAE features.
+- Identify candidate features using:
+  - coefficient magnitude;
+  - coefficient direction;
+  - activation frequency;
+  - stability across data subsets or random seeds.
+- Analyze changes in SAE feature activation before and after Critic feedback where appropriate.
+
+For selected feature \(i\), this may include:
+
+`Δz_i = z_i(after feedback) - z_i(before feedback)`
+
+where \(z_i\) represents the activation of SAE feature \(i\).
+
+#### Held-Out Validation
+
+Before causal intervention:
+
+- Evaluate candidate predictive features on the held-out validation split.
+- Determine whether associations between candidate features and feedback acceptance generalize beyond the discovery data.
+- Select a small final set of features for causal testing.
+
+Features will not be selected using the intervention/test split.
+
+**Milestone:** By the end of Week 11, the team should have a small validated set of SAE features associated with feedback acceptance or rejection and ready for causal testing.
+
+---
+
+### PHASE 7: CAUSAL SAE INTERVENTION
+
+#### [Weeks 12-13: Feature Suppression and Amplification]
+
+This is the final step of our experiment. The primary causal experiment will test whether features identified during predictive analysis actually influence how the Solver responds to Critic feedback.
+
+For each selected feature:
+
+1. Run the Solver to the selected intervention point.
+2. Capture the relevant internal activation.
+3. Encode the activation using the SAE.
+4. Modify the selected SAE latent.
+5. Decode the modified sparse representation.
+6. Inject the reconstructed activation back into the Solver.
+7. Continue generation.
+8. Measure whether Solver feedback acceptance changes.
+
+#### Intervention Conditions
+
+Selected features will be evaluated using:
+
+- **Target-feature suppression:** decrease or remove activation of the selected feature.
+- **Target-feature amplification:** increase activation of the selected feature.
+- **Intervention magnitude sweep:** evaluate multiple intervention strengths where feasible.
+
+#### Required Controls
+
+The causal experiment will include:
+
+1. **No-intervention baseline**  
+   Run the Solver normally without SAE reconstruction or feature modification.
+
+2. **SAE reconstruction-only control**  
+   Encode and decode the activation without deliberately modifying a feature. This controls for behavioral changes caused by SAE reconstruction error.
+
+3. **Random-feature intervention control**  
+   Apply matched interventions to unrelated SAE features to test whether observed effects are specific to the selected feature rather than a generic consequence of perturbing the SAE representation.
+
+Where feasible, random features will be matched on characteristics such as activation frequency or typical activation magnitude.
+
+#### Primary Outcome
+
+The primary causal outcome will be the change in Solver feedback acceptance under intervention relative to the appropriate control condition.
+
+#### Secondary Outcomes
+
+Secondary outcomes will include:
+
+- final-answer correctness;
+- answer-change rate;
+- acceptance of correct feedback;
+- acceptance of incorrect feedback;
+- rejection of correct feedback;
+- resistance to incorrect feedback;
+- generation coherence and output quality.
+
+Intervention effects will be analyzed separately under correct and incorrect Critic feedback.
+
+For example:
+
+- if amplifying a feature increases acceptance of both correct and incorrect feedback, the feature may represent general deference or willingness to revise;
+- if amplification selectively increases acceptance of correct feedback, the feature may be involved in evaluating feedback quality;
+- if suppressing a feature reproducibly decreases acceptance relative to matched controls, this provides evidence that the feature is causally involved in feedback acceptance rather than merely correlated with it.
+
+---
+
+### PHASE 8: ANALYSIS & ROBUSTNESS
+
+#### [Week 14: Final Statistical Analysis and Interpretation]
+
+- NOTE: this really should be more about interpretation and analysis. If we did a good job implementing, when we run the experiment the tests will populate csv's with the data we want to see.
+
+- Compare behavioral outcomes across:
+  - natural Critic interactions;
+  - controlled correct feedback;
+  - controlled incorrect feedback.
+- Compare pre-feedback and post-feedback sparse representations.
+- Compare accepted and rejected feedback interactions.
+- Compare predictive feature strength with measured causal intervention effects.
+- Compare pretrained and interaction-specific SAE representations.
+- Quantify intervention effects relative to:
+  - no-intervention behavior;
+  - SAE reconstruction-only controls;
+  - random-feature controls.
+- Evaluate whether intervention effects remain consistent across intervention strengths and data subsets.
+- Analyze whether identified features appear related to:
+  - general feedback acceptance;
+  - resistance to feedback;
+  - sensitivity to feedback correctness;
+  - or broader behavioral changes unrelated to feedback.
+- Report null or inconsistent intervention results explicitly rather than interpreting predictive association alone as evidence of mechanism.
+
+The central distinction will be between:
+
+**Observation:** a sparse feature is associated with Solver feedback acceptance.
+
+and
+
+**Causal evidence:** manipulating that feature produces a reproducible change in Solver feedback acceptance relative to appropriate controls.
+
+**Visualization prep** by this week, we should basically be done. We should be focused on ensuring all of our visualizations for the paper are ready.
+
+---
+
+### PHASE 9: FINAL PAPER & REPRODUCIBILITY
+
+#### [Week 15: Final Documentation, Paper, and Presentation]
+
+- Finalize statistical analyses and figures.
+- Document:
+  - model configuration;
+  - Solver and Critic prompts;
+  - Critic conditions;
+  - benchmark preprocessing;
+  - activation site and layer;
+  - pretrained SAE configuration;
+  - custom SAE architecture and training procedure;
+  - predictive models;
+  - feature-selection procedure;
+  - intervention magnitudes;
+  - random seeds;
+  - experimental controls.
+- Prepare final tables and visualizations showing:
+  - the 2 × 2 behavioral outcome distribution;
+  - predictive feature performance;
+  - pretrained versus interaction-specific SAE results;
+  - causal intervention effects;
+  - correct versus incorrect feedback behavior.
+- Final organization checks for the codebase into reproducible components for:
+  - Solver-Critic orchestration;
+  - benchmark processing;
+  - interaction generation;
+  - activation caching;
+  - SAE loading and training;
+  - predictive modeling;
+  - feature intervention;
+  - evaluation and statistical analysis.
+- Complete the final capstone paper.
+- Prepare the final presentation and project demonstration.
+
+## 5 Timeline:
+
+**Weeks 1-2:** Proposal development, research conceptualization, literature review, dataset selection, EDA, and experimental design.
+
+**Week 3:** Begin parallel development:
+
+- Solver-Critic system, benchmark pipeline, and activation-extraction infrastructure;
+- interaction-specific SAE architecture and training infrastructure.
+
+**Week 4:** Continue parallel development. Integrate Solver/Critic conditions, behavioral scoring, activation extraction and storage, SAE training components, and pretrained SAE support. Begin testing the custom SAE on sample or available real activations.
+
+**Week 5:** Complete core Solver-Critic and SAE infrastructure. Perform end-to-end integration and validation of interaction generation, activation extraction, SAE encoding/reconstruction, and activation intervention. Begin preliminary SAE training if sufficient real activations are available.
+
+**Week 6:** Run the finalized Solver-Critic experiment and generate the full behavioral and activation datasets. Finalize discovery/training, validation, and intervention/test splits. Prepare finalized training activations for the interaction-specific SAE.
+
+**Week 7:** Begin full interaction-specific SAE training and hyperparameter evaluation. In parallel, continue development of downstream predictive modeling, feature-selection, causal-intervention, control, and evaluation pipelines.
+
+**Week 8:** Continue interaction-specific SAE training and evaluate reconstruction quality, sparsity, dead-feature rate, and training stability. Generate pretrained SAE representations in parallel. Continue development and testing of downstream experimental infrastructure.
+
+**Week 9:** Finalize and validate the interaction-specific SAE. Generate sparse representations of the Solver-Critic interactions using both pretrained and interaction-specific SAEs. Begin predictive feature analysis as validated representations become available.
+
+**Week 10:** Train regularized predictive models, analyze feedback-related SAE features, compare pretrained and interaction-specific SAE representations, and identify candidate features associated with feedback acceptance and rejection.
+
+**Week 11:** Perform held-out validation of candidate SAE features and select the final feature set for causal testing. Finalize causal intervention conditions, reconstruction-only controls, random-feature controls, and intervention-strength configurations.
+
+**Week 12:** Run target-feature suppression and amplification experiments across correct and incorrect Critic-feedback conditions.
+
+**Week 13:** Complete causal intervention experiments and associated controls. Compare intervention effects across feedback conditions, intervention strengths, and SAE representations. Begin final interpretation and visualization of experimental results.
+
+**Week 14:** Complete statistical analysis and robustness checks. Focus on interpretation of predictive and causal results and finalize tables, figures, and visualizations for the paper.
+
+**Week 15:** Complete the research paper, repository documentation, reproducibility checks, final presentation, and project demonstration.
+
+**TOTAL: 15 weeks**
+
+### KEY MILESTONES:
+
+- **Week 2:** Research question, dataset, eda experimental design, candidate model/SAE configuration, and evaluation strategy finalized.
+- **Week 5:** Solver-Critic system, activation pipeline, SAE training pipeline, and end-to-end SAE intervention mechanism operational.
+- **Week 6:** Full behavioral and activation datasets generated and experimental splits finalized.
+- **Week 9:** Interaction-specific SAE trained and validated; pretrained and interaction-specific sparse representations available for analysis.
+- **Week 11:** Candidate feedback-related SAE features selected using held-out validation.
+- **Week 13:** Causal feature-intervention experiments and controls complete.
+- **Week 14:** Primary statistical analyses, interpretation, and research figures complete.
+- **Week 15:** Final paper, reproducible codebase, and presentation complete.
+
+### DELIVERABLES BY WEEK 15:
+
+- Reproducible Solver-Critic experimental framework.
+- Behavioral dataset containing natural, controlled-correct, and controlled-incorrect Critic interactions.
+- Solver activation dataset collected before and after Critic feedback.
+- Pretrained SAE representations of Solver-Critic activations.
+- Interaction-specific SAE trained on Solver-Critic activations.
+- Predictive feature-selection analysis of feedback acceptance and rejection.
+- Held-out evaluation of feedback-related sparse features.
+- Controlled SAE feature-intervention experiments, including reconstruction-only and random-feature controls.
+- Quantitative analysis of whether selected SAE features are causally involved in feedback acceptance.
+- Comparison of pretrained and interaction-specific SAE representations.
+- Final research paper/report.
+- Documented and reproducible GitHub repository.
+- Final project presentation and demonstration.
+
+## 6 Expected Number Students:
+
+**RECOMMENDED: 3 STUDENTS**
+
+### STUDENT 1 -- SOLVER-CRITIC SYSTEM, DATA PIPELINE, AND EXPERIMENT INFRASTRUCTURE
+
+Primary responsibility:
+
+- Design and implement the modular Solver-Critic pipeline.
+- Implement benchmark ingestion and evaluation.
+- Implement controlled correct/incorrect critic-feedback generation.
+- Implement interaction logging and behavioral-label generation.
+- Build the activation-caching infrastructure.
+- Maintain experiment configuration and reproducibility.
+- Support the causal-intervention pipeline by ensuring the forward-pass infrastructure can be reused during Objective 4.
+
+This role owns the foundation of the project. The remaining experiments depend on the interaction and activation datasets produced by this pipeline.
+
+All team members should be involved in designing and validating the controlled interaction protocol because errors in this stage would affect the validity of every downstream experiment.
+
+---
+
+### STUDENT 2 -- SPARSE AUTOENCODER TRAINING AND REPRESENTATION ANALYSIS
+
+Primary responsibility:
+
+- Integrate the pretrained SAE.
+- Determine compatible activation sites and layers with the team.
+- Implement the interaction-specific SAE.
+- Train the SAE on cached Solver activations.
+- Evaluate reconstruction loss, sparsity, dead features, and training stability.
+- Produce SAE latent representations for downstream predictive modeling.
+- Compare pretrained and interaction-specific SAE representations.
+- Support intervention experiments requiring SAE encoding, latent manipulation, and decoding.
+
+This is expected to be one of the most technically difficult components because poor SAE reconstruction or unstable sparse representations could compromise downstream feature discovery and intervention.
+
+---
+
+### STUDENT 3 -- PREDICTIVE MODELING, FEATURE SELECTION, AND CAUSAL INTERVENTION
+
+Primary responsibility:
+
+- Build the linear-probe modeling pipeline.
+- Train regularized logistic regression models predicting feedback acceptance.
+- Evaluate AUROC, F1, and balanced accuracy.
+- Analyze probe coefficients and feature stability.
+- Select candidate SAE features using the discovery split.
+- Validate candidate features on held-out interactions.
+- Implement target-feature suppression and amplification experiments.
+- Implement random-feature and reconstruction-only controls.
+- Analyze causal effects on feedback acceptance and final correctness.
+
+This role owns the transition from correlational feature discovery to causal testing.
+
+---
+
+### SHARED RESPONSIBILITIES:
+
+All three students will contribute to:
+
+- experimental design;
+- controlled-feedback protocol;
+- selection of activation sites;
+- evaluation methodology;
+- statistical analysis;
+- interpretation of results;
+- robustness checks;
+- paper writing;
+- final presentation;
+- repository documentation.
+
+The project should be treated as a single experimental pipeline rather than three independent subprojects. In particular, the behavioral labels created by Student 1, SAE representations produced by Student 2, and candidate features identified by Student 3 must remain aligned through stable episode identifiers and frozen experimental splits.
