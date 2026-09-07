@@ -80,3 +80,25 @@ After modifying `environment.yml`, update your environment:
 ```bash
 conda env update -f environment.yml --prune
 ```
+
+## Jupyter Notebooks
+
+After environment is set up, when using a jupyter notebook, make sure to run the following command to ensure you can select the capstone environment inside the kernel:
+
+```bash
+python -m ipykernel install --user \
+  --name capstone \
+  --display-name "Python 3.11 (capstone)"
+```
+
+## Data Collection
+
+Before continuing with development or using the repo, make sure to run the data collection script to ensure you have the data in the repo.
+
+After activating the codna environment, and before using the code, run the following:
+
+```bash
+python get_MuSiQue_dataset.py
+```
+
+If using

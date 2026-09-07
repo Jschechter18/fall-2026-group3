@@ -7,6 +7,9 @@ dependencies:
   - python=3.11
   - pandas
   - pytest
+  - matplotlib
+  - seaborn
+  - ipykernel
   - pip
   - pip:
       - datasets

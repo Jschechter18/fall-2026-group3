@@ -25,3 +25,9 @@ htmlcov/
 
 # Jupyter Notebook checkpoints
 .ipynb_checkpoints/
+
+# Figures
+figs/
+
+# os stuff
+.DS_Store
