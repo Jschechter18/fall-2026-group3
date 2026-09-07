@@ -28,3 +28,6 @@ htmlcov/
 
 # Figures
 figs/
+
+# os stuff
+.DS_Store
