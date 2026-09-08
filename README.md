@@ -7,8 +7,8 @@ Master's Data Science Capstone project.
 ### 1. Clone the Repository
 
 ```bash
-git clone <agent-evidence>
-cd <agent-evidence>
+git clone <multi-agent-sae>
+cd <multi-agent-sae>
 ```
 
 ### 2. Install Conda
