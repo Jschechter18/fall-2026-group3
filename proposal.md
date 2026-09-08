@@ -2,7 +2,7 @@
 
 ## SAE-MAS: Causal Analysis of Feedback Uptake in Solver-Critic Multi-Agent LLM Systems
 
-### Proposed by: Josh Schechter
+### Proposed by: Josh Schechter, Israel Omoniyi , Raye Oji
 
 #### Advisor: Dr. Amir Jafari
 
@@ -37,11 +37,7 @@ A secondary objective is to compare a **general pretrained SAE** against an **in
    - Cache selected Solver activations before and after critic feedback.
    - Generate controlled correct and incorrect critic feedback using known benchmark ground truth.
    - Record behavioral outcomes including feedback acceptance, answer changes, and final correctness.
-   - Record labels such that we have 4 potential classes:
-     - 0: Critic feedback helpful, solver accepts
-     - 1: Critic feedback helpful, solver rejects
-     - 2: Critic feedback harmful, solver accepts
-     - 3: Critic feedback harmful, solver rejects
+   - Record the primary binary feedback-acceptance target `solver_accepted_feedback ∈ {0,1}` and record Critic-feedback correctness separately. Retain the four combinations of Critic correctness × Solver acceptance as a 2×2 behavioral outcome matrix for descriptive and causal analysis.
 
 2. **Represent Solver activations using Sparse Autoencoders.**
    <!-- - Load a compatible pretrained SAE for the selected LLM and activation site. -->
@@ -58,11 +54,11 @@ A secondary objective is to compare a **general pretrained SAE** against an **in
    - Suppress or amplify selected SAE features during the Solver's processing of critic feedback.
    - Decode the modified SAE representation back into the LLM activation space.
    - Continue the Solver forward pass using the modified activation.
-   - Measure whether the intervention changes the probability that the Solver accepts critic feedback.
+   - Measure whether the intervention changes the Solver's feedback-acceptance behavior or acceptance rate.
 
-5. **Characterize when feedback-related internal mechanisms produce useful versus harmful behavior.**
+5. **Characterize whether feedback-related internal mechanisms support appropriate feedback uptake.**
    - Compare interventions under correct and incorrect critic feedback.
-   - Determine whether selected features correspond to useful correction uptake, general willingness to revise, resistance to feedback, or other feedback-related behavior.
+   - Determine whether selected features correspond to useful correction uptake, general willingness to revise, resistance to feedback, susceptibility to incorrect feedback, or other feedback-related behavior.
    - Package the interaction pipeline, activation collection, SAE training/loading, probe analysis, and causal intervention experiments into a reproducible repository.
 
 ---
@@ -103,6 +99,8 @@ The Critic independently evaluates the Solver's initial response and provides wh
 This condition represents the normal Solver-Critic interaction and will serve as the project's primary observational dataset.
 
 After the interaction, the known benchmark ground truth will be used to determine whether the Critic's feedback was correct/helpful or incorrect/harmful. The Solver's second response will then be evaluated to determine whether it accepted or rejected the Critic's feedback.
+
+The Natural Critic will return a structured response containing at minimum a `verdict` (`agree` / `disagree`), an `advocated_answer`, and an explanation. This structured output allows Critic correctness to be scored against MuSiQue gold answers and aliases. Non-committal feedback without a clear advocated answer will be flagged separately.
 
 This produces naturally occurring examples of:
 
@@ -280,6 +278,16 @@ A negative result remains scientifically meaningful.
 
 ## 4 Approach:
 
+### Model and SAE Configuration
+
+### Model and SAE Configuration
+
+We plan to use **Gemma 3 IT** for both the Solver and Critic, with different role prompts. We chose this model family because Gemma Scope 2 provides pretrained SAEs that are compatible with the instruction-tuned Gemma 3 models.
+
+If we use the proposed AWS `g5.xlarge` setup with one A10G GPU, **Gemma 3 4B IT** is the most practical starting point. The 12B model would need more GPU memory once activation extraction, SAE processing, and generation are included. If we are given access to a larger GPU, we can test 12B using the same pipeline.
+
+We will make the final model choice after a small pilot confirms that the model performs well enough on MuSiQue, the Solver and Critic behave as intended, activation extraction and SAE reconstruction work properly, and the compute requirements are manageable.
+
 ### PHASE 1: PROJECT CONCEPTUALIZATION & EXPLORATORY ANALYSIS
 
 #### [Weeks 1-2: Research Design, Literature Review, and Dataset Exploration]
@@ -401,7 +409,7 @@ This integration will verify:
 
 ### PHASE 3: FULL INTERACTION & ACTIVATION DATASET GENERATION
 
-#### [Week 6: Integreation Full Forward-Pass Data Collection]
+#### [Week 6: Integration Full Forward-Pass Data Collection]
 
 Run the finalized Solver-Critic experiment across the selected benchmark questions and Critic conditions.
 
@@ -428,7 +436,7 @@ Only activation data belonging to the **discovery/training split** will be used 
 
 ---
 
-### PHASE 5: INTERACTION-SPECIFIC SAE TRAINING & REPRESENTATION GENERATION
+### PHASE 4: INTERACTION-SPECIFIC SAE TRAINING & REPRESENTATION GENERATION
 
 #### [Weeks 7-10: SAE Training and Validation]
 
@@ -456,7 +464,7 @@ The experimental sequence will remain explicitly separated:
 
 ---
 
-### PHASE 6: PREDICTIVE FEATURE DISCOVERY
+### PHASE 5: PREDICTIVE FEATURE DISCOVERY
 
 #### [Weeks 10-11: Predictive Modeling and Feature Selection]
 
@@ -508,7 +516,7 @@ Features will not be selected using the intervention/test split.
 
 ---
 
-### PHASE 7: CAUSAL SAE INTERVENTION
+### PHASE 6: CAUSAL SAE INTERVENTION
 
 #### [Weeks 12-13: Feature Suppression and Amplification]
 
@@ -574,7 +582,7 @@ For example:
 
 ---
 
-### PHASE 8: ANALYSIS & ROBUSTNESS
+### PHASE 7: ANALYSIS & ROBUSTNESS
 
 #### [Week 14: Final Statistical Analysis and Interpretation]
 
@@ -612,7 +620,7 @@ and
 
 ---
 
-### PHASE 9: FINAL PAPER & REPRODUCIBILITY
+### PHASE 8: FINAL PAPER & REPRODUCIBILITY
 
 #### [Week 15: Final Documentation, Paper, and Presentation]
 
@@ -783,3 +791,179 @@ All three students will contribute to:
 - repository documentation.
 
 The project should be treated as a single experimental pipeline rather than three independent subprojects. In particular, the behavioral labels created by Student 1, SAE representations produced by Student 2, and candidate features identified by Student 3 must remain aligned through stable episode identifiers and frozen experimental splits.
+
+---
+
+## 7 Possible Issues:
+
+### TECHNICAL CHALLENGES AND SOLUTIONS:
+
+The project has a few technical and experimental risks that we need to address before running the full study. Most of these decisions will be tested during a small pilot so that we do not lock in assumptions too early.
+
+### 1. Model and pretrained-SAE compatibility
+
+**Issue:**  
+We plan to use the Gemma 3 instruction-tuned model family with Gemma Scope 2 SAEs. However, pretrained SAEs are tied to specific model versions, layers, and activation sites, so we still need to confirm that the exact combination we choose works correctly for our Solver setup.
+
+**Plan:**  
+During the technical pilot, we will test the selected Gemma 3 model with the corresponding Gemma Scope 2 SAE and check activation extraction, SAE encoding/decoding, reconstruction quality, memory use, and runtime. The pretrained SAE gives us a lower-risk starting point, while the interaction-specific SAE will be trained as a separate comparison.
+
+---
+
+### 2. Choosing the activation layer, site, and token position
+
+**Issue:**  
+A transformer produces activations at every layer and for every token. This means that saying we will compare "before feedback" and "after feedback" is not enough unless we also define which activation we are comparing.
+
+**Plan:**  
+The pilot will be used to test reasonable layer, activation-site, and token-position or aggregation choices. Once we find a setup that is technically stable and useful for the analysis, we will freeze it before the full experiment. Token-level activations may still be collected separately for training the interaction-specific SAE.
+
+---
+
+### 3. Amount of activation data needed for the interaction-specific SAE
+
+**Issue:**  
+The custom SAE will need more activation data than the linear probe because it is learning a sparse representation directly from the Solver's internal activations. A small number of pooled interaction vectors may not be enough.
+
+**Plan:**  
+We will collect token-level activations from the discovery/training split and use the pilot to estimate how much data and storage are practical. We will monitor reconstruction loss, sparsity, dead-feature rate, feature activation frequency, and training stability before deciding whether the amount of activation data is sufficient.
+
+---
+
+### 4. Interaction-specific SAE quality
+
+**Issue:**  
+The interaction-specific SAE may not train well enough to produce useful sparse features. Poor reconstruction or unstable features would make downstream analysis difficult.
+
+**Plan:**  
+We will evaluate the custom SAE using reconstruction quality, sparsity, dead-feature rate, feature frequency, and training stability. If the custom SAE performs poorly, the compatible pretrained SAE will still allow the main probe and intervention analyses to continue. The custom-SAE result would then be reported as part of the comparison rather than treated as a failed project.
+
+---
+
+### 5. Defining feedback acceptance consistently
+
+**Issue:**  
+Most interactions should be easy to describe as the Solver accepting or rejecting the Critic's feedback, but some responses may be ambiguous.
+
+**Plan:**  
+We will test the feedback-acceptance labeling approach on pilot examples and make sure the team can apply it consistently. The final rule will be fixed before the full dataset is generated. More detailed edge-case handling will be documented in the Objective 1 pipeline specification.
+
+---
+
+### 6. Scoring the Natural Critic's feedback
+
+**Issue:**  
+The Natural Critic is allowed to respond freely. If its response does not clearly state which answer it supports, it may be difficult to decide whether the feedback was correct.
+
+**Plan:**  
+The Natural Critic will return a structured response that includes a verdict, an advocated answer, and an explanation. This allows the advocated answer to be compared with the MuSiQue ground truth while still allowing the Critic to behave naturally.
+
+---
+
+### 7. Imbalanced behavioral outcomes
+
+**Issue:**  
+We can control whether the Critic receives a correct or deliberately incorrect target, but we cannot control whether the Solver accepts or rejects that feedback. Some correctness × acceptance outcome groups may therefore be much smaller than others.
+
+**Plan:**  
+The pilot will measure how often the Solver accepts and rejects correct and incorrect feedback. We will report the full 2 × 2 outcome distribution and investigate any missing or very small groups before the full run. The main requirement is enough behavioral variation to support the probe and causal analyses, not simply forcing the data to look balanced.
+
+---
+
+### 8. Probe stability and interpretation
+
+**Issue:**  
+SAE features may be correlated with one another, and probe coefficients can change depending on feature scale, regularization, or the particular data sample. A large coefficient alone does not prove that a feature is important.
+
+**Plan:**  
+We will standardize the probe inputs, use regularized models such as L1 or elastic-net logistic regression, and check feature stability across seeds or data subsets. Candidate features will also be evaluated on held-out data before they are used in the causal experiment.
+
+A probe using the original model activations will be used as a predictive baseline. SAE features are not required to outperform raw activations because the value of the SAE also comes from producing sparse, interpretable, and directly manipulable features.
+
+---
+
+### 9. Feature-selection leakage
+
+**Issue:**  
+If we select candidate SAE features using the same interactions later used for the causal experiment, we could overestimate how meaningful those features are.
+
+**Plan:**  
+The discovery/training, validation, and intervention/test splits will remain separate. Candidate features will be identified using discovery data and checked on the validation split before the intervention/test data is used.
+
+---
+
+### 10. Separating a real feature effect from a general intervention effect
+
+**Issue:**  
+Changing an internal activation can affect the Solver even if the selected SAE feature is not actually responsible for feedback uptake. SAE reconstruction itself can also slightly change the activation.
+
+**Plan:**  
+The causal experiment will compare the selected-feature intervention against three controls:
+
+1. **No-intervention replay**
+2. **SAE reconstruction-only**
+3. **Matched random-feature intervention**
+
+We will also test more than one intervention strength where practical. The exact point in the Solver's processing where the intervention is applied will be chosen during the pilot and fixed before the causal experiment.
+
+---
+
+### 11. Compute, memory, and experiment size
+
+**Issue:**  
+The full study includes three Critic conditions, activation caching, SAE processing, probe analysis, causal controls, and intervention-strength tests. This can increase GPU memory use, storage requirements, and runtime quickly.
+
+**Plan:**  
+The team is currently considering an AWS `g5.xlarge` setup with one A10G GPU as the starting configuration. Under that setup, Gemma 3 4B IT is the practical model to pilot first. We will measure actual GPU memory, runtime, prompt length, and activation-storage requirements instead of relying only on estimates.
+
+If larger-memory GPU access is available, we can test Gemma 3 12B IT using the same pipeline. The full run size will only be decided after the pilot shows what the available compute can handle reliably.
+
+---
+
+### 12. Replay stability during causal intervention
+
+**Issue:**  
+Objective 4 requires us to rerun Solver Attempt 2 and then change an internal feature. If an unmodified replay already produces a different answer from the stored interaction, it becomes harder to say that a later difference was caused by our intervention.
+
+**Plan:**  
+We will use fixed generation settings, fixed seeds where applicable, and pinned model/library versions. An unmodified replay is expected to reproduce the stored behavior under the frozen setup. Any replay mismatch will be flagged and investigated rather than automatically treated as a valid intervention result.
+
+---
+
+### 13. Version and configuration drift
+
+**Issue:**  
+Model checkpoints, SAE releases, Python libraries, prompts, and dataset versions can change during the semester. Small changes could make later experiments difficult to compare with earlier ones.
+
+**Plan:**  
+Once the technical pilot is complete, we will pin the tested software versions and record the model revision, SAE configuration, dataset version, prompts, generation settings, random seeds, and code version used for each experiment.
+
+---
+
+### Open Questions to Resolve During the Pilot
+
+The following decisions are intentionally being left open until we have tested the system:
+
+1. Which GPU resources will be available for the main experiment?
+2. Which Gemma 3 model size will be used for the final experiment?
+3. Which Gemma Scope 2 SAE release and configuration will be used?
+4. Which model layer and activation site will be analyzed?
+5. Which token position or aggregation rule will be used for aligned activation comparisons?
+6. Which framework will be used for activation extraction and intervention?
+7. What final rule will be used to label feedback acceptance in ambiguous cases?
+8. What exact structured output will be required from the Critic?
+9. How will plausible incorrect answers be generated for the Controlled Incorrect condition?
+10. How will MuSiQue questions be grouped or filtered when creating the experimental splits?
+11. How much activation data and storage will be needed for the interaction-specific SAE?
+12. At what point in Solver Attempt 2 will the causal intervention be applied, and what intervention strengths will be tested?
+
+---
+
+### Risk Mitigation Timeline
+
+- **Technical pilot:** Test the proposed Gemma 3 / Gemma Scope 2 setup, measure compute use, verify activation extraction, check Natural-Critic behavior, and test the initial feedback-labeling approach.
+- **System integration:** Verify activation storage, SAE reconstruction, Solver replay, and a small end-to-end activation-intervention test.
+- **Before full data generation:** Freeze the model configuration, prompts, Critic conditions, data splits, activation policy, and experiment run plan.
+- **SAE and probe stages:** Monitor SAE quality, probe stability, held-out performance, and feature-selection leakage.
+- **Causal stage:** Run the selected-feature interventions together with the no-intervention, reconstruction-only, and random-feature controls.
+- **Final analysis:** Report positive, negative, inconsistent, and inconclusive results, and document the final configuration needed to reproduce the experiments.
