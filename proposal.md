@@ -28,7 +28,9 @@ The project will study this question using a controlled Solver-Critic system. Th
 
 Candidate SAE features identified by the predictive analysis will then be directly manipulated during subsequent Solver forward passes. If manipulating a feature systematically changes whether the Solver accepts or rejects critic feedback, this provides evidence that the feature is not merely correlated with feedback uptake but is causally involved in the mechanism.
 
-A secondary objective is to compare a **general pretrained SAE** against an **interaction-specific SAE trained on activations collected during Solver-Critic interactions**. This tests whether an SAE trained specifically on the activation distribution produced during feedback processing better isolates features associated with feedback uptake.
+A secondary objective is to compare a **general pretrained SAE** against an **interaction-specific SAE trained on activations collected during Solver-Critic interactions**. This tests whether an SAE trained specifically on the activation distribution produced during feedback processing better isolates features associated with feedback uptake. 
+
+![SAE-MAS Experimental Pipeline](documents/final_capstone_diagram.drawio.png)
 
 ### Key Objectives:
 
