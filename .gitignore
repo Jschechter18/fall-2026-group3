@@ -1,6 +1,5 @@
 # Data
-/data
-/data*
+/data/
 
 # vsCode
 .vscode
@@ -27,7 +26,20 @@ htmlcov/
 .ipynb_checkpoints/
 
 # Figures
-figs/
+# figs/
 
 # os stuff
 .DS_Store
+
+# Downloads
+/checkpoints
+/downloads
+
+# Coding agent helpers
+/.agents
+/.agents/skills
+
+# Python packaging artifacts
+*.egg-info/
+build/
+dist/

@@ -7,8 +7,8 @@ Master's Data Science Capstone project.
 ### 1. Clone the Repository
 
 ```bash
-git clone <fall-2026-group3>
-cd <fall-2026-group3>
+git clone <fall-2026-group3-repo-url>
+cd fall-2026-group3
 ```
 
 ### 2. Install Conda
@@ -33,6 +33,12 @@ This will create the `capstone` environment with the appropriate Python version 
 
 ```bash
 conda activate capstone
+```
+
+### 5. Install the project
+
+```bash
+python -m pip install -e .
 ```
 
 Verify that the environment is using Python 3.11:
@@ -61,12 +67,27 @@ This installs new dependencies and removes dependencies that are no longer speci
 
 ```text
 .
-├── environment.yml       # Conda environment and dependencies
-├── README.md             # Project documentation
-├── data/                 # Project datasets
-├── notebookc/            # Exploratory analysis and experiments
-├── Code/src                  # Source code
-└── results/              # Experimental outputs and results
+├── cookbooks/                    # Jupyter notebooks and tutorials
+├── data/                         # Downloaded project datasets
+├── demo/                         # Demonstrations and demo figures
+├── documents/                    # Supporting project documents and references
+├── presentation/                 # Presentation materials
+├── reports/                      # Project and progress reports
+├── research_paper/               # Research paper source and materials
+├── results/                      # Experimental outputs and results
+├── scripts/                      # Executable Python entry-point scripts
+├── src/
+│   ├── mas_sae/                 # Reusable Python package
+│   │   ├── agents/              # Solver and critic agent logic
+│   │   ├── data/                # Dataset loading and processing
+│   │   ├── evaluation/          # Evaluation functions and metrics
+│   │   ├── models/              # Language-model loading and interaction
+│   │   └── sae/                 # Sparse-autoencoder functionality
+│   └── tests/                   # Unit and integration tests
+├── environment.yml               # Conda environment and dependencies
+├── pyproject.toml                # Python package configuration
+├── pytest.ini                    # Pytest configuration
+└── README.md                     # Setup and project documentation
 ```
 
 The project structure may change as development progresses.
@@ -93,12 +114,16 @@ python -m ipykernel install --user \
 
 ## Data Collection
 
-Before continuing with development or using the repo, make sure to run the data collection script to ensure you have the data in the repo.
-
-After activating the codna environment, and before using the code, run the following:
+After activating the Conda environment and installing the project, run the following command from the repository root:
 
 ```bash
-python get_MuSiQue_dataset.py
+python scripts/get_musique_dataset.py
 ```
 
-If using
+## Testing
+
+After activating the Conda environment and installing the project, run:
+
+```bash
+pytest
+```
