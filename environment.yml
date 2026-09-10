@@ -5,11 +5,18 @@ channels:
 
 dependencies:
   - python=3.11
+  - numpy
   - pandas
+  - scipy
+  - scikit-learn
   - pytest
   - matplotlib
   - seaborn
   - ipykernel
   - pip
   - pip:
-      - datasets
+      - torch==2.14.0
+      - datasets>=3.1
+      - transformers>=5.4,<6
+      - accelerate>=0.23
+      - sae-lens==6.49.1
