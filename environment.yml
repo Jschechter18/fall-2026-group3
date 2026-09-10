@@ -13,9 +13,9 @@ dependencies:
   - matplotlib
   - seaborn
   - ipykernel
+  - pytorch=2.13
   - pip
   - pip:
-      - torch==2.14.0
       - datasets>=3.1
       - transformers>=5.4,<6
       - accelerate>=0.23
