@@ -26,7 +26,7 @@ htmlcov/
 .ipynb_checkpoints/
 
 # Figures
-# figs/
+demo/figs/
 
 # os stuff
 .DS_Store

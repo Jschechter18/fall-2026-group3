@@ -7,7 +7,7 @@ Master's Data Science Capstone project.
 ### 1. Clone the Repository
 
 ```bash
-git clone <fall-2026-group3-repo-url>
+git clone <git@github.com:Jschechter18/fall-2026-group3.git>
 cd fall-2026-group3
 ```
 
