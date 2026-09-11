@@ -31,10 +31,13 @@ def test_activation_dataset_loads_from_configured_store(
 ) -> None:
     store_constructor, store = mocked_activation_store
 
-    dataset = ActivationDataset(location="s3://test-bucket/activations")
+    dataset = ActivationDataset(
+        split="discovery",
+        location="s3://test-bucket/activations",
+    )
 
     store_constructor.assert_called_once_with("s3://test-bucket/activations")
-    store.load_activations.assert_called_once_with()
+    store.load_activations.assert_called_once_with("discovery")
     assert dataset.activations is activations
 
 
@@ -42,7 +45,7 @@ def test_activation_dataset_length_is_number_of_activation_vectors(
     mocked_activation_store: tuple[Mock, Mock],
     activations: torch.Tensor,
 ) -> None:
-    dataset = ActivationDataset(location="test-location")
+    dataset = ActivationDataset(split="discovery", location="test-location")
 
     assert len(dataset) == activations.shape[0]
 
@@ -51,7 +54,7 @@ def test_activation_dataset_returns_activation_at_requested_index(
     mocked_activation_store: tuple[Mock, Mock],
     activations: torch.Tensor,
 ) -> None:
-    dataset = ActivationDataset(location="test-location")
+    dataset = ActivationDataset(split="discovery", location="test-location")
 
     assert torch.equal(dataset[2], activations[2])
 
@@ -63,11 +66,27 @@ def test_create_sae_dataloader_uses_requested_location(
 
     create_sae_dataloader(
         batch_size=2,
+        split="discovery",
         num_workers=0,
         location="s3://test-bucket/activations",
     )
 
     store_constructor.assert_called_once_with("s3://test-bucket/activations")
+
+
+def test_create_sae_dataloader_uses_default_location_when_location_is_none(
+    mocked_activation_store: tuple[Mock, Mock],
+) -> None:
+    store_constructor, _ = mocked_activation_store
+
+    create_sae_dataloader(
+        batch_size=2,
+        split="discovery",
+        num_workers=0,
+        location=None,
+    )
+
+    store_constructor.assert_called_once_with("s3://bucket")
 
 
 def test_create_sae_dataloader_configures_batching_and_preserves_order(
@@ -76,6 +95,7 @@ def test_create_sae_dataloader_configures_batching_and_preserves_order(
 ) -> None:
     loader = create_sae_dataloader(
         batch_size=2,
+        split="discovery",
         num_workers=0,
         shuffle=False,
     )
@@ -96,6 +116,7 @@ def test_create_sae_dataloader_uses_random_sampler_when_shuffling(
 ) -> None:
     loader = create_sae_dataloader(
         batch_size=2,
+        split="discovery",
         num_workers=0,
         shuffle=True,
     )

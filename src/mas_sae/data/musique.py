@@ -5,7 +5,8 @@ from pathlib import Path
 from datasets import load_dataset
 
 def download_musique(output_dir: Path) -> tuple[Path, Path]:
-    """Helper function to download MuSiQue dataset.
+    """Helper function to download MuSiQue dataset. This dataset is currently a community maintained one from huggingface. We will use this for the smoke test, but load
+    from the actual source after early development.
 
     Parameters
     ----------
