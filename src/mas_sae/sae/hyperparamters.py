@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 @dataclass
 class Hyperparameters:
-    epochs = 2
+    epochs = 10
     
     input_dim = 4
     hidden_dim = 8

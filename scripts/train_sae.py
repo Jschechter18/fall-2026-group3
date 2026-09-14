@@ -6,7 +6,7 @@ from mas_sae.sae.dataloader import create_sae_dataloader
 from mas_sae.sae.model_runner import ModelRunner
 
 
-    
+
 
 def main():
     hp = HP()
@@ -24,6 +24,7 @@ def main():
         train_loss = runner.train_epoch(train_dataloader)
         val_loss = runner.val_epoch(val_dataloader)
         print(f"Epoch {epoch+1}/{hp.epochs} - Train Loss: {train_loss:.4f} - Val Loss: {val_loss:.4f}")
+
     test_loss = runner.test(test_dataloader)
     print(f"Test Loss: {test_loss:.4f}")
     
