@@ -3,7 +3,7 @@ TODO: ISRAEL -> this store must be implemented in order for the SAE to ever get 
 
 I created this as a placeholder for now. This should be replaced though
 """
-
+import warnings
 import torch
 
 class ActivationStore:
@@ -13,6 +13,9 @@ class ActivationStore:
         # you also are going to want to cache these activations somewhere. this should be a good task for you
     
     def load_activations(self, split: str) -> torch.Tensor:
+        
+        warnings.warn("Loading activations from a placeholder store. This returns random activations for now.")
+        
         num_activation_vectors = 2 # this will be how many 
         input_dims = 4 # this will be the dimensionality of each activation vector, right now it is hardcoded, but you may actually need to determine this dynamically based on the data
         return torch.rand(num_activation_vectors, input_dims)
