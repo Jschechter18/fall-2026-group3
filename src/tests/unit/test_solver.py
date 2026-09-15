@@ -143,3 +143,48 @@ def test_custom_max_new_tokens_is_respected():
     )
 
     assert model.generate.call_args.kwargs["max_new_tokens"] == 64
+
+
+def test_build_revise_prompt_contains_original_answer_and_feedback():
+    solver, _, _ = make_solver()
+
+    prompt = solver.build_revise_prompt(
+        question="What city is the capital of France?",
+        paragraphs=[
+            {
+                "idx": 0,
+                "title": "France",
+                "paragraph_text": "Paris is the capital of France.",
+            }
+        ],
+        previous_answer="Lyon",
+        feedback="The answer should be Paris.",
+    )
+
+    assert "Previous answer: Lyon" in prompt
+    assert "Reviewer feedback: The answer should be Paris." in prompt
+    assert prompt.endswith("Final answer:")
+
+
+def test_revise_uses_revision_prompt():
+    solver, _, processor = make_solver()
+
+    solver.revise(
+        question="What city is the capital of France?",
+        paragraphs=[
+            {
+                "idx": 0,
+                "title": "France",
+                "paragraph_text": "Paris is the capital of France.",
+            }
+        ],
+        previous_answer="Lyon",
+        feedback="The answer should be Paris.",
+    )
+
+    messages = processor.apply_chat_template.call_args.args[0]
+    text = messages[0]["content"][0]["text"]
+
+    assert "Previous answer: Lyon" in text
+    assert "Reviewer feedback: The answer should be Paris." in text
+    assert text.endswith("Final answer:")

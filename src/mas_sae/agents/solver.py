@@ -1,25 +1,12 @@
-from typing import Any, Protocol
+from __future__ import annotations
 
-import torch
+from typing import Any
 
-
-class ProcessorProtocol(Protocol):
-    """Processor interface required by the Solver."""
-
-    def apply_chat_template(self, *args: Any, **kwargs: Any) -> Any:
-        ...
-
-    def decode(
-        self,
-        token_ids: Any,
-        *,
-        skip_special_tokens: bool = False,
-    ) -> str:
-        ...
+from mas_sae.agents.base import Agent
 
 
-class Solver:
-    """Generate answers to questions from provided context paragraphs."""
+class Solver(Agent):
+    """Generate and revise answers using provided context paragraphs."""
 
     SOLVE_PROMPT_V1 = (
         "Answer the question using only the paragraphs provided.\n"
@@ -29,24 +16,28 @@ class Solver:
         "Answer:"
     )
 
-    def __init__(
-        self,
-        model: Any,
-        processor: ProcessorProtocol,
-        *,
-        max_new_tokens: int = 32,
-    ) -> None:
-        self.model = model
-        self.processor = processor
-        self.max_new_tokens = max_new_tokens
+    REVISE_PROMPT_V1 = (
+        "You previously answered a question using only the paragraphs provided.\n"
+        "A reviewer has now given feedback about your answer.\n"
+        "Consider the feedback carefully. You may keep your original answer "
+        "or change it.\n"
+        "Respond with the final answer only, no explanation.\n\n"
+        "{paragraphs}\n\n"
+        "Question: {question}\n"
+        "Previous answer: {previous_answer}\n"
+        "Reviewer feedback: {feedback}\n"
+        "Final answer:"
+    )
 
     @staticmethod
     def format_paragraphs(
         paragraphs: list[dict[str, Any]],
     ) -> str:
         return "\n\n".join(
-            f"[{p['idx']}] {p['title']}: {p['paragraph_text']}"
-            for p in paragraphs
+            f"[{paragraph['idx']}] "
+            f"{paragraph['title']}: "
+            f"{paragraph['paragraph_text']}"
+            for paragraph in paragraphs
         )
 
     def build_prompt(
@@ -61,45 +52,43 @@ class Solver:
             question=question,
         )
 
+    def build_revise_prompt(
+        self,
+        question: str,
+        paragraphs: list[dict[str, Any]],
+        previous_answer: str,
+        feedback: str,
+    ) -> str:
+        context = self.format_paragraphs(paragraphs)
+
+        return self.REVISE_PROMPT_V1.format(
+            paragraphs=context,
+            question=question,
+            previous_answer=previous_answer,
+            feedback=feedback,
+        )
+
     def solve(
         self,
         question: str,
         paragraphs: list[dict[str, Any]],
     ) -> str:
-        prompt = self.build_prompt(question, paragraphs)
-        return self._generate(prompt)
+        return self._generate(
+            self.build_prompt(question, paragraphs)
+        )
 
-    def _generate(self, prompt: str) -> str:
-        messages = [
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": prompt,
-                    }
-                ],
-            }
-        ]
-
-        inputs = self.processor.apply_chat_template(
-            messages,
-            add_generation_prompt=True,
-            tokenize=True,
-            return_dict=True,
-            return_tensors="pt",
-        ).to(self.model.device)
-
-        prompt_tokens = inputs["input_ids"].shape[-1]
-
-        with torch.inference_mode():
-            output = self.model.generate(
-                **inputs,
-                max_new_tokens=self.max_new_tokens,
-                do_sample=False,
+    def revise(
+        self,
+        question: str,
+        paragraphs: list[dict[str, Any]],
+        previous_answer: str,
+        feedback: str,
+    ) -> str:
+        return self._generate(
+            self.build_revise_prompt(
+                question,
+                paragraphs,
+                previous_answer,
+                feedback,
             )
-
-        return self.processor.decode(
-            output[0][prompt_tokens:],
-            skip_special_tokens=True,
-        ).strip()
+        )
