@@ -1,0 +1,30 @@
+{
+  "candidate_features": [
+    2,
+    15,
+    7
+  ],
+  "no_intervention_baseline": "predictions on original latents, used as the reference for all flip rates",
+  "reconstruction_only_flip_rate": 0.5,
+  "features": {
+    "2": {
+      "suppress_flip_rate": 0.5,
+      "amplify_flip_rate": 0.48
+    },
+    "15": {
+      "suppress_flip_rate": 0.47,
+      "amplify_flip_rate": 0.48
+    },
+    "7": {
+      "suppress_flip_rate": 0.51,
+      "amplify_flip_rate": 0.49
+    }
+  },
+  "random_control_dims": [
+    29,
+    6,
+    42,
+    48
+  ],
+  "random_control_mean_flip_rate": 0.4975
+}
