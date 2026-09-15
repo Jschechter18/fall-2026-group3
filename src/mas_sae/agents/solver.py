@@ -1,6 +1,21 @@
-from typing import Any
+from typing import Any, Protocol
 
 import torch
+
+
+class ProcessorProtocol(Protocol):
+    """Processor interface required by the Solver."""
+
+    def apply_chat_template(self, *args: Any, **kwargs: Any) -> Any:
+        ...
+
+    def decode(
+        self,
+        token_ids: Any,
+        *,
+        skip_special_tokens: bool = False,
+    ) -> str:
+        ...
 
 
 class Solver:
@@ -17,7 +32,7 @@ class Solver:
     def __init__(
         self,
         model: Any,
-        processor: Any,
+        processor: ProcessorProtocol,
         *,
         max_new_tokens: int = 32,
     ) -> None:

@@ -2,7 +2,7 @@ from unittest.mock import Mock
 
 import torch
 
-from mas_sae.agents import Solver
+from mas_sae.agents.solver import Solver
 
 
 class FakeInputs(dict):
