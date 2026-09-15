@@ -1,27 +1,67 @@
-"""
-TODO: ISRAEL -> this store must be implemented in order for the SAE to ever get access to the data. The implementation details are up to you. This is really just meant to be an API
-
-I created this as a placeholder for now. This should be replaced though
-"""
-import warnings
+from pathlib import Path
 
 import torch
 
 
 class ActivationStore:
+    """Persist and load activation matrices by dataset split."""
+
     def __init__(self, location: str):
-        self.store_location = location # this is likely going to just be a web address to an S3 bucket. We won't use a database, we just need persistent storage
-        
-        # you also are going to want to cache these activations somewhere. this should be a good task for you
-    
-    def load_activations(self, split: str) -> torch.Tensor:
-        warnings.warn(
-            "Loading activations from a placeholder store. "
-            "This returns random activations for now.",
-            stacklevel=2,
+        self.store_location = location
+        self._is_s3 = location.startswith("s3://")
+
+        if not self._is_s3:
+            self._local_path = Path(location)
+
+    def _split_path(self, split: str) -> Path:
+        if self._is_s3:
+            raise NotImplementedError(
+                "S3 activation storage will be implemented separately."
+            )
+
+        return self._local_path / f"{split}.pt"
+
+    def save_activations(
+        self,
+        split: str,
+        activations: torch.Tensor,
+    ) -> None:
+        if activations.ndim != 2:
+            raise ValueError(
+                "Activations must be a 2-dimensional tensor "
+                "with shape (num_vectors, input_dim)."
+            )
+
+        path = self._split_path(split)
+        path.parent.mkdir(parents=True, exist_ok=True)
+
+        torch.save(
+            activations.detach().cpu(),
+            path,
         )
 
-        _ = split  # The placeholder does not distinguish dataset splits yet.
-        num_activation_vectors = 2 # this will be how many 
-        input_dims = 4 # this will be the dimensionality of each activation vector, right now it is hardcoded, but you may actually need to determine this dynamically based on the data
-        return torch.rand(num_activation_vectors, input_dims)
+    def load_activations(self, split: str) -> torch.Tensor:
+        path = self._split_path(split)
+
+        if not path.is_file():
+            raise FileNotFoundError(
+                f"No activations found for split {split!r} at {path}."
+            )
+
+        activations = torch.load(
+            path,
+            map_location="cpu",
+            weights_only=True,
+        )
+
+        if not isinstance(activations, torch.Tensor):
+            raise TypeError(
+                f"Stored activations for split {split!r} are not a tensor."
+            )
+
+        if activations.ndim != 2:
+            raise ValueError(
+                "Stored activations must be a 2-dimensional tensor."
+            )
+
+        return activations
