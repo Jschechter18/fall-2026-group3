@@ -7,20 +7,33 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
 
-def fit_probe(
+def train_val_split(
     X: np.ndarray,
     y: np.ndarray,
     test_size: float = 0.2,
     seed: int = 42,
+):
+    """Default random train/val split. Kept separate from fit_probe so callers
+    can substitute their own split (e.g. the discovery/validation/intervention
+    splits from the proposal) instead of always getting a fresh random one."""
+    return train_test_split(X, y, test_size=test_size, random_state=seed, stratify=y)
+
+
+def fit_probe(
+    X_train: np.ndarray,
+    y_train: np.ndarray,
+    X_val: np.ndarray,
+    y_val: np.ndarray,
+    seed: int = 42,
     C: float = 0.5,
 ):
-    """Split, standardize, and fit an L1-regularized logistic regression probe.
+    """Standardize and fit an L1-regularized logistic regression probe on an
+    already-split train/val set. Use train_val_split() above to get a default
+    random split, or pass in your own split (e.g. real discovery/validation
+    interactions) once that exists.
 
     Returns (probe, scaler, metrics, X_train_scaled, X_val_scaled, y_val).
     """
-    X_train, X_val, y_train, y_val = train_test_split(
-        X, y, test_size=test_size, random_state=seed, stratify=y
-    )
     scaler = StandardScaler().fit(X_train)
     X_train_s, X_val_s = scaler.transform(X_train), scaler.transform(X_val)
 
