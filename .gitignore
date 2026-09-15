@@ -43,3 +43,5 @@ demo/figs/
 *.egg-info/
 build/
 dist/
+# Generated activation tensors
+/data/activations/
