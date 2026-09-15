@@ -42,4 +42,6 @@ demo/figs/
 # Python packaging artifacts
 *.egg-info/
 build/
-dist/
+dist/ 
+
+logs/**/*.npy
