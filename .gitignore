@@ -44,4 +44,4 @@ demo/figs/
 build/
 dist/ 
 
-logs/
+logs/**/*.npy
