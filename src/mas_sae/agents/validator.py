@@ -16,14 +16,14 @@ class ValidatorVerdict:
 class Validator(Agent):
     """LLM-based secondary answer-equivalence judge."""
 
-    VALIDATE_PROMPT_V2 = (
+    VALIDATE_PROMPT = (
         "You are an exact answer-equivalence checker.\n"
         "Compare the candidate answer ONLY with the gold answer "
         "and accepted aliases.\n"
         "Do not solve the original question.\n"
         "Do not treat a related person, company, place, event, "
         "or concept as equivalent.\n"
-        "Reply YES only when the candidate refers to the same "
+        "Reply YES only if the candidate refers to the same "
         "entity or value as the gold answer or an accepted alias.\n"
         "Otherwise reply NO.\n"
         "Reply with one word only: YES or NO.\n\n"
@@ -53,9 +53,6 @@ class Validator(Agent):
         aliases: Iterable[str],
         candidate: str,
     ) -> str:
-        # Preserve the public API while intentionally excluding the
-        # question from the prompt. The Validator should compare
-        # answers, not attempt to solve the question itself.
         _ = question
 
         if isinstance(aliases, str):
@@ -63,7 +60,7 @@ class Validator(Agent):
 
         alias_text = ", ".join(aliases) or "none"
 
-        return self.VALIDATE_PROMPT_V2.format(
+        return self.VALIDATE_PROMPT.format(
             gold_answer=gold_answer,
             aliases=alias_text,
             candidate=candidate,
