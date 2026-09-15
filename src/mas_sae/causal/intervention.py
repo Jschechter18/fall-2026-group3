@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 import torch
 
-from mas_sae.probe.model import fit_probe
+from mas_sae.probe.model import fit_probe, train_val_split
 from mas_sae.sae.sparse_autoencoder import SparseAutoencoder
 
 
@@ -59,7 +59,8 @@ def run_causal_experiment(
     ready to be logged as JSON."""
     rng = np.random.default_rng(seed)
 
-    probe, scaler, _, _, X_val, _ = fit_probe(sparse_features, labels, seed=seed)
+    X_train, X_val, y_train, y_val = train_val_split(sparse_features, labels, seed=seed)
+    probe, scaler, _, _, X_val, _ = fit_probe(X_train, y_train, X_val, y_val, seed=seed)
 
     baseline_preds = probe.predict(scaler.transform(X_val))  # no-intervention replay
 
