@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import ExitStack
 from typing import Any
 
 import torch
@@ -45,7 +46,7 @@ class ActivationCapture:
         _ = module, inputs
 
         # generate() calls decoder layers repeatedly.
-        # Keep only the first call, which is the prompt/prefill pass.
+        # Keep only the first call: the prompt/prefill pass.
         if self.activation is not None:
             return
 
@@ -57,8 +58,8 @@ class ActivationCapture:
                 "(batch, sequence, hidden_dim)."
             )
 
-        # One activation vector per example:
-        # representation at the final prompt token.
+        # Keep one activation per example:
+        # the final prompt-token representation.
         self.activation = (
             hidden[:, -1, :]
             .detach()
@@ -74,6 +75,7 @@ class ActivationCapture:
             )
 
         self.activation = None
+
         self._handle = modules[
             self.module_name
         ].register_forward_hook(self._hook)
@@ -89,3 +91,57 @@ class ActivationCapture:
         if self._handle is not None:
             self._handle.remove()
             self._handle = None
+
+
+class MultiSiteCapture:
+    """Capture several activation sites during one model forward pass."""
+
+    def __init__(
+        self,
+        model: nn.Module,
+        module_names: list[str],
+    ) -> None:
+        if not module_names:
+            raise ValueError(
+                "module_names must contain at least one module."
+            )
+
+        self._captures = [
+            ActivationCapture(model, module_name)
+            for module_name in module_names
+        ]
+
+        self._stack: ExitStack | None = None
+
+    def __enter__(self) -> "MultiSiteCapture":
+        self._stack = ExitStack()
+
+        for capture in self._captures:
+            self._stack.enter_context(capture)
+
+        return self
+
+    def __exit__(
+        self,
+        exc_type: Any,
+        exc_value: Any,
+        traceback: Any,
+    ) -> None:
+        if self._stack is not None:
+            self._stack.close()
+            self._stack = None
+
+    @property
+    def activations(self) -> dict[str, torch.Tensor]:
+        result: dict[str, torch.Tensor] = {}
+
+        for capture in self._captures:
+            if capture.activation is None:
+                raise RuntimeError(
+                    f"No activation was captured for "
+                    f"{capture.module_name!r}."
+                )
+
+            result[capture.module_name] = capture.activation
+
+        return result
