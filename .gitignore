@@ -42,6 +42,10 @@ demo/figs/
 # Python packaging artifacts
 *.egg-info/
 build/
-dist/ 
+dist/
 
+# Probe artifacts
 logs/**/*.npy
+
+# Generated activation tensors
+/data/activations/

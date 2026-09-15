@@ -20,5 +20,6 @@ dependencies:
       - transformers>=5.4,<6
       - accelerate>=0.23
       - sae-lens==6.49.1
-      - shap 
+      - shap
       - lime
+      - boto3>=1.35,<2
