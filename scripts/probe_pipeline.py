@@ -26,7 +26,7 @@ from mas_sae.probe.model import fit_probe
 # ---------------------------------------------------------------------------
 SEED = 42
 N_SAMPLES = 500
-INPUT_DIM = 64      # placeholder, matches current hyperparamters.py
+INPUT_DIM = 64      # synthetic smoke-test dimension, not tied to hyperparamters.py
 LATENT_DIM = 64
 HIDDEN_DIM = 8
 SIGNAL_DIMS = [2, 7, 15]   # latent dims we bake ground-truth signal into

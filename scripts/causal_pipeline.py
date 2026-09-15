@@ -34,7 +34,7 @@ from mas_sae.sae.sparse_autoencoder import SparseAutoencoder
 # Config
 # ---------------------------------------------------------------------------
 SEED = 42
-INPUT_DIM = 64
+INPUT_DIM = 64 #synthetic smoke-test dimension, not tied to hyperparamters.py
 LATENT_DIM = 64
 HIDDEN_DIM = 8
 N_CANDIDATE_FEATURES = 3   # how many top features (from probe_pipeline.py) to test causally
