@@ -19,14 +19,14 @@ import numpy as np
 
 from mas_sae.probe.data import make_sample_labels, make_sample_sae_features
 from mas_sae.probe.interpretability import run_lime, run_shap, top_features_by_mean_abs_shap
-from mas_sae.probe.model import fit_probe
+from mas_sae.probe.model import fit_probe, train_val_split
 
 # ---------------------------------------------------------------------------
 # Config
 # ---------------------------------------------------------------------------
 SEED = 42
 N_SAMPLES = 500
-INPUT_DIM = 64      # placeholder, matches current hyperparamters.py
+INPUT_DIM = 64      #synthetic smoke-test dimension, not tied to hyperparamters.py
 LATENT_DIM = 64
 HIDDEN_DIM = 8
 SIGNAL_DIMS = [2, 7, 15]   # latent dims we bake ground-truth signal into
@@ -41,9 +41,10 @@ def main():
     )
     labels = make_sample_labels(sparse_features, SIGNAL_DIMS, seed=SEED)
 
+    X_train, X_val, y_train, y_val = train_val_split(sparse_features, labels, seed=SEED)
     probe, scaler, metrics, X_train_s, X_val_s, y_val = fit_probe(
-        sparse_features, labels, seed=SEED
-    )
+        X_train, y_train, X_val, y_val, seed=SEED
+    ) 
     print("Probe metrics:", metrics)
 
     shap_values = run_shap(probe, X_train_s, X_val_s)
