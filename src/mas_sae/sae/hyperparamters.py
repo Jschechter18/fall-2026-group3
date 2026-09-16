@@ -12,5 +12,8 @@ class Hyperparameters:
     hidden_dim: int = 8
     latent_dim: int = 64
     num_layers: int = 2
+    
+    patience: int = 10
+    lr_patience: int = 3
 
     sparsity_coefficient: float = 1e-3
