@@ -18,7 +18,7 @@ from mas_sae.sae.callbacks.early_stopping import EarlyStopping
 
 def main():
     PROJECT_ROOT = Path(__file__).resolve().parents[1]
-    results_root = PROJECT_ROOT / "results" / "sae"
+    results_root = PROJECT_ROOT / "results" / "sae" / "musique"
     subdirectories = ("checkpoints",)
     
     hp = HP()
