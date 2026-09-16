@@ -1,6 +1,6 @@
 import torch
 
-class CheckpointEvaluator:
+class CheckpointEvaluatorCallback:
     def __init__(self, checkpoint_dir):
         self.checkpoint_dir = checkpoint_dir
     

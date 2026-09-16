@@ -1,6 +1,6 @@
 
 
-class EarlyStopping:
+class EarlyStoppingCallback:
     def __init__(self, patience: int, min_delta: float=0.0):
         self.patience = patience
         self.min_delta = min_delta

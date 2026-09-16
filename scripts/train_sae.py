@@ -12,8 +12,8 @@ from mas_sae.sae.hyperparamters import Hyperparameters as HP
 from mas_sae.sae.sparse_autoencoder import SparseAutoencoder as SAE
 from mas_sae.sae.dataloader import create_sae_dataloader
 from mas_sae.sae.model_runner import ModelRunner
-from mas_sae.sae.callbacks.checkpointing import CheckpointEvaluator
-from mas_sae.sae.callbacks.early_stopping import EarlyStopping
+from mas_sae.sae.callbacks.checkpointing import CheckpointEvaluatorCallback
+from mas_sae.sae.callbacks.early_stopping import EarlyStoppingCallback
 
 
 def main():
@@ -37,13 +37,14 @@ def main():
         train_dataloader = create_sae_dataloader(hp.batch_size, split='train', num_workers=2)
         val_dataloader = create_sae_dataloader(hp.batch_size, split='val', num_workers=2)
         test_dataloader = create_sae_dataloader(hp.batch_size, split='test', num_workers=2)
+        
         optimizer = torch.optim.Adam(model.parameters(), lr=hp.lr)
         scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=hp.lr_patience, gamma=0.1)
         
         runner = ModelRunner(model, sparsity_coefficient=hp.sparsity_coefficient, optimizer=optimizer)
         
-        checkpoint_evaluator = CheckpointEvaluator(run_directory / "checkpoints")
-        early_stopping = EarlyStopping(hp.patience)
+        checkpoint_evaluator = CheckpointEvaluatorCallback(run_directory / "checkpoints")
+        early_stopping = EarlyStoppingCallback(hp.patience)
         
         best_loss = float('inf')
         for epoch in range(hp.epochs):
