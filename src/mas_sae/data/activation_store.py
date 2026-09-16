@@ -137,48 +137,47 @@ class ActivationStore:
         self,
         split: str,
     ) -> torch.Tensor:
-        return torch.rand(32, 4)  # Example shape (num_vectors, input_dim)
-        # if self._is_s3:
-        #     response = (
-        #         self._get_s3_client()
-        #         .get_object(
-        #             Bucket=self._bucket,
-        #             Key=self._s3_key(split),
-        #         )
-        #     )
+        if self._is_s3:
+            response = (
+                self._get_s3_client()
+                .get_object(
+                    Bucket=self._bucket,
+                    Key=self._s3_key(split),
+                )
+            )
 
-        #     activations = torch.load(
-        #         BytesIO(
-        #             response["Body"].read()
-        #         ),
-        #         map_location="cpu",
-        #         weights_only=True,
-        #     )
+            activations = torch.load(
+                BytesIO(
+                    response["Body"].read()
+                ),
+                map_location="cpu",
+                weights_only=True,
+            )
 
-        # else:
-        #     path = self._split_path(split)
+        else:
+            path = self._split_path(split)
 
-        #     if not path.is_file():
-        #         raise FileNotFoundError(
-        #             f"No activations found for split "
-        #             f"{split!r} at {path}."
-        #         )
+            if not path.is_file():
+                raise FileNotFoundError(
+                    f"No activations found for split "
+                    f"{split!r} at {path}."
+                )
 
-        #     activations = torch.load(
-        #         path,
-        #         map_location="cpu",
-        #         weights_only=True,
-        #     )
+            activations = torch.load(
+                path,
+                map_location="cpu",
+                weights_only=True,
+            )
 
-        # if not isinstance(
-        #     activations,
-        #     torch.Tensor,
-        # ):
-        #     raise TypeError(
-        #         f"Stored activations for split "
-        #         f"{split!r} are not a tensor."
-        #     )
+        if not isinstance(
+            activations,
+            torch.Tensor,
+        ):
+            raise TypeError(
+                f"Stored activations for split "
+                f"{split!r} are not a tensor."
+            )
 
-        # self._validate(activations)
+        self._validate(activations)
 
-        # return activations
+        return activations

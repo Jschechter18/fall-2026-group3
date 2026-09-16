@@ -22,24 +22,24 @@ def main():
     subdirectories = ("checkpoints",)
     
     hp = HP()
-
+    
     run_directory = create_sae_run_directory(
         run_name=f"sae-l{hp.latent_dim}",
         results_root=results_root,
         subdirectories=subdirectories,
     )
-
+    
     try:
         write_run_config(run_directory, asdict(hp))
-
+        
         model = SAE(input_dim=hp.input_dim, hidden_dim=hp.hidden_dim, latent_dim=hp.latent_dim)
-
+        
         train_dataloader = create_sae_dataloader(hp.batch_size, split='train', num_workers=2)
         val_dataloader = create_sae_dataloader(hp.batch_size, split='val', num_workers=2)
         test_dataloader = create_sae_dataloader(hp.batch_size, split='test', num_workers=2)
         optimizer = torch.optim.Adam(model.parameters(), lr=hp.lr)
         scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=hp.lr_patience, gamma=0.1)
-
+        
         runner = ModelRunner(model, sparsity_coefficient=hp.sparsity_coefficient, optimizer=optimizer)
         
         checkpoint_evaluator = CheckpointEvaluator(run_directory / "checkpoints")
@@ -58,7 +58,7 @@ def main():
             if early_stopping.on_validation_end(val_loss):
                 print(f"Early stopping after epoch {epoch+1}")
                 break
-
+        
         test_loss = runner.test(test_dataloader)
         print(f"Test Loss: {test_loss:.4f}")
     except (Exception, KeyboardInterrupt) as error:
@@ -68,8 +68,9 @@ def main():
             error_message=f"{type(error).__name__}: {error}",
         )
         raise
-
+    
     update_run_manifest(run_directory, status="completed")
-
+    
 if __name__ == "__main__":
     main()
+    
