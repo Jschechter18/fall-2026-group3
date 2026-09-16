@@ -36,11 +36,11 @@ def get_run_command() -> str:
     return shlex.join([sys.executable, *sys.argv])
 
 
-def _write_manifest(path: Path, manifest: dict[str, object]) -> None:
+def _write_json(path: Path, data: dict[str, object]) -> None:
     temporary_path = path.with_suffix(".json.tmp")
 
     with temporary_path.open("w", encoding="utf-8") as file:
-        json.dump(manifest, file, indent=2)
+        json.dump(data, file, indent=2)
         file.write("\n")
 
     temporary_path.replace(path)
@@ -77,9 +77,17 @@ def create_sae_run_directory(
         (run_directory / subdirectory).mkdir()
 
     manifest = build_manifest(run_id, run_name, timestamp)
-    _write_manifest(run_directory / "manifest.json", manifest)
+    _write_json(run_directory / "manifest.json", manifest)
 
     return run_directory
+
+
+def write_run_config(
+    run_directory: Path,
+    config: dict[str, object],
+) -> None:
+    """Write the resolved training configuration for a run."""
+    _write_json(run_directory / "config.json", config)
 
 
 def update_run_manifest(
@@ -96,4 +104,4 @@ def update_run_manifest(
     manifest["updated_at"] = utc_now().isoformat()
     manifest["error_message"] = error_message
 
-    _write_manifest(manifest_path, manifest)
+    _write_json(manifest_path, manifest)

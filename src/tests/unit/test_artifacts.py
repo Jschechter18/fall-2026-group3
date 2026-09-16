@@ -57,6 +57,21 @@ def test_get_run_command_quotes_arguments(monkeypatch) -> None:
     assert command == "/usr/bin/python scripts/train_sae.py --run-name 'test run'"
 
 
+def test_write_run_config(tmp_path) -> None:
+    run_directory = tmp_path / "run"
+    run_directory.mkdir()
+    config = {
+        "epochs": 10,
+        "batch_size": 32,
+        "learning_rate": 1e-3,
+    }
+
+    artifacts.write_run_config(run_directory, config)
+
+    saved_config = json.loads((run_directory / "config.json").read_text())
+    assert saved_config == config
+
+
 def test_update_run_manifest_records_completion(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(
         artifacts.subprocess,

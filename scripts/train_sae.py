@@ -1,3 +1,4 @@
+from dataclasses import asdict
 from pathlib import Path
 
 import torch
@@ -5,6 +6,7 @@ import torch
 from mas_sae.experiments.artifacts import (
     create_sae_run_directory,
     update_run_manifest,
+    write_run_config,
 )
 from mas_sae.sae.hyperparamters import Hyperparameters as HP
 from mas_sae.sae.sparse_autoencoder import SparseAutoencoder as SAE
@@ -24,15 +26,16 @@ def main():
         results_root=results_root,
         subdirectories=subdirectories,
     )
-    print(f"Run artifacts: {run_directory}")
 
     try:
+        write_run_config(run_directory, asdict(hp))
+
         model = SAE(input_dim=hp.input_dim, hidden_dim=hp.hidden_dim, latent_dim=hp.latent_dim)
 
-        train_dataloader = create_sae_dataloader(32, split='train', num_workers=2)
-        val_dataloader = create_sae_dataloader(32, split='val', num_workers=2)
-        test_dataloader = create_sae_dataloader(32, split='test', num_workers=2)
-        optimizer = torch.optim.Adam(model.parameters())
+        train_dataloader = create_sae_dataloader(hp.batch_size, split='train', num_workers=2)
+        val_dataloader = create_sae_dataloader(hp.batch_size, split='val', num_workers=2)
+        test_dataloader = create_sae_dataloader(hp.batch_size, split='test', num_workers=2)
+        optimizer = torch.optim.Adam(model.parameters(), lr=hp.lr)
 
         runner = ModelRunner(model, sparsity_coefficient=hp.sparsity_coefficient, optimizer=optimizer)
         for epoch in range(hp.epochs):
