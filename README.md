@@ -166,16 +166,21 @@ Activate the project environment:
 
 ```bash
 conda activate capstone
+```
 
 Then log in to Hugging Face:
 
+```
 hf auth login
+```
 
 Paste your Hugging Face token when prompted.
 
 Verify that authentication worked:
 
+```
 hf auth whoami
+```
 
 ### 5. Run the project
 
