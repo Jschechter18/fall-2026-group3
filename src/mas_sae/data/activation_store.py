@@ -1,42 +1,27 @@
 from __future__ import annotations
 
-from io import BytesIO
 from pathlib import Path
-from typing import Any
-from urllib.parse import urlparse
 
 import torch
 
 
 class ActivationStore:
-    """Persist and load activation matrices locally or from S3."""
+    """Persist and load 2-D activation matrices as <split>.pt files in a local directory."""
 
     def __init__(
         self,
-        location: str,
-        *,
-        s3_client: Any | None = None,
+        location: str | Path = "data/activations",
     ) -> None:
-        self.store_location = location
-        self._is_s3 = location.startswith("s3://")
-        self._s3_client = s3_client
+        location_str = str(location)
 
-        if self._is_s3:
-            parsed = urlparse(location)
-
-            if not parsed.netloc:
-                raise ValueError(
-                    "S3 location must contain a bucket name."
-                )
-
-            self._bucket = parsed.netloc
-            self._prefix = (
-                parsed.path
-                .lstrip("/")
-                .rstrip("/")
+        if location_str.startswith("s3://"):
+            raise ValueError(
+                "ActivationStore is local-only; pass a directory path "
+                "such as data/activations/<run>."
             )
-        else:
-            self._local_path = Path(location)
+
+        self.store_location = location_str
+        self._local_path = Path(location)
 
     @staticmethod
     def _validate(
@@ -60,36 +45,7 @@ class ActivationStore:
         self,
         split: str,
     ) -> Path:
-        if self._is_s3:
-            raise RuntimeError(
-                "_split_path is only for local storage."
-            )
-
         return self._local_path / f"{split}.pt"
-
-    def _s3_key(
-        self,
-        split: str,
-    ) -> str:
-        filename = f"{split}.pt"
-
-        if not self._prefix:
-            return filename
-
-        return f"{self._prefix}/{filename}"
-
-    def _get_s3_client(self):
-        if self._s3_client is None:
-            try:
-                import boto3
-            except ImportError as exc:
-                raise ImportError(
-                    "boto3 is required for S3 activation storage."
-                ) from exc
-
-            self._s3_client = boto3.client("s3")
-
-        return self._s3_client
 
     def save_activations(
         self,
@@ -103,23 +59,6 @@ class ActivationStore:
             .detach()
             .cpu()
         )
-
-        if self._is_s3:
-            buffer = BytesIO()
-
-            torch.save(
-                activations,
-                buffer,
-            )
-
-            buffer.seek(0)
-
-            self._get_s3_client().put_object(
-                Bucket=self._bucket,
-                Key=self._s3_key(split),
-                Body=buffer.getvalue(),
-            )
-            return
 
         path = self._split_path(split)
 
@@ -137,37 +76,19 @@ class ActivationStore:
         self,
         split: str,
     ) -> torch.Tensor:
-        if self._is_s3:
-            response = (
-                self._get_s3_client()
-                .get_object(
-                    Bucket=self._bucket,
-                    Key=self._s3_key(split),
-                )
+        path = self._split_path(split)
+
+        if not path.is_file():
+            raise FileNotFoundError(
+                f"No activations found for split "
+                f"{split!r} at {path}."
             )
 
-            activations = torch.load(
-                BytesIO(
-                    response["Body"].read()
-                ),
-                map_location="cpu",
-                weights_only=True,
-            )
-
-        else:
-            path = self._split_path(split)
-
-            if not path.is_file():
-                raise FileNotFoundError(
-                    f"No activations found for split "
-                    f"{split!r} at {path}."
-                )
-
-            activations = torch.load(
-                path,
-                map_location="cpu",
-                weights_only=True,
-            )
+        activations = torch.load(
+            path,
+            map_location="cpu",
+            weights_only=True,
+        )
 
         if not isinstance(
             activations,
