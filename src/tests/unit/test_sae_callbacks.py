@@ -4,8 +4,8 @@ import pytest
 import torch
 from torch import nn
 
-from mas_sae.sae.callbacks.checkpointing import CheckpointEvaluator
-from mas_sae.sae.callbacks.early_stopping import EarlyStopping
+from mas_sae.sae.callbacks.checkpointing import CheckpointEvaluatorCallback
+from mas_sae.sae.callbacks.early_stopping import EarlyStoppingCallback
 
 
 @pytest.fixture
@@ -35,7 +35,7 @@ def test_checkpoint_evaluator_saves_complete_loadable_checkpoint(
     model, optimizer, scheduler = training_components
     checkpoint_directory = tmp_path / "checkpoints"
     checkpoint_directory.mkdir()
-    evaluator = CheckpointEvaluator(checkpoint_directory)
+    evaluator = CheckpointEvaluatorCallback(checkpoint_directory)
 
     evaluator.on_validation_end(
         train_loss=0.6,
@@ -82,7 +82,7 @@ def test_checkpoint_evaluator_does_not_save_without_improvement(
     model, optimizer, scheduler = training_components
     checkpoint_directory = tmp_path / "checkpoints"
     checkpoint_directory.mkdir()
-    evaluator = CheckpointEvaluator(checkpoint_directory)
+    evaluator = CheckpointEvaluatorCallback(checkpoint_directory)
 
     evaluator.on_validation_end(
         train_loss=0.6,
@@ -105,7 +105,7 @@ def test_checkpoint_evaluator_preserves_best_checkpoint_when_loss_worsens(
     model, optimizer, scheduler = training_components
     checkpoint_directory = tmp_path / "checkpoints"
     checkpoint_directory.mkdir()
-    evaluator = CheckpointEvaluator(checkpoint_directory)
+    evaluator = CheckpointEvaluatorCallback(checkpoint_directory)
 
     evaluator.on_validation_end(
         train_loss=0.6,
@@ -138,7 +138,7 @@ def test_checkpoint_evaluator_preserves_best_checkpoint_when_loss_worsens(
 
 
 def test_early_stopping_stops_after_patience_consecutive_failures() -> None:
-    early_stopping = EarlyStopping(patience=2)
+    early_stopping = EarlyStoppingCallback(patience=2)
 
     assert early_stopping.on_validation_end(1.0) is False
     assert early_stopping.on_validation_end(1.1) is False
@@ -146,7 +146,7 @@ def test_early_stopping_stops_after_patience_consecutive_failures() -> None:
 
 
 def test_early_stopping_improvement_resets_failure_counter() -> None:
-    early_stopping = EarlyStopping(patience=2)
+    early_stopping = EarlyStoppingCallback(patience=2)
 
     assert early_stopping.on_validation_end(1.0) is False
     assert early_stopping.on_validation_end(1.1) is False
@@ -158,7 +158,7 @@ def test_early_stopping_improvement_resets_failure_counter() -> None:
 
 
 def test_early_stopping_requires_minimum_improvement() -> None:
-    early_stopping = EarlyStopping(patience=2, min_delta=0.1)
+    early_stopping = EarlyStoppingCallback(patience=2, min_delta=0.1)
 
     assert early_stopping.on_validation_end(1.0) is False
     assert early_stopping.on_validation_end(0.95) is False
