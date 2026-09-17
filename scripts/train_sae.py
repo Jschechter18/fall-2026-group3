@@ -7,6 +7,7 @@ from mas_sae.experiments.artifacts import (
     create_sae_run_directory,
     update_run_manifest,
     write_run_config,
+    write_run_history
 )
 from mas_sae.sae.hyperparamters import Hyperparameters as HP
 from mas_sae.sae.sparse_autoencoder import SparseAutoencoder as SAE
@@ -47,6 +48,7 @@ def main():
         early_stopping = EarlyStoppingCallback(hp.patience)
         
         best_loss = float('inf')
+        epoch_history = []
         for epoch in range(hp.epochs):
             train_loss = runner.train_epoch(train_dataloader)
             val_loss = runner.val_epoch(val_dataloader)
@@ -55,6 +57,8 @@ def main():
             scheduler.step()
             checkpoint_evaluator.on_validation_end(train_loss, val_loss, best_loss, epoch,
                                                    model, optimizer, scheduler, run_directory)
+            epoch_history.append({"epoch": epoch+1, "train_loss": train_loss, "val_loss": val_loss})
+            write_run_history(run_directory, epoch_history)
             
             if early_stopping.on_validation_end(val_loss):
                 print(f"Early stopping after epoch {epoch+1}")
@@ -62,6 +66,9 @@ def main():
         
         test_loss = runner.test(test_dataloader)
         print(f"Test Loss: {test_loss:.4f}")
+        
+        write_run_history(run_directory, epoch_history, test_loss=test_loss)
+        
     except (Exception, KeyboardInterrupt) as error:
         update_run_manifest(
             run_directory,

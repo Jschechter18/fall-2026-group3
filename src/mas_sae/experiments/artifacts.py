@@ -105,3 +105,12 @@ def update_run_manifest(
     manifest["error_message"] = error_message
 
     _write_json(manifest_path, manifest)
+
+
+def write_run_history(
+    run_directory: Path,
+    history: list[dict[str, object]],
+    test_loss: float | None = None
+) -> None:
+    """Write the training history for a run."""
+    _write_json(run_directory / "history.json", {"history": history, "test_loss": test_loss})
