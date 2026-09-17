@@ -127,3 +127,65 @@ After activating the Conda environment and installing the project, run:
 ```bash
 pytest
 ```
+
+## Gemma Model Access
+
+This project uses the Hugging Face model:
+
+`google/gemma-3-4b-it`
+
+Because Gemma is a gated model, each team member must request/accept access on Hugging Face before running the Solver-Critic pipeline.
+
+### 1. Create or log in to Hugging Face
+
+Go to:
+
+https://huggingface.co/
+
+### 2. Request/accept access to Gemma
+
+Open:
+
+https://huggingface.co/google/gemma-3-4b-it
+
+Accept the Gemma license/access requirements shown on the model page.
+
+### 3. Create a Hugging Face access token
+
+Go to:
+
+https://huggingface.co/settings/tokens
+
+Create a token with read access.
+
+Do not commit or share your Hugging Face token.
+
+### 4. Authenticate on the machine running the project
+
+Activate the project environment:
+
+```bash
+conda activate capstone
+```
+
+Then log in to Hugging Face:
+
+```
+hf auth login
+```
+
+Paste your Hugging Face token when prompted.
+
+Verify that authentication worked:
+
+```
+hf auth whoami
+```
+
+### 5. Run the project
+
+Once Gemma access and authentication are complete, the model will download automatically when the project calls load_gemma().
+
+The model is cached under:
+
+checkpoints/huggingface/

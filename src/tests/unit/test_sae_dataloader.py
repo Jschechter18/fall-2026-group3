@@ -33,10 +33,10 @@ def test_activation_dataset_loads_from_configured_store(
 
     dataset = ActivationDataset(
         split="discovery",
-        location="s3://test-bucket/activations",
+        location="data/activations/test",
     )
 
-    store_constructor.assert_called_once_with("s3://test-bucket/activations")
+    store_constructor.assert_called_once_with("data/activations/test")
     store.load_activations.assert_called_once_with("discovery")
     assert dataset.activations is activations
 
@@ -68,10 +68,10 @@ def test_create_sae_dataloader_uses_requested_location(
         batch_size=2,
         split="discovery",
         num_workers=0,
-        location="s3://test-bucket/activations",
+        location="data/activations/test",
     )
 
-    store_constructor.assert_called_once_with("s3://test-bucket/activations")
+    store_constructor.assert_called_once_with("data/activations/test")
 
 
 def test_create_sae_dataloader_uses_default_location_when_location_is_none(
@@ -86,7 +86,7 @@ def test_create_sae_dataloader_uses_default_location_when_location_is_none(
         location=None,
     )
 
-    store_constructor.assert_called_once_with("s3://bucket")
+    store_constructor.assert_called_once_with("data/activations")
 
 
 def test_create_sae_dataloader_configures_batching_and_preserves_order(
