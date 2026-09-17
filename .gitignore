@@ -49,3 +49,6 @@ logs/**/*.npy
 
 # Generated activation tensors
 /data/activations/
+
+# SAE training artifacts
+/results/sae/
