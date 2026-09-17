@@ -68,3 +68,38 @@ def test_save_rejects_non_matrix_activations(tmp_path):
             "discovery",
             torch.ones(2, 3, 4),
         )
+
+
+def test_s3_uri_is_rejected():
+    with pytest.raises(
+        ValueError,
+        match="local-only",
+    ):
+        ActivationStore(
+            "s3://bucket/activations"
+        )
+
+
+def test_accepts_path_object(tmp_path):
+    location = tmp_path / "activations"
+
+    store = ActivationStore(location)
+
+    expected = torch.arange(
+        12,
+        dtype=torch.float32,
+    ).reshape(4, 3)
+
+    store.save_activations(
+        "discovery",
+        expected,
+    )
+
+    actual = store.load_activations(
+        "discovery"
+    )
+
+    assert torch.equal(
+        actual,
+        expected,
+    )

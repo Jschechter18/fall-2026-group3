@@ -118,15 +118,6 @@ def main() -> None:
         required=True,
     )
 
-    parser.add_argument(
-        "--s3-uri",
-        default=None,
-        help=(
-            "Optional S3 base URI, for example "
-            "s3://bucket/mas-sae/issue14"
-        ),
-    )
-
     args = parser.parse_args()
 
     activation_root = (
@@ -310,7 +301,6 @@ def main() -> None:
     # =========================================================
 
     activation_shapes = {}
-    s3_locations = {}
 
     for site in CANDIDATE_SITES:
         slug = site_slug(site)
@@ -381,34 +371,6 @@ def main() -> None:
             ),
         }
 
-        # Optional S3 mirror.
-        if args.s3_uri:
-            site_uri = (
-                f"{args.s3_uri.rstrip('/')}/"
-                f"{args.run_name}/"
-                f"{slug}"
-            )
-
-            s3_store = ActivationStore(
-                site_uri
-            )
-
-            save_and_verify(
-                store=s3_store,
-                split="pilot_attempt1",
-                tensor=attempt1_tensor,
-            )
-
-            save_and_verify(
-                store=s3_store,
-                split="pilot_attempt2",
-                tensor=attempt2_tensor,
-            )
-
-            s3_locations[
-                slug
-            ] = site_uri
-
         print(
             slug,
             "Attempt1:",
@@ -472,12 +434,6 @@ def main() -> None:
         "rejected": rejected,
         "unlabeled_noncommittal": (
             noncommittal
-        ),
-        "s3_enabled": bool(
-            args.s3_uri
-        ),
-        "s3_locations": (
-            s3_locations
         ),
     }
 
