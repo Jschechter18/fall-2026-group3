@@ -1,27 +1,104 @@
-"""
-TODO: ISRAEL -> this store must be implemented in order for the SAE to ever get access to the data. The implementation details are up to you. This is really just meant to be an API
+from __future__ import annotations
 
-I created this as a placeholder for now. This should be replaced though
-"""
-import warnings
+from pathlib import Path
 
 import torch
 
 
 class ActivationStore:
-    def __init__(self, location: str):
-        self.store_location = location # this is likely going to just be a web address to an S3 bucket. We won't use a database, we just need persistent storage
-        
-        # you also are going to want to cache these activations somewhere. this should be a good task for you
-    
-    def load_activations(self, split: str) -> torch.Tensor:
-        warnings.warn(
-            "Loading activations from a placeholder store. "
-            "This returns random activations for now.",
-            stacklevel=2,
+    """Persist and load 2-D activation matrices as <split>.pt files in a local directory."""
+
+    def __init__(
+        self,
+        location: str | Path = "data/activations",
+    ) -> None:
+        location_str = str(location)
+
+        if location_str.startswith("s3://"):
+            raise ValueError(
+                "ActivationStore is local-only; pass a directory path "
+                "such as data/activations/<run>."
+            )
+
+        self.store_location = location_str
+        self._local_path = Path(location)
+
+    @staticmethod
+    def _validate(
+        activations: torch.Tensor,
+    ) -> None:
+        if not isinstance(
+            activations,
+            torch.Tensor,
+        ):
+            raise TypeError(
+                "Activations must be a torch.Tensor."
+            )
+
+        if activations.ndim != 2:
+            raise ValueError(
+                "Activations must be a 2-dimensional tensor "
+                "with shape (num_vectors, input_dim)."
+            )
+
+    def _split_path(
+        self,
+        split: str,
+    ) -> Path:
+        return self._local_path / f"{split}.pt"
+
+    def save_activations(
+        self,
+        split: str,
+        activations: torch.Tensor,
+    ) -> None:
+        self._validate(activations)
+
+        activations = (
+            activations
+            .detach()
+            .cpu()
         )
 
-        _ = split  # The placeholder does not distinguish dataset splits yet.
-        num_activation_vectors = 2 # this will be how many 
-        input_dims = 4 # this will be the dimensionality of each activation vector, right now it is hardcoded, but you may actually need to determine this dynamically based on the data
-        return torch.rand(num_activation_vectors, input_dims)
+        path = self._split_path(split)
+
+        path.parent.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+        torch.save(
+            activations,
+            path,
+        )
+
+    def load_activations(
+        self,
+        split: str,
+    ) -> torch.Tensor:
+        path = self._split_path(split)
+
+        if not path.is_file():
+            raise FileNotFoundError(
+                f"No activations found for split "
+                f"{split!r} at {path}."
+            )
+
+        activations = torch.load(
+            path,
+            map_location="cpu",
+            weights_only=True,
+        )
+
+        if not isinstance(
+            activations,
+            torch.Tensor,
+        ):
+            raise TypeError(
+                f"Stored activations for split "
+                f"{split!r} are not a tensor."
+            )
+
+        self._validate(activations)
+
+        return activations

@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import torch
 from torch.utils.data import Dataset, DataLoader
 
@@ -5,7 +7,11 @@ from mas_sae.data.activation_store import ActivationStore
 
 
 class ActivationDataset(Dataset):
-    def __init__(self, split: str, location: str = "s3://bucket"):
+    def __init__(
+        self,
+        split: str,
+        location: str | Path = "data/activations",
+    ):
         self.activation_store = ActivationStore(location)
         self.split = split
 
@@ -23,7 +29,7 @@ def create_sae_dataloader(
     split: str,
     num_workers: int,
     shuffle: bool = False,
-    location: str | None = None,
+    location: str | Path | None = None,
 ) -> DataLoader:
     """Dataloader helper function to construct and return the dataloader for any given split.
 
@@ -37,8 +43,10 @@ def create_sae_dataloader(
         Number of cpu cores to load the data.
     shuffle : bool, optional
         Whether to shuffle the dataset, by default False.
-    location : str | None, optional
-        Location of the activation store, by default None.
+    location : str | Path | None, optional
+        Directory containing <split>.pt, for example
+        data/activations/pilot_12q/layer_17.
+        Defaults to data/activations.
 
     Returns
     -------
