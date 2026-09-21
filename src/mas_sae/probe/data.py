@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+from pathlib import Path
+from typing import Any
+
 import numpy as np
 import torch
 
+from mas_sae.data.activation_store import ActivationStore
 from mas_sae.sae.sparse_autoencoder import SparseAutoencoder
 
 
@@ -39,3 +43,29 @@ def make_sample_labels(
     logit = logit - logit.mean()
     prob = 1 / (1 + np.exp(-logit))
     return (rng.random(sparse_features.shape[0]) < prob).astype(int)
+
+
+def load_acceptance_probe_data(
+    location: str | Path,
+    interactions: list[dict[str, Any]],
+    split: str = "pilot_attempt2",
+) -> tuple[np.ndarray, np.ndarray]:
+    """Load labeled Attempt 2 activations for the acceptance probe."""
+    activations = ActivationStore(location).load_activations(split)
+
+    indices = []
+    labels = []
+
+    for row in interactions:
+        label = row["solver_accepted_feedback"]
+
+        if label is None:
+            continue
+
+        indices.append(row["attempt2_activation_index"])
+        labels.append(int(label))
+
+    X = activations[indices].numpy()
+    y = np.asarray(labels, dtype=np.int64)
+
+    return X, y
