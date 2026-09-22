@@ -60,8 +60,48 @@ def run_causal_experiment(
 ) -> dict:
     """Full causal intervention experiment: no-intervention baseline,
     reconstruction-only control, targeted suppress/amplify per candidate
-    feature, and a matched random-feature control. Returns a results dict
-    ready to be logged as JSON."""
+    feature, and a matched random-feature control.
+
+    Args:
+        candidate_features: Latent feature indices to causally test (e.g. the
+            top-SHAP features from probe_pipeline.py). Each gets suppressed
+            (set to 0) and amplified (scaled up) independently, and both are
+            compared against a reconstruction-only baseline and a
+            matched-random-feature control.
+        sparse_features: SAE latent vectors for the full sample, shape
+            (n_samples, latent_dim). The same array probe_pipeline.py trained
+            its probe on.
+        labels: Binary solver_accepted_feedback labels, shape (n_samples,),
+            aligned row-for-row with sparse_features.
+        sae: A SparseAutoencoder instance (currently untrained, since no real
+            activation data has been wired in yet -- see issue #39). Its
+            .encoder()/.decoder() are used to re-encode and decode activations
+            during each intervention.
+        n_random_controls: How many features, drawn from outside
+            candidate_features, to use as the matched random-feature control.
+        amplify_scale: Multiplicative factor applied to a feature's value
+            under the "amplify" intervention (z * amplify_scale + amplify_shift).
+        amplify_shift: Additive shift applied under the "amplify" intervention.
+        seed: Random seed, used both for the train/val split inside this
+            function's probe refit and for choosing the random control dims.
+
+    Returns:
+        A dict with:
+            - "candidate_features": the input list, echoed back
+            - "reconstruction_only_flip_rate": float, fraction of validation
+              examples whose prediction changed after an encode/decode
+              round-trip with no feature modified
+            - "features": dict keyed by feature index (as str) -> {
+                  "suppress_flip_rate": float, "amplify_flip_rate": float }
+            - "random_control_dims": the feature indices chosen as the random
+              control
+            - "random_control_mean_flip_rate": float, mean flip rate across
+              the random control dims
+
+        This dict is written directly to
+        logs/causal_intervention_smoke_test/causal_intervention_results.json
+        by causal_pipeline.py.
+    """
     rng = np.random.default_rng(seed)
 
     X_train, X_val, y_train, y_val = train_val_split(sparse_features, labels, seed=seed)
