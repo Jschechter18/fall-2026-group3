@@ -38,6 +38,11 @@ def run_condition(
             z[:, feature_idx] = 0.0
         elif mode == "amplify":
             z[:, feature_idx] = z[:, feature_idx] * amplify_scale + amplify_shift
+        else:
+            raise ValueError(
+                f"feature_idx was provided but mode={mode!r} is not 'suppress' or "
+                "'amplify' -- a typo here would silently skip the intended intervention."
+            )
     with torch.no_grad():
         activation = sae.decoder(torch.from_numpy(z).float()).numpy()
     return downstream_decision(activation, sae, probe, scaler)
