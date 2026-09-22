@@ -120,6 +120,31 @@ After activating the Conda environment and installing the project, run the follo
 python scripts/get_musique_dataset.py
 ```
 
+## Activation Collection
+
+Activation collection is config-driven. Run from the repository root:
+
+    python scripts/collect_activations.py --config configs/collection_smoke_train.yaml
+
+Use the corresponding train or validation config for larger runs.
+
+Activation tensors are saved under:
+
+    data/activations/<run_name>/layer_<N>/
+
+Each source split produces:
+- <split>_attempt1.pt
+- <split>_attempt2.pt
+- <split>.pt
+
+<split>.pt is the SAE-facing tensor with Attempt 1 rows followed by Attempt 2 rows.
+
+Run metadata and reproducibility information are saved under:
+
+    results/collection/<run_name>/<split>/
+
+This directory contains interactions.jsonl, resolved_config.yaml, and summary.json.
+
 ## Testing
 
 After activating the Conda environment and installing the project, run:

@@ -1,0 +1,17 @@
+model:
+  id: google/gemma-3-4b-it
+
+dataset:
+  source_split: train
+  num_questions: 100
+
+collection:
+  layers:
+    - 8
+    - 17
+    - 25
+    - 33
+  seed: 42
+
+output:
+  run_name: scale_100q
