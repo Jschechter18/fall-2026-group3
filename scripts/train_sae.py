@@ -55,7 +55,7 @@ def main():
             
             scheduler.step()
             checkpoint_evaluator.on_validation_end(train_loss, val_loss, epoch,
-                                                   model, optimizer, scheduler, run_directory)
+                                                   model, optimizer, scheduler)
             epoch_history.append({"epoch": epoch+1, "train_loss": train_loss, "val_loss": val_loss})
             write_run_history(run_directory, epoch_history)
             
