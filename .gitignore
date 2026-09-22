@@ -52,3 +52,5 @@ logs/
 
 # SAE training artifacts
 /results/sae/
+
+/logs/
