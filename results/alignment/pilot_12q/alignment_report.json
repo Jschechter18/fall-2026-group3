@@ -1,0 +1,50 @@
+{
+  "status": "pass",
+  "questions": 12,
+  "episodes": 36,
+  "accepted": 19,
+  "rejected": 16,
+  "noncommittal": 1,
+  "layers": {
+    "8": {
+      "attempt1_shape": [
+        12,
+        2560
+      ],
+      "attempt2_shape": [
+        36,
+        2560
+      ]
+    },
+    "17": {
+      "attempt1_shape": [
+        12,
+        2560
+      ],
+      "attempt2_shape": [
+        36,
+        2560
+      ]
+    },
+    "25": {
+      "attempt1_shape": [
+        12,
+        2560
+      ],
+      "attempt2_shape": [
+        36,
+        2560
+      ]
+    },
+    "33": {
+      "attempt1_shape": [
+        12,
+        2560
+      ],
+      "attempt2_shape": [
+        36,
+        2560
+      ]
+    }
+  }
+}

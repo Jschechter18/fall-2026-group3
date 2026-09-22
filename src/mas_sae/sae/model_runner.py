@@ -15,7 +15,7 @@ class ModelRunner:
         self.sparsity_coefficient = sparsity_coefficient
         
         self.optimizer = optimizer
-        
+    
     
     def _loss_fn(self, reconstructed: torch.Tensor, batch: torch.Tensor, sparse_features: torch.Tensor):
         rec_loss = F.mse_loss(reconstructed, batch)
