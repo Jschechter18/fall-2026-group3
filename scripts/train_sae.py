@@ -69,12 +69,18 @@ def main():
         hp.input_dim = int(next(iter(train_dataloader)).shape[-1])
 
         write_run_config(run_directory, asdict(hp))
+        
+        device = torch.device(
+            "cuda" if torch.cuda.is_available()
+            else "mps" if torch.backends.mps.is_available()
+            else "cpu"
+        )
 
         model = SAE(
             input_dim=hp.input_dim,
             hidden_dim=hp.hidden_dim,
             latent_dim=hp.latent_dim,
-        )
+        ).to(device)
         
         optimizer = torch.optim.Adam(model.parameters(), lr=hp.lr)
         scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=hp.lr_patience, gamma=0.1)

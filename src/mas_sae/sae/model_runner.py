@@ -36,11 +36,12 @@ class ModelRunner:
         tuple[torch.Tensor, torch.Tensor, torch.Tensor]
             Returns tuple of loss, reconstructed activation, sparse_features
         """
-        activations = batch # batch.shape = (batch_size, input_size)
+        device = next(self.model.parameters()).device
+        activations = batch.to(device) # batch.shape = (batch_size, input_size)
         
         sparse_features, reconstructed = self.model(activations)
         
-        loss = self._loss_fn(reconstructed, batch, sparse_features)
+        loss = self._loss_fn(reconstructed, activations, sparse_features)
         
         return loss, reconstructed, sparse_features
     
@@ -126,4 +127,3 @@ class ModelRunner:
             The average loss over the epoch.
         """
         return self._run_epoch(dataloader)
-

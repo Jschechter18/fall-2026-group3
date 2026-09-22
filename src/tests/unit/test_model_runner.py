@@ -8,6 +8,7 @@ from torch.utils.data import DataLoader
 
 from mas_sae.sae import model_runner as model_runner_module
 from mas_sae.sae.model_runner import ModelRunner
+from mas_sae.sae.sparse_autoencoder import SparseAutoencoder
 
 
 class TrackingModel(nn.Module):
@@ -72,6 +73,7 @@ def test_common_passes_batch_to_model_and_returns_outputs() -> None:
     sparse_features = torch.randn(3, 6)
     reconstructed = torch.randn(3, 4)
     model = Mock(return_value=(sparse_features, reconstructed))
+    model.parameters.return_value = iter([nn.Parameter(torch.zeros(1))])
     runner = ModelRunner(model=model, sparsity_coefficient=0.1, optimizer=Mock())
 
     loss, returned_reconstruction, returned_features = runner._common(batch)
@@ -137,3 +139,26 @@ def test_evaluation_pipeline_disables_gradients_and_does_not_update_model(
     assert optimizer.step_calls == 0
     assert torch.equal(model.scale.detach(), initial_scale)
     assert loss == pytest.approx(sum(expected_batch_losses) / len(dataloader))
+
+
+@pytest.mark.parametrize("device", ["cpu", "cuda", "mps"])
+@pytest.mark.parametrize("runner_method", ["train_epoch", "val_epoch", "test"])
+def test_cpu_batches_run_on_model_device(device: str, runner_method: str) -> None:
+    if device == "cuda" and not torch.cuda.is_available():
+        pytest.skip("CUDA is unavailable")
+    if device == "mps" and not torch.backends.mps.is_available():
+        pytest.skip("MPS is unavailable")
+
+    model = SparseAutoencoder(input_dim=4, hidden_dim=8, latent_dim=6).to(device)
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
+    runner = ModelRunner(model, sparsity_coefficient=0.05, optimizer=optimizer)
+    activations = torch.randn(6, 4)
+    dataloader = DataLoader(activations, batch_size=2)
+    initial_weight = next(model.parameters()).detach().clone()
+
+    loss = getattr(runner, runner_method)(dataloader)
+
+    assert torch.isfinite(torch.tensor(loss))
+    assert activations.device.type == "cpu"
+    weight_changed = not torch.equal(initial_weight, next(model.parameters()).detach())
+    assert weight_changed == (runner_method == "train_epoch")
