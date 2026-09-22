@@ -1,10 +1,3 @@
-Note: Use Markdown Cheat Sheet download in the directory as needed.
-
-- Useful links
-  - https://github.com/im-luka/markdown-cheatsheet
-
----
-
 ## Date: Week 1 - 08 25 2026
 
 - Topics of discussion
