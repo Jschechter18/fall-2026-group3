@@ -7,6 +7,7 @@ name = "mas-sae"
 version = "0.1.0"
 requires-python = ">=3.11"
 dependencies = [
+    "PyYAML>=6.0,<7",
     "tqdm>=4.66,<5",
 ]
 

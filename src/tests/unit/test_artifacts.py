@@ -2,6 +2,8 @@ import json
 from datetime import datetime, timezone
 from types import SimpleNamespace
 
+import pytest
+
 from mas_sae.experiments import artifacts
 
 
@@ -110,3 +112,35 @@ def test_update_run_manifest_records_failure(tmp_path, monkeypatch) -> None:
     manifest = json.loads((run_directory / "manifest.json").read_text())
     assert manifest["status"] == "failed"
     assert manifest["error_message"] == "RuntimeError: training failed"
+
+
+def test_ensure_output_available_rejects_existing_path(tmp_path) -> None:
+    output_dir = tmp_path / "test_run" / "train"
+
+    artifacts.ensure_output_available(output_dir)
+
+    output_dir.mkdir(parents=True)
+
+    with pytest.raises(FileExistsError, match="Output already exists"):
+        artifacts.ensure_output_available(output_dir)
+
+
+def test_get_package_version(monkeypatch) -> None:
+    monkeypatch.setattr(
+        artifacts,
+        "version",
+        lambda package: f"{package}-version",
+    )
+
+    assert artifacts.get_package_version("torch") == "torch-version"
+
+
+def test_get_package_version_returns_unknown_when_missing(
+    monkeypatch,
+) -> None:
+    def raise_missing(package: str) -> None:
+        raise artifacts.PackageNotFoundError(package)
+
+    monkeypatch.setattr(artifacts, "version", raise_missing)
+
+    assert artifacts.get_package_version("missing-package") == "unknown"

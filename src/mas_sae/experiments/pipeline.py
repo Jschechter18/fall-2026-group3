@@ -20,7 +20,7 @@ def choose_incorrect_answer(
     gold: str,
     aliases: Iterable[str] = (),
 ) -> str:
-    """Choose a deterministic wrong answer for the pilot."""
+    """Choose a deterministic wrong answer for controlled feedback."""
 
     aliases = tuple(aliases)
 

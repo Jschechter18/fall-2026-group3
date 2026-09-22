@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 import json
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 import shlex
 import subprocess
@@ -31,9 +32,28 @@ def get_git_commit() -> str:
         return "unknown"
 
 
+def get_package_version(package: str) -> str:
+    """Return the installed version of a package when available."""
+    try:
+        return version(package)
+    except PackageNotFoundError:
+        return "unknown"
+
+
 def get_run_command() -> str:
     """Return a shell-safe representation of the current Python command."""
     return shlex.join([sys.executable, *sys.argv])
+
+
+def ensure_output_available(output_dir: str | Path) -> None:
+    """Prevent an existing output path from being overwritten."""
+    output_path = Path(output_dir)
+
+    if output_path.exists():
+        raise FileExistsError(
+            f"Output already exists at {output_path}. "
+            "Remove it or choose a different output path."
+        )
 
 
 def _write_json(path: Path, data: dict[str, object]) -> None:

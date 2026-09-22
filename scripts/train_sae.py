@@ -1,3 +1,4 @@
+import argparse
 from dataclasses import asdict
 from pathlib import Path
 
@@ -18,6 +19,18 @@ from mas_sae.sae.callbacks.early_stopping import EarlyStoppingCallback
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--run-name", required=True)
+    parser.add_argument("--layer", type=int, required=True)
+    args = parser.parse_args()
+
+    ACTIVATION_LOCATION = (
+        Path("data")
+        / "activations"
+        / args.run_name
+        / f"layer_{args.layer:02d}"
+    )
+
     PROJECT_ROOT = Path(__file__).resolve().parents[1]
     results_root = PROJECT_ROOT / "results" / "sae" / "musique"
     subdirectories = ("checkpoints",)
@@ -31,13 +44,37 @@ def main():
     )
     
     try:
+        train_dataloader = create_sae_dataloader(
+            hp.batch_size,
+            split="train",
+            num_workers=2,
+            location=ACTIVATION_LOCATION,
+        )
+        val_dataloader = create_sae_dataloader(
+            hp.batch_size,
+            split="validation",
+            num_workers=2,
+            location=ACTIVATION_LOCATION,
+        )
+
+        test_dataloader = None
+        if (ACTIVATION_LOCATION / "test.pt").is_file():
+            test_dataloader = create_sae_dataloader(
+                hp.batch_size,
+                split="test",
+                num_workers=2,
+                location=ACTIVATION_LOCATION,
+            )
+
+        hp.input_dim = int(next(iter(train_dataloader)).shape[-1])
+
         write_run_config(run_directory, asdict(hp))
-        
-        model = SAE(input_dim=hp.input_dim, hidden_dim=hp.hidden_dim, latent_dim=hp.latent_dim)
-        
-        train_dataloader = create_sae_dataloader(hp.batch_size, split='train', num_workers=2)
-        val_dataloader = create_sae_dataloader(hp.batch_size, split='val', num_workers=2)
-        test_dataloader = create_sae_dataloader(hp.batch_size, split='test', num_workers=2)
+
+        model = SAE(
+            input_dim=hp.input_dim,
+            hidden_dim=hp.hidden_dim,
+            latent_dim=hp.latent_dim,
+        )
         
         optimizer = torch.optim.Adam(model.parameters(), lr=hp.lr)
         scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=hp.lr_patience, gamma=0.1)
@@ -63,10 +100,15 @@ def main():
                 print(f"Early stopping after epoch {epoch+1}")
                 break
         
-        test_loss = runner.test(test_dataloader)
-        print(f"Test Loss: {test_loss:.4f}")
-        
-        write_run_history(run_directory, epoch_history, test_loss=test_loss)
+        if test_dataloader is not None:
+            test_loss = runner.test(test_dataloader)
+            print(f"Test Loss: {test_loss:.4f}")
+
+            write_run_history(
+                run_directory,
+                epoch_history,
+                test_loss=test_loss,
+            )
         
     except (Exception, KeyboardInterrupt) as error:
         update_run_manifest(
