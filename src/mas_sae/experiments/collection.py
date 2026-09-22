@@ -1,31 +1,75 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, TypedDict
 
 import torch
 
 from mas_sae.agents.critic import Critic
 from mas_sae.agents.solver import Solver
 from mas_sae.agents.validator import Validator
+from mas_sae.data.musique import MuSiQueExample
 from mas_sae.experiments.pipeline import run_question
 
 
 logger = logging.getLogger(__name__)
 
 
+class CollectionResult(TypedDict):
+    """Activation rows and metadata produced by one collection run."""
+
+    records: list[dict[str, Any]]
+    attempt1_by_site: dict[str, list[torch.Tensor]]
+    attempt2_by_site: dict[str, list[torch.Tensor]]
+
+
 def collect_examples(
     *,
-    examples: list[dict[str, Any]],
+    examples: list[MuSiQueExample],
     source_split: str,
-    model: Any,
+    model: torch.nn.Module,
     solver: Solver,
     critic: Critic,
     validator: Validator,
     candidate_sites: list[str],
     base_seed: int,
-) -> dict[str, Any]:
-    """Run Solver-Critic collection for already-loaded examples."""
+) -> CollectionResult:
+    """Collect paired Solver-Critic episodes and activation-row mappings.
+
+    Each question is passed once to ``run_question``. That call generates one
+    Solver Attempt 1 and reuses it across natural, controlled-correct, and
+    controlled-incorrect critic conditions. The three resulting records share
+    one Attempt 1 activation index, while each Attempt 2 has its own index.
+
+    Parameters
+    ----------
+    examples
+        Answerable MuSiQue examples to collect in the provided order.
+    source_split
+        Original MuSiQue source split, currently ``train`` or ``validation``.
+    model
+        Language model whose candidate modules are captured during generation.
+    solver
+        Solver agent used for the initial answer and revision.
+    critic
+        Critic agent used to generate each feedback condition.
+    validator
+        Secondary judge used to evaluate the final Solver answer.
+    candidate_sites
+        Fully qualified model-module names whose activations are captured.
+    base_seed
+        Seed for the first question. Question index is added deterministically.
+
+    Returns
+    -------
+    CollectionResult
+        Episode records plus Attempt 1 and Attempt 2 tensors grouped by site.
+
+    Raises
+    ------
+    ValueError
+        If no examples or no candidate activation sites are provided.
+    """
     if not examples:
         raise ValueError("examples must not be empty.")
     if not candidate_sites:

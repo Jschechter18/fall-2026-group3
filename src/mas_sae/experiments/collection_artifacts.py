@@ -1,9 +1,6 @@
 from __future__ import annotations
 
 import json
-import subprocess
-from datetime import UTC, datetime
-from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Any
 
@@ -12,45 +9,9 @@ import yaml
 
 from mas_sae.data.activation_store import ActivationStore
 from mas_sae.data.musique import MUSIQUE_DATASET_ID
+from mas_sae.experiments import artifacts
 from mas_sae.experiments.collection import stack_site_activations
 from mas_sae.experiments.records import write_jsonl
-
-
-def get_git_sha() -> str:
-    """Return the current Git commit or 'unknown' outside a Git checkout."""
-    try:
-        result = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-        return result.stdout.strip()
-    except (OSError, subprocess.CalledProcessError):
-        return "unknown"
-
-
-def get_package_version(package: str) -> str:
-    """Return an installed package version when available."""
-    try:
-        return version(package)
-    except PackageNotFoundError:
-        return "unknown"
-
-
-def ensure_output_available(
-    result_root: str | Path,
-    run_name: str,
-    source_split: str,
-) -> None:
-    """Prevent an existing collection result from being overwritten."""
-    output_dir = Path(result_root) / run_name / source_split
-
-    if output_dir.exists():
-        raise FileExistsError(
-            f"Output already exists at {output_dir}. "
-            "Remove it or choose a different run_name."
-        )
 
 
 def build_resolved_config(
@@ -64,16 +25,16 @@ def build_resolved_config(
     return {
         **config,
         "provenance": {
-            "created_at_utc": datetime.now(UTC).isoformat(),
-            "git_sha": get_git_sha(),
+            "created_at_utc": artifacts.utc_now().isoformat(),
+            "git_commit": artifacts.get_git_commit(),
             "model_revision": (
                 getattr(model.config, "_commit_hash", None) or "unknown"
             ),
             "dataset_id": MUSIQUE_DATASET_ID,
             "package_versions": {
-                "torch": get_package_version("torch"),
-                "transformers": get_package_version("transformers"),
-                "datasets": get_package_version("datasets"),
+                "torch": artifacts.get_package_version("torch"),
+                "transformers": artifacts.get_package_version("transformers"),
+                "datasets": artifacts.get_package_version("datasets"),
             },
             "prompt_versions": {
                 "solver_solve": "SOLVE_PROMPT_V1",

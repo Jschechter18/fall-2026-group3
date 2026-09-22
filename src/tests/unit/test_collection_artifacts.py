@@ -1,14 +1,12 @@
 from pathlib import Path
 from types import SimpleNamespace
 
-import pytest
 import torch
 import yaml
 
 from mas_sae.data.activation_store import ActivationStore
-from mas_sae.experiments import collection_artifacts
+from mas_sae.experiments import artifacts, collection_artifacts
 from mas_sae.experiments.collection_artifacts import (
-    ensure_output_available,
     save_collection_artifacts,
 )
 from mas_sae.experiments.records import read_jsonl
@@ -101,28 +99,16 @@ def test_save_collection_artifacts(tmp_path: Path) -> None:
 
 
 
-def test_ensure_output_available_rejects_existing_result(
-    tmp_path: Path,
-) -> None:
-    ensure_output_available(tmp_path, "test_run", "train")
-
-    output_dir = tmp_path / "test_run" / "train"
-    output_dir.mkdir(parents=True)
-
-    with pytest.raises(FileExistsError, match="Output already exists"):
-        ensure_output_available(tmp_path, "test_run", "train")
-
-
 def test_build_resolved_config_adds_provenance(
     monkeypatch,
 ) -> None:
     monkeypatch.setattr(
-        collection_artifacts,
-        "get_git_sha",
+        artifacts,
+        "get_git_commit",
         lambda: "abc123",
     )
     monkeypatch.setattr(
-        collection_artifacts,
+        artifacts,
         "get_package_version",
         lambda package: f"{package}-version",
     )
@@ -152,7 +138,7 @@ def test_build_resolved_config_adds_provenance(
     provenance = resolved["provenance"]
 
     assert resolved["model"] == config["model"]
-    assert provenance["git_sha"] == "abc123"
+    assert provenance["git_commit"] == "abc123"
     assert provenance["model_revision"] == "model-revision"
     assert provenance["dataset_id"] == "dgslibisey/MuSiQue"
     assert provenance["package_versions"]["torch"] == "torch-version"

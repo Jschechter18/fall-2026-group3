@@ -8,10 +8,10 @@ from mas_sae.agents.critic import Critic
 from mas_sae.agents.solver import Solver
 from mas_sae.agents.validator import Validator
 from mas_sae.data.musique import load_musique_examples
+from mas_sae.experiments.artifacts import ensure_output_available
 from mas_sae.experiments.collection import collect_examples
 from mas_sae.experiments.collection_artifacts import (
     build_resolved_config,
-    ensure_output_available,
     save_collection_artifacts,
 )
 from mas_sae.experiments.collection_config import load_collection_config
@@ -54,7 +54,7 @@ def main() -> None:
     seed = config["collection"]["seed"]
     run_name = config["output"]["run_name"]
 
-    ensure_output_available(RESULT_ROOT, run_name, source_split)
+    ensure_output_available(RESULT_ROOT / run_name / source_split)
     candidate_sites = [
         f"model.language_model.layers.{layer}" for layer in layers
     ]

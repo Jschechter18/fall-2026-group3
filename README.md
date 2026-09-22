@@ -124,7 +124,11 @@ python scripts/get_musique_dataset.py
 
 Activation collection is config-driven. Run from the repository root:
 
-    python scripts/collect_activations.py --config configs/collection_smoke_train.yaml
+    python scripts/collect_activations.py --config configs/collection/v1/smoke_train.yaml
+
+Collection run definitions are versioned under `configs/collection/`. Once a
+config has produced a recorded experiment run, keep that version unchanged and
+create a new version directory for protocol changes.
 
 Use the corresponding train or validation config for larger runs.
 
