@@ -45,7 +45,7 @@ build/
 dist/
 
 # Probe artifacts
-logs/**/*.npy
+logs/
 
 # Generated activation tensors
 /data/activations/
