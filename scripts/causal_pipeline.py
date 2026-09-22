@@ -11,10 +11,17 @@ the candidate features it flagged as promising, plus the sample SAE
 features/labels -- and the reusable mas_sae.causal.intervention module for
 the actual ablate/decode/measure logic.
 
+downstream_decision() in mas_sae/causal/intervention.py is a clearly-marked mock: 
+it re-encodes the reconstructed activation and asks the trained probe for a decision instead
+of continuing a real generation. 
+
+Run from the repo root with the `capstone` conda env active:
+    python scripts/causal_pipeline.py
 """
 
 import json
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 
 import numpy as np
@@ -35,7 +42,18 @@ class CausalPipelineConfig:
     amplify_scale: float = 3.0
     amplify_shift: float = 1.0
     probe_data_dir: Path = Path("logs/probe_smoke_test")
-    output_dir: Path = Path("logs/causal_intervention_smoke_test")
+    results_root: Path = Path("results/causal_intervention")
+
+
+def create_versioned_run_dir(results_root: Path) -> Path:
+    """Create a fresh, timestamped subdirectory under results_root for this
+    run's outputs, so repeated runs don't overwrite each other. Mirrors the
+    versioning style already used in mas_sae/experiments/artifacts.py for SAE
+    training runs, for consistency across the repo."""
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+    run_dir = results_root / timestamp
+    run_dir.mkdir(parents=True, exist_ok=True)
+    return run_dir
 
 
 def load_promising_features_and_data(config: CausalPipelineConfig):
@@ -52,7 +70,7 @@ def load_promising_features_and_data(config: CausalPipelineConfig):
 def main():
     config = CausalPipelineConfig()
     torch.manual_seed(config.seed)
-    config.output_dir.mkdir(parents=True, exist_ok=True)
+    run_dir = create_versioned_run_dir(config.results_root)
 
     candidate_features, sparse_features, labels = load_promising_features_and_data(config)
     print("Candidate features loaded from probe_pipeline.py:", candidate_features)
@@ -79,10 +97,10 @@ def main():
     print(f"Random control dims {results['random_control_dims']}: "
           f"mean flip rate = {results['random_control_mean_flip_rate']:.3f}")
 
-    with open(config.output_dir / "causal_intervention_results.json", "w") as f:
+    with open(run_dir / "causal_intervention_results.json", "w") as f:
         json.dump(results, f, indent=2)
 
-    print(f"\nAll causal smoke-test outputs written to {config.output_dir.resolve()}")
+    print(f"\nAll causal smoke-test outputs written to {run_dir.resolve()}")
     print(
         "\nNOTE: the SAE here is still untrained. Real Solver-Critic activation data now "
         "exists (the 12-question pilot, logs/issue14/pilot_12q/), but this script hasn't "
