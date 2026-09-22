@@ -40,7 +40,6 @@ def test_checkpoint_evaluator_saves_complete_loadable_checkpoint(
     evaluator.on_validation_end(
         train_loss=0.6,
         val_loss=0.5,
-        best_loss=float("inf"),
         epoch=2,
         model=model,
         optimizer=optimizer,
@@ -83,11 +82,11 @@ def test_checkpoint_evaluator_does_not_save_without_improvement(
     checkpoint_directory = tmp_path / "checkpoints"
     checkpoint_directory.mkdir()
     evaluator = CheckpointEvaluatorCallback(checkpoint_directory)
+    evaluator.best_loss = 0.4
 
     evaluator.on_validation_end(
         train_loss=0.6,
         val_loss=0.5,
-        best_loss=0.4,
         epoch=1,
         model=model,
         optimizer=optimizer,
@@ -96,6 +95,7 @@ def test_checkpoint_evaluator_does_not_save_without_improvement(
     )
 
     assert not (checkpoint_directory / "best_checkpoint.pt").exists()
+    assert evaluator.best_loss == pytest.approx(0.4)
 
 
 def test_checkpoint_evaluator_preserves_best_checkpoint_when_loss_worsens(
@@ -110,7 +110,6 @@ def test_checkpoint_evaluator_preserves_best_checkpoint_when_loss_worsens(
     evaluator.on_validation_end(
         train_loss=0.6,
         val_loss=0.5,
-        best_loss=float("inf"),
         epoch=0,
         model=model,
         optimizer=optimizer,
@@ -120,7 +119,6 @@ def test_checkpoint_evaluator_preserves_best_checkpoint_when_loss_worsens(
     evaluator.on_validation_end(
         train_loss=0.7,
         val_loss=0.6,
-        best_loss=0.5,
         epoch=1,
         model=model,
         optimizer=optimizer,

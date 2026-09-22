@@ -47,7 +47,6 @@ def main():
         checkpoint_evaluator = CheckpointEvaluatorCallback(run_directory / "checkpoints")
         early_stopping = EarlyStoppingCallback(hp.patience)
         
-        best_loss = float('inf')
         epoch_history = []
         for epoch in range(hp.epochs):
             train_loss = runner.train_epoch(train_dataloader)
@@ -55,7 +54,7 @@ def main():
             print(f"Epoch {epoch+1}/{hp.epochs} - Train Loss: {train_loss:.4f} - Val Loss: {val_loss:.4f}")
             
             scheduler.step()
-            checkpoint_evaluator.on_validation_end(train_loss, val_loss, best_loss, epoch,
+            checkpoint_evaluator.on_validation_end(train_loss, val_loss, epoch,
                                                    model, optimizer, scheduler, run_directory)
             epoch_history.append({"epoch": epoch+1, "train_loss": train_loss, "val_loss": val_loss})
             write_run_history(run_directory, epoch_history)
@@ -81,4 +80,3 @@ def main():
     
 if __name__ == "__main__":
     main()
-    
