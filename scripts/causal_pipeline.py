@@ -72,6 +72,8 @@ def main():
     torch.manual_seed(config.seed)
     run_dir = create_versioned_run_dir(config.results_root)
 
+# TODO:  change this to load a trained checkpoint rather than a newly initialized SAE. 
+# There are no trained autoencoders yet due to needing Israel's items to be completed to train it.
     candidate_features, sparse_features, labels = load_promising_features_and_data(config)
     print("Candidate features loaded from probe_pipeline.py:", candidate_features)
 
