@@ -44,7 +44,6 @@ def test_checkpoint_evaluator_saves_complete_loadable_checkpoint(
         model=model,
         optimizer=optimizer,
         scheduler=scheduler,
-        run_directory=tmp_path,
     )
 
     checkpoint = torch.load(
@@ -91,7 +90,6 @@ def test_checkpoint_evaluator_does_not_save_without_improvement(
         model=model,
         optimizer=optimizer,
         scheduler=scheduler,
-        run_directory=tmp_path,
     )
 
     assert not (checkpoint_directory / "best_checkpoint.pt").exists()
@@ -114,7 +112,6 @@ def test_checkpoint_evaluator_preserves_best_checkpoint_when_loss_worsens(
         model=model,
         optimizer=optimizer,
         scheduler=scheduler,
-        run_directory=tmp_path,
     )
     evaluator.on_validation_end(
         train_loss=0.7,
@@ -123,7 +120,6 @@ def test_checkpoint_evaluator_preserves_best_checkpoint_when_loss_worsens(
         model=model,
         optimizer=optimizer,
         scheduler=scheduler,
-        run_directory=tmp_path,
     )
 
     checkpoint = torch.load(

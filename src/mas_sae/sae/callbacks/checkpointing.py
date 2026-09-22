@@ -7,8 +7,7 @@ class CheckpointEvaluatorCallback:
         self.best_loss = float("inf")
     
     def on_validation_end(self, train_loss: float, val_loss: float, epoch: int,
-                          model: torch.nn.Module, optimizer: torch.optim.Optimizer, scheduler: torch.optim.lr_scheduler.StepLR,
-                          run_directory: Path):
+                          model: torch.nn.Module, optimizer: torch.optim.Optimizer, scheduler: torch.optim.lr_scheduler.StepLR):
         """Evaluate the model checkpoint at the end of a validation epoch and save it if it has the best validation loss so far.
 
 
@@ -26,8 +25,6 @@ class CheckpointEvaluatorCallback:
             The optimizer used for training the model.
         scheduler : torch.optim.lr_scheduler.StepLR
             The learning rate scheduler used during training.
-        run_directory : Path
-            The directory where the run results and checkpoints are stored.
         """
         if val_loss < self.best_loss:
             self.best_loss = val_loss
@@ -40,4 +37,4 @@ class CheckpointEvaluatorCallback:
                 'best_loss': self.best_loss,
                 'scheduler_state_dict': scheduler.state_dict()
             }
-            torch.save(checkpoint, run_directory / "checkpoints" / "best_checkpoint.pt")
+            torch.save(checkpoint, self.checkpoint_dir / "best_checkpoint.pt")
