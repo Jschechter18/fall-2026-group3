@@ -3,13 +3,21 @@ import json
 import logging
 from pathlib import Path
 
+from mas_sae.agents.critic import CriticCondition
 from mas_sae.experiments.alignment import (
-    validate_pilot_alignment,
+    validate_activation_alignment,
 )
 from mas_sae.experiments.records import read_jsonl
 
 
 LAYERS = [8, 17, 25, 33]
+HIDDEN_DIM = 2560
+ATTEMPT1_SPLIT = "pilot_attempt1"
+ATTEMPT2_SPLIT = "pilot_attempt2"
+EXPECTED_CONDITIONS = {
+    condition.value
+    for condition in CriticCondition
+}
 
 
 def main() -> None:
@@ -25,9 +33,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    logging.basicConfig(
-        level=logging.INFO,
-    )
+    logging.basicConfig(level=logging.INFO)
 
     interactions = read_jsonl(
         Path("logs")
@@ -36,17 +42,24 @@ def main() -> None:
         / "interactions.jsonl"
     )
 
-    report = validate_pilot_alignment(
-        Path("data")
-        / "activations"
-        / args.run_name,
-        interactions,
-        LAYERS,
-        args.num_questions,
+    report = validate_activation_alignment(
+        store_root=(
+            Path("data")
+            / "activations"
+            / args.run_name
+        ),
+        interactions=interactions,
+        layers=LAYERS,
+        attempt1_split=ATTEMPT1_SPLIT,
+        attempt2_split=ATTEMPT2_SPLIT,
+        expected_conditions=EXPECTED_CONDITIONS,
+        hidden_dim=HIDDEN_DIM,
+        expected_num_questions=args.num_questions,
     )
 
     output = (
         Path("results")
+        / "alignment"
         / args.run_name
         / "alignment_report.json"
     )
