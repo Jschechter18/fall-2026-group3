@@ -256,3 +256,48 @@ def test_collection_config_random_rejects_hop_proportions(
 
     with pytest.raises(ValueError, match="only allowed when"):
         load_collection_config(write_config(tmp_path, text))
+
+
+def test_collection_config_protocol_version_defaults_to_absent(
+    tmp_path: Path,
+) -> None:
+    config = load_collection_config(write_config(tmp_path, V2_CONFIG))
+
+    assert "protocol_version" not in config["collection"]
+
+
+def test_collection_config_accepts_protocol_version_v2(
+    tmp_path: Path,
+) -> None:
+    text = V2_CONFIG.replace("  seed: 42\n", "  seed: 42\n  protocol_version: v2\n")
+    config = load_collection_config(write_config(tmp_path, text))
+
+    assert config["collection"]["protocol_version"] == "v2"
+
+
+@pytest.mark.parametrize("value", ["v3", "2", "true"])
+def test_collection_config_rejects_unknown_protocol_version(
+    tmp_path: Path, value: str
+) -> None:
+    text = V2_CONFIG.replace(
+        "  seed: 42\n", f"  seed: 42\n  protocol_version: {value}\n"
+    )
+
+    with pytest.raises(ValueError, match="protocol_version"):
+        load_collection_config(write_config(tmp_path, text))
+
+
+def test_collection_config_v2_smoke_selects_v2_protocol() -> None:
+    config = load_collection_config(
+        Path("configs/collection/v2/smoke_train.yaml")
+    )
+
+    assert config["collection"]["protocol_version"] == "v2"
+
+
+def test_collection_config_v1_has_no_protocol_version() -> None:
+    config = load_collection_config(
+        Path("configs/collection/v1/train_100q.yaml")
+    )
+
+    assert "protocol_version" not in config["collection"]

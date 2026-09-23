@@ -245,3 +245,83 @@ def test_save_collection_artifacts_rejects_manifest_length_mismatch(
             resolved_config={},
             sampled_questions=[],
         )
+
+
+@pytest.mark.parametrize(
+    ("critic", "expected_version", "expected_natural", "expected_controlled"),
+    [
+        (
+            SimpleNamespace(max_new_tokens=128),
+            "v1",
+            "NATURAL_PROMPT_V1",
+            "CONTROLLED_PROMPT_V1",
+        ),
+        (
+            SimpleNamespace(max_new_tokens=128, prompt_version="v1"),
+            "v1",
+            "NATURAL_PROMPT_V1",
+            "CONTROLLED_PROMPT_V1",
+        ),
+        (
+            SimpleNamespace(max_new_tokens=128, prompt_version="v2"),
+            "v2",
+            "NATURAL_BLIND_PROMPT_V2+NATURAL_COMPARE_PROMPT_V2",
+            "CONTROLLED_PROMPT_V2",
+        ),
+    ],
+    ids=["no-attribute", "v1", "v2"],
+)
+def test_build_resolved_config_records_protocol_version(
+    monkeypatch,
+    critic,
+    expected_version,
+    expected_natural,
+    expected_controlled,
+) -> None:
+    monkeypatch.setattr(artifacts, "get_git_commit", lambda: "abc123")
+    monkeypatch.setattr(
+        artifacts, "get_package_version", lambda package: "x"
+    )
+
+    resolved = collection_artifacts.build_resolved_config(
+        {"output": {"run_name": "r"}},
+        SimpleNamespace(config=SimpleNamespace(_commit_hash="rev")),
+        SimpleNamespace(max_new_tokens=32),
+        critic,
+        SimpleNamespace(max_new_tokens=4),
+    )
+
+    provenance = resolved["provenance"]
+    prompts = provenance["prompt_versions"]
+
+    assert provenance["protocol_version"] == expected_version
+    assert prompts["critic_natural"] == expected_natural
+    assert prompts["critic_controlled"] == expected_controlled
+    assert prompts["solver_solve"] == "SOLVE_PROMPT_V1"
+    assert ("critic_distractor" in prompts) == (expected_version == "v2")
+
+
+def test_build_resolved_config_rejects_unknown_prompt_version(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(artifacts, "get_git_commit", lambda: "abc123")
+    monkeypatch.setattr(
+        artifacts, "get_package_version", lambda package: "x"
+    )
+
+    with pytest.raises(ValueError, match="prompt_version"):
+        collection_artifacts.build_resolved_config(
+            {},
+            SimpleNamespace(config=SimpleNamespace(_commit_hash="rev")),
+            SimpleNamespace(max_new_tokens=32),
+            SimpleNamespace(max_new_tokens=128, prompt_version="v9"),
+            SimpleNamespace(max_new_tokens=4),
+        )
+
+
+def test_critic_prompt_names_cover_all_prompt_versions() -> None:
+    from mas_sae.agents.critic import PROMPT_VERSIONS
+
+    assert set(collection_artifacts.CRITIC_PROMPT_NAMES) == set(
+        PROMPT_VERSIONS
+    )

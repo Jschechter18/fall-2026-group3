@@ -15,6 +15,21 @@ from mas_sae.experiments.collection import stack_site_activations
 from mas_sae.experiments.records import write_jsonl
 
 
+CRITIC_PROMPT_NAMES: dict[str, dict[str, str]] = {
+    "v1": {
+        "critic_natural": "NATURAL_PROMPT_V1",
+        "critic_controlled": "CONTROLLED_PROMPT_V1",
+    },
+    "v2": {
+        "critic_natural": (
+            "NATURAL_BLIND_PROMPT_V2+NATURAL_COMPARE_PROMPT_V2"
+        ),
+        "critic_controlled": "CONTROLLED_PROMPT_V2",
+        "critic_distractor": "DISTRACTOR_PROMPT_V2",
+    },
+}
+
+
 def build_resolved_config(
     config: dict[str, Any],
     model: Any,
@@ -22,7 +37,19 @@ def build_resolved_config(
     critic: Any,
     validator: Any,
 ) -> dict[str, Any]:
-    """Add minimal reproducibility provenance to the run config."""
+    """Add minimal reproducibility provenance to the run config.
+
+    The critic prompt names follow ``critic.prompt_version`` (``v1`` when
+    the critic has no such attribute), so a run records which protocol
+    actually produced its feedback.
+    """
+    protocol_version = getattr(critic, "prompt_version", "v1")
+
+    if protocol_version not in CRITIC_PROMPT_NAMES:
+        raise ValueError(
+            f"Unknown critic prompt_version {protocol_version!r}."
+        )
+
     return {
         **config,
         "provenance": {
@@ -37,11 +64,11 @@ def build_resolved_config(
                 "transformers": artifacts.get_package_version("transformers"),
                 "datasets": artifacts.get_package_version("datasets"),
             },
+            "protocol_version": protocol_version,
             "prompt_versions": {
                 "solver_solve": "SOLVE_PROMPT_V1",
                 "solver_revise": "REVISE_PROMPT_V1",
-                "critic_natural": "NATURAL_PROMPT_V1",
-                "critic_controlled": "CONTROLLED_PROMPT_V1",
+                **CRITIC_PROMPT_NAMES[protocol_version],
                 "validator": "VALIDATE_PROMPT",
             },
             "generation": {

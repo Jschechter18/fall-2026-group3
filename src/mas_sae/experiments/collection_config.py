@@ -5,6 +5,7 @@ from typing import Any, NotRequired, TypedDict
 
 import yaml
 
+from mas_sae.agents.critic import PROMPT_VERSIONS
 from mas_sae.data.musique import (
     SUPPORTED_SOURCE_SPLITS,
     validate_experiment_split_proportions,
@@ -13,6 +14,7 @@ from mas_sae.data.musique import (
 
 
 SUPPORTED_SAMPLING_STRATEGIES = ("first_n", "random", "stratified")
+SUPPORTED_PROTOCOL_VERSIONS = PROMPT_VERSIONS
 
 
 class ModelConfig(TypedDict):
@@ -53,8 +55,16 @@ class DatasetConfig(TypedDict):
 
 
 class CollectionSettings(TypedDict):
+    """Activation layers, seed, and the Solver-Critic protocol version.
+
+    ``protocol_version`` selects the critic prompts and the
+    controlled-incorrect target strategy (``v1`` or ``v2``). Omitted means
+    ``v1``, so existing configs are unchanged.
+    """
+
     layers: list[int]
     seed: int
+    protocol_version: NotRequired[str]
 
 
 class OutputConfig(TypedDict):
@@ -135,6 +145,15 @@ def load_collection_config(path: str | Path) -> CollectionConfig:
     seed = collection.get("seed")
     if type(seed) is not int:
         raise ValueError("collection.seed must be an integer.")
+
+    if (
+        "protocol_version" in collection
+        and collection["protocol_version"] not in SUPPORTED_PROTOCOL_VERSIONS
+    ):
+        raise ValueError(
+            "collection.protocol_version must be one of "
+            f"{list(SUPPORTED_PROTOCOL_VERSIONS)}."
+        )
 
     run_name = output.get("run_name")
     if not isinstance(run_name, str) or not run_name.strip():

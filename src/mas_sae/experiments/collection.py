@@ -108,6 +108,7 @@ def collect_examples(
     candidate_sites: list[str],
     base_seed: int,
     experiment_splits: dict[str, str] | None = None,
+    protocol_version: str = "v1",
 ) -> CollectionResult:
     """Collect paired Solver-Critic episodes and activation-row mappings.
 
@@ -142,6 +143,9 @@ def collect_examples(
         question level, so it is written unchanged to every episode of that
         question. When omitted, records carry no ``experiment_split`` field,
         which preserves V1 behaviour.
+    protocol_version
+        ``"v1"`` (default) or ``"v2"``; forwarded to ``run_question``
+        together with each example's MuSiQue ``question_decomposition``.
 
     Returns
     -------
@@ -200,6 +204,8 @@ def collect_examples(
             validator=validator,
             candidate_sites=candidate_sites,
             seed=seed,
+            decomposition=example.get("question_decomposition") or [],
+            protocol_version=protocol_version,
         )
 
         attempt1_index = len(attempt1_by_site[candidate_sites[0]])

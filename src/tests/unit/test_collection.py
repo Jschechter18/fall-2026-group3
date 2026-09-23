@@ -295,3 +295,63 @@ def test_select_questions_stratified_with_experiment_split(
     # same config -> same assignment
     again = collection.select_questions(dataset_config, default_seed=42)
     assert again["experiment_splits"] == splits
+
+
+def test_collect_examples_forwards_decomposition_and_protocol(
+    monkeypatch,
+) -> None:
+    mock_run_question = Mock(side_effect=[make_result("q1"), make_result("q2")])
+    monkeypatch.setattr(collection, "run_question", mock_run_question)
+
+    decomposition = [
+        {"question": "Green >> performer", "answer": "Steve Hillage"},
+        {"question": "#1 >> spouse", "answer": "Miquette Giraudy"},
+    ]
+    examples = [
+        {
+            "id": "q1",
+            "question": "Q1",
+            "paragraphs": [],
+            "answer": "A",
+            "question_decomposition": decomposition,
+        },
+        {"id": "q2", "question": "Q2", "paragraphs": [], "answer": "B"},
+    ]
+
+    collection.collect_examples(
+        examples=examples,
+        source_split="train",
+        model=object(),
+        solver=Mock(),
+        critic=Mock(),
+        validator=Mock(),
+        candidate_sites=SITES,
+        base_seed=42,
+        protocol_version="v2",
+    )
+
+    first, second = mock_run_question.call_args_list
+    assert first.kwargs["decomposition"] == decomposition
+    assert first.kwargs["protocol_version"] == "v2"
+    assert second.kwargs["decomposition"] == []
+    assert second.kwargs["protocol_version"] == "v2"
+
+
+def test_collect_examples_defaults_to_v1_protocol(monkeypatch) -> None:
+    mock_run_question = Mock(side_effect=[make_result("q1")])
+    monkeypatch.setattr(collection, "run_question", mock_run_question)
+
+    collection.collect_examples(
+        examples=[
+            {"id": "q1", "question": "Q1", "paragraphs": [], "answer": "A"},
+        ],
+        source_split="train",
+        model=object(),
+        solver=Mock(),
+        critic=Mock(),
+        validator=Mock(),
+        candidate_sites=SITES,
+        base_seed=42,
+    )
+
+    assert mock_run_question.call_args.kwargs["protocol_version"] == "v1"

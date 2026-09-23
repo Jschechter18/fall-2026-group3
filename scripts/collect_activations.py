@@ -54,6 +54,7 @@ def main() -> None:
     num_questions = config["dataset"]["num_questions"]
     layers = config["collection"]["layers"]
     seed = config["collection"]["seed"]
+    protocol_version = config["collection"].get("protocol_version", "v1")
     run_name = config["output"]["run_name"]
 
     ensure_output_available(RESULT_ROOT / run_name / source_split)
@@ -62,16 +63,17 @@ def main() -> None:
     ]
 
     logger.info(
-        "Starting run=%s split=%s questions=%d",
+        "Starting run=%s split=%s questions=%d protocol=%s",
         run_name,
         source_split,
         num_questions,
+        protocol_version,
     )
     logger.info("Loading model %s", model_id)
 
     model, processor = load_gemma(model_id=model_id)
     solver = Solver(model, processor)
-    critic = Critic(model, processor)
+    critic = Critic(model, processor, prompt_version=protocol_version)
     validator = Validator(model, processor)
 
     resolved_config = build_resolved_config(
@@ -97,6 +99,7 @@ def main() -> None:
         candidate_sites=candidate_sites,
         base_seed=seed,
         experiment_splits=selection["experiment_splits"],
+        protocol_version=protocol_version,
     )
 
     summary = save_collection_artifacts(
