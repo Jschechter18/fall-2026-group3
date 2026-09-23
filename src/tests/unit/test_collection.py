@@ -139,3 +139,159 @@ def test_collect_examples_rejects_empty_examples() -> None:
             candidate_sites=SITES,
             base_seed=42,
         )
+
+
+def test_collect_examples_writes_question_level_experiment_split(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(
+        collection,
+        "run_question",
+        Mock(side_effect=[make_result("q1"), make_result("q2")]),
+    )
+
+    examples = [
+        {"id": "q1", "question": "Q1", "paragraphs": [], "answer": "A"},
+        {"id": "q2", "question": "Q2", "paragraphs": [], "answer": "B"},
+    ]
+
+    result = collection.collect_examples(
+        examples=examples,
+        source_split="train",
+        model=object(),
+        solver=Mock(),
+        critic=Mock(),
+        validator=Mock(),
+        candidate_sites=SITES,
+        base_seed=42,
+        experiment_splits={"q1": "discovery", "q2": "intervention"},
+    )
+
+    records = result["records"]
+
+    # all three critic episodes of a question share its split
+    assert [row["experiment_split"] for row in records] == [
+        "discovery", "discovery", "discovery",
+        "intervention", "intervention", "intervention",
+    ]
+    assert {row["source_split"] for row in records} == {"train"}
+
+    per_question = {}
+    for row in records:
+        per_question.setdefault(row["question_id"], set()).add(
+            row["experiment_split"]
+        )
+    assert all(len(splits) == 1 for splits in per_question.values())
+
+
+def test_collect_examples_without_splits_has_no_field(monkeypatch) -> None:
+    monkeypatch.setattr(
+        collection, "run_question", Mock(side_effect=[make_result("q1")])
+    )
+
+    result = collection.collect_examples(
+        examples=[
+            {"id": "q1", "question": "Q1", "paragraphs": [], "answer": "A"},
+        ],
+        source_split="validation",
+        model=object(),
+        solver=Mock(),
+        critic=Mock(),
+        validator=Mock(),
+        candidate_sites=SITES,
+        base_seed=42,
+    )
+
+    assert all("experiment_split" not in row for row in result["records"])
+
+
+def test_collect_examples_rejects_missing_split_assignment() -> None:
+    with pytest.raises(ValueError, match="missing question ids"):
+        collection.collect_examples(
+            examples=[
+                {"id": "q1", "question": "Q1", "paragraphs": [], "answer": "A"},
+            ],
+            source_split="train",
+            model=object(),
+            solver=Mock(),
+            critic=Mock(),
+            validator=Mock(),
+            candidate_sites=SITES,
+            base_seed=42,
+            experiment_splits={"other": "discovery"},
+        )
+
+
+def test_select_questions_first_n_is_v1_behaviour(monkeypatch) -> None:
+    examples = [{"id": "2hop__1_2"}, {"id": "2hop__3_4"}]
+    mock_first_n = Mock(return_value=examples)
+    mock_sample = Mock()
+    monkeypatch.setattr(collection, "load_musique_examples", mock_first_n)
+    monkeypatch.setattr(collection, "sample_musique_examples", mock_sample)
+
+    selection = collection.select_questions(
+        {"source_split": "train", "num_questions": 2},
+        default_seed=42,
+    )
+
+    mock_first_n.assert_called_once_with(
+        source_split="train", num_questions=2
+    )
+    mock_sample.assert_not_called()
+    assert selection["examples"] == examples
+    assert selection["experiment_splits"] is None
+    assert selection["sampled_questions"] is None
+
+
+def test_select_questions_stratified_with_experiment_split(
+    monkeypatch,
+) -> None:
+    examples = [
+        {"id": "2hop__1_2"},
+        {"id": "3hop1__3_4"},
+        {"id": "2hop__5_6"},
+    ]
+    mock_sample = Mock(return_value=examples)
+    monkeypatch.setattr(collection, "sample_musique_examples", mock_sample)
+    monkeypatch.setattr(
+        collection, "load_musique_examples", Mock(side_effect=AssertionError)
+    )
+
+    dataset_config = {
+        "source_split": "train",
+        "num_questions": 3,
+        "sampling": {
+            "strategy": "stratified",
+            "hop_proportions": {"2hop": 0.7, "3hop": 0.3},
+        },
+        "experiment_split": {
+            "proportions": {"discovery": 0.5, "intervention": 0.5},
+            "seed": 9,
+        },
+    }
+
+    selection = collection.select_questions(dataset_config, default_seed=42)
+
+    mock_sample.assert_called_once_with(
+        source_split="train",
+        num_questions=3,
+        seed=42,
+        hop_proportions={"2hop": 0.7, "3hop": 0.3},
+    )
+
+    splits = selection["experiment_splits"]
+    assert set(splits) == {"2hop__1_2", "3hop1__3_4", "2hop__5_6"}
+    assert set(splits.values()) <= {"discovery", "intervention"}
+
+    manifest = selection["sampled_questions"]
+    assert [entry["question_id"] for entry in manifest] == [
+        e["id"] for e in examples
+    ]
+    assert all(
+        entry["experiment_split"] == splits[entry["question_id"]]
+        for entry in manifest
+    )
+
+    # same config -> same assignment
+    again = collection.select_questions(dataset_config, default_seed=42)
+    assert again["experiment_splits"] == splits

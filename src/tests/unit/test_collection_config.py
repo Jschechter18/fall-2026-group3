@@ -147,3 +147,112 @@ output:
 
     with pytest.raises(ValueError, match="must not contain duplicates"):
         load_collection_config(path)
+
+
+V2_CONFIG = """
+model:
+  id: google/gemma-3-4b-it
+dataset:
+  source_split: train
+  num_questions: 10
+  sampling:
+    strategy: stratified
+    seed: 7
+    hop_proportions:
+      2hop: 0.6
+      3hop: 0.3
+      4hop: 0.1
+  experiment_split:
+    proportions:
+      discovery: 0.6
+      validation: 0.2
+      intervention: 0.2
+collection:
+  layers: [8, 17]
+  seed: 42
+output:
+  run_name: v2_test
+"""
+
+
+def write_config(tmp_path: Path, text: str) -> Path:
+    path = tmp_path / "collection.yaml"
+    path.write_text(text.strip() + "\n", encoding="utf-8")
+    return path
+
+
+def test_collection_config_accepts_v2_sampling_and_split(
+    tmp_path: Path,
+) -> None:
+    config = load_collection_config(write_config(tmp_path, V2_CONFIG))
+
+    assert config["dataset"]["sampling"]["strategy"] == "stratified"
+    assert config["dataset"]["sampling"]["seed"] == 7
+    assert config["dataset"]["sampling"]["hop_proportions"]["3hop"] == 0.3
+    assert config["dataset"]["experiment_split"]["proportions"] == {
+        "discovery": 0.6,
+        "validation": 0.2,
+        "intervention": 0.2,
+    }
+
+
+def test_collection_config_v1_has_no_sampling_sections(
+    tmp_path: Path,
+) -> None:
+    config = load_collection_config(
+        Path("configs/collection/v1/train_100q.yaml")
+    )
+
+    assert "sampling" not in config["dataset"]
+    assert "experiment_split" not in config["dataset"]
+
+
+def test_collection_config_v2_smoke_loads() -> None:
+    config = load_collection_config(
+        Path("configs/collection/v2/smoke_train.yaml")
+    )
+
+    assert config["dataset"]["sampling"]["strategy"] == "stratified"
+    assert config["dataset"]["experiment_split"]["proportions"]
+
+
+@pytest.mark.parametrize(
+    ("replacement", "message"),
+    [
+        ("strategy: stratified", "strategy: first_last"),
+        ("      4hop: 0.1", "      4hop: 0.2"),
+        ("      intervention: 0.2", "      test: 0.2"),
+        ("    seed: 7", "    seed: true"),
+    ],
+    ids=["bad-strategy", "hop-sum", "bad-split-name", "bool-seed"],
+)
+def test_collection_config_rejects_invalid_v2_sections(
+    tmp_path: Path,
+    replacement: str,
+    message: str,
+) -> None:
+    text = V2_CONFIG.replace(replacement, message)
+
+    with pytest.raises(ValueError):
+        load_collection_config(write_config(tmp_path, text))
+
+
+def test_collection_config_stratified_requires_hop_proportions(
+    tmp_path: Path,
+) -> None:
+    text = V2_CONFIG.replace(
+        "    hop_proportions:\n      2hop: 0.6\n      3hop: 0.3\n      4hop: 0.1\n",
+        "",
+    )
+
+    with pytest.raises(ValueError, match="hop_proportions is required"):
+        load_collection_config(write_config(tmp_path, text))
+
+
+def test_collection_config_random_rejects_hop_proportions(
+    tmp_path: Path,
+) -> None:
+    text = V2_CONFIG.replace("strategy: stratified", "strategy: random")
+
+    with pytest.raises(ValueError, match="only allowed when"):
+        load_collection_config(write_config(tmp_path, text))

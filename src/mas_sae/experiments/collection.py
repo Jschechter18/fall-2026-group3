@@ -8,7 +8,13 @@ import torch
 from mas_sae.agents.critic import Critic
 from mas_sae.agents.solver import Solver
 from mas_sae.agents.validator import Validator
-from mas_sae.data.musique import MuSiQueExample
+from mas_sae.data.musique import (
+    MuSiQueExample,
+    assign_experiment_splits,
+    describe_sampled_questions,
+    load_musique_examples,
+    sample_musique_examples,
+)
 from mas_sae.experiments.pipeline import run_question
 
 
@@ -23,6 +29,74 @@ class CollectionResult(TypedDict):
     attempt2_by_site: dict[str, list[torch.Tensor]]
 
 
+class QuestionSelection(TypedDict):
+    """Questions chosen for one run plus their split and manifest."""
+
+    examples: list[MuSiQueExample]
+    experiment_splits: dict[str, str] | None
+    sampled_questions: list[dict[str, Any]] | None
+
+
+def select_questions(
+    dataset_config: dict[str, Any],
+    *,
+    default_seed: int,
+) -> QuestionSelection:
+    """Select questions and assign experiment splits from ``config.dataset``.
+
+    Without a ``sampling`` section, or with ``strategy: first_n``, this is
+    the V1 behaviour: the first N answerable questions in dataset order and
+    no experiment split. Otherwise a seeded (optionally hop-stratified)
+    sample is drawn, and when ``experiment_split`` is configured each
+    question id is assigned exactly one split. ``sampled_questions`` is the
+    ordered reproducibility manifest, or ``None`` on the pure V1 path.
+    Seeds default to ``default_seed`` (``collection.seed``).
+    """
+    source_split = dataset_config["source_split"]
+    num_questions = dataset_config["num_questions"]
+    sampling = dataset_config.get("sampling") or {}
+    strategy = sampling.get("strategy", "first_n")
+    split_config = dataset_config.get("experiment_split")
+
+    if strategy == "first_n":
+        examples = load_musique_examples(
+            source_split=source_split,
+            num_questions=num_questions,
+        )
+    else:
+        examples = sample_musique_examples(
+            source_split=source_split,
+            num_questions=num_questions,
+            seed=sampling.get("seed", default_seed),
+            hop_proportions=(
+                sampling.get("hop_proportions")
+                if strategy == "stratified"
+                else None
+            ),
+        )
+
+    experiment_splits = None
+    if split_config is not None:
+        experiment_splits = assign_experiment_splits(
+            [str(example["id"]) for example in examples],
+            proportions=split_config["proportions"],
+            seed=split_config.get("seed", default_seed),
+        )
+
+    if strategy == "first_n" and split_config is None:
+        sampled_questions = None
+    else:
+        sampled_questions = describe_sampled_questions(
+            examples, experiment_splits
+        )
+
+    return {
+        "examples": examples,
+        "experiment_splits": experiment_splits,
+        "sampled_questions": sampled_questions,
+    }
+
+
 def collect_examples(
     *,
     examples: list[MuSiQueExample],
@@ -33,6 +107,7 @@ def collect_examples(
     validator: Validator,
     candidate_sites: list[str],
     base_seed: int,
+    experiment_splits: dict[str, str] | None = None,
 ) -> CollectionResult:
     """Collect paired Solver-Critic episodes and activation-row mappings.
 
@@ -40,6 +115,8 @@ def collect_examples(
     Solver Attempt 1 and reuses it across natural, controlled-correct, and
     controlled-incorrect critic conditions. The three resulting records share
     one Attempt 1 activation index, while each Attempt 2 has its own index.
+    When ``experiment_splits`` is given, all three records of a question also
+    share that question's ``experiment_split``.
 
     Parameters
     ----------
@@ -59,6 +136,12 @@ def collect_examples(
         Fully qualified model-module names whose activations are captured.
     base_seed
         Seed for the first question. Question index is added deterministically.
+    experiment_splits
+        Optional mapping from question id to scientific experiment split
+        (``discovery`` / ``validation`` / ``intervention``). Assigned at
+        question level, so it is written unchanged to every episode of that
+        question. When omitted, records carry no ``experiment_split`` field,
+        which preserves V1 behaviour.
 
     Returns
     -------
@@ -68,12 +151,25 @@ def collect_examples(
     Raises
     ------
     ValueError
-        If no examples or no candidate activation sites are provided.
+        If no examples or no candidate activation sites are provided, or if
+        ``experiment_splits`` is given but lacks one of the question ids.
     """
     if not examples:
         raise ValueError("examples must not be empty.")
     if not candidate_sites:
         raise ValueError("candidate_sites must not be empty.")
+
+    if experiment_splits is not None:
+        missing = [
+            str(example["id"])
+            for example in examples
+            if str(example["id"]) not in experiment_splits
+        ]
+        if missing:
+            raise ValueError(
+                "experiment_splits is missing question ids: "
+                f"{missing[:5]}{'...' if len(missing) > 5 else ''}."
+            )
 
     attempt1_by_site: dict[str, list[torch.Tensor]] = {
         site: [] for site in candidate_sites
@@ -121,6 +217,10 @@ def collect_examples(
 
             record = dict(episode["record"])
             record["source_split"] = source_split
+            if experiment_splits is not None:
+                record["experiment_split"] = experiment_splits[
+                    str(example["id"])
+                ]
             record["attempt1_activation_index"] = attempt1_index
             record["attempt2_activation_index"] = attempt2_index
             records.append(record)
