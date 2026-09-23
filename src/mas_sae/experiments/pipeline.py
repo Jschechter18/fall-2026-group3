@@ -171,8 +171,8 @@ def run_question(
       ``controlled_target_source`` and ``controlled_target_type_check``.
       Otherwise the paragraph-title heuristic is used.
 
-    Either error aborts the run; whole-question exclusion is later QC
-    work.
+    Either error aborts this question; ``collect_examples`` skips it and
+    continues with the next one.
     """
 
     aliases = tuple(aliases)
