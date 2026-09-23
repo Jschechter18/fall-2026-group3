@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from collections import Counter
 from pathlib import Path
 from typing import Any
 
@@ -98,6 +99,14 @@ def _add_sae_indices(
     return enriched
 
 
+def _count_by_key(
+    entries: list[dict[str, Any]],
+    key: str,
+) -> dict[str, int]:
+    """Count manifest entries by one key, in sorted key order."""
+    return dict(sorted(Counter(str(entry[key]) for entry in entries).items()))
+
+
 def save_collection_artifacts(
     *,
     activation_root: str | Path,
@@ -109,8 +118,16 @@ def save_collection_artifacts(
     attempt2_by_site: dict[str, list[torch.Tensor]],
     records: list[dict[str, Any]],
     resolved_config: dict[str, Any],
+    sampled_questions: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    """Save activation tensors, metadata, resolved config, and summary."""
+    """Save activation tensors, metadata, resolved config, and summary.
+
+    When ``sampled_questions`` is given (the ordered manifest built by
+    ``describe_sampled_questions``), it is written to
+    ``sampled_questions.json`` so the exact question set can be reproduced,
+    and the summary gains question-level hop-group and experiment-split
+    counts. V1 runs pass nothing and their outputs are unchanged.
+    """
     attempt1 = stack_site_activations(attempt1_by_site)
     attempt2 = stack_site_activations(attempt2_by_site)
     expected_sites = set(candidate_sites)
@@ -199,6 +216,29 @@ def save_collection_artifacts(
         "unlabeled_noncommittal": noncommittal,
         "site_shapes": site_shapes,
     }
+
+    if sampled_questions is not None:
+        if len(sampled_questions) != num_attempt1:
+            raise ValueError(
+                "sampled_questions length does not match the number of "
+                f"collected questions ({len(sampled_questions)} vs "
+                f"{num_attempt1})."
+            )
+
+        with (output_dir / "sampled_questions.json").open(
+            "w", encoding="utf-8"
+        ) as file:
+            json.dump(sampled_questions, file, indent=2)
+            file.write("\n")
+
+        summary["hop_group_counts"] = _count_by_key(
+            sampled_questions, "hop_group"
+        )
+
+        if all("experiment_split" in entry for entry in sampled_questions):
+            summary["experiment_split_counts"] = _count_by_key(
+                sampled_questions, "experiment_split"
+            )
 
     with (output_dir / "summary.json").open("w", encoding="utf-8") as file:
         json.dump(summary, file, indent=2)

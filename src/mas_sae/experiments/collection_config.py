@@ -1,20 +1,55 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TypedDict
+from typing import Any, NotRequired, TypedDict
 
 import yaml
 
-from mas_sae.data.musique import SUPPORTED_SOURCE_SPLITS
+from mas_sae.data.musique import (
+    SUPPORTED_SOURCE_SPLITS,
+    validate_experiment_split_proportions,
+    validate_proportions,
+)
+
+
+SUPPORTED_SAMPLING_STRATEGIES = ("first_n", "random", "stratified")
 
 
 class ModelConfig(TypedDict):
     id: str
 
 
+class SamplingConfig(TypedDict):
+    """How questions are drawn from the MuSiQue source split.
+
+    ``first_n`` reproduces the V1 behaviour (dataset order). ``random`` draws
+    a seeded uniform sample. ``stratified`` draws a seeded sample with the
+    given ``hop_proportions`` over hop groups (``2hop``, ``3hop``, ``4hop``).
+    ``seed`` defaults to ``collection.seed`` when omitted.
+    """
+
+    strategy: str
+    seed: NotRequired[int]
+    hop_proportions: NotRequired[dict[str, float]]
+
+
+class ExperimentSplitConfig(TypedDict):
+    """Question-level scientific split, separate from ``source_split``.
+
+    ``proportions`` maps a subset of ``discovery`` / ``validation`` /
+    ``intervention`` to fractions summing to one. ``seed`` defaults to
+    ``collection.seed`` when omitted.
+    """
+
+    proportions: dict[str, float]
+    seed: NotRequired[int]
+
+
 class DatasetConfig(TypedDict):
     source_split: str
     num_questions: int
+    sampling: NotRequired[SamplingConfig]
+    experiment_split: NotRequired[ExperimentSplitConfig]
 
 
 class CollectionSettings(TypedDict):
@@ -77,6 +112,12 @@ def load_collection_config(path: str | Path) -> CollectionConfig:
             "dataset.num_questions must be a positive integer."
         )
 
+    if "sampling" in dataset:
+        _validate_sampling(dataset["sampling"])
+
+    if "experiment_split" in dataset:
+        _validate_experiment_split(dataset["experiment_split"])
+
     layers = collection.get("layers")
     if (
         not isinstance(layers, list)
@@ -100,3 +141,68 @@ def load_collection_config(path: str | Path) -> CollectionConfig:
         raise ValueError("output.run_name must be a non-empty string.")
 
     return raw
+
+
+def _validate_optional_seed(section: dict[str, Any], name: str) -> None:
+    if "seed" in section and type(section["seed"]) is not int:
+        raise ValueError(f"{name}.seed must be an integer when provided.")
+
+
+def _validate_sampling(sampling: Any) -> None:
+    """Validate the optional ``dataset.sampling`` section."""
+    if not isinstance(sampling, dict):
+        raise ValueError("dataset.sampling must be a mapping.")
+
+    strategy = sampling.get("strategy")
+    if strategy not in SUPPORTED_SAMPLING_STRATEGIES:
+        raise ValueError(
+            "dataset.sampling.strategy must be one of "
+            f"{list(SUPPORTED_SAMPLING_STRATEGIES)}."
+        )
+
+    _validate_optional_seed(sampling, "dataset.sampling")
+
+    has_proportions = "hop_proportions" in sampling
+
+    if strategy == "stratified" and not has_proportions:
+        raise ValueError(
+            "dataset.sampling.hop_proportions is required when "
+            "strategy is 'stratified'."
+        )
+
+    if strategy != "stratified" and has_proportions:
+        raise ValueError(
+            "dataset.sampling.hop_proportions is only allowed when "
+            "strategy is 'stratified'."
+        )
+
+    if has_proportions:
+        proportions = sampling["hop_proportions"]
+        validate_proportions(
+            proportions, name="dataset.sampling.hop_proportions"
+        )
+
+        for group in proportions:
+            if not group.endswith("hop") or not group[:-3].isdigit():
+                raise ValueError(
+                    "dataset.sampling.hop_proportions keys must be hop "
+                    f"groups such as '2hop', got {group!r}."
+                )
+
+
+def _validate_experiment_split(experiment_split: Any) -> None:
+    """Validate the optional ``dataset.experiment_split`` section."""
+    if not isinstance(experiment_split, dict):
+        raise ValueError("dataset.experiment_split must be a mapping.")
+
+    if "proportions" not in experiment_split:
+        raise ValueError(
+            "dataset.experiment_split.proportions is required."
+        )
+
+    validate_experiment_split_proportions(
+        experiment_split["proportions"],
+        name="dataset.experiment_split.proportions",
+    )
+
+    _validate_optional_seed(experiment_split, "dataset.experiment_split")

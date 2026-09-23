@@ -7,9 +7,11 @@ from pathlib import Path
 from mas_sae.agents.critic import Critic
 from mas_sae.agents.solver import Solver
 from mas_sae.agents.validator import Validator
-from mas_sae.data.musique import load_musique_examples
 from mas_sae.experiments.artifacts import ensure_output_available
-from mas_sae.experiments.collection import collect_examples
+from mas_sae.experiments.collection import (
+    collect_examples,
+    select_questions,
+)
 from mas_sae.experiments.collection_artifacts import (
     build_resolved_config,
     save_collection_artifacts,
@@ -75,13 +77,18 @@ def main() -> None:
     resolved_config = build_resolved_config(
         config, model, solver, critic, validator
     )
-    examples = load_musique_examples(
-        source_split=source_split,
-        num_questions=num_questions,
-    )
+    selection = select_questions(config["dataset"], default_seed=seed)
+
+    if selection["sampled_questions"] is not None:
+        logger.info(
+            "Sampled %d questions (strategy=%s, experiment_split=%s)",
+            len(selection["examples"]),
+            config["dataset"].get("sampling", {}).get("strategy", "first_n"),
+            "yes" if selection["experiment_splits"] is not None else "no",
+        )
 
     result = collect_examples(
-        examples=examples,
+        examples=selection["examples"],
         source_split=source_split,
         model=model,
         solver=solver,
@@ -89,6 +96,7 @@ def main() -> None:
         validator=validator,
         candidate_sites=candidate_sites,
         base_seed=seed,
+        experiment_splits=selection["experiment_splits"],
     )
 
     summary = save_collection_artifacts(
@@ -101,6 +109,7 @@ def main() -> None:
         attempt2_by_site=result["attempt2_by_site"],
         records=result["records"],
         resolved_config=resolved_config,
+        sampled_questions=selection["sampled_questions"],
     )
 
     logger.info(
