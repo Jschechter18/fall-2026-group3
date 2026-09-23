@@ -266,17 +266,22 @@ def test_collection_config_protocol_version_defaults_to_absent(
     assert "protocol_version" not in config["collection"]
 
 
-def test_collection_config_accepts_protocol_version_v2(
-    tmp_path: Path,
+@pytest.mark.parametrize("value", ["v2", "v3", "my_label"])
+def test_collection_config_accepts_any_protocol_version_label(
+    tmp_path: Path, value: str
 ) -> None:
-    text = V2_CONFIG.replace("  seed: 42\n", "  seed: 42\n  protocol_version: v2\n")
+    text = V2_CONFIG.replace(
+        "  seed: 42\n", f"  seed: 42\n  protocol_version: {value}\n"
+    )
     config = load_collection_config(write_config(tmp_path, text))
 
-    assert config["collection"]["protocol_version"] == "v2"
+    # the loader keeps the label as is; the collection script owns the
+    # accepted set
+    assert config["collection"]["protocol_version"] == value
 
 
-@pytest.mark.parametrize("value", ["v3", "2", "true"])
-def test_collection_config_rejects_unknown_protocol_version(
+@pytest.mark.parametrize("value", ["2", "true", '""', "'  '"])
+def test_collection_config_rejects_non_string_protocol_version(
     tmp_path: Path, value: str
 ) -> None:
     text = V2_CONFIG.replace(
@@ -287,7 +292,7 @@ def test_collection_config_rejects_unknown_protocol_version(
         load_collection_config(write_config(tmp_path, text))
 
 
-def test_collection_config_v2_smoke_selects_v2_protocol() -> None:
+def test_collection_config_v2_smoke_carries_v2_label() -> None:
     config = load_collection_config(
         Path("configs/collection/v2/smoke_train.yaml")
     )

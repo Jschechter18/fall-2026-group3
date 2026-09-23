@@ -297,7 +297,7 @@ def test_select_questions_stratified_with_experiment_split(
     assert again["experiment_splits"] == splits
 
 
-def test_collect_examples_forwards_decomposition_and_protocol(
+def test_collect_examples_forwards_decomposition_and_target_flag(
     monkeypatch,
 ) -> None:
     mock_run_question = Mock(side_effect=[make_result("q1"), make_result("q2")])
@@ -327,17 +327,17 @@ def test_collect_examples_forwards_decomposition_and_protocol(
         validator=Mock(),
         candidate_sites=SITES,
         base_seed=42,
-        protocol_version="v2",
+        type_checked_target=True,
     )
 
     first, second = mock_run_question.call_args_list
     assert first.kwargs["decomposition"] == decomposition
-    assert first.kwargs["protocol_version"] == "v2"
+    assert first.kwargs["type_checked_target"] is True
     assert second.kwargs["decomposition"] == []
-    assert second.kwargs["protocol_version"] == "v2"
+    assert second.kwargs["type_checked_target"] is True
 
 
-def test_collect_examples_defaults_to_v1_protocol(monkeypatch) -> None:
+def test_collect_examples_defaults_to_heuristic_target(monkeypatch) -> None:
     mock_run_question = Mock(side_effect=[make_result("q1")])
     monkeypatch.setattr(collection, "run_question", mock_run_question)
 
@@ -354,4 +354,4 @@ def test_collect_examples_defaults_to_v1_protocol(monkeypatch) -> None:
         base_seed=42,
     )
 
-    assert mock_run_question.call_args.kwargs["protocol_version"] == "v1"
+    assert mock_run_question.call_args.kwargs["type_checked_target"] is False

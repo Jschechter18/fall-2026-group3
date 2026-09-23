@@ -45,11 +45,12 @@ def select_questions(
     """Select questions and assign experiment splits from ``config.dataset``.
 
     Without a ``sampling`` section, or with ``strategy: first_n``, this is
-    the V1 behaviour: the first N answerable questions in dataset order and
-    no experiment split. Otherwise a seeded (optionally hop-stratified)
-    sample is drawn, and when ``experiment_split`` is configured each
-    question id is assigned exactly one split. ``sampled_questions`` is the
-    ordered reproducibility manifest, or ``None`` on the pure V1 path.
+    the original behaviour: the first N answerable questions in dataset
+    order and no experiment split. Otherwise a seeded (optionally
+    hop-stratified) sample is drawn, and when ``experiment_split`` is
+    configured each question id is assigned exactly one split.
+    ``sampled_questions`` is the ordered reproducibility manifest, or
+    ``None`` on the pure dataset-order path.
     Seeds default to ``default_seed`` (``collection.seed``).
     """
     source_split = dataset_config["source_split"]
@@ -108,7 +109,7 @@ def collect_examples(
     candidate_sites: list[str],
     base_seed: int,
     experiment_splits: dict[str, str] | None = None,
-    protocol_version: str = "v1",
+    type_checked_target: bool = False,
 ) -> CollectionResult:
     """Collect paired Solver-Critic episodes and activation-row mappings.
 
@@ -142,10 +143,12 @@ def collect_examples(
         (``discovery`` / ``validation`` / ``intervention``). Assigned at
         question level, so it is written unchanged to every episode of that
         question. When omitted, records carry no ``experiment_split`` field,
-        which preserves V1 behaviour.
-    protocol_version
-        ``"v1"`` (default) or ``"v2"``; forwarded to ``run_question``
-        together with each example's MuSiQue ``question_decomposition``.
+        which preserves the original record schema.
+    type_checked_target
+        Forwarded to ``run_question`` together with each example's MuSiQue
+        ``question_decomposition``. When set, the controlled-incorrect
+        target comes from the type-checked generator instead of the
+        paragraph-title heuristic.
 
     Returns
     -------
@@ -205,7 +208,7 @@ def collect_examples(
             candidate_sites=candidate_sites,
             seed=seed,
             decomposition=example.get("question_decomposition") or [],
-            protocol_version=protocol_version,
+            type_checked_target=type_checked_target,
         )
 
         attempt1_index = len(attempt1_by_site[candidate_sites[0]])

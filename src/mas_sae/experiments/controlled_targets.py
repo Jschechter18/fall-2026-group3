@@ -1,4 +1,4 @@
-"""V2 controlled-incorrect target generation.
+"""Type-checked controlled-incorrect target generation.
 
 Chooses a plausible, type-compatible wrong answer for the
 controlled-incorrect critic condition. Candidates are tried in a fixed

@@ -5,7 +5,6 @@ from typing import Any, NotRequired, TypedDict
 
 import yaml
 
-from mas_sae.agents.critic import PROMPT_VERSIONS
 from mas_sae.data.musique import (
     SUPPORTED_SOURCE_SPLITS,
     validate_experiment_split_proportions,
@@ -14,7 +13,6 @@ from mas_sae.data.musique import (
 
 
 SUPPORTED_SAMPLING_STRATEGIES = ("first_n", "random", "stratified")
-SUPPORTED_PROTOCOL_VERSIONS = PROMPT_VERSIONS
 
 
 class ModelConfig(TypedDict):
@@ -24,7 +22,7 @@ class ModelConfig(TypedDict):
 class SamplingConfig(TypedDict):
     """How questions are drawn from the MuSiQue source split.
 
-    ``first_n`` reproduces the V1 behaviour (dataset order). ``random`` draws
+    ``first_n`` is the original behaviour (dataset order). ``random`` draws
     a seeded uniform sample. ``stratified`` draws a seeded sample with the
     given ``hop_proportions`` over hop groups (``2hop``, ``3hop``, ``4hop``).
     ``seed`` defaults to ``collection.seed`` when omitted.
@@ -55,11 +53,12 @@ class DatasetConfig(TypedDict):
 
 
 class CollectionSettings(TypedDict):
-    """Activation layers, seed, and the Solver-Critic protocol version.
+    """Activation layers, seed, and an optional protocol label.
 
-    ``protocol_version`` selects the critic prompts and the
-    controlled-incorrect target strategy (``v1`` or ``v2``). Omitted means
-    ``v1``, so existing configs are unchanged.
+    ``protocol_version`` is a run label that the collection script maps
+    to critic and target behaviour; the loader only checks that it is a
+    non-empty string. Omitted means the script's default, so existing
+    configs are unchanged.
     """
 
     layers: list[int]
@@ -146,14 +145,16 @@ def load_collection_config(path: str | Path) -> CollectionConfig:
     if type(seed) is not int:
         raise ValueError("collection.seed must be an integer.")
 
-    if (
-        "protocol_version" in collection
-        and collection["protocol_version"] not in SUPPORTED_PROTOCOL_VERSIONS
-    ):
-        raise ValueError(
-            "collection.protocol_version must be one of "
-            f"{list(SUPPORTED_PROTOCOL_VERSIONS)}."
-        )
+    if "protocol_version" in collection:
+        protocol_version = collection["protocol_version"]
+        if (
+            not isinstance(protocol_version, str)
+            or not protocol_version.strip()
+        ):
+            raise ValueError(
+                "collection.protocol_version must be a non-empty string "
+                "when provided."
+            )
 
     run_name = output.get("run_name")
     if not isinstance(run_name, str) or not run_name.strip():

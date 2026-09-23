@@ -7,9 +7,10 @@
 #   - dataset.experiment_split: a question-level scientific split
 #     (discovery / validation / intervention), separate from the MuSiQue
 #     source_split, shared by all three critic episodes of a question.
-#   - collection.protocol_version: v2 selects the blind-then-compare
-#     natural critic, the leakage-safe controlled prompt, and the
-#     type-checked controlled-incorrect target generator. Omitted = v1.
+#   - collection.protocol_version: a run label. v2 selects the
+#     blind-then-compare natural critic, the leakage-safe controlled
+#     prompt, and the type-checked controlled-incorrect target generator
+#     (mapping in scripts/collect_activations.py). Omitted = v1.
 #
 # PENDING TEAM SIGN-OFF — the numeric values below are placeholders that
 # reproduce the plan's recommended defaults; they are NOT decided:

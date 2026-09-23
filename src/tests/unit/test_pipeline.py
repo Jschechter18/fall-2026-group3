@@ -1,4 +1,5 @@
-"""End-to-end tests of ``run_question`` under the V1 and V2 protocols.
+"""End-to-end tests of ``run_question`` with and without the optional
+critic and target capabilities.
 
 Agents are real ``Critic`` objects whose generation is faked, so the
 prompts actually built by the pipeline are inspected; activation capture
@@ -50,6 +51,14 @@ NATURAL_JSON = (
     '"explanation": "Paragraph 1 names her."}'
 )
 
+# All three optional capabilities on (what the collection script maps
+# ``protocol_version: v2`` to).
+BLIND_TYPED = dict(
+    blind_then_compare=True,
+    controlled_as_own_conclusion=True,
+    type_checked_target=True,
+)
+
 
 class FakeCapture:
     def __init__(self, model, sites):
@@ -79,8 +88,14 @@ def fake_generation(prompts, *, blind='{"answer": "Steve Hillage"}',
     return generate
 
 
-def make_agents(prompt_version, prompts, **generation):
-    critic = Critic(Mock(device="cpu"), Mock(), prompt_version=prompt_version)
+def make_agents(prompts, *, blind_then_compare=False,
+                controlled_as_own_conclusion=False, **generation):
+    critic = Critic(
+        Mock(device="cpu"),
+        Mock(),
+        blind_then_compare=blind_then_compare,
+        controlled_as_own_conclusion=controlled_as_own_conclusion,
+    )
     critic._generate = fake_generation(prompts, **generation)
 
     solver = Mock()
@@ -94,11 +109,15 @@ def make_agents(prompt_version, prompts, **generation):
     return solver, critic, validator
 
 
-def run(monkeypatch, protocol_version, prompts, decomposition=DECOMPOSITION,
-        **generation):
+def run(monkeypatch, prompts, *, blind_then_compare=False,
+        controlled_as_own_conclusion=False, type_checked_target=False,
+        decomposition=DECOMPOSITION, **generation):
     monkeypatch.setattr(pipeline, "MultiSiteCapture", FakeCapture)
     solver, critic, validator = make_agents(
-        protocol_version, prompts, **generation
+        prompts,
+        blind_then_compare=blind_then_compare,
+        controlled_as_own_conclusion=controlled_as_own_conclusion,
+        **generation,
     )
 
     return pipeline.run_question(
@@ -114,7 +133,7 @@ def run(monkeypatch, protocol_version, prompts, decomposition=DECOMPOSITION,
         candidate_sites=SITES,
         seed=42,
         decomposition=decomposition,
-        protocol_version=protocol_version,
+        type_checked_target=type_checked_target,
     )
 
 
@@ -122,11 +141,11 @@ def records(result):
     return {ep["record"]["critic_condition"]: ep["record"] for ep in result["episodes"]}
 
 
-def test_v2_blind_answer_is_formed_before_the_critic_sees_attempt1(
+def test_blind_answer_is_formed_before_the_critic_sees_attempt1(
     monkeypatch,
 ):
     prompts: list[str] = []
-    result = run(monkeypatch, "v2", prompts)
+    result = run(monkeypatch, prompts, **BLIND_TYPED)
 
     blind_prompts = [
         index for index, prompt in enumerate(prompts)
@@ -147,9 +166,9 @@ def test_v2_blind_answer_is_formed_before_the_critic_sees_attempt1(
     assert "Steve Hillage" not in natural["critic_feedback"]
 
 
-def test_v2_records_carry_target_fields_per_condition(monkeypatch):
+def test_records_carry_target_fields_per_condition(monkeypatch):
     prompts: list[str] = []
-    by_condition = records(run(monkeypatch, "v2", prompts))
+    by_condition = records(run(monkeypatch, prompts, **BLIND_TYPED))
 
     natural = by_condition["natural"]
     correct = by_condition["controlled_correct"]
@@ -173,9 +192,9 @@ def test_v2_records_carry_target_fields_per_condition(monkeypatch):
     assert not any("plausible but incorrect" in prompt for prompt in prompts)
 
 
-def test_v2_controlled_prompts_present_target_as_own_conclusion(monkeypatch):
+def test_own_conclusion_controlled_prompts_present_target_as_own(monkeypatch):
     prompts: list[str] = []
-    run(monkeypatch, "v2", prompts)
+    run(monkeypatch, prompts, **BLIND_TYPED)
 
     controlled = [prompt for prompt in prompts if prompt.endswith("Review:")]
     assert len(controlled) == 2
@@ -185,9 +204,13 @@ def test_v2_controlled_prompts_present_target_as_own_conclusion(monkeypatch):
         assert "supplied" not in prompt.casefold()
 
 
-def test_v2_uses_distractor_when_no_hop_candidate(monkeypatch):
+def test_type_checked_target_uses_distractor_when_no_hop_candidate(
+    monkeypatch,
+):
     prompts: list[str] = []
-    by_condition = records(run(monkeypatch, "v2", prompts, decomposition=[]))
+    by_condition = records(
+        run(monkeypatch, prompts, decomposition=[], **BLIND_TYPED)
+    )
 
     incorrect = by_condition["controlled_incorrect"]
     assert incorrect["controlled_target_source"] == "llm_distractor"
@@ -202,31 +225,56 @@ def test_v2_uses_distractor_when_no_hop_candidate(monkeypatch):
     assert GOLD in distractor_prompt  # excluded strings listed
 
 
-def test_v2_blind_failure_aborts_before_any_feedback(monkeypatch):
+def test_blind_failure_aborts_before_any_feedback(monkeypatch):
     prompts: list[str] = []
 
     with pytest.raises(CriticBlindAnswerError):
-        run(monkeypatch, "v2", prompts, blind="I cannot tell.")
+        run(monkeypatch, prompts, blind="I cannot tell.", **BLIND_TYPED)
 
     assert len(prompts) == 1
 
 
-def test_v2_unresolvable_target_aborts(monkeypatch):
+def test_unresolvable_type_checked_target_aborts(monkeypatch):
     prompts: list[str] = []
 
     with pytest.raises(ControlledTargetError):
         run(
             monkeypatch,
-            "v2",
             prompts,
             decomposition=[],
             distractor='{"answer": "Miquette Giraudy"}',
+            **BLIND_TYPED,
         )
 
 
-def test_v1_path_is_unchanged(monkeypatch):
+def test_capabilities_are_independent(monkeypatch):
+    """Each flag adds only its own fields; the others stay absent."""
     prompts: list[str] = []
-    result = run(monkeypatch, "v1", prompts)
+    result = run(monkeypatch, prompts, blind_then_compare=True)
+
+    for record in records(result).values():
+        assert "critic_blind_answer" in record
+        assert "controlled_target_source" not in record
+    assert records(result)["controlled_incorrect"]["critic_advocated_answer"] == (
+        "Paris"
+    )
+    assert any("Answer to advocate:" in prompt for prompt in prompts)
+
+    prompts = []
+    result = run(monkeypatch, prompts, type_checked_target=True)
+
+    assert not any("independently" in prompt for prompt in prompts)
+    for record in records(result).values():
+        assert "critic_blind_answer" not in record
+        assert "controlled_target_source" in record
+    assert records(result)["controlled_incorrect"]["critic_advocated_answer"] == (
+        "Steve Hillage"
+    )
+
+
+def test_default_path_is_unchanged(monkeypatch):
+    prompts: list[str] = []
+    result = run(monkeypatch, prompts)
 
     assert not any("independently" in prompt for prompt in prompts)
     assert not any("plausible but incorrect" in prompt for prompt in prompts)
@@ -237,51 +285,7 @@ def test_v1_path_is_unchanged(monkeypatch):
         assert "controlled_target_source" not in record
         assert "controlled_target_type_check" not in record
 
-    # V1 target: first non-supporting paragraph title
+    # original target: first non-supporting paragraph title
     assert records(result)["controlled_incorrect"]["critic_advocated_answer"] == (
         "Paris"
     )
-
-
-def test_protocol_version_must_match_critic(monkeypatch):
-    prompts: list[str] = []
-    monkeypatch.setattr(pipeline, "MultiSiteCapture", FakeCapture)
-    solver, critic, validator = make_agents("v1", prompts)
-
-    with pytest.raises(ValueError, match="does not match"):
-        pipeline.run_question(
-            question_id="q",
-            question=QUESTION,
-            paragraphs=PARAGRAPHS,
-            gold=GOLD,
-            aliases=[],
-            model=object(),
-            solver=solver,
-            critic=critic,
-            validator=validator,
-            candidate_sites=SITES,
-            seed=42,
-            protocol_version="v2",
-        )
-
-
-def test_unknown_protocol_version_rejected(monkeypatch):
-    prompts: list[str] = []
-    monkeypatch.setattr(pipeline, "MultiSiteCapture", FakeCapture)
-    solver, critic, validator = make_agents("v1", prompts)
-
-    with pytest.raises(ValueError, match="protocol_version"):
-        pipeline.run_question(
-            question_id="q",
-            question=QUESTION,
-            paragraphs=PARAGRAPHS,
-            gold=GOLD,
-            aliases=[],
-            model=object(),
-            solver=solver,
-            critic=critic,
-            validator=validator,
-            candidate_sites=SITES,
-            seed=42,
-            protocol_version="v3",
-        )

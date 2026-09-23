@@ -247,81 +247,108 @@ def test_save_collection_artifacts_rejects_manifest_length_mismatch(
         )
 
 
-@pytest.mark.parametrize(
-    ("critic", "expected_version", "expected_natural", "expected_controlled"),
-    [
-        (
-            SimpleNamespace(max_new_tokens=128),
-            "v1",
-            "NATURAL_PROMPT_V1",
-            "CONTROLLED_PROMPT_V1",
-        ),
-        (
-            SimpleNamespace(max_new_tokens=128, prompt_version="v1"),
-            "v1",
-            "NATURAL_PROMPT_V1",
-            "CONTROLLED_PROMPT_V1",
-        ),
-        (
-            SimpleNamespace(max_new_tokens=128, prompt_version="v2"),
-            "v2",
-            "NATURAL_BLIND_PROMPT_V2+NATURAL_COMPARE_PROMPT_V2",
-            "CONTROLLED_PROMPT_V2",
-        ),
-    ],
-    ids=["no-attribute", "v1", "v2"],
-)
-def test_build_resolved_config_records_protocol_version(
-    monkeypatch,
-    critic,
-    expected_version,
-    expected_natural,
-    expected_controlled,
-) -> None:
+def _resolve(monkeypatch, critic, **kwargs):
     monkeypatch.setattr(artifacts, "get_git_commit", lambda: "abc123")
     monkeypatch.setattr(
         artifacts, "get_package_version", lambda package: "x"
     )
 
-    resolved = collection_artifacts.build_resolved_config(
+    return collection_artifacts.build_resolved_config(
         {"output": {"run_name": "r"}},
         SimpleNamespace(config=SimpleNamespace(_commit_hash="rev")),
         SimpleNamespace(max_new_tokens=32),
         critic,
         SimpleNamespace(max_new_tokens=4),
-    )
+        **kwargs,
+    )["provenance"]
 
-    provenance = resolved["provenance"]
+
+@pytest.mark.parametrize(
+    (
+        "critic",
+        "type_checked_target",
+        "expected_natural",
+        "expected_controlled",
+    ),
+    [
+        (
+            SimpleNamespace(max_new_tokens=128),
+            False,
+            "NATURAL_PROMPT_V1",
+            "CONTROLLED_PROMPT_V1",
+        ),
+        (
+            SimpleNamespace(
+                max_new_tokens=128,
+                blind_then_compare=False,
+                controlled_as_own_conclusion=False,
+            ),
+            False,
+            "NATURAL_PROMPT_V1",
+            "CONTROLLED_PROMPT_V1",
+        ),
+        (
+            SimpleNamespace(
+                max_new_tokens=128,
+                blind_then_compare=True,
+                controlled_as_own_conclusion=True,
+            ),
+            True,
+            "NATURAL_BLIND_PROMPT+NATURAL_COMPARE_PROMPT",
+            "CONTROLLED_OWN_CONCLUSION_PROMPT",
+        ),
+        (
+            SimpleNamespace(
+                max_new_tokens=128,
+                blind_then_compare=True,
+                controlled_as_own_conclusion=False,
+            ),
+            False,
+            "NATURAL_BLIND_PROMPT+NATURAL_COMPARE_PROMPT",
+            "CONTROLLED_PROMPT_V1",
+        ),
+    ],
+    ids=["no-attributes", "all-off", "all-on", "blind-only"],
+)
+def test_build_resolved_config_records_actual_capabilities(
+    monkeypatch,
+    critic,
+    type_checked_target,
+    expected_natural,
+    expected_controlled,
+) -> None:
+    provenance = _resolve(
+        monkeypatch, critic, type_checked_target=type_checked_target
+    )
     prompts = provenance["prompt_versions"]
 
-    assert provenance["protocol_version"] == expected_version
+    assert provenance["capabilities"] == {
+        "blind_then_compare": getattr(critic, "blind_then_compare", False),
+        "controlled_as_own_conclusion": getattr(
+            critic, "controlled_as_own_conclusion", False
+        ),
+        "type_checked_target": type_checked_target,
+    }
     assert prompts["critic_natural"] == expected_natural
     assert prompts["critic_controlled"] == expected_controlled
     assert prompts["solver_solve"] == "SOLVE_PROMPT_V1"
-    assert ("critic_distractor" in prompts) == (expected_version == "v2")
+    assert ("critic_distractor" in prompts) == type_checked_target
 
 
-def test_build_resolved_config_rejects_unknown_prompt_version(
+def test_build_resolved_config_echoes_protocol_label_without_branching(
     monkeypatch,
 ) -> None:
-    monkeypatch.setattr(artifacts, "get_git_commit", lambda: "abc123")
-    monkeypatch.setattr(
-        artifacts, "get_package_version", lambda package: "x"
-    )
+    critic = SimpleNamespace(max_new_tokens=128)
 
-    with pytest.raises(ValueError, match="prompt_version"):
-        collection_artifacts.build_resolved_config(
-            {},
-            SimpleNamespace(config=SimpleNamespace(_commit_hash="rev")),
-            SimpleNamespace(max_new_tokens=32),
-            SimpleNamespace(max_new_tokens=128, prompt_version="v9"),
-            SimpleNamespace(max_new_tokens=4),
-        )
+    # the label is recorded as given and does not change the behaviour
+    # actually recorded
+    labelled = _resolve(monkeypatch, critic, protocol_version="v9")
+    assert labelled["protocol_version"] == "v9"
+    assert labelled["capabilities"]["blind_then_compare"] is False
+    assert labelled["prompt_versions"]["critic_natural"] == "NATURAL_PROMPT_V1"
 
-
-def test_critic_prompt_names_cover_all_prompt_versions() -> None:
-    from mas_sae.agents.critic import PROMPT_VERSIONS
-
-    assert set(collection_artifacts.CRITIC_PROMPT_NAMES) == set(
-        PROMPT_VERSIONS
-    )
+    # no label supplied: no label key, everything else unchanged
+    unlabelled = _resolve(monkeypatch, critic)
+    assert "protocol_version" not in unlabelled
+    assert unlabelled["capabilities"] == labelled["capabilities"]
+    assert unlabelled["prompt_versions"] == labelled["prompt_versions"]

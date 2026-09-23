@@ -197,7 +197,8 @@ def test_parse_natural_ignores_trailing_braced_text():
 
 
 # ---------------------------------------------------------------------
-# V2 prompts (issue #54)
+# Optional critic capabilities (issue #54): blind-then-compare natural
+# critic, own-conclusion controlled prompt, distractor proposal.
 # ---------------------------------------------------------------------
 
 from mas_sae.agents import critic as critic_module  # noqa: E402
@@ -223,27 +224,30 @@ FORBIDDEN_CONTROLLED_PHRASES = (
 )
 
 
-def make_v2_critic():
+def make_blind_compare_critic():
     model = Mock()
     model.device = "cpu"
-    return Critic(model, Mock(), prompt_version="v2")
+    return Critic(
+        model,
+        Mock(),
+        blind_then_compare=True,
+        controlled_as_own_conclusion=True,
+    )
 
 
-def test_v1_prompts_are_unchanged():
+def test_original_prompts_are_unchanged_and_default():
     assert "advocate the supplied target answer" in (
         critic_module.CONTROLLED_PROMPT_V1
     )
     assert critic_module.NATURAL_PROMPT_V1.endswith("JSON:")
-    assert make_critic().prompt_version == "v1"
 
-
-def test_critic_rejects_unknown_prompt_version():
-    with pytest.raises(ValueError, match="prompt_version"):
-        Critic(Mock(), Mock(), prompt_version="v3")
+    critic = make_critic()
+    assert critic.blind_then_compare is False
+    assert critic.controlled_as_own_conclusion is False
 
 
 def test_answer_blind_prompt_excludes_solver_and_parses_answer():
-    critic = make_v2_critic()
+    critic = make_blind_compare_critic()
     critic._generate = Mock(return_value='{"answer": "Paris"}')
 
     answer = critic.answer_blind("What is the capital of France?", PARAGRAPHS)
@@ -260,15 +264,15 @@ def test_answer_blind_prompt_excludes_solver_and_parses_answer():
     ["I am not sure.", '{"answer": ""}', '{"verdict": "agree"}', ""],
 )
 def test_answer_blind_raises_on_unusable_output(raw):
-    critic = make_v2_critic()
+    critic = make_blind_compare_critic()
     critic._generate = Mock(return_value=raw)
 
     with pytest.raises(CriticBlindAnswerError):
         critic.answer_blind("What is the capital of France?", PARAGRAPHS)
 
 
-def test_v2_natural_compare_prompt_contains_blind_and_proposed_answers():
-    critic = make_v2_critic()
+def test_compare_prompt_contains_blind_and_proposed_answers():
+    critic = make_blind_compare_critic()
     critic._generate = Mock(
         return_value=(
             '{"verdict": "disagree", "advocated_answer": "Paris", '
@@ -292,8 +296,8 @@ def test_v2_natural_compare_prompt_contains_blind_and_proposed_answers():
     assert feedback.blind_answer == "Paris"
 
 
-def test_v2_natural_requires_blind_answer():
-    critic = make_v2_critic()
+def test_blind_then_compare_natural_requires_blind_answer():
+    critic = make_blind_compare_critic()
     critic._generate = Mock()
 
     with pytest.raises(ValueError, match="blind_answer is required"):
@@ -307,11 +311,13 @@ def test_v2_natural_requires_blind_answer():
     critic._generate.assert_not_called()
 
 
-def test_v1_natural_rejects_blind_answer():
+def test_single_step_natural_rejects_blind_answer():
     critic = make_critic()
     critic._generate = Mock()
 
-    with pytest.raises(ValueError, match="only used by prompt_version 'v2'"):
+    with pytest.raises(
+        ValueError, match="only used when blind_then_compare is enabled"
+    ):
         critic.critique(
             question="Q",
             paragraphs=PARAGRAPHS,
@@ -322,7 +328,7 @@ def test_v1_natural_rejects_blind_answer():
 
 
 def test_controlled_rejects_blind_answer():
-    critic = make_v2_critic()
+    critic = make_blind_compare_critic()
     critic._generate = Mock()
 
     with pytest.raises(ValueError, match="only used by the natural"):
@@ -350,8 +356,8 @@ def test_blind_answer_never_reaches_solver_text():
     assert "SECRET-BLIND" not in feedback.to_solver_text()
 
 
-def test_v2_controlled_prompt_is_leakage_safe_and_verdict_is_code_set():
-    critic = make_v2_critic()
+def test_own_conclusion_prompt_is_leakage_safe_and_verdict_is_code_set():
+    critic = make_blind_compare_critic()
     critic._generate = Mock(return_value="Paris is named in paragraph 0.")
 
     feedback = critic.critique(
@@ -375,7 +381,7 @@ def test_v2_controlled_prompt_is_leakage_safe_and_verdict_is_code_set():
     assert feedback.explanation == "Paris is named in paragraph 0."
 
 
-def test_v1_controlled_prompt_still_used_under_v1():
+def test_original_controlled_prompt_used_by_default():
     critic = make_critic()
     critic._generate = Mock(return_value="review")
 
@@ -391,7 +397,7 @@ def test_v1_controlled_prompt_still_used_under_v1():
 
 
 def test_propose_distractor_prompt_and_parsing():
-    critic = make_v2_critic()
+    critic = make_blind_compare_critic()
     critic._generate = Mock(return_value='{"answer": "Marseille"}')
 
     proposal = critic.propose_distractor(
@@ -408,7 +414,7 @@ def test_propose_distractor_prompt_and_parsing():
 
 
 def test_propose_distractor_returns_empty_on_unusable_output():
-    critic = make_v2_critic()
+    critic = make_blind_compare_critic()
     critic._generate = Mock(return_value="no json here")
 
     assert critic.propose_distractor(
@@ -419,7 +425,7 @@ def test_propose_distractor_returns_empty_on_unusable_output():
     ) == ""
 
 
-def test_build_critique_prompt_v1_natural_matches_constant():
+def test_build_critique_prompt_default_natural_matches_constant():
     critic = make_critic()
     critic._generate = Mock()
 

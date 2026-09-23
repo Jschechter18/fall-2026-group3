@@ -10,9 +10,6 @@ from mas_sae.agents.solver import Solver
 from mas_sae.evaluation.scoring import answer_matches
 
 
-PROMPT_VERSIONS = ("v1", "v2")
-
-
 class CriticCondition(StrEnum):
     NATURAL = "natural"
     CONTROLLED_CORRECT = "controlled_correct"
@@ -20,7 +17,7 @@ class CriticCondition(StrEnum):
 
 
 class CriticBlindAnswerError(RuntimeError):
-    """The V2 critic failed to produce a usable blind answer.
+    """The critic failed to produce a usable blind answer.
 
     Raised instead of falling back to a compare step without a blind
     answer, which would silently change the natural-critic treatment.
@@ -36,8 +33,9 @@ class CriticFeedback:
     explanation: str
     raw_output: str
     noncommittal: bool
-    # V2 natural critic only: the answer the critic gave before seeing the
-    # Solver's attempt. Never included in ``to_solver_text``.
+    # Natural condition with ``blind_then_compare`` only: the answer the
+    # critic gave before seeing the Solver's attempt. Never included in
+    # ``to_solver_text``.
     blind_answer: str | None = None
 
     def to_solver_text(self) -> str:
@@ -96,15 +94,16 @@ CONTROLLED_PROMPT_V1 = (
 
 
 # ---------------------------------------------------------------------
-# V2 prompts. V1 prompts above are frozen; V2 is selected per run through
-# ``Critic(prompt_version="v2")``.
+# Optional critic capabilities. The prompts above are frozen; the ones
+# below are selected per Critic instance through ``blind_then_compare``
+# and ``controlled_as_own_conclusion``.
 # ---------------------------------------------------------------------
 
-# Step 1 of the V2 natural critic: an independent answer formed without
-# seeing the Solver's attempt. Deliberately worded and formatted
-# differently from the Solver's SOLVE_PROMPT_V1 so greedy decoding does
-# not simply replay Attempt 1.
-NATURAL_BLIND_PROMPT_V2 = (
+# Step 1 of the blind-then-compare natural critic: an independent answer
+# formed without seeing the Solver's attempt. Deliberately worded and
+# formatted differently from the Solver's SOLVE_PROMPT_V1 so greedy
+# decoding does not simply replay Attempt 1.
+NATURAL_BLIND_PROMPT = (
     "Using only the paragraphs provided, answer the question "
     "independently.\n"
     "Return JSON only, in exactly this form:\n"
@@ -115,9 +114,10 @@ NATURAL_BLIND_PROMPT_V2 = (
 )
 
 
-# Step 2 of the V2 natural critic: compare the blind answer with the
-# Solver's attempt and return the same JSON schema as V1.
-NATURAL_COMPARE_PROMPT_V2 = (
+# Step 2 of the blind-then-compare natural critic: compare the blind
+# answer with the Solver's attempt and return the same JSON schema as
+# NATURAL_PROMPT_V1.
+NATURAL_COMPARE_PROMPT = (
     "Review another model's answer using only the paragraphs provided.\n"
     "You already answered this question yourself; your own answer is "
     "shown below.\n"
@@ -137,11 +137,11 @@ NATURAL_COMPARE_PROMPT_V2 = (
 )
 
 
-# Controlled feedback (both controlled conditions). The target is
-# presented as the reviewer's own conclusion; no experimental vocabulary
-# ("supplied", "target", "advocate", "instructed") that could be echoed
-# to the Solver.
-CONTROLLED_PROMPT_V2 = (
+# Controlled feedback (both controlled conditions) with
+# ``controlled_as_own_conclusion``. The target is presented as the
+# reviewer's own conclusion; no experimental vocabulary ("supplied",
+# "target", "advocate", "instructed") that could be echoed to the Solver.
+CONTROLLED_OWN_CONCLUSION_PROMPT = (
     "Review another model's answer to the question using only the "
     "paragraphs provided.\n"
     "You have read the paragraphs and concluded that the correct answer "
@@ -157,10 +157,10 @@ CONTROLLED_PROMPT_V2 = (
 )
 
 
-# Type-constrained wrong-answer proposal used as the last resort of the V2
-# controlled-incorrect target generator. Its output is only ever used as a
-# target string; it is never shown to the Solver.
-DISTRACTOR_PROMPT_V2 = (
+# Type-constrained wrong-answer proposal used as the last resort of the
+# type-checked controlled-incorrect target generator. Its output is only
+# ever used as a target string; it is never shown to the Solver.
+DISTRACTOR_PROMPT = (
     "Using only the paragraphs provided, propose one plausible but "
     "incorrect answer to the question.\n"
     "The proposed answer must be {type_description}.\n"
@@ -219,33 +219,42 @@ class Critic(Agent):
         model,
         processor,
         max_new_tokens: int = 128,
-        prompt_version: str = "v1",
+        *,
+        blind_then_compare: bool = False,
+        controlled_as_own_conclusion: bool = False,
     ) -> None:
-        if prompt_version not in PROMPT_VERSIONS:
-            raise ValueError(
-                "prompt_version must be one of "
-                f"{list(PROMPT_VERSIONS)}, got {prompt_version!r}."
-            )
+        """Critic agent with two optional prompt capabilities.
 
+        ``blind_then_compare``: the natural condition first answers the
+        question without seeing the Solver (``answer_blind``), then
+        compares that blind answer with the Solver's attempt. Otherwise
+        the natural condition uses ``NATURAL_PROMPT_V1`` in one step.
+
+        ``controlled_as_own_conclusion``: controlled feedback presents
+        the advocated answer as the reviewer's own conclusion
+        (``CONTROLLED_OWN_CONCLUSION_PROMPT``). Otherwise
+        ``CONTROLLED_PROMPT_V1`` is used.
+        """
         super().__init__(
             model=model,
             processor=processor,
             max_new_tokens=max_new_tokens,
         )
-        self.prompt_version = prompt_version
+        self.blind_then_compare = blind_then_compare
+        self.controlled_as_own_conclusion = controlled_as_own_conclusion
 
     def answer_blind(
         self,
         question: str,
         paragraphs: list[dict],
     ) -> str:
-        """V2 step 1: answer the question without seeing the Solver.
+        """Answer the question without seeing the Solver (blind step).
 
         Raises ``CriticBlindAnswerError`` when the output carries no
         usable answer, so a run never continues on a compare step that
         lacks the blind answer.
         """
-        prompt = NATURAL_BLIND_PROMPT_V2.format(
+        prompt = NATURAL_BLIND_PROMPT.format(
             paragraphs=Solver.format_paragraphs(paragraphs),
             question=question,
         )
@@ -269,12 +278,12 @@ class Critic(Agent):
         type_description: str,
         excluded: Sequence[str],
     ) -> str:
-        """Propose one type-constrained wrong answer (V2, last resort).
+        """Propose one type-constrained wrong answer (target last resort).
 
         Returns an empty string when the output carries no answer; the
         caller validates the proposal like any other candidate.
         """
-        prompt = DISTRACTOR_PROMPT_V2.format(
+        prompt = DISTRACTOR_PROMPT.format(
             paragraphs=Solver.format_paragraphs(paragraphs),
             question=question,
             type_description=type_description,
@@ -343,28 +352,28 @@ class Critic(Agent):
         advocated_answer: str | None = None,
         blind_answer: str | None = None,
     ) -> str:
-        """Build the critique prompt for one condition and prompt version.
+        """Build the critique prompt for one condition.
 
         Validates the argument combination and selects the prompt; no
-        model call is made. ``blind_answer`` is required for the V2
-        natural condition (the output of ``answer_blind``) and must be
-        omitted otherwise. ``advocated_answer`` is required for the
-        controlled conditions.
+        model call is made. ``blind_answer`` is required for the natural
+        condition when ``blind_then_compare`` is enabled (the output of
+        ``answer_blind``) and must be omitted otherwise.
+        ``advocated_answer`` is required for the controlled conditions.
         """
         formatted_paragraphs = Solver.format_paragraphs(
             paragraphs
         )
-        is_v2 = self.prompt_version == "v2"
 
         if condition is CriticCondition.NATURAL:
-            if is_v2:
+            if self.blind_then_compare:
                 if not blind_answer:
                     raise ValueError(
-                        "blind_answer is required for the V2 natural "
-                        "critic; call answer_blind first."
+                        "blind_answer is required for the natural "
+                        "condition when blind_then_compare is enabled; "
+                        "call answer_blind first."
                     )
 
-                return NATURAL_COMPARE_PROMPT_V2.format(
+                return NATURAL_COMPARE_PROMPT.format(
                     paragraphs=formatted_paragraphs,
                     question=question,
                     blind_answer=blind_answer,
@@ -373,7 +382,8 @@ class Critic(Agent):
 
             if blind_answer is not None:
                 raise ValueError(
-                    "blind_answer is only used by prompt_version 'v2'."
+                    "blind_answer is only used when blind_then_compare "
+                    "is enabled."
                 )
 
             return NATURAL_PROMPT_V1.format(
@@ -393,7 +403,9 @@ class Critic(Agent):
             )
 
         controlled_prompt = (
-            CONTROLLED_PROMPT_V2 if is_v2 else CONTROLLED_PROMPT_V1
+            CONTROLLED_OWN_CONCLUSION_PROMPT
+            if self.controlled_as_own_conclusion
+            else CONTROLLED_PROMPT_V1
         )
 
         return controlled_prompt.format(
@@ -415,8 +427,10 @@ class Critic(Agent):
     ) -> CriticFeedback:
         """Generate feedback for one critic condition.
 
-        ``blind_answer`` is required for the V2 natural condition (the
-        output of ``answer_blind``) and must be omitted otherwise.
+        ``blind_answer`` is required for the natural condition when
+        ``blind_then_compare`` is enabled (the output of ``answer_blind``)
+        and must be omitted otherwise. It is recorded on the natural
+        feedback and never reaches ``to_solver_text``.
         """
         prompt = self.build_critique_prompt(
             question=question,
@@ -430,12 +444,10 @@ class Critic(Agent):
         raw_output = self._generate(prompt)
 
         if condition is CriticCondition.NATURAL:
-            feedback = self.parse_natural(raw_output)
-
-            if self.prompt_version == "v2":
-                feedback = replace(feedback, blind_answer=blind_answer)
-
-            return feedback
+            return replace(
+                self.parse_natural(raw_output),
+                blind_answer=blind_answer,
+            )
 
         verdict = (
             "agree"
