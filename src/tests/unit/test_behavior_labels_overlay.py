@@ -2,12 +2,18 @@ from copy import deepcopy
 
 import pytest
 
-from mas_sae.evaluation.behavior_v01 import (RULE_VERSION as V011_RULE_VERSION, classify_candidate,
-                                             read_labels, write_labels)
-from mas_sae.evaluation.behavior_v012_qc import (RULE_VERSION, classify_candidate_v012,
-                                                 explicit_a2_nonanswer, propose_feedback)
+from mas_sae.evaluation.behavior_labels import (
+    TRACE_FIELDS,
+    V011,
+    V012_QC,
+    a2_nonanswer_rules,
+    classify_candidate,
+    override_feedback,
+    read_labels,
+    write_labels,
+)
 
-TRACE_FIELDS = ("rule_version", "qc_rules", "base_feedback_type", "base_a2_kind")
+VERSION_AND_TRACE = ("rule_version",) + TRACE_FIELDS
 
 
 def row(a1="London", critic="Paris", a2="Paris", **kwargs):
@@ -40,8 +46,12 @@ def row(a1="London", critic="Paris", a2="Paris", **kwargs):
     # An unresolved Critic is never touched.
     ("unresolved", "The question contains a logical error.", "unresolved", []),
 ])
-def test_propose_feedback(current, advocated, expected, rules):
-    assert propose_feedback(current, advocated) == (expected, rules)
+def test_override_feedback(current, advocated, expected, rules):
+    assert override_feedback(current, advocated, V012_QC) == (expected, rules)
+
+
+def test_override_feedback_is_a_no_op_without_overrides():
+    assert override_feedback("answer", "The provided paragraphs do not mention it.", V011) == ("answer", [])
 
 
 @pytest.mark.parametrize("a2,rules", [
@@ -59,26 +69,27 @@ def test_propose_feedback(current, advocated, expected, rules):
     ("", []),
     (None, []),
 ])
-def test_explicit_a2_nonanswer(a2, rules):
-    assert explicit_a2_nonanswer(a2) == rules
+def test_a2_nonanswer_rules(a2, rules):
+    assert a2_nonanswer_rules(a2, V012_QC) == rules
+    assert a2_nonanswer_rules(a2, V011) == []
 
 
 def test_overlay_never_modifies_the_row_or_the_v011_result():
     r = row(critic="The provided paragraphs do not mention a castle.", a2="No such castle is mentioned.")
     before = deepcopy(r)
     base_before = classify_candidate(r)
-    label = classify_candidate_v012(r)
+    label = classify_candidate(r, V012_QC)
     assert r == before
     assert classify_candidate(r) == base_before
-    assert base_before["rule_version"] == V011_RULE_VERSION
+    assert base_before["rule_version"] == V011.version
     assert base_before["feedback_type"] == "answer" and label["feedback_type"] == "refusal"
 
 
 def test_explicit_refusal_makes_the_episode_a_non_answer_and_ineligible():
-    label = classify_candidate_v012(row(a1="Prague Castle",
-                                        critic="The provided paragraphs do not mention a castle.",
-                                        a2="No such castle is mentioned."))
-    assert label["rule_version"] == RULE_VERSION
+    label = classify_candidate(row(a1="Prague Castle",
+                                   critic="The provided paragraphs do not mention a castle.",
+                                   a2="No such castle is mentioned."), V012_QC)
+    assert label["rule_version"] == V012_QC.version
     assert label["feedback_type"] == "refusal" and label["solver_response"] == "non_answer"
     assert label["critic_refusal_flag"] and not label["critic_premise_rejection_flag"]
     assert not label["eligible_primary"] and label["primary_target"] is None
@@ -88,7 +99,7 @@ def test_explicit_refusal_makes_the_episode_a_non_answer_and_ineligible():
 
 
 def test_explicit_premise_rejection_sets_the_flag():
-    label = classify_candidate_v012(row(critic="The question contains a factual error.", a2="London"))
+    label = classify_candidate(row(critic="The question contains a factual error.", a2="London"), V012_QC)
     assert label["feedback_type"] == "premise_rejection" and label["critic_premise_rejection_flag"]
     assert label["solver_response"] == "retained_a1" and not label["eligible_primary"]
     assert label["qc_rules"] == ["premise:question_explicitly_erroneous"]
@@ -98,38 +109,38 @@ def test_row_without_a_rule_equals_v011_except_the_trace_fields():
     for r in [row(), row(a2="London"), row(a2="Rome"), row(a1="Paris", critic="Paris", a2="Paris"),
               row(critic="The passage does not specify", a2="Rome")]:
         base = classify_candidate(r)
-        label = classify_candidate_v012(r)
-        assert {k: v for k, v in label.items() if k not in TRACE_FIELDS} == \
+        label = classify_candidate(r, V012_QC)
+        assert {k: v for k, v in label.items() if k not in VERSION_AND_TRACE} == \
                {k: v for k, v in base.items() if k != "rule_version"}
-        assert label["rule_version"] == RULE_VERSION and label["qc_rules"] == []
+        assert label["rule_version"] == V012_QC.version and label["qc_rules"] == []
         assert label["base_feedback_type"] == base["feedback_type"]
         assert label["base_a2_kind"] == base["a2_kind"]
 
 
 def test_valid_disagreement_stays_eligible():
-    label = classify_candidate_v012(row(a1="Paris", critic="London", a2="London"))
+    label = classify_candidate(row(a1="Paris", critic="London", a2="London"), V012_QC)
     assert label["feedback_type"] == "answer" and label["solver_response"] == "adopted_critic"
     assert label["eligible_primary"] and label["primary_target"] == 1 and label["qc_rules"] == []
 
 
 def test_unresolved_critic_is_never_overridden():
-    label = classify_candidate_v012(row(critic="The question contains a factual error.",
-                                        critic_noncommittal=True))
+    label = classify_candidate(row(critic="The question contains a factual error.",
+                                   critic_noncommittal=True), V012_QC)
     assert label["feedback_type"] == "unresolved" and label["qc_rules"] == []
     assert label["solver_response"] == classify_candidate(
         row(critic="The question contains a factual error.", critic_noncommittal=True))["solver_response"]
 
 
 def test_a2_override_applies_even_when_the_critic_is_unresolved():
-    label = classify_candidate_v012(row(critic_noncommittal=True, a2="Not mentioned anywhere."))
+    label = classify_candidate(row(critic_noncommittal=True, a2="Not mentioned anywhere."), V012_QC)
     assert label["feedback_type"] == "unresolved" and label["a2_kind"] == "nonanswer"
     assert label["solver_response"] == "non_answer" and label["qc_rules"] == ["a2:simple_nonanswer"]
 
 
-def test_v012_has_every_v011_field():
+def test_overlay_policy_has_every_base_field_plus_the_trace_fields():
     r = row()
-    assert set(classify_candidate(r)) <= set(classify_candidate_v012(r))
-    assert set(classify_candidate_v012(r)) - set(classify_candidate(r)) == set(TRACE_FIELDS[1:])
+    assert set(classify_candidate(r)) <= set(classify_candidate(r, V012_QC))
+    assert set(classify_candidate(r, V012_QC)) - set(classify_candidate(r)) == set(TRACE_FIELDS)
 
 
 def test_labels_round_trip_through_labels_csv(tmp_path):
@@ -137,7 +148,7 @@ def test_labels_round_trip_through_labels_csv(tmp_path):
     for i, r in enumerate([row(critic="The provided paragraphs do not mention it.", a2="No such thing."),
                            row()]):
         rows.append({"question_id": f"q{i}", "source_split": "train", "partition": "train",
-                     "solver_behavior": "accepted", "label": classify_candidate_v012(r)})
+                     "solver_behavior": "accepted", "label": classify_candidate(r, V012_QC)})
     path = tmp_path / "labels.csv"
     write_labels(path, rows)
     labels = read_labels(path)
@@ -146,4 +157,4 @@ def test_labels_round_trip_through_labels_csv(tmp_path):
         assert labels[r["question_id"]]["exclusion_reasons"] == r["label"]["exclusion_reasons"]
         assert labels[r["question_id"]]["eligible_primary"] == r["label"]["eligible_primary"]
         assert labels[r["question_id"]]["primary_target"] == r["label"]["primary_target"]
-        assert labels[r["question_id"]]["rule_version"] == RULE_VERSION
+        assert labels[r["question_id"]]["rule_version"] == V012_QC.version
