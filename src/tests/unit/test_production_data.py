@@ -30,7 +30,7 @@ from mas_sae.data.production import (
     write_package_tables,
     write_partitions,
 )
-from mas_sae.evaluation.behavior_v01 import classify_candidate, write_labels
+from mas_sae.evaluation.behavior_labels import classify_candidate, write_labels
 from mas_sae.experiments.records import read_jsonl, write_jsonl
 
 PROPORTIONS = {"train": 0.6, "test": 0.2, "intervention": 0.2}

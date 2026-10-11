@@ -18,7 +18,7 @@ from sklearn.metrics import cohen_kappa_score, confusion_matrix
 
 from mas_sae.agents.solver import Solver
 from mas_sae.data.musique import SUPPORTED_SOURCE_SPLITS, load_musique_split
-from mas_sae.evaluation.behavior_v01 import SOLVER_RESPONSES
+from mas_sae.evaluation.behavior_labels import SOLVER_RESPONSES
 
 # Columns an annotator sees, then the empty columns they fill in.
 EVIDENCE_COLUMNS = ["review_id", "question", "context", "solver_a1", "critic_feedback", "solver_a2"]

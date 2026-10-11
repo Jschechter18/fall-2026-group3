@@ -44,7 +44,7 @@ from mas_sae.data.musique import (
     assign_experiment_splits,
     hop_group,
 )
-from mas_sae.evaluation.behavior_v01 import LABEL_INPUT_FIELDS, read_labels
+from mas_sae.evaluation.behavior_labels import LABEL_INPUT_FIELDS, read_labels
 from mas_sae.experiments.artifacts import ensure_output_available, sha256_file
 from mas_sae.experiments.collection_artifacts import _add_sae_indices, _save_and_verify
 from mas_sae.experiments.records import read_jsonl, write_jsonl

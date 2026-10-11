@@ -17,7 +17,7 @@ Behavior v0.1 answers two separate questions for every episode.
 | `feedback_type` | What did the Critic give? | `answer`, `refusal`, `premise_rejection`, `unresolved` |
 | `solver_response` | What did the Solver do in A2? | `adopted_critic`, `retained_a1`, `third_answer`, `unchanged_same_position`, `non_answer`, `produced_answer`, `unresolved` |
 
-The rules are in `src/mas_sae/evaluation/behavior_v01.py`. They compare normalized text, so "Paris" and "Paris, France" are treated as a partial match and left out rather than guessed.
+The rules are in `src/mas_sae/evaluation/behavior_labels.py`. They compare normalized text, so "Paris" and "Paris, France" are treated as a partial match and left out rather than guessed.
 
 There are three label layers, and each one is kept:
 
@@ -143,7 +143,7 @@ Evidence (private, not committed, contains the unblinded key): `~/capstone-artif
 
 | File | What it does |
 |---|---|
-| `src/mas_sae/evaluation/behavior_v01.py` | The labelling rules, and reading and writing `labels.csv` |
+| `src/mas_sae/evaluation/behavior_labels.py` | The labelling rules, and reading and writing `labels.csv` |
 | `src/mas_sae/evaluation/behavior_qc.py` | Builds the blind QC packet and scores annotator agreement |
 | `src/mas_sae/data/production.py` | The split table and the loader that enforces it |
 | `scripts/prepare_behavior_v01.py` | Runs the steps above on the finished production run |

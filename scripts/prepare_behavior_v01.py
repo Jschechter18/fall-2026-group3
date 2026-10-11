@@ -1,4 +1,4 @@
-"""Build the Behavior v0.1.1 label package from the finished production run.
+"""Build the behavior label package from the finished production run.
 
 Writes four things into a new folder:
 
@@ -33,6 +33,12 @@ does not know stops the run. A run that deliberately covers part of the
 question set, such as a layer scan, passes --coverage subset and the uncovered
 ids are written next to the package.
 
+--label-policy picks the rule set that labels every episode (see
+``mas_sae.evaluation.behavior_labels.POLICIES``). The default is the frozen
+first rule set, v0.1.1, until the team adopts another under issue #108. The
+policy's version and the hash of its full definition go into counts.json, so a
+package always says which rules produced it.
+
 The QC packet is sampled from the train partition only. Pass --reuse-qc only
 for a packet that was itself sampled under the same partition rule; a packet
 issued under an earlier split is refused because it would show annotators
@@ -61,8 +67,14 @@ from mas_sae.evaluation.behavior_qc import (
     source_paragraphs,
     write_annotator_files,
 )
-from mas_sae.evaluation import behavior, behavior_v01, scoring
-from mas_sae.evaluation.behavior_v01 import classify_candidate, label_counts, write_labels
+from mas_sae.evaluation import behavior, behavior_labels, scoring
+from mas_sae.evaluation.behavior_labels import (
+    DEFAULT_POLICY_NAME,
+    POLICIES,
+    classify_candidate,
+    label_counts,
+    write_labels,
+)
 from mas_sae.experiments.artifacts import (
     ensure_output_available,
     get_git_commit,
@@ -79,7 +91,7 @@ FIRST_QC_SAMPLE = "issue55_human_qc/sample_manifest.json"
 QC_GUIDE = Path(__file__).resolve().parents[1] / "docs" / "qc_guide.md"
 
 # The modules whose code decides the labels; their hashes go into counts.json.
-RULE_MODULES = (behavior_v01, behavior, scoring)
+RULE_MODULES = (behavior_labels, behavior, scoring)
 
 
 def main():
@@ -106,6 +118,9 @@ def main():
     parser.add_argument("--frozen-partitions", type=Path,
                         help="partitions.csv to take every question's partition from, never recomputing "
                              "membership; use this for every run after the first")
+    parser.add_argument("--label-policy", choices=sorted(POLICIES), default=DEFAULT_POLICY_NAME,
+                        help="rule set that labels every episode; the default is the frozen first "
+                             "rule set until the team adopts another (issue #108)")
     parser.add_argument("--coverage", choices=COVERAGE_MODES, default="complete",
                         help="with --frozen-partitions: 'complete' fails if any frozen question is "
                              "missing from the run; 'subset' records the missing ids instead")
@@ -136,6 +151,7 @@ def main():
     qc_sample = args.first_qc_sample
     if qc_sample is None and args.artifacts is not None and (args.artifacts / FIRST_QC_SAMPLE).is_file():
         qc_sample = args.artifacts / FIRST_QC_SAMPLE
+    policy = POLICIES[args.label_policy]
     ensure_output_available(args.output)
 
     # Remember the input files' hashes so we can confirm they were not changed.
@@ -167,7 +183,7 @@ def main():
     # 2. Label every episode of the full run.
     for row in full_rows:
         row["partition"] = manifest[row["question_id"]]["partition"]
-        row["label"] = classify_candidate(row)
+        row["label"] = classify_candidate(row, policy)
 
     # 3. Write the tables and the counts. partitions.csv is the frozen mapping
     #    in full whenever one is in use, however much of it this run covers.
@@ -190,6 +206,14 @@ def main():
     validation_rows = [row for row in full_rows if row["source_split"] == "validation"]
     counts = {
         "rule_version": full_rows[0]["label"]["rule_version"],
+        "label_policy": {
+            "name": args.label_policy,
+            "version": policy.version,
+            "definition_sha256": policy.definition_sha256(),
+            "overrides": {"premise": list(policy.premise_overrides),
+                          "refusal": list(policy.refusal_overrides),
+                          "a2_nonanswer": list(policy.a2_nonanswer_overrides)},
+        },
         "code": {
             "git_commit": get_git_commit(),
             "uncommitted_changes_sha256": get_git_diff_sha256(),
