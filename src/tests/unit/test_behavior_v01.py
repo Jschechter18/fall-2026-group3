@@ -2,7 +2,7 @@ from copy import deepcopy
 
 import pytest
 
-from mas_sae.evaluation.behavior_v01 import SOLVER_RESPONSES, classify_candidate
+from mas_sae.evaluation.behavior_v01 import SOLVER_RESPONSES, assemble_labels, classify_candidate
 
 
 def row(a1="London", critic="Paris", a2="Paris", **kwargs):
@@ -62,6 +62,18 @@ def test_responses_to_a_critic_refusal():
         assert r == before, "the interaction row must not be modified"
         assert label["feedback_type"] == "refusal" and label["solver_response"] == expected
         assert label["human_validated_behavior_v1"] is None
+
+
+def test_assemble_labels_rebuilds_the_label_from_its_recorded_facts():
+    for r in [row(), row(a1="Paris, France", critic="The passage does not specify", a2="Rome"),
+              row(critic="False premise", a2="Cannot determine"), row(a2=None, critic_noncommittal=True)]:
+        label = classify_candidate(r)
+        rebuilt = assemble_labels(
+            label["feedback_type"], label["a1_kind"], label["a2_kind"], label["critic_kind"],
+            label["a1_vs_critic"], label["a2_vs_a1"], label["a2_vs_critic"],
+            label["critic_unresolved_flag"], label["critic_premise_rejection_flag"],
+            label["critic_refusal_flag"])
+        assert rebuilt == label
 
 
 def test_every_declared_response_is_reachable_and_nothing_else():
