@@ -20,7 +20,7 @@ Restricted test:
 s3://dats-capstone/shared/group3/data/activations/natural_4b_full9_test_partitioned/
 
 ## Required downstream actions
-- Josh: confirm SAE checkpoint and training provenance; do not train or select models on test data.
+- Josh: confirm SAE checkpoint and training provenance. Fit SAEs on train, use validation for tuning and checkpoint selection, and use test to compare completed SAE versions under Issue #97. Keep intervention reserved for causal experiments
 - Raye: load v0.1.2 labels by question_id, rerun layer selection, report validation results.
 - Ignore older v0.1.1 labels embedded in interactions.jsonl.
 - Record label version and SHA256 in downstream results.
