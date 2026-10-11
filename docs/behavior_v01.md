@@ -1,6 +1,6 @@
 # Behavior v0.1: labelling how the Solver responds to Critic feedback
 
-Status: rule version `behavior_v0.1.1_candidate`, checked by human annotators between 2026-10-06 and 2026-10-11 (see "Human check"). An experimental overlay, `behavior_v0.1.2_qc_candidate`, exists on branch `issue55-v012-qc` and is not a production label.
+Status: rule version `behavior_v0.1.1_candidate`. Human QC is complete: the labels were checked by human annotators between 2026-10-06 and 2026-10-11 (see "Human check"). No production label freeze has been approved. An experimental overlay, `behavior_v0.1.2_qc_candidate`, exists on branch `issue55-v012-qc` and is not a production label.
 
 ## The problem this solves
 
@@ -24,7 +24,7 @@ There are three label layers, and each one is kept:
 | Layer | Status |
 |---|---|
 | `lexical_v2` | The original labels from the collection run. Unchanged. |
-| `behavior_v0.1.1_candidate` | The labels proposed here. Automatic, not yet validated. |
+| `behavior_v0.1.1_candidate` | The labels proposed here. Automatic rules, checked against human annotation (see "Human check"); not yet approved for a label freeze. |
 | `human_validated_behavior_v1` | Empty for every row until human annotation is finished. |
 
 ## What the 22,332 episodes look like
@@ -124,7 +124,7 @@ Only the partitions named on the command line are written; no `intervention.pt` 
 
 ## Human check
 
-The labels are string rules, so they need to be checked by people. The blind packet is sampled from the train partition only: every "kept" case in train plus 40 from each other situation, shuffled together. A packet sampled under an earlier split is not reused, because it would show annotators test or intervention questions. Annotators see the question, the source paragraphs, A1, the Critic's feedback and A2, and none of our labels. A second annotator independently labels 120 of the rows. `scripts/qc_agreement.py` then reports agreement and lists the disagreements. Instructions are in `docs/qc_guide.md`.
+The labels are string rules, so they were checked by people. The blind packet is sampled from the train partition only: every "kept" case in train plus 40 from each other situation, shuffled together. A packet sampled under an earlier split is not reused, because it would show annotators test or intervention questions. Annotators see the question, the source paragraphs, A1, the Critic's feedback and A2, and none of our labels. A second annotator independently labels 120 of the rows. `scripts/qc_agreement.py` then reports agreement and lists the disagreements. Instructions are in `docs/qc_guide.md`.
 
 ### Outcome (2026-10-11)
 
@@ -208,6 +208,6 @@ X = load_production_activations(train, manifest, "<artifacts>/natural_4b_full/da
 
 ## Next steps
 
-1. Behavior v0.1.2 is an experimental rule overlay (`src/mas_sae/evaluation/behavior_v012_qc.py` on branch `issue55-v012-qc`) written from the 559-row disagreements. On a separate blind sample of 120 train rows (80 that the overlay changes, 40 unchanged controls; 30 double-annotated with A/B kappa 0.84 / 0.51 / 1.00; 10 disagreements adjudicated by annotator A with an assistant's proposals in view) agreement with the human reference moves from 47 to 74 of 120 (`feedback_type`), 30 to 85 of 120 (`solver_response`), 85 to 110 of 116 (`eligible_primary`, 4 uncertain rows excluded) and 19 to 50 of 116 (all three). Of the 80 changed rows, 76 improved, 3 regressed and 1 was unchanged. The sample is enriched, not a population estimate. Over the full run the overlay changes 1,575 of 22,332 labels. Whether to promote it is a separate team decision; until then `behavior_v0.1.1_candidate` is the label in use.
+1. Behavior v0.1.2 is an experimental rule overlay (`src/mas_sae/evaluation/behavior_v012_qc.py` on branch `issue55-v012-qc`) written from the 559-row disagreements. On a separate blind sample of 120 train rows (80 that the overlay changes, 40 unchanged controls; 30 double-annotated with A/B kappa 0.84 / 0.51 / 1.00; the 10 disagreements were reviewed and resolved by Annotator A, and all decisions were documented and verified during the final reproducibility audit) agreement with the human reference moves from 47 to 74 of 120 (`feedback_type`), 30 to 85 of 120 (`solver_response`), 85 to 110 of 116 (`eligible_primary`, 4 uncertain rows excluded) and 19 to 50 of 116 (all three). Of the 80 changed rows, 76 improved, 3 regressed and 1 was unchanged. The sample is enriched, not a population estimate. Over the full run the overlay changes 1,575 of 22,332 labels. Whether to promote it is a separate team decision; until then `behavior_v0.1.1_candidate` is the label in use.
 2. Probe and SAE work (Raye, Josh) fits on the train partition and chooses on validation, with a text baseline and a breakdown by Critic correctness. An early look on the old discovery role suggested A2 activations predict adoption better than the feedback text does (balanced accuracy about 0.84 versus 0.75); that is unvalidated and is theirs to reproduce properly on the new partitions.
 3. The role of the test partition is being restated under issue #97; intervention is used only for the causal experiment.
