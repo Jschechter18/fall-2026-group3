@@ -80,6 +80,7 @@ This installs new dependencies and removes dependencies that are no longer speci
 ├── data/                         # Downloaded project datasets
 ├── demo/                         # Demonstrations
 │   └── fig/                      # Demo figures
+├── docs/                         # Technical documentation; diagrams/ holds editable + SVG figures
 ├── presentation/                 # Presentation materials
 ├── proposal/                     # Project proposal and its diagram
 ├── reports/                      # Project and progress reports
@@ -349,7 +350,12 @@ Run metadata and reproducibility information are saved under:
 
     results/collection/<run_name>/<split>/
 
-This directory contains interactions.jsonl, resolved_config.yaml, and summary.json.
+This directory contains interactions.jsonl, resolved_config.yaml, summary.json,
+collected_question_ids.json and exclusions.jsonl. The record fields are defined
+in `docs/episode_record.md`, the provenance files and the identity used by
+`--resume` in `docs/collection_provenance.md`, and the capture position, tensor
+layout and row indices in `docs/activations.md` (with the partition diagram,
+`docs/diagrams/data_split_workflow.drawio`).
 
 The metadata of the finished production run (`natural_4b_full`: summaries,
 resolved configs, question lists, provenance) and of its partition export are
