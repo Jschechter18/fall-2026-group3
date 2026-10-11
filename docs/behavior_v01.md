@@ -1,6 +1,6 @@
 # Behavior v0.1: labelling how the Solver responds to Critic feedback
 
-Status: candidate labels, not yet checked by human annotators. Rule version `behavior_v0.1.1_candidate`.
+Status: rule version `behavior_v0.1.1_candidate`, checked by human annotators between 2026-10-06 and 2026-10-11 (see "Human check"). An experimental overlay, `behavior_v0.1.2_qc_candidate`, exists on branch `issue55-v012-qc` and is not a production label.
 
 ## The problem this solves
 
@@ -126,7 +126,18 @@ Only the partitions named on the command line are written; no `intervention.pt` 
 
 The labels are string rules, so they need to be checked by people. The blind packet is sampled from the train partition only: every "kept" case in train plus 40 from each other situation, shuffled together. A packet sampled under an earlier split is not reused, because it would show annotators test or intervention questions. Annotators see the question, the source paragraphs, A1, the Critic's feedback and A2, and none of our labels. A second annotator independently labels 120 of the rows. `scripts/qc_agreement.py` then reports agreement and lists the disagreements. Instructions are in `docs/qc_guide.md`.
 
-Until that is done, `human_validated_behavior_v1` is empty for every row and results built on these labels are exploratory.
+### Outcome (2026-10-11)
+
+The packet was issued from `behavior_v011_split80_10_10_20261006/qc/` (559 rows, 120 of them also given to a second annotator). Annotator A labelled all 559 rows and annotator B the 120. `scripts/qc_agreement.py` on the completed files: `feedback_type` 115/120 (kappa 0.94), `solver_response` 110/120 (kappa 0.89), `eligible_primary` 100/120 (kappa 0.47; 14 of the 20 disagreements are "no" against "uncertain"). The 29 rows with any disagreement were adjudicated (24 decisions followed B, 4 followed A, 1 neither). Against the adjudicated reference the rules agree on all three fields for 169/559 rows. The strata were chosen to be hard, so that figure is not population accuracy.
+
+Two findings for anyone using the labels:
+
+- `retained_a1`: of the 119 train rows the rules mark as kept-A1 and eligible, the annotators judged 111 not eligible, 6 uncertain and 2 eligible. Those 119 rows are the whole negative class of `strict_target`.
+- 127 rows whose Critic feedback the annotators call `unresolved` are labelled `answer` by the rules.
+
+`human_validated_behavior_v1` is still empty in `labels.csv`; the human labels live only in the private evidence folders below. Results that depend on those two groups remain exploratory.
+
+Evidence (private, not committed, contains the unblinded key): `~/capstone-artifacts/issue55_human_evidence/` (completed annotator files, adjudication workbook, `agreement_repo_reproduced.json`); `~/capstone-artifacts/issue55_independent_validation/` and `~/capstone-artifacts/issue55_final_package/` (the v0.1.2 validation sample and its completed annotations); `~/capstone-artifacts/issue55_final_package_verification/verification_ec2.json` (the numbers above and below, reproduced with the repository code).
 
 ## Where the code is
 
@@ -189,7 +200,7 @@ X = load_production_activations(train, manifest, "<artifacts>/natural_4b_full/da
 
 ## Limits
 
-- Labels are provisional until the human check is complete.
+- The human check is complete; the labels stay string rules with the two known gaps listed under "Outcome".
 - String matching cannot recognise aliases. "USA" and "United States" count as two different answers, so some episodes labelled as disagreements are really agreements, and some "third answers" are really adoptions. Only partial overlaps such as "Paris" / "Paris, France" are excluded. The human check measures how often this happens.
 - The premise-rejection rule includes the bare word "premise"; 29 of its 300 matches depend on that word alone and should be read by hand.
 - Correctness flags come from the collection run's own answer matching and can be wrong.
@@ -197,6 +208,6 @@ X = load_production_activations(train, manifest, "<artifacts>/natural_4b_full/da
 
 ## Next steps
 
-1. Two annotators complete the blind packet; measure agreement; adjust rules if needed and freeze Behavior v1.
+1. Behavior v0.1.2 is an experimental rule overlay (`src/mas_sae/evaluation/behavior_v012_qc.py` on branch `issue55-v012-qc`) written from the 559-row disagreements. On a separate blind sample of 120 train rows (80 that the overlay changes, 40 unchanged controls; 30 double-annotated with A/B kappa 0.84 / 0.51 / 1.00; 10 disagreements adjudicated by annotator A with an assistant's proposals in view) agreement with the human reference moves from 47 to 74 of 120 (`feedback_type`), 30 to 85 of 120 (`solver_response`), 85 to 110 of 116 (`eligible_primary`, 4 uncertain rows excluded) and 19 to 50 of 116 (all three). Of the 80 changed rows, 76 improved, 3 regressed and 1 was unchanged. The sample is enriched, not a population estimate. Over the full run the overlay changes 1,575 of 22,332 labels. Whether to promote it is a separate team decision; until then `behavior_v0.1.1_candidate` is the label in use.
 2. Probe and SAE work (Raye, Josh) fits on the train partition and chooses on validation, with a text baseline and a breakdown by Critic correctness. An early look on the old discovery role suggested A2 activations predict adoption better than the feedback text does (balanced accuracy about 0.84 versus 0.75); that is unvalidated and is theirs to reproduce properly on the new partitions.
-3. Test is scored once, on the frozen checkpoint; intervention is used only for the causal experiment.
+3. The role of the test partition is being restated under issue #97; intervention is used only for the causal experiment.
