@@ -40,6 +40,7 @@ BOOLEAN_COLUMNS = ("eligible_primary", "eligible_strict", "critic_unresolved_fla
                    "critic_premise_rejection_flag", "critic_refusal_flag")
 INTEGER_OR_BLANK_COLUMNS = ("primary_target", "strict_target")
 TEXT_OR_BLANK_COLUMNS = ("subtype", "human_validated_behavior_v1")
+LIST_COLUMNS = ("exclusion_reasons", "qc_rules")  # qc_rules only in overlay versions
 
 # Ways of refusing to answer that the lexical_v2 rules did not catch.
 EXTRA_NONANSWER = re.compile(
@@ -167,6 +168,21 @@ def classify_candidate(row):
     critic_refusal = critic_kind == "nonanswer"
 
     feedback_type = _feedback_type(critic_unresolved, critic_premise, critic_refusal)
+    return assemble_labels(feedback_type, a1_kind, a2_kind, critic_kind,
+                           a1_vs_critic, a2_vs_a1, a2_vs_critic,
+                           critic_unresolved, critic_premise, critic_refusal)
+
+
+def assemble_labels(feedback_type, a1_kind, a2_kind, critic_kind,
+                    a1_vs_critic, a2_vs_a1, a2_vs_critic,
+                    critic_unresolved, critic_premise, critic_refusal, *,
+                    rule_version=RULE_VERSION):
+    """Derive the Solver response, eligibility and targets from the Critic type and text facts.
+
+    ``classify_candidate`` computes the facts and calls this. A rule overlay (a later
+    version) may call it with an overridden ``feedback_type`` or ``a2_kind`` so the
+    derivation is never copied.
+    """
     conflict_status = _conflict_status(feedback_type, a1_kind, a1_vs_critic)
     solver_response, subtype = _solver_response(
         feedback_type, a1_kind, a2_kind, a1_vs_critic, a2_vs_a1, a2_vs_critic)
@@ -181,7 +197,7 @@ def classify_candidate(row):
     adopted = int(solver_response == "adopted_critic")
 
     return {
-        "rule_version": RULE_VERSION,
+        "rule_version": rule_version,
         "feedback_type": feedback_type,
         "solver_response": solver_response,
         "conflict_status": conflict_status,
@@ -214,8 +230,8 @@ def write_labels(path, rows):
         writer = csv.writer(f)
         writer.writerow(LABEL_KEY_FIELDS + label_fields)
         for row in rows:
-            label = dict(row["label"])
-            label["exclusion_reasons"] = ";".join(label["exclusion_reasons"])
+            label = {field: ";".join(value) if isinstance(value, list) else value
+                     for field, value in row["label"].items()}
             values = ["" if label[field] is None else label[field] for field in label_fields]
             writer.writerow([row["question_id"], row["source_split"],
                              row["partition"], row["solver_behavior"]] + values)
@@ -234,8 +250,9 @@ def read_labels(path):
             label[field] = int(label[field]) if label[field] else None
         for field in TEXT_OR_BLANK_COLUMNS:
             label[field] = label[field] or None
-        reasons = label["exclusion_reasons"]
-        label["exclusion_reasons"] = reasons.split(";") if reasons else []
+        for field in LIST_COLUMNS:
+            if field in label:
+                label[field] = label[field].split(";") if label[field] else []
     return labels
 
 
