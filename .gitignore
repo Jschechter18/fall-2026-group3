@@ -53,4 +53,7 @@ logs/
 # SAE training checkpoints
 results/sae/musique/runs/*/*/checkpoints/
 
+# Collection results
+/results/collection/*/*/interactions.jsonl
+
 /logs/
