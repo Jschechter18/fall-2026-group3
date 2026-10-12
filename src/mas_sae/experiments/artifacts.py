@@ -190,12 +190,15 @@ def create_sae_run_directory(
     layer: int,
     results_root: Path = Path("results"),
     subdirectories: tuple[str, ...] = (),
+    *,
+    category: str = "runs",
+    output_directory: Path | None = None,
 ) -> Path:
     """Create one experiment run directory and its initial manifest."""
     timestamp = utc_now()
     git_commit = get_git_commit()
     run_id = build_run_id(timestamp, git_commit)
-    run_directory = (results_root / "runs" / f"layer_{layer:02d}" / run_id)
+    run_directory = output_directory or (results_root / category / f"layer_{layer:02d}" / run_id)
 
     run_directory.mkdir(parents=True)
     for subdirectory in subdirectories:
