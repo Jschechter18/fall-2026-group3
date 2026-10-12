@@ -9,7 +9,9 @@ import torch
 
 def save_training_state(path, runner, scheduler, checkpoint_evaluator,
                         early_stopping, history, stopped):
-    numpy_state = np.random.get_state()
+    numpy_state = np.random.get_state(legacy=True)
+    if not isinstance(numpy_state, tuple):
+        raise TypeError("Expected NumPy legacy RNG state as a tuple.")
     state = {
         "model": runner.model.state_dict(),
         "optimizer": runner.optimizer.state_dict(),

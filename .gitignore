@@ -57,3 +57,6 @@ results/sae/musique/runs/*/*/checkpoints/
 /results/collection/*/*/interactions.jsonl
 
 /logs/
+
+# Tuning and continuation checkpoints
+/results/sae/musique/tuning/**/checkpoints/

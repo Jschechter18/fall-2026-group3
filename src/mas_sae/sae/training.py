@@ -79,8 +79,8 @@ def train_sae(
             subdirectories=("checkpoints",),
             output_directory=output_directory,
         )
+        manifest = json.loads((run_directory / "manifest.json").read_text())
         if run_context is not None:
-            manifest = json.loads((run_directory / "manifest.json").read_text())
             manifest["tuning"] = run_context
             write_json_atomic(run_directory / "manifest.json", manifest)
     else:
@@ -388,10 +388,10 @@ def finish_run(run_directory: Path, epochs: int, project_root: Path) -> Training
     hp = HP(**{field.name: config[field.name] for field in fields(HP)})
     hp.epochs = epochs
     validate_hyperparameters(hp)
-    study = None
+    record_path: Path | None = None
     if "tuning" in config:
-        study = project_root / config["tuning"]["study_directory"]
-        record_path = study / "finalizations" / f"{source.name}.json"
+        study = project_root / Path(config["tuning"]["study_directory"])
+        record_path = Path(study, "finalizations", f"{source.name}.json")
         run_directory = study / "finishing" / source.name
         if record_path.exists():
             record = json.loads(record_path.read_text())
@@ -417,9 +417,9 @@ def finish_run(run_directory: Path, epochs: int, project_root: Path) -> Training
         results_root=results_root,
         project_root=project_root,
         resume_directory=run_directory,
-        register_version=study is None,
+        register_version=record_path is None,
     )
-    if study is not None:
+    if record_path is not None:
         final_id = build_run_id(utc_now(), get_git_commit())
         destination = results_root / "runs" / f"layer_{config['layer']:02d}" / final_id
         destination.parent.mkdir(parents=True, exist_ok=True)
