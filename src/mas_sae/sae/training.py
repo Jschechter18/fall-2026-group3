@@ -409,10 +409,24 @@ def _register_run(result: TrainingResult, project_root: Path) -> None:
 
 def finish_run(run_directory: Path, epochs: int, project_root: Path) -> TrainingResult:
     """Continue a chosen trial and publish its completed artifacts under runs/.
-
+    
     Tuning trials remain untouched. Continuation works on a copy inside the
     study, which is moved into runs/ only after training and evaluation succeed.
     Legacy validation-only runs without a study continue in place.
+    
+    Parameters
+    ----------
+    run_directory : Path
+        The directory of the run to be finished.
+    epochs : int
+        The number of epochs to continue training for.
+    project_root : Path
+        The root directory of the project.
+    
+    Returns
+    -------
+    TrainingResult
+        The result of the finished training run.
     """
     run_directory = run_directory.resolve()
     project_root = project_root.resolve()
