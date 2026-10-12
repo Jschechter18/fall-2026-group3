@@ -115,6 +115,36 @@ def test_continuation_matches_uninterrupted_training(setup, mode):
         training.finish_run(trial.run_directory, 4, setup["project_root"])
 
 
+@pytest.mark.parametrize("study_trial", [False, True])
+def test_finishing_after_project_relocation(setup, config, study_trial):
+    project_root = setup["project_root"]
+    if study_trial:
+        study = tuning.run_tuning(config, project_root)
+        selection = json.loads((study / "selection.json").read_text())
+        run = project_root / selection["run_directory"]
+    else:
+        trial = training.train_sae(
+            Hyperparameters(epochs=1, latent_dim=6, batch_size=3), **setup,
+            evaluate_test=False, register_version=False,
+        )
+        run = trial.run_directory
+    relative_run = run.relative_to(project_root)
+    original_manifest = json.loads((run / "manifest.json").read_text())
+    relocated_root = project_root / "relocated"
+    relocated_root.mkdir()
+    for directory in ("data", "results"):
+        (project_root / directory).rename(relocated_root / directory)
+    assert not Path(original_manifest["activation_files"]["train"]["path"]).exists()
+
+    result = training.finish_run(relocated_root / relative_run, 2, relocated_root)
+
+    assert result.run_directory.is_relative_to(relocated_root)
+    assert result.checkpoint_path.is_file()
+    assert "test" in result.metrics
+    manifest = json.loads((result.run_directory / "manifest.json").read_text())
+    assert manifest["finalized"] is True
+
+
 def test_study_artifacts_and_finishing_selected_run(setup, config):
     # Corrupt test data proves neither loading nor hashing it is needed for tuning.
     test_path = setup["activation_location"] / "test.pt"

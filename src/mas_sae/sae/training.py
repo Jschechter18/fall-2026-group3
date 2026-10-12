@@ -457,7 +457,8 @@ def finish_run(run_directory: Path, epochs: int, project_root: Path) -> Training
             shutil.copytree(source, temporary)
             temporary.rename(run_directory)
 
-    activation_location = Path(manifest["activation_files"]["train"]["path"]).parent
+    activation_location = (project_root / "data" / "activations"
+                           / config["activation_run_name"] / f"layer_{config['layer']:02d}")
     results_root = project_root / "results" / "sae" / "musique"
     result = train_sae(
         hp=hp,
