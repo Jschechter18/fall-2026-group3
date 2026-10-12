@@ -64,6 +64,36 @@ def train_sae(
     The supplied hyperparameters are copied before inferring the input dimension.
     Test evaluation is performed only when enabled and test.pt exists.
     Validation-only trials save epoch-boundary state for later continuation.
+    
+    Parameters:
+    ----------
+    hp : HP
+        The hyperparameters for the SAE training.
+    activation_location : Path
+        The location of the activation files.
+    activation_run_name : str
+        The name of the activation run.
+    layer : int
+        The layer of the SAE being trained.
+    results_root : Path
+        The root directory for storing results.
+    project_root : Path
+        The root directory of the project.
+    evaluate_test : bool, optional
+        Whether to evaluate the test set. Defaults to True.
+    register_version : bool, optional
+        Whether to register the version. Defaults to True.
+    resume_directory : Path | None, optional
+        The directory to resume training from. Defaults to None.
+    run_context : dict | None, optional
+        The context of the run. Defaults to None.
+    output_directory : Path | None, optional
+        The output directory for the run. Defaults to None.
+    
+    Returns:
+    ----------
+    TrainingResult
+        The result of the training run, including the run directory, the best epoch, and the evaluation metrics.
     """
     hp = replace(hp)
     validate_hyperparameters(hp)
