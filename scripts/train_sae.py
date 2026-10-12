@@ -1,4 +1,11 @@
-"""Train one SAE, run a tuning study, or finish a validation-only trial."""
+"""Train one SAE, run a tuning study, or finish a validation-only trial.
+
+
+python scripts/train_sae.py \
+  --hp-tune \
+  --config configs/sae_hp_tuning/layer_33.yaml \
+  --dry-run
+"""
 
 import argparse
 from pathlib import Path
