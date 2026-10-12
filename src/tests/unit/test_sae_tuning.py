@@ -266,3 +266,36 @@ def test_publication_retry_does_not_retrain(setup, config, monkeypatch):
     assert result.checkpoint_path.is_file()
     records = list((study / "finalizations").glob("*.json"))
     assert json.loads(records[0].read_text())["status"] == "completed"
+
+
+@pytest.mark.parametrize("stopped,total_epochs", [(False, 1), (True, 3)])
+def test_evaluation_only_finalization_skips_device_rng(setup, monkeypatch, stopped, total_epochs):
+    trial = training.train_sae(
+        Hyperparameters(epochs=1, latent_dim=6), **setup,
+        evaluate_test=False, register_version=False,
+    )
+    path = trial.run_directory / "checkpoints/last_checkpoint.pt"
+    state = torch.load(path, weights_only=True)
+    # Simulate a checkpoint from another device without requiring GPU hardware.
+    state["device_type"] = "cuda"
+    state["stopped"] = stopped
+    torch.save(state, path)
+    monkeypatch.setattr(training, "restore_training_state",
+                        lambda *args: pytest.fail("Must not restore training RNG for evaluation"))
+    result = training.finish_run(trial.run_directory, total_epochs, setup["project_root"])
+    history = json.loads((result.run_directory / "history.json").read_text())
+    assert len(history["history"]) == 1
+    assert "test" in result.metrics
+
+
+def test_additional_training_still_requires_same_device(setup):
+    trial = training.train_sae(
+        Hyperparameters(epochs=1, latent_dim=6), **setup,
+        evaluate_test=False, register_version=False,
+    )
+    path = trial.run_directory / "checkpoints/last_checkpoint.pt"
+    state = torch.load(path, weights_only=True)
+    state["device_type"] = "cuda"
+    torch.save(state, path)
+    with pytest.raises(ValueError, match="same device type"):
+        training.finish_run(trial.run_directory, 2, setup["project_root"])

@@ -92,8 +92,9 @@ python scripts/train_sae.py \
 `--epochs` is the **total** budget, not an additional count. This command continues
 a copy of the chosen trial from `last_checkpoint.pt`, restoring weights, optimizer, scheduler,
 early stopping, activity counters, and RNG states. It checks that training and
-validation activation contents have not changed. Continue on the same device
-type; exact reproducibility across hardware/software environments is not promised.
+validation activation contents have not changed. Additional training requires
+the same device type; evaluation-only finalization can use another device.
+For resumed training, exact reproducibility across hardware/software environments is not promised.
 All settings except the epoch budget are fixed. Existing early stopping remains
 in force; a trial already stopped will be finalized without further epochs.
 An equal budget can finalize a trial without adding epochs.

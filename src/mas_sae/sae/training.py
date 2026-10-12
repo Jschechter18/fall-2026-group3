@@ -167,7 +167,10 @@ def train_sae(
             else "cpu"
         )
 
-        if state is not None and device.type != state["device_type"]:
+        training_remaining = state is None or (
+            not state["stopped"] and len(state["history"]) < hp.epochs
+        )
+        if state is not None and training_remaining and device.type != state["device_type"]:
             raise ValueError("Continue on the same device type to restore RNG state.")
 
         model = SAE(
@@ -239,7 +242,10 @@ def train_sae(
         epoch_history = []
         stopped = False
         if state is not None:
-            restore_training_state(state, runner, scheduler, checkpoint_evaluator, early_stopping)
+            # Evaluation-only finalization loads the best checkpoint below;
+            # optimizer and device-specific RNG state are needed only to train.
+            if training_remaining:
+                restore_training_state(state, runner, scheduler, checkpoint_evaluator, early_stopping)
             epoch_history = state["history"]
             stopped = state["stopped"]
         stop_reason = "early_stopping" if stopped else "max_epochs"
