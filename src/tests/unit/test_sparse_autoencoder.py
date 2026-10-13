@@ -146,3 +146,53 @@ def test_decoder_normalization_constrains_columns_and_preserves_bias(model: Spar
     assert model.decoder_layer[0].weight is weight
     assert torch.allclose(weight.norm(dim=0), torch.ones(LATENT_DIM), atol=1e-6)
     assert torch.equal(model.decoder_layer[0].bias, bias)
+
+
+@pytest.mark.parametrize("mode", ["l1", "topk"])
+@pytest.mark.parametrize("shape", [(3, INPUT_DIM), (2, 3, INPUT_DIM)])
+def test_training_forward_matches_inference_with_one_encoder_call(mode, shape):
+    model = SparseAutoencoder(INPUT_DIM, HIDDEN_DIM, LATENT_DIM, mode, 3)
+    model.input_scale.fill_(3.0)
+    x = torch.randn(shape)
+    expected = model(x)
+    calls = []
+    handle = model.encoder_layer.register_forward_hook(lambda *args: calls.append(1))
+    try:
+        features, reconstruction, pre_topk = model.forward_with_pre_topk(x)
+    finally:
+        handle.remove()
+    assert len(calls) == 1
+    assert torch.equal(features, expected[0])
+    assert torch.equal(reconstruction, expected[1])
+    assert torch.equal(pre_topk, model.encode_pre_topk(x))
+    pre_topk.sum().backward()
+    assert model.encoder_layer[0].weight.grad is not None
+
+
+def test_select_topk_values_and_gradients():
+    features = torch.tensor([[1., 4., 2., 3.]], requires_grad=True)
+    selected = SparseAutoencoder.select_topk(features, 2)
+    assert selected.tolist() == [[0., 4., 0., 3.]]
+    selected.sum().backward()
+    assert features.grad.tolist() == [[0., 1., 0., 1.]]
+    assert torch.equal(SparseAutoencoder.select_topk(features, 0), torch.zeros_like(features))
+    assert torch.equal(SparseAutoencoder.select_topk(features, 4), features)
+
+
+@pytest.mark.parametrize("k", [-1, 5, True, 1.5])
+def test_select_topk_rejects_invalid_counts(k):
+    with pytest.raises(ValueError, match="k must"):
+        SparseAutoencoder.select_topk(torch.ones(2, 4), k)
+
+
+def test_bias_free_decoder_uses_normalized_units_and_shared_weights(model):
+    model.input_scale.fill_(7.0)
+    with torch.no_grad():
+        model.decoder_layer[0].bias.fill_(2.0)
+    features = torch.randn(2, 3, LATENT_DIM, requires_grad=True)
+    decoded = model.decode_without_bias(features)
+    assert torch.allclose(model.decoder(features), (decoded + 2.0) * 7.0, atol=1e-5)
+    decoded.square().sum().backward()
+    assert features.grad is not None
+    assert model.decoder_layer[0].weight.grad is not None
+    assert model.decoder_layer[0].bias.grad is None

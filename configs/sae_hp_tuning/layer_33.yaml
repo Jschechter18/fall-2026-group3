@@ -20,13 +20,25 @@ groups:
   #     lr: [0.0001, 0.0003]
   #     sparsity_coefficient: [0.001, 0.01, 0.1, 1.0]
 
-  - name: topk
+  # - name: topk
+  #   fixed:
+  #     sparsity_mode: topk
+  #   grid:
+  #     lr: [0.0003]
+  #     top_k: [64, 128, 256, 512]
+  #     tied_initialization: [false, true]
+
+  - name: auxk
     fixed:
       sparsity_mode: topk
+      tied_initialization: true
+      # top_k: 64
+      lr: 0.0003
+      aux_k: 512
+      aux_dead_window_examples: 10000
     grid:
-      lr: [0.0003]
-      top_k: [64, 128, 256, 512]
-      tied_initialization: [false, true]
+      aux_coefficient: [0.0, 0.03125]
+      top_k: [64, 512]
 
 # Initially review the reconstruction–sparsity Pareto frontier.
 # Enable automatic selection after choosing an activity budget:

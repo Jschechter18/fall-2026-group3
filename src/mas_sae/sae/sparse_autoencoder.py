@@ -1,5 +1,6 @@
 import torch
 from torch import nn, Tensor
+from torch.nn import functional as F
 
 
 class SparseAutoencoder(nn.Module):
@@ -44,6 +45,68 @@ class SparseAutoencoder(nn.Module):
             with torch.no_grad():
                 encoder_linear.weight.copy_(decoder_linear.weight.T)
         
+    def encode_pre_topk(self, activation: Tensor) -> Tensor:
+        """Compute nonnegative encoder activations before TopK selection.
+
+        Parameters
+        ----------
+        activation : Tensor
+            Input activation vector, divided by the stored input scale before encoding.
+
+        Returns
+        -------
+        Tensor
+            Nonnegative feature vector before sparsification, attached to the autograd graph.
+        """
+        return self.encoder_layer(activation / self.input_scale)
+
+    @staticmethod
+    def select_topk(features: Tensor, k: int) -> Tensor:
+        """Keep the largest k values on the last axis, preserving gradients.
+
+        Accepts k=0 for an empty auxiliary selection. Callers handle eligibility
+        masking and cap k to the number of eligible features.
+
+        Parameters
+        ----------
+        features : Tensor
+            Feature values to select from along the last dimension.
+        k : int
+            Number of values to retain, between zero and the feature dimension.
+
+        Returns
+        -------
+        Tensor
+            Feature vector with unselected values set to zero and the input shape preserved.
+
+        Raises
+        ------
+        ValueError
+            If k is not an integer within the supported range.
+        """
+        if type(k) is not int or not 0 <= k <= features.shape[-1]:
+            raise ValueError("k must be an integer between 0 and the feature dimension.")
+        values, indices = torch.topk(features, k=k, dim=-1)
+        return torch.zeros_like(features).scatter(-1, indices, values)
+
+    def _sparsify(self, features: Tensor) -> Tensor:
+        """Apply the sparsity mode configured for the model.
+
+        Parameters
+        ----------
+        features : Tensor
+            Nonnegative encoder activations before sparsification.
+
+        Returns
+        -------
+        Tensor
+            TopK feature vector in TopK mode, or the unchanged features in L1 mode.
+        """
+        if self.sparsity_mode == "topk":
+            assert self.top_k is not None
+            return self.select_topk(features, self.top_k)
+        return features
+
     def encoder(self, activation: Tensor) -> Tensor:
         """Encoder layer of model. Used to convert activation to sparse feature vector.
 
@@ -57,11 +120,7 @@ class SparseAutoencoder(nn.Module):
         Tensor
             Sparse feature vector. This is a sparse representation of the activation input.
         """
-        features = self.encoder_layer(activation / self.input_scale)
-        if self.sparsity_mode == "topk" and self.top_k:
-            values, indices = torch.topk(features, k=self.top_k, dim=-1)
-            features = torch.zeros_like(features).scatter(-1, indices, values)
-        return features
+        return self._sparsify(self.encode_pre_topk(activation))
         
     
     def decoder(self, sparse_features: Tensor) -> Tensor:
@@ -79,6 +138,46 @@ class SparseAutoencoder(nn.Module):
         """
         return self.decoder_layer(sparse_features) * self.input_scale
     
+    def decode_without_bias(self, sparse_features: Tensor) -> Tensor:
+        """Decode features without decoder bias or input-scale restoration.
+
+        Parameters
+        ----------
+        sparse_features : Tensor
+            Sparse feature vector to project using the shared decoder weights.
+
+        Returns
+        -------
+        Tensor
+            Decoded vector in normalized input units, suitable for residual reconstruction.
+        """
+        decoder_linear = self.decoder_layer[0]
+        assert isinstance(decoder_linear, nn.Linear)
+        return F.linear(sparse_features, decoder_linear.weight)
+
+    def forward_with_pre_topk(self, x: Tensor) -> tuple[Tensor, Tensor, Tensor]:
+        """Return features, reconstruction, and pre-TopK activations.
+
+        Computes the encoder once and keeps the pre-TopK tensor attached to its
+        autograd graph for auxiliary training objectives. Nothing is cached.
+
+        Parameters
+        ----------
+        x : Tensor
+            Input activation vector.
+
+        Returns
+        -------
+        tuple[Tensor, Tensor, Tensor]
+            Tuple containing:
+            - Sparse feature vector (output of the encoder)
+            - Reconstructed activation vector in original input units
+            - Nonnegative encoder activations before TopK selection
+        """
+        pre_topk = self.encode_pre_topk(x)
+        sparse_features = self._sparsify(pre_topk)
+        return sparse_features, self.decoder(sparse_features), pre_topk
+
     @torch.no_grad()
     def normalize_decoder_weights(self):
         """Normalize each decoder column to prevent sparsity-penalty scaling."""
