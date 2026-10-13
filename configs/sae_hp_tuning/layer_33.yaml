@@ -37,7 +37,7 @@ groups:
       aux_k: 512
       aux_dead_window_examples: 10000
     grid:
-      aux_coefficient: [0.0, 0.03125]
+      aux_coefficient: [0.03125, 0.0]
       top_k: [64, 512]
 
 # Initially review the reconstruction–sparsity Pareto frontier.
