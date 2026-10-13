@@ -30,17 +30,17 @@ groups:
   #     top_k: [64, 128, 256, 512]
   #     tied_initialization: [false, true]
 
-  - name: auxk
-    fixed:
-      sparsity_mode: topk
-      tied_initialization: true
-      # top_k: 64
-      lr: 0.0003
-      aux_k: 512
-      aux_dead_window_examples: 10000
-    grid:
-      aux_coefficient: [0.03125, 0.0]
-      top_k: [64, 512]
+  # - name: auxk
+  #   fixed:
+  #     sparsity_mode: topk
+  #     tied_initialization: true
+  #     # top_k: 64
+  #     lr: 0.0003
+  #     aux_k: 512
+  #     aux_dead_window_examples: 10000
+  #   grid:
+  #     aux_coefficient: [0.03125, 0.0]
+  #     top_k: [64, 512]
 
   - name: auxk_diagnostics
     fixed:
