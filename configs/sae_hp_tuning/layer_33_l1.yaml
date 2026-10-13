@@ -1,0 +1,31 @@
+activation_run_name: natural_4b_full9_partitioned
+layer: 33
+
+defaults:
+  latent_dim: 12888
+  epochs: 200
+  batch_size: 256
+  seed: 42
+  train_shuffle: true
+  patience: 20
+  early_stopping_min_delta: 0.0001
+  lr_patience: 5
+  inactivity_window_examples: 10000
+
+groups:
+  - name: l1_coarse
+    fixed:
+      sparsity_mode: l1
+      tied_initialization: true
+      aux_coefficient: 0.0
+    grid:
+      lr: [0.0003, 0.0001, 0.001]
+      # The penalty is mean(abs(z)) over examples AND latent dimensions.
+      # This coarse grid brackets useful activity levels; refine afterward
+      # around models with mean activity near 64 or 128.
+      sparsity_coefficient: [0.1, 1.0, 10.0, 100.0, 1000.0]
+
+# Select lowest validation reconstruction loss within the TopK=128 budget.
+# Review trials.csv: a model far below 128 is not an activity-matched pair.
+selection:
+  max_mean_active_features: 128
