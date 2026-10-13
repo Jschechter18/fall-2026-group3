@@ -24,8 +24,9 @@ groups:
     fixed:
       sparsity_mode: topk
     grid:
-      lr: [0.0001, 0.0003, 0.001]
+      lr: [0.0003]
       top_k: [64, 128, 256, 512]
+      tied_initialization: [false, true]
 
 # Initially review the reconstruction–sparsity Pareto frontier.
 # Enable automatic selection after choosing an activity budget:

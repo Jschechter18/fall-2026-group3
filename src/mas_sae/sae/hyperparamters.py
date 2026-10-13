@@ -21,6 +21,8 @@ class Hyperparameters:
     sparsity_coefficient: float = 0.1
     inactivity_window_examples: int = 10000
 
+    tied_initialization: bool = True
+
 
 def validate_hyperparameters(hp: Hyperparameters) -> None:
     """Reject invalid settings before allocating a model or creating a run."""
@@ -35,6 +37,8 @@ def validate_hyperparameters(hp: Hyperparameters) -> None:
         raise ValueError("seed must be an integer in [0, 2**32).")
     if type(hp.train_shuffle) is not bool:
         raise ValueError("train_shuffle must be a boolean.")
+    if type(hp.tied_initialization) is not bool:
+        raise ValueError("tied_initialization must be a boolean.")
     for name in ("lr", "sparsity_coefficient"):
         value = getattr(hp, name)
         if type(value) not in (int, float) or not math.isfinite(value):

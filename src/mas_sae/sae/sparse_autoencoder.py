@@ -5,7 +5,7 @@ from torch import nn, Tensor
 class SparseAutoencoder(nn.Module):
     def __init__(
         self, input_dim: int, hidden_dim: int, latent_dim: int,
-        sparsity_mode: str = "l1", top_k: int | None = None,
+        sparsity_mode: str = "l1", top_k: int | None = None, tied_initialization: bool = True,
     ):
         super().__init__()
         if sparsity_mode not in {"l1", "topk"}:
@@ -33,7 +33,16 @@ class SparseAutoencoder(nn.Module):
         self.decoder_layer = nn.Sequential(
             nn.Linear(latent_dim, self.output_dim)
         )
+
         self.normalize_decoder_weights()
+
+        if tied_initialization:
+            encoder_linear = self.encoder_layer[0]
+            decoder_linear = self.decoder_layer[0]
+            assert isinstance(encoder_linear, nn.Linear)
+            assert isinstance(decoder_linear, nn.Linear)
+            with torch.no_grad():
+                encoder_linear.weight.copy_(decoder_linear.weight.T)
         
     def encoder(self, activation: Tensor) -> Tensor:
         """Encoder layer of model. Used to convert activation to sparse feature vector.

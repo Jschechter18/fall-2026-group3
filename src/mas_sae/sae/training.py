@@ -209,6 +209,7 @@ def train_sae(
             latent_dim=hp.latent_dim,
             sparsity_mode=hp.sparsity_mode,
             top_k=hp.top_k,
+            tied_initialization=hp.tied_initialization,
         ).to(device)
 
         assert isinstance(train_dataloader.dataset, ActivationDataset)
