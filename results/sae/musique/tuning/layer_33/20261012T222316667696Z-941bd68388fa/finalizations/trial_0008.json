@@ -1,0 +1,53 @@
+{
+  "status": "completed",
+  "trial_id": 8,
+  "source_trial_directory": "results/sae/musique/tuning/layer_33/20261012T222316667696Z-941bd68388fa/trials/trial_0008",
+  "run_directory": "results/sae/musique/runs/layer_33/20261013T134443616063Z-941bd68388fa",
+  "checkpoint_path": "results/sae/musique/runs/layer_33/20261013T134443616063Z-941bd68388fa/checkpoints/best_checkpoint.pt",
+  "total_epoch_budget": 200,
+  "best_epoch": 142,
+  "metrics": {
+    "train": {
+      "loss": 0.009514340442646459,
+      "rec_loss": 0.009514340442646459,
+      "weighted_sparsity_loss": 0.0,
+      "mean_active_features": 512.0,
+      "inactive_feature_fraction": 0.8351955413818359,
+      "firing_frequency_min": 0.0,
+      "firing_frequency_p50": 0.0,
+      "firing_frequency_p90": 0.005020080134272575,
+      "firing_frequency_p99": 0.8107783794403076,
+      "firing_frequency_max": 0.9955133199691772,
+      "mean_baseline_rec_loss": 0.28104305554585285,
+      "variance_explained": 0.9661463243624101
+    },
+    "validation": {
+      "loss": 0.020802624639813777,
+      "rec_loss": 0.020802624639813777,
+      "weighted_sparsity_loss": 0.0,
+      "mean_active_features": 512.0,
+      "inactive_feature_fraction": 0.837135374546051,
+      "firing_frequency_min": 0.0,
+      "firing_frequency_p50": 0.0,
+      "firing_frequency_p90": 0.004558640532195568,
+      "firing_frequency_p99": 0.8056361079216003,
+      "firing_frequency_max": 0.9946125149726868,
+      "mean_baseline_rec_loss": 0.2580109989055202,
+      "variance_explained": 0.9193731091772898
+    },
+    "test": {
+      "loss": 0.013778241500856886,
+      "rec_loss": 0.013778241500856886,
+      "weighted_sparsity_loss": 0.0,
+      "mean_active_features": 512.0,
+      "inactive_feature_fraction": 0.8406269550323486,
+      "firing_frequency_min": 0.0,
+      "firing_frequency_p50": 0.0,
+      "firing_frequency_p90": 0.004518072120845318,
+      "firing_frequency_p99": 0.8155446648597717,
+      "firing_frequency_max": 0.9939758777618408,
+      "mean_baseline_rec_loss": 0.2814142315023874,
+      "variance_explained": 0.9510392867222851
+    }
+  }
+}
