@@ -1,4 +1,6 @@
 import copy
+import json
+import math
 from unittest.mock import Mock
 
 import pytest
@@ -59,11 +61,11 @@ def test_auxk_handles_no_eligible_features_and_caps_selection():
     runner.last_fired_example = torch.tensor([10, 10, 10])
     x = torch.tensor([[2., 3.]])
     _, reconstruction, pre_topk = runner.model.forward_with_pre_topk(x)
-    loss, fraction = runner._auxiliary_loss(x, reconstruction, pre_topk)
+    loss, fraction, _ = runner._auxiliary_loss(x, reconstruction, pre_topk)
     assert loss.item() == 0
     assert fraction == 0
     runner.last_fired_example[1] = 0  # Only one eligible feature, aux_k is two.
-    loss, fraction = runner._auxiliary_loss(x, reconstruction, pre_topk)
+    loss, fraction, _ = runner._auxiliary_loss(x, reconstruction, pre_topk)
     assert loss.item() == pytest.approx(2.0)
     assert fraction == pytest.approx(1 / 3)
 
@@ -95,7 +97,7 @@ def test_zero_eligible_activations_do_not_select_active_features(monkeypatch):
     pre_topk = torch.tensor([[100., 0., 0.]], requires_grad=True)
     decode = Mock(wraps=runner.model.decode_without_bias)
     monkeypatch.setattr(runner.model, "decode_without_bias", decode)
-    loss, fraction = runner._auxiliary_loss(
+    loss, fraction, _ = runner._auxiliary_loss(
         torch.ones(1, 2), torch.zeros(1, 2), pre_topk,
     )
     assert torch.equal(decode.call_args.args[0], torch.zeros_like(pre_topk))
@@ -203,3 +205,61 @@ def test_evaluation_never_calls_auxiliary_path(method, monkeypatch):
         for key, value in state.items():
             assert torch.equal(runner.model.state_dict()[key], value)
     forbidden.assert_not_called()
+
+
+def test_auxiliary_diagnostics_aggregate_squared_sums_over_uneven_batches():
+    runner = make_runner(window=1)
+    loader = DataLoader(torch.tensor([[2., 3.], [2., 5.], [2., 7.]]), batch_size=2)
+    metrics = runner.train_epoch(loader)
+    auxiliary = metrics["auxiliary"]
+    assert auxiliary["measured_examples"] == 3
+    assert auxiliary["eligible_feature_fraction"] == pytest.approx(2 / 3)
+    assert auxiliary["mean_positive_features"] == 1
+    assert auxiliary["eligible_positive_activation_fraction"] == pytest.approx(0.5)
+    assert auxiliary["prediction_rms"] == pytest.approx(math.sqrt(3 / 6))
+    assert auxiliary["residual_rms"] == pytest.approx(math.sqrt(83 / 6))
+    assert auxiliary["residual_error_reduction"] == pytest.approx(1 - 56 / 83)
+    assert json.loads(json.dumps(auxiliary, allow_nan=False)) == auxiliary
+    assert "auxiliary" not in runner.val_epoch(loader)
+
+
+def test_auxiliary_diagnostics_exclude_warmup_examples():
+    runner = make_runner(window=3)
+    loader = DataLoader(torch.tensor([[2., 3.]] * 3), batch_size=2)
+    auxiliary = runner.train_epoch(loader)["auxiliary"]
+    assert auxiliary["measured_examples"] == 1
+    assert auxiliary["mean_positive_features"] == 1
+    assert auxiliary["residual_rms"] == pytest.approx(math.sqrt(9 / 2))
+    assert auxiliary["residual_error_reduction"] == pytest.approx(1 - 4 / 9)
+
+
+def test_auxiliary_diagnostics_unavailable_during_warmup_and_absent_when_disabled():
+    loader = DataLoader(torch.tensor([[2., 3.]]), batch_size=1)
+    auxiliary = make_runner(window=10).train_epoch(loader)["auxiliary"]
+    assert auxiliary["measured_examples"] == 0
+    assert auxiliary["eligible_feature_fraction"] == 0
+    for key in ("mean_positive_features", "prediction_rms", "residual_rms", "residual_error_reduction", "eligible_positive_activation_fraction"):
+        assert auxiliary[key] is None
+    assert "auxiliary" not in make_runner(coefficient=0).train_epoch(loader)
+
+
+def test_eligible_positive_fraction_counts_before_selection_and_excludes_active_features():
+    runner = make_runner(window=1, aux_k=1)
+    with torch.no_grad():
+        runner.model.encoder_layer[0].bias[2] = 0.5
+    loader = DataLoader(torch.tensor([[2., 3.]] * 3), batch_size=2)
+    auxiliary = runner.train_epoch(loader)["auxiliary"]
+    assert auxiliary["eligible_positive_activation_fraction"] == 1.0
+    assert auxiliary["mean_positive_features"] == 1.0
+
+
+@pytest.mark.parametrize("residual, expected_reduction", [(0., None), (-1., -3.), (1., 1.)])
+def test_auxiliary_error_reduction_handles_zero_negative_and_perfect_cases(residual, expected_reduction):
+    runner = make_runner(window=1)
+    loader = DataLoader(torch.tensor([[2., residual]]), batch_size=1)
+    auxiliary = runner.train_epoch(loader)["auxiliary"]
+    if expected_reduction is None:
+        assert auxiliary["residual_error_reduction"] is None
+    else:
+        assert auxiliary["residual_error_reduction"] == pytest.approx(expected_reduction)
+    json.dumps(auxiliary, allow_nan=False)

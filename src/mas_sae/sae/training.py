@@ -60,6 +60,7 @@ def _saved_hyperparameters(config: dict) -> HP:
         runs predating tied initialization retain independent initialization.
     """
     resolved = {
+        "early_stopping_min_delta": 0.0,
         "tied_initialization": False,
         "aux_coefficient": 0.0,
         "aux_k": 512,
@@ -268,7 +269,9 @@ def train_sae(
             "auxiliary_loss": "Training-only mean squared error against the detached RMS-normalized reconstruction residual, decoded without bias using eligible inactive features; zero when disabled or no features qualify.",
             "auxiliary_eligibility": "No positive main-path activation in the last aux_dead_window_examples training examples, measured after the current batch; disabled until the window has elapsed. Auxiliary activations do not reset counters.",
             "auxiliary_metrics": "Training auxiliary loss, weighted auxiliary loss, and eligible feature fraction are averaged with example weighting across batches.",
+            "auxiliary_effectiveness": "train_auxiliary groups eligible fraction, measured_examples, positive features per example, positive encoder activation fraction across eligible feature/example pairs before auxiliary selection, prediction and residual RMS in normalized units, and 1 - auxiliary error SSE / residual SSE. Effectiveness uses only batches with eligible features; RMS and reduction use accumulated squared sums. Undefined values are null; negative reduction means worse than predicting zero.",
             "selection_metric": "val_loss",
+            "early_stopping": "Stop after patience epochs without validation loss decreasing by more than early_stopping_min_delta from the last significant improvement. The threshold is absolute, and smaller improvements accumulate. Checkpoint selection still saves the lowest validation loss.",
             "selection_loss": "Main-path validation loss, excluding AuxK; reconstruction loss for TopK and reconstruction plus weighted sparsity loss for L1.",
             "variance_explained": "1 - reconstruction SSE / SSE around the training-mean activation; null if baseline SSE is zero.",
             "persistent_inactivity": "No positive activation in the last inactivity_window_examples training examples; null until that many examples have been observed. Evaluations do not update counters.",
@@ -302,7 +305,7 @@ def train_sae(
         )
 
         checkpoint_evaluator = CheckpointEvaluatorCallback(run_directory / "checkpoints")
-        early_stopping = EarlyStoppingCallback(hp.patience)
+        early_stopping = EarlyStoppingCallback(hp.patience, hp.early_stopping_min_delta)
 
         epoch_history = []
         stopped = False
@@ -324,6 +327,20 @@ def train_sae(
                 f"Train Loss: {train_metrics['loss']:.4f} - "
                 f"Val Loss: {val_metrics['loss']:.4f}"
             )
+            auxiliary = train_metrics.get("auxiliary")
+            if auxiliary is not None:
+                if auxiliary["measured_examples"]:
+                    reduction = auxiliary["residual_error_reduction"]
+                    reduction_text = f"{reduction:.1%}" if reduction is not None else "n/a"
+                    print(
+                        f"Auxiliary: eligible={auxiliary['eligible_feature_fraction']:.1%} | "
+                        f"eligible-positive={auxiliary['eligible_positive_activation_fraction']:.3%} | "
+                        f"positive/example={auxiliary['mean_positive_features']:.2f} | "
+                        f"RMS={auxiliary['prediction_rms']:.4f}/{auxiliary['residual_rms']:.4f} | "
+                        f"reduction={reduction_text} | examples={auxiliary['measured_examples']}"
+                    )
+                else:
+                    print("Auxiliary: no eligible batches this epoch")
 
             if not all(torch.isfinite(torch.tensor(metrics["loss"]))
                        for metrics in (train_metrics, val_metrics)):

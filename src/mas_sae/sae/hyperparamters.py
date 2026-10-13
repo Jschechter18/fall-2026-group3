@@ -14,6 +14,7 @@ class Hyperparameters:
     latent_dim: int = 12888
     
     patience: int = 20
+    early_stopping_min_delta: float = 0.0
     lr_patience: int = 5
 
     sparsity_mode: str = "l1"
@@ -44,7 +45,7 @@ def validate_hyperparameters(hp: Hyperparameters) -> None:
         raise ValueError("train_shuffle must be a boolean.")
     if type(hp.tied_initialization) is not bool:
         raise ValueError("tied_initialization must be a boolean.")
-    for name in ("lr", "sparsity_coefficient", "aux_coefficient"):
+    for name in ("lr", "sparsity_coefficient", "aux_coefficient", "early_stopping_min_delta"):
         value = getattr(hp, name)
         if type(value) not in (int, float) or not math.isfinite(value):
             raise ValueError(f"{name} must be a finite number.")
@@ -52,6 +53,8 @@ def validate_hyperparameters(hp: Hyperparameters) -> None:
         raise ValueError("lr must be positive and sparsity_coefficient nonnegative.")
     if hp.aux_coefficient < 0:
         raise ValueError("aux_coefficient must be nonnegative.")
+    if hp.early_stopping_min_delta < 0:
+        raise ValueError("early_stopping_min_delta must be nonnegative.")
     if hp.aux_coefficient > 0:
         if hp.sparsity_mode != "topk":
             raise ValueError("AuxK requires topk sparsity mode.")

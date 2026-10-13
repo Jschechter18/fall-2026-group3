@@ -9,6 +9,8 @@ defaults:
   seed: 42
   train_shuffle: true
   patience: 20
+  # Absolute validation-loss improvement needed to reset stopping patience.
+  early_stopping_min_delta: 0.0001
   lr_patience: 5
   inactivity_window_examples: 10000
 
@@ -39,6 +41,18 @@ groups:
     grid:
       aux_coefficient: [0.03125, 0.0]
       top_k: [64, 512]
+
+  - name: auxk_diagnostics
+    fixed:
+      sparsity_mode: topk
+      tied_initialization: true
+      # top_k: 64
+      lr: 0.0003
+      aux_k: 512
+      aux_dead_window_examples: 10000
+    grid:
+      top_k: [64, 128, 256, 512]
+      aux_coefficient: [0.0078125, 0.03125]
 
 # Initially review the reconstruction–sparsity Pareto frontier.
 # Enable automatic selection after choosing an activity budget:

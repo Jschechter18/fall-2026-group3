@@ -80,7 +80,7 @@ class ModelRunner:
     def _auxiliary_loss(
         self, activations: torch.Tensor, reconstructed: torch.Tensor,
         pre_topk: torch.Tensor,
-    ) -> tuple[torch.Tensor, float]:
+    ) -> tuple[torch.Tensor, float, dict[str, float]]:
         """Reconstruct the detached residual using persistently inactive features.
 
         Parameters
@@ -94,27 +94,41 @@ class ModelRunner:
 
         Returns
         -------
-        tuple[torch.Tensor, float]
-            Auxiliary loss in normalized units and fraction of eligible features.
-            Both are zero when disabled, warming up, or no features qualify.
+        tuple[torch.Tensor, float, dict[str, float]]
+            Auxiliary loss in normalized units, fraction of eligible features,
+            and detached counts and squared sums for epoch diagnostics. When
+            disabled, warming up, or no features qualify, returns zero loss,
+            zero eligibility, and an empty dictionary.
         """
         if (self.aux_coefficient == 0 or self.last_fired_example is None
                 or self.training_examples_seen < self.aux_dead_window_examples):
-            return reconstructed.new_zeros(()), 0.0
+            return reconstructed.new_zeros(()), 0.0, {}
         eligible = (
             self.training_examples_seen - self.last_fired_example
             >= self.aux_dead_window_examples
         ).to(pre_topk.device)
         eligible_count = int(eligible.sum().item())
         if eligible_count == 0:
-            return reconstructed.new_zeros(()), 0.0
+            return reconstructed.new_zeros(()), 0.0, {}
 
         # Exclude ineligible features even when eligible activations are zero.
         masked = pre_topk.masked_fill(~eligible, -torch.inf)
         aux_features = self.model.select_topk(masked, min(self.aux_k, eligible_count))
         auxiliary_prediction = self.model.decode_without_bias(aux_features)
         residual = ((activations - reconstructed) / self.model.input_scale).detach()
-        return F.mse_loss(auxiliary_prediction, residual), eligible_count / self.model.latent_dim
+        aux_loss = F.mse_loss(auxiliary_prediction, residual)
+        with torch.no_grad():
+            diagnostics = {
+                "examples": float(activations.shape[0]),
+                "elements": float(residual.numel()),
+                "positive_features": float((aux_features > 0).sum().item()),
+                "eligible_positive_activations": float(((pre_topk > 0) & eligible).sum().item()),
+                "eligible_activation_pairs": float(eligible_count * activations.shape[0]),
+                "prediction_sse": auxiliary_prediction.square().sum().item(),
+                "residual_sse": residual.square().sum().item(),
+                "error_sse": aux_loss.detach().item() * residual.numel(),
+            }
+        return aux_loss, eligible_count / self.model.latent_dim, diagnostics
 
     def _common(self, batch: torch.Tensor, training_mode: bool = False):
         """Run a single forward pass and compute the loss.
@@ -144,17 +158,21 @@ class ModelRunner:
         losses = self._loss_fn(reconstructed, activations, sparse_features)
         aux_loss = reconstructed.new_zeros(())
         eligible_fraction = 0.0
+        aux_diagnostics = {}
         if training_mode:
             self._track_training_activity(sparse_features.detach() > 0)
         if use_aux:
             assert pre_topk is not None
-            aux_loss, eligible_fraction = self._auxiliary_loss(activations, reconstructed, pre_topk)
+            aux_loss, eligible_fraction, aux_diagnostics = self._auxiliary_loss(
+                activations, reconstructed, pre_topk,
+            )
         weighted_aux_loss = self.aux_coefficient * aux_loss
 
         return {'loss': losses["loss"] + weighted_aux_loss,
                 'aux_loss': aux_loss,
                 'weighted_aux_loss': weighted_aux_loss,
                 'aux_eligible_feature_fraction': eligible_fraction,
+                'aux_diagnostics': aux_diagnostics,
                 'rec_loss': losses["rec_loss"],
                 'weighted_sparsity_loss': losses['weighted_sparsity_loss'],
                 'reconstructed': reconstructed,
@@ -181,6 +199,7 @@ class ModelRunner:
         running_aux_loss = 0.0
         running_weighted_aux_loss = 0.0
         running_aux_eligible_fraction = 0.0
+        auxiliary_sums: dict[str, float] = {}
         num_examples = 0
         running_baseline_loss = 0.0
         device = next(self.model.parameters()).device
@@ -215,6 +234,8 @@ class ModelRunner:
             running_aux_loss += outputs['aux_loss'].item() * batch_size
             running_weighted_aux_loss += outputs['weighted_aux_loss'].item() * batch_size
             running_aux_eligible_fraction += outputs['aux_eligible_feature_fraction'] * batch_size
+            for key, value in outputs['aux_diagnostics'].items():
+                auxiliary_sums[key] = auxiliary_sums.get(key, 0.0) + value
             num_examples += batch_size
             
         if num_examples == 0:
@@ -243,6 +264,20 @@ class ModelRunner:
             metrics["aux_loss"] = running_aux_loss / num_examples
             metrics["weighted_aux_loss"] = running_weighted_aux_loss / num_examples
             metrics["aux_eligible_feature_fraction"] = running_aux_eligible_fraction / num_examples
+            if self.aux_coefficient > 0:
+                measured_examples = auxiliary_sums.get("examples", 0.0)
+                elements = auxiliary_sums.get("elements", 0.0)
+                residual_sse = auxiliary_sums.get("residual_sse", 0.0)
+                eligible_pairs = auxiliary_sums.get("eligible_activation_pairs", 0.0)
+                metrics["auxiliary"] = {
+                    "eligible_feature_fraction": metrics["aux_eligible_feature_fraction"],
+                    "measured_examples": int(measured_examples),
+                    "eligible_positive_activation_fraction": auxiliary_sums["eligible_positive_activations"] / eligible_pairs if eligible_pairs else None,
+                    "mean_positive_features": auxiliary_sums["positive_features"] / measured_examples if measured_examples else None,
+                    "prediction_rms": math.sqrt(auxiliary_sums["prediction_sse"] / elements) if elements else None,
+                    "residual_rms": math.sqrt(residual_sse / elements) if elements else None,
+                    "residual_error_reduction": 1 - auxiliary_sums["error_sse"] / residual_sse if residual_sse > 0 else None,
+                }
             last_fired = self.last_fired_example
             if last_fired is None:
                 raise RuntimeError("Training did not initialize feature activity counters.")
@@ -269,6 +304,13 @@ class ModelRunner:
             Auxiliary loss, weighted auxiliary loss, and eligible feature fraction
             are averaged across batches with weighting by the number of examples.
             Activity statistics count only main-path features.
+            When AuxK is enabled, auxiliary contains effectiveness diagnostics
+            over batches with eligible features. RMS and error reduction use
+            accumulated squared sums; undefined values are None. Its
+            measured_examples reports coverage, excluding warmup and batches
+            without eligible features.
+            eligible_positive_activation_fraction counts positive encoder
+            outputs before auxiliary selection across eligible feature/example pairs.
         """
         return self._run_epoch(dataloader, training_mode=True)
     
