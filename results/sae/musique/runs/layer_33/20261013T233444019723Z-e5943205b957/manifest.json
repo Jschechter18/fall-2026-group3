@@ -12,7 +12,7 @@
     "trial_id": 3,
     "group": "auxk_diagnostics"
   },
-  "git_dirty": true,
+  "git_dirty": false,
   "git_status": "?? results/sae/musique/tuning/layer_33/20261013T173330494845Z-e5943205b957/config.json\n?? results/sae/musique/tuning/layer_33/20261013T173330494845Z-e5943205b957/manifest.json\n?? results/sae/musique/tuning/layer_33/20261013T173330494845Z-e5943205b957/trials.csv\n?? results/sae/musique/tuning/layer_33/20261013T173330494845Z-e5943205b957/trials.json\n?? results/sae/musique/tuning/layer_33/20261013T173330494845Z-e5943205b957/trials/trial_0001/config.json\n?? results/sae/musique/tuning/layer_33/20261013T173330494845Z-e5943205b957/trials/trial_0001/feature_frequencies.json\n?? results/sae/musique/tuning/layer_33/20261013T173330494845Z-e5943205b957/trials/trial_0001/history.json\n?? results/sae/musique/tuning/layer_33/20261013T173330494845Z-e5943205b957/trials/trial_0001/manifest.json\n?? results/sae/musique/tuning/layer_33/20261013T173330494845Z-e5943205b957/trials/trial_0002/config.json\n?? results/sae/musique/tuning/layer_33/20261013T173330494845Z-e5943205b957/trials/trial_0002/feature_frequencies.json\n?? results/sae/musique/tuning/layer_33/20261013T173330494845Z-e5943205b957/trials/trial_0002/history.json\n?? results/sae/musique/tuning/layer_33/20261013T173330494845Z-e5943205b957/trials/trial_0002/manifest.json\n",
   "git_diff": "",
   "git_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
