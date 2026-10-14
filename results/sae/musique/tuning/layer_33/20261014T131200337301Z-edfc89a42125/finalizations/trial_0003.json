@@ -1,0 +1,53 @@
+{
+  "status": "completed",
+  "trial_id": 3,
+  "source_trial_directory": "results/sae/musique/tuning/layer_33/20261014T131200337301Z-edfc89a42125/trials/trial_0003",
+  "run_directory": "results/sae/musique/runs/layer_33/20261014T161949048498Z-edfc89a42125",
+  "checkpoint_path": "results/sae/musique/runs/layer_33/20261014T161949048498Z-edfc89a42125/checkpoints/best_checkpoint.pt",
+  "total_epoch_budget": 200,
+  "best_epoch": 111,
+  "metrics": {
+    "train": {
+      "loss": 0.04419084243386625,
+      "rec_loss": 0.01727491990479839,
+      "weighted_sparsity_loss": 0.02691592273104143,
+      "mean_active_features": 37.9589922188755,
+      "inactive_feature_fraction": 0.07107386738061905,
+      "firing_frequency_min": 0.0,
+      "firing_frequency_p50": 0.0006588855176232755,
+      "firing_frequency_p90": 0.00771837355569005,
+      "firing_frequency_p99": 0.032132588326931,
+      "firing_frequency_max": 0.9942896366119385,
+      "mean_baseline_rec_loss": 0.28104305554585285,
+      "variance_explained": 0.9385328348667205
+    },
+    "validation": {
+      "loss": 0.08397526639504795,
+      "rec_loss": 0.058947790185606336,
+      "weighted_sparsity_loss": 0.025027476209441606,
+      "mean_active_features": 66.02009946125155,
+      "inactive_feature_fraction": 0.027312230318784714,
+      "firing_frequency_min": 0.0,
+      "firing_frequency_p50": 0.0020721093751490116,
+      "firing_frequency_p90": 0.01243265625089407,
+      "firing_frequency_p99": 0.041234977543354034,
+      "firing_frequency_max": 0.9939908981323242,
+      "mean_baseline_rec_loss": 0.2580109989055202,
+      "variance_explained": 0.7715299330816817
+    },
+    "test": {
+      "loss": 0.059340544987514794,
+      "rec_loss": 0.03349270677590466,
+      "weighted_sparsity_loss": 0.025847838211610134,
+      "mean_active_features": 51.33232931726908,
+      "inactive_feature_fraction": 0.07836747914552689,
+      "firing_frequency_min": 0.0,
+      "firing_frequency_p50": 0.0015060240402817726,
+      "firing_frequency_p90": 0.00978915672749281,
+      "firing_frequency_p99": 0.03639558330178261,
+      "firing_frequency_max": 0.9919678568840027,
+      "mean_baseline_rec_loss": 0.2814142315023874,
+      "variance_explained": 0.8809843176832352
+    }
+  }
+}

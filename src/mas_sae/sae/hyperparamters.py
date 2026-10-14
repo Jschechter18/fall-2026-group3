@@ -9,8 +9,8 @@ class Hyperparameters:
     
     lr: float = 3e-4
     
-    input_dim: int = 768
-    hidden_dim: int = 8
+    input_dim: int = 2560 # the number of features for gemma 4b layer 33
+    hidden_dim: int = 8 # never actually used - this was here incase we ever wanted an intermediate hidden layer
     latent_dim: int = 12888
     
     patience: int = 20

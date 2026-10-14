@@ -1,0 +1,9 @@
+{
+  "policy": {
+    "max_mean_active_features": 128
+  },
+  "status": "selected",
+  "trial_id": 7,
+  "run_directory": "results/sae/musique/tuning/layer_33/20261014T131200337301Z-edfc89a42125/trials/trial_0007",
+  "checkpoint_path": "results/sae/musique/tuning/layer_33/20261014T131200337301Z-edfc89a42125/trials/trial_0007/checkpoints/best_checkpoint.pt"
+}

@@ -1,0 +1,22 @@
+- l1 sweep results for preliminary presentation
+- trial 3: has the broadest dictionary coverage
+- trial 7: has the most sparcity
+- including both as controls in the downstream causality pipeline would allow us to see the effects of the sparcity vs broad coverage tradeoff
+- key configs:
+    - sparcity_coefficient = 5
+- selected because:
+    - pretty good or at least reasonable reconstruction (relative to top_k = 64)
+    - still has good sparsity
+    - has a very high fraction of dictionary usage - indicating that most features are being seen by the model at some point
+
+- limitations
+    - there are about 70% dead features. this means that it learns only on about 30% of the features.
+    - this could be a severe limitation in the causality pipeline, as some features likely are just not learned
+
+- potential experiments to improve:
+    - we like that this is both sparse and high dictionary usage, but we could work on reconstruction accuracy
+    - freeze the encoder since we like the sparcity and dictionary usage, but fine tune the decoder/dictionary to improve its ability to reconstruction
+    - benefits of this experiment:
+        - it could improve the distortion between the ablated groups and the non-intervened groups, allowing for better controls in the causality pipeline
+    - potential issues with this experiment:
+        - it could result in damaging our interventions
