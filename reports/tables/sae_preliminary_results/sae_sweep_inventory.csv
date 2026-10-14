@@ -1,0 +1,7 @@
+Study,Status,Completed trials,Listed trials,Included,Reason,study_id
+Initial TopK sweep,completed,12,12,True,Completed presentation sweep,20261012T222316667696Z-941bd68388fa
+20261013T142312360355Z-272aaa1bbfea,failed,2,8,False,Interrupted study,20261013T142312360355Z-272aaa1bbfea
+20261013T155904522802Z-a24620ad82c2,failed,2,4,False,Interrupted study,20261013T155904522802Z-a24620ad82c2
+TopK + AuxK diagnostics,completed,8,8,True,Completed presentation sweep,20261013T173330494845Z-e5943205b957
+Coarse L1 sweep,completed,15,15,True,Completed presentation sweep,20261013T234044861337Z-35e93bdfd4fe
+L1 refinement,completed,8,8,True,Completed presentation sweep,20261014T131200337301Z-edfc89a42125
