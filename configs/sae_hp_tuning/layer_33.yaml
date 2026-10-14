@@ -1,0 +1,34 @@
+# layer_33.yaml
+activation_run_name: natural_4b_full9_partitioned
+layer: 33
+
+defaults:
+  latent_dim: 12888
+  epochs: 200
+  batch_size: 256
+  seed: 42
+  train_shuffle: true
+  patience: 20
+  lr_patience: 5
+  inactivity_window_examples: 10000
+
+groups:
+  - name: l1
+    fixed:
+      sparsity_mode: l1
+    grid:
+      lr: [0.0001, 0.0003]
+      sparsity_coefficient: [0.001, 0.01, 0.1, 1.0]
+
+  - name: topk
+    fixed:
+      sparsity_mode: topk
+    grid:
+      lr: [0.0001, 0.0003]
+      top_k: [64, 128, 256, 512]
+
+# Initially review the reconstruction–sparsity Pareto frontier.
+# Enable automatic selection after choosing an activity budget:
+#
+# selection:
+#   max_mean_active_features: 128

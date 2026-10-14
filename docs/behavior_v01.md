@@ -1,6 +1,6 @@
 # Behavior v0.1: labelling how the Solver responds to Critic feedback
 
-Status: candidate labels, not yet checked by human annotators. Rule version `behavior_v0.1.1_candidate`.
+Status: rule version `behavior_v0.1.1_candidate`. Human QC is complete: the labels were checked by human annotators between 2026-10-06 and 2026-10-11 (see "Human check"). No production label freeze has been approved. An experimental overlay, `behavior_v0.1.2_qc_candidate`, exists on branch `issue55-v012-qc` and is not a production label.
 
 ## The problem this solves
 
@@ -17,14 +17,14 @@ Behavior v0.1 answers two separate questions for every episode.
 | `feedback_type` | What did the Critic give? | `answer`, `refusal`, `premise_rejection`, `unresolved` |
 | `solver_response` | What did the Solver do in A2? | `adopted_critic`, `retained_a1`, `third_answer`, `unchanged_same_position`, `non_answer`, `produced_answer`, `unresolved` |
 
-The rules are in `src/mas_sae/evaluation/behavior_v01.py`. They compare normalized text, so "Paris" and "Paris, France" are treated as a partial match and left out rather than guessed.
+The rules are in `src/mas_sae/evaluation/behavior_labels.py`. They compare normalized text, so "Paris" and "Paris, France" are treated as a partial match and left out rather than guessed.
 
 There are three label layers, and each one is kept:
 
 | Layer | Status |
 |---|---|
 | `lexical_v2` | The original labels from the collection run. Unchanged. |
-| `behavior_v0.1.1_candidate` | The labels proposed here. Automatic, not yet validated. |
+| `behavior_v0.1.1_candidate` | The labels proposed here. Automatic rules, checked against human annotation (see "Human check"); not yet approved for a label freeze. |
 | `human_validated_behavior_v1` | Empty for every row until human annotation is finished. |
 
 ## What the 22,332 episodes look like
@@ -124,15 +124,26 @@ Only the partitions named on the command line are written; no `intervention.pt` 
 
 ## Human check
 
-The labels are string rules, so they need to be checked by people. The blind packet is sampled from the train partition only: every "kept" case in train plus 40 from each other situation, shuffled together. A packet sampled under an earlier split is not reused, because it would show annotators test or intervention questions. Annotators see the question, the source paragraphs, A1, the Critic's feedback and A2, and none of our labels. A second annotator independently labels 120 of the rows. `scripts/qc_agreement.py` then reports agreement and lists the disagreements. Instructions are in `docs/qc_guide.md`.
+The labels are string rules, so they were checked by people. The blind packet is sampled from the train partition only: every "kept" case in train plus 40 from each other situation, shuffled together. A packet sampled under an earlier split is not reused, because it would show annotators test or intervention questions. Annotators see the question, the source paragraphs, A1, the Critic's feedback and A2, and none of our labels. A second annotator independently labels 120 of the rows. `scripts/qc_agreement.py` then reports agreement and lists the disagreements. Instructions are in `docs/qc_guide.md`.
 
-Until that is done, `human_validated_behavior_v1` is empty for every row and results built on these labels are exploratory.
+### Outcome (2026-10-11)
+
+The packet was issued from `behavior_v011_split80_10_10_20261006/qc/` (559 rows, 120 of them also given to a second annotator). Annotator A labelled all 559 rows and annotator B the 120. `scripts/qc_agreement.py` on the completed files: `feedback_type` 115/120 (kappa 0.94), `solver_response` 110/120 (kappa 0.89), `eligible_primary` 100/120 (kappa 0.47; 14 of the 20 disagreements are "no" against "uncertain"). The 29 rows with any disagreement were adjudicated (24 decisions followed B, 4 followed A, 1 neither). Against the adjudicated reference the rules agree on all three fields for 169/559 rows. The strata were chosen to be hard, so that figure is not population accuracy.
+
+Two findings for anyone using the labels:
+
+- `retained_a1`: of the 119 train rows the rules mark as kept-A1 and eligible, the annotators judged 111 not eligible, 6 uncertain and 2 eligible. Those 119 rows are the whole negative class of `strict_target`.
+- 127 rows whose Critic feedback the annotators call `unresolved` are labelled `answer` by the rules.
+
+`human_validated_behavior_v1` is still empty in `labels.csv`; the human labels live only in the private evidence folders below. Results that depend on those two groups remain exploratory.
+
+Evidence (private, not committed, contains the unblinded key): `~/capstone-artifacts/issue55_human_evidence/` (completed annotator files, adjudication workbook, `agreement_repo_reproduced.json`); `~/capstone-artifacts/issue55_independent_validation/` and `~/capstone-artifacts/issue55_final_package/` (the v0.1.2 validation sample and its completed annotations); `~/capstone-artifacts/issue55_final_package_verification/verification_ec2.json` (the numbers above and below, reproduced with the repository code).
 
 ## Where the code is
 
 | File | What it does |
 |---|---|
-| `src/mas_sae/evaluation/behavior_v01.py` | The labelling rules, and reading and writing `labels.csv` |
+| `src/mas_sae/evaluation/behavior_labels.py` | The labelling rules, and reading and writing `labels.csv` |
 | `src/mas_sae/evaluation/behavior_qc.py` | Builds the blind QC packet and scores annotator agreement |
 | `src/mas_sae/data/production.py` | The split table and the loader that enforces it |
 | `scripts/prepare_behavior_v01.py` | Runs the steps above on the finished production run |
@@ -150,7 +161,32 @@ PYTHONPATH=src python scripts/prepare_behavior_v01.py \
     --split-seed 42
 ```
 
-This writes `labels.csv`, `split_manifest.csv`, `counts.json` and the `qc/` packet. `counts.json` also records the Git commit, the hashes of the rule files that produced the labels, the partition proportions and seed, and the partition audit. The collection run folders are read and never changed. Activation tensors stay outside Git.
+This writes `labels.csv`, `split_manifest.csv`, `partitions.csv`, `counts.json` and the `qc/` packet. `counts.json` also records the Git commit, the hashes of the rule files that produced the labels, the partition proportions and seed, and the partition audit. The collection run folders are read and never changed. Activation tensors stay outside Git.
+
+## Re-running the collection without moving a single question
+
+The cut above is reproducible only from the exact same question set. Removing even one question can move many other assignments when the split is re-derived. So the assignment was made once and is frozen in `partitions.csv`, committed at `results/behavior/behavior_v011_split80_10_10_20261006/partitions.csv` next to the `split_manifest.csv`, `labels.csv` and `counts.json` it came from. Every later run takes its partitions from that file and never derives them again:
+
+```bash
+PYTHONPATH=src python scripts/prepare_behavior_v01.py \
+    --full-results <artifacts>/<rerun>/results \
+    --output <artifacts>/<new package folder> \
+    --frozen-partitions results/behavior/behavior_v011_split80_10_10_20261006/partitions.csv \
+    --coverage complete
+```
+
+What this guarantees:
+
+- A question keeps its partition whatever order the run collected it in. Only `full_index` / `scan_index`, the activation rows, are rebuilt for the new run.
+- `--coverage complete` (the default) stops if any frozen question is missing from the run. `--coverage subset` is for runs that deliberately cover part of the question set, such as a layer scan; the uncovered ids are written to `missing_question_ids.json` and counted in `counts.json["partition"]["questions"]`.
+- Every package built from the frozen file carries the whole frozen mapping as its `partitions.csv`, byte for byte, however much of it the run covers. Only `split_manifest.csv` is run-specific.
+- A question the frozen file does not know stops the run. Adding questions is a new manifest version made by a person, not something the script decides.
+- The rerun's `split_manifest.csv` has the same columns as before, so every reader (`read_manifest`, the export, the layer-selection loader) works unchanged.
+- `scripts/export_partition_activations.py` checks the package manifest against the frozen file before writing anything, so a package built under a different cut is refused.
+
+`partitions.csv` fields: `question_id`; `source_split`, the MuSiQue split the question came from; `partition`, the only column anyone reads to choose data; `hop_group`, what the stratification used. Everything else in `split_manifest.csv` (`collection_split`, `scan_split`, the development flags, the two index columns) describes one run and is rebuilt per run.
+
+For a future collection use `configs/collection/v2/natural_4b_rerun_*.yaml`: the same models, budgets, layers and seed as the recorded run, a new run name, and no collection-time `experiment_split`. The historical configs are left as they were, because the resumable collection checks them.
 
 ```python
 from mas_sae.data.production import load_labeled_rows, load_production_activations
@@ -164,7 +200,7 @@ X = load_production_activations(train, manifest, "<artifacts>/natural_4b_full/da
 
 ## Limits
 
-- Labels are provisional until the human check is complete.
+- The human check is complete; the labels stay string rules with the two known gaps listed under "Outcome".
 - String matching cannot recognise aliases. "USA" and "United States" count as two different answers, so some episodes labelled as disagreements are really agreements, and some "third answers" are really adoptions. Only partial overlaps such as "Paris" / "Paris, France" are excluded. The human check measures how often this happens.
 - The premise-rejection rule includes the bare word "premise"; 29 of its 300 matches depend on that word alone and should be read by hand.
 - Correctness flags come from the collection run's own answer matching and can be wrong.
@@ -172,6 +208,6 @@ X = load_production_activations(train, manifest, "<artifacts>/natural_4b_full/da
 
 ## Next steps
 
-1. Two annotators complete the blind packet; measure agreement; adjust rules if needed and freeze Behavior v1.
+1. Behavior v0.1.2 is an experimental rule overlay (`src/mas_sae/evaluation/behavior_v012_qc.py` on branch `issue55-v012-qc`) written from the 559-row disagreements. On a separate blind sample of 120 train rows (80 that the overlay changes, 40 unchanged controls; 30 double-annotated with A/B kappa 0.84 / 0.51 / 1.00; the 10 disagreements were reviewed and resolved by Annotator A, and all decisions were documented and verified during the final reproducibility audit) agreement with the human reference moves from 47 to 74 of 120 (`feedback_type`), 30 to 85 of 120 (`solver_response`), 85 to 110 of 116 (`eligible_primary`, 4 uncertain rows excluded) and 19 to 50 of 116 (all three). Of the 80 changed rows, 76 improved, 3 regressed and 1 was unchanged. The sample is enriched, not a population estimate. Over the full run the overlay changes 1,575 of 22,332 labels. Whether to promote it is a separate team decision; until then `behavior_v0.1.1_candidate` is the label in use.
 2. Probe and SAE work (Raye, Josh) fits on the train partition and chooses on validation, with a text baseline and a breakdown by Critic correctness. An early look on the old discovery role suggested A2 activations predict adoption better than the feedback text does (balanced accuracy about 0.84 versus 0.75); that is unvalidated and is theirs to reproduce properly on the new partitions.
-3. Test is scored once, on the frozen checkpoint; intervention is used only for the causal experiment.
+3. The role of the test partition is being restated under issue #97; intervention is used only for the causal experiment.
