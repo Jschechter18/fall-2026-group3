@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 import torch
 
+from mas_sae.experiments.artifacts import sha256_file
 from mas_sae.probe import behavior_data as bd
 from mas_sae.probe import layer_selection as ls
 
@@ -61,6 +62,7 @@ def build_tree(root: Path, n_train=700, n_val=220, seed=0, labels_have_episode_i
     # it has question_id but NO episode_id, and carries its own source_split/partition columns.
     lab = pd.DataFrame({"question_id": truth.question_id, "source_split": truth.source_split,
                         "partition": truth.partition, "solver_response": truth.target,
+                        "rule_version": "behavior_v0.1.1_candidate",
                         "eligible_primary": truth.eligible,
                         "primary_target": np.where(truth.eligible, (truth.target == "adopted_critic").astype(float), np.nan)})
     if labels_have_episode_id:
@@ -185,7 +187,7 @@ def test_old_canonical_split_manifest_is_rejected_with_a_clear_message(tmp_path)
     try:
         ls.load_inputs(make_cfg(tmp_path))
     except bd.AlignmentError as e:
-        assert "NEW" in str(e) and "partition" in str(e)
+        assert "four-partition" in str(e) and "partition" in str(e)
     else:
         raise AssertionError("the old manifest was accepted")
 
@@ -296,6 +298,135 @@ def test_exported_layout_is_verified_through_the_original_row_index():
         assert "disagrees" in str(e)
     else:
         raise AssertionError("a wrong original index was accepted for exported data")
+
+
+def _tiny():
+    """Three exported-layout episodes (a, b, c) with matching labels and manifest rows."""
+    ep = pd.DataFrame({"source_split": ["train"] * 3, "activation_row": [0, 1, 2], "verify_index": [10, 11, 12],
+                       "ep_episode_id": ["a__n", "b__n", "c__n"], "ep_question_id": ["a", "b", "c"]})
+    lab = pd.DataFrame({"question_id": ["a", "b", "c"], "primary_target": [1.0, 0.0, 1.0],
+                        "eligible_primary": [True] * 3})
+    man = pd.DataFrame({"question_id": ["a", "b", "c"], "source_split": ["train"] * 3,
+                        "partition": ["train"] * 3, "full_index": [10, 11, 12]})
+    return ep, lab, man
+
+
+def _raises_alignment(*args, match, **kwargs):
+    try:
+        bd.align_episodes(*args, **kwargs)
+    except bd.AlignmentError as e:
+        assert match in str(e), str(e)
+        return str(e)
+    raise AssertionError("misaligned input was accepted")
+
+
+def test_episode_missing_from_labels_stops_the_run_instead_of_dropping_out():
+    ep, lab, man = _tiny()
+    msg = _raises_alignment(ep, lab[lab.question_id != "b"], man, bd.Columns(), "full_index",
+                            match="no row in labels.csv")
+    assert "b" in msg
+
+
+def test_episode_missing_from_manifest_stops_the_run_instead_of_dropping_out():
+    ep, lab, man = _tiny()
+    _raises_alignment(ep, lab, man[man.question_id != "c"], bd.Columns(), "full_index",
+                      match="no row in the manifest")
+
+
+def test_recorded_exclusion_is_dropped_and_reported():
+    ep, lab, man = _tiny()
+    reason = "no label: Critic output was truncated"
+    df, diag = bd.align_episodes(ep, lab[lab.question_id != "b"], man, bd.Columns(), "full_index",
+                                 excluded={"b": reason})
+    assert list(df["ep_question_id"]) == ["a", "c"]
+    assert diag["n_excluded"] == 1 and diag["excluded_episodes"] == {"b": reason}
+    assert diag["n_joined"] == 2 and diag["index_verified_rows"] == 2
+
+
+def test_exclusion_naming_a_question_that_is_not_in_the_run_is_refused():
+    ep, lab, man = _tiny()
+    _raises_alignment(ep, lab, man, bd.Columns(), "full_index", excluded={"zzz": "typo"},
+                      match="not episodes of this run")
+
+
+def test_partially_missing_activation_index_raises():
+    ep, lab, man = _tiny()
+    man = man.assign(full_index=[10, None, 12])
+    msg = _raises_alignment(ep, lab, man, bd.Columns(), "full_index", match="have no full_index")
+    assert msg.startswith("1 of 3")
+
+
+def test_entirely_missing_activation_index_raises_instead_of_warning():
+    ep, lab, man = _tiny()
+    man = man.assign(full_index=[None, None, None])
+    msg = _raises_alignment(ep, lab, man, bd.Columns(), "full_index", match="have no full_index")
+    assert msg.startswith("3 of 3")
+
+
+def test_unknown_partition_value_is_refused():
+    ep, lab, man = _tiny()
+    _raises_alignment(ep, lab, man.assign(partition=["train", "dev", "train"]), bd.Columns(), "full_index",
+                      match="unknown partition")
+
+
+def _eval_rows(n=200, seed=0):
+    rng = np.random.default_rng(seed)
+    y = np.array(["adopted_critic", "not_adopted"] * (n // 2))
+    return rng, y, np.arange(n).astype(str)
+
+
+def _flip(y, idx):
+    p = y.copy()
+    p[idx] = np.where(p[idx] == "adopted_critic", "not_adopted", "adopted_critic")
+    return p
+
+
+def test_highest_observed_layer_is_not_reported_as_separated_when_a_close_layer_is_within_noise():
+    rng, y, groups = _eval_rows()
+    errs_a = rng.choice(len(y), 20, replace=False)
+    errs_b = np.concatenate([errs_a[:16], rng.choice(np.setdiff1d(np.arange(len(y)), errs_a), 6, replace=False)])
+    preds = {"layer_a": _flip(y, errs_a), "layer_b": _flip(y, errs_b)}
+    res = ls._evaluate(preds, {k: {} for k in preds}, y, groups, ["adopted_critic", "not_adopted"],
+                       ls.LayerSelectionConfig(n_bootstrap=300))
+    assert res["highest_observed_layer"] == "layer_a"
+    assert res["separated_from_all_other_layers"] is False
+    assert res["not_separated_from_highest"] == ["layer_b"]
+    assert res["recommendation_basis"] == "highest_observed_not_separated"
+    assert "NOT statistically separated" in res["selection_statement"] and "layer_b" in res["selection_statement"]
+
+
+def test_highest_observed_layer_is_reported_as_separated_when_every_other_layer_is_clearly_worse():
+    rng, y, groups = _eval_rows()
+    preds = {"layer_a": _flip(y, rng.choice(len(y), 10, replace=False)),
+             "layer_b": rng.permutation(y)}                       # chance-level layer
+    res = ls._evaluate(preds, {k: {} for k in preds}, y, groups, ["adopted_critic", "not_adopted"],
+                       ls.LayerSelectionConfig(n_bootstrap=300))
+    assert res["recommended_layer"] == "layer_a"
+    assert res["separated_from_all_other_layers"] is True and res["not_separated_from_highest"] == []
+    assert res["recommendation_basis"] == "highest_observed_and_separated"
+
+
+def test_probes_are_class_weighted_and_recover_the_rare_class():
+    """The target is ~10% not-adopted; a probe that ignored the imbalance would predict 'adopted' always."""
+    assert ls._activation_model(1.0, 0).named_steps["clf"].class_weight == "balanced"
+    assert ls._text_model(1.0, 0).named_steps["clf"].class_weight == "balanced"
+    rng = np.random.default_rng(0)
+    y = np.where(rng.random(600) < 0.1, "not_adopted", "adopted_critic")
+    X = rng.normal(size=(600, 16)).astype(np.float32)
+    X[y == "not_adopted", 0] += 1.5
+    res = ls.compare_layers_holdout({"layer_x": X}, y, np.arange(600).astype(str), np.arange(600) < 400,
+                                    None, ls.LayerSelectionConfig(n_bootstrap=50, c_grid=[0.01, 0.1, 1.0]))
+    assert res["results"]["layer_x"]["per_class"]["not_adopted"]["recall"] > 0.5
+
+
+def test_summary_records_label_hash_rule_version_and_package_versions(tmp_path):
+    build_tree(tmp_path)
+    summary = _summary(ls.run(make_cfg(tmp_path)))
+    prov = summary["provenance"]
+    assert prov["labels_sha256"] == sha256_file(tmp_path / "labels.csv")
+    assert prov["manifest_sha256"] == sha256_file(tmp_path / "manifest.csv")
+    assert set(prov["packages"]) == set(ls.PROVENANCE_PACKAGES) and prov["python"]
+    assert summary["data_diagnostics"]["label_rule_versions"] == ["behavior_v0.1.1_candidate"]
 
 
 def test_stale_labels_path_is_refused_until_both_files_are_set(tmp_path):

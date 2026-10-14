@@ -1,6 +1,8 @@
 # Layer selection on the nine-layer SCAN (partitioned export): fit on `train`, rank on `validation`.
 # Eligible scan rows: train 445 (53 not adopted), validation 130 (13 not adopted), so validation CIs are
 # wide; a tie or "not above chance" is a valid outcome. test and intervention rows are never read.
+# Historical evidence: Behavior v0.1.1 labels on the 2,500-question layer-scan activations. The
+# updated run on v0.1.2 labels and the full nine-layer export (full_index) is tracked in Issue #88.
 capstone_data_root: data/capstone-data
 activations_dir: natural_4b_layer_scan_partitioned/data/activations/natural_4b_layer_scan_partitioned
 results_dir: natural_4b_layer_scan_partitioned/results/collection/natural_4b_layer_scan_partitioned

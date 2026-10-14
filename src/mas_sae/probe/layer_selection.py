@@ -21,6 +21,8 @@ from __future__ import annotations
 
 import json
 import logging
+import platform
+import sys
 import warnings
 from dataclasses import asdict, dataclass, field, fields
 from pathlib import Path
@@ -34,6 +36,10 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
+from mas_sae.data.production import DEVELOPMENT_PARTITIONS
+from mas_sae.experiments.artifacts import (
+    get_git_commit, get_git_diff_sha256, get_package_version, get_run_command, sha256_file,
+)
 from mas_sae.probe import behavior_data as bd
 from mas_sae.probe.cv_eval import (
     balanced_accuracy, bootstrap_ci, confusion, grouped_bootstrap_indices,
@@ -44,7 +50,9 @@ from mas_sae.utils.versioning import create_versioned_run_dir
 logger = logging.getLogger(__name__)
 
 PATH_FIELDS = {"capstone_data_root", "output_dir"}
-DEV_PARTITIONS = ["train", "validation"]
+DEV_PARTITIONS = list(DEVELOPMENT_PARTITIONS)
+# recorded with every run: results differed slightly across environments for one layer
+PROVENANCE_PACKAGES = ("numpy", "pandas", "scikit-learn", "scipy", "torch", "pyyaml")
 
 
 @dataclass
@@ -58,6 +66,9 @@ class LayerSelectionConfig:
     labels_csv: str = "REPLACE_ME/labels.csv"
     manifest_csv: str = "REPLACE_ME/split_manifest.csv"
     index_column: str = "full_index"                       # "scan_index" for the nine-layer scan
+    # question_id -> reason, for episodes deliberately left out. Any other episode missing from the
+    # labels or the manifest stops the run; these are dropped and recorded in the summary.
+    excluded_episodes: dict = field(default_factory=dict)
     layers: list = field(default_factory=lambda: [8, 17, 25, 33])
     source_splits: list = field(default_factory=lambda: ["train", "validation"])  # folder names
     activation_file: str = "{split}_attempt2.pt"           # Solver activations before A2
@@ -208,12 +219,33 @@ def _evaluate(preds, extras, y, groups, classes, cfg, folds=None, subgroups=None
     if "text_only_baseline" in preds:
         d, dlo, dhi = paired_bootstrap_diff(y, preds[best], preds["text_only_baseline"], boot)
         beats_text, best_vs_text = bool(dlo > 0), {"diff": d, "ci95": [dlo, dhi]}
+    # Highest observed score is not the same claim as "better than every other layer": a layer is
+    # separated from the top only if the paired-bootstrap CI of its difference excludes 0.
+    not_separated = [n for n in act_names if n != best and records[n]["within_noise_of_best"]]
+    separated = not not_separated
+    if reason:
+        basis = None
+        statement = f"No layer recommended ({reason}). Highest observed: {best}."
+    elif separated:
+        basis = "highest_observed_and_separated"
+        statement = (f"{best} has the highest observed balanced accuracy and is separated from every "
+                     "other layer (paired-bootstrap CI of each difference excludes 0).")
+    else:
+        basis = "highest_observed_not_separated"
+        statement = (f"{best} has the highest observed balanced accuracy but is NOT statistically "
+                     f"separated from {', '.join(not_separated)} (paired-bootstrap CI of each difference "
+                     "includes 0). Choosing it does not rule those layers out.")
     return {
         "classes": [str(c) for c in classes],
         "n_rows_evaluated": int(len(y)),
         "class_counts_evaluated": {str(c): int((y == c).sum()) for c in classes},
         "chance_balanced_accuracy": 1.0 / len(classes),
         "c_grid": list(cfg.c_grid),
+        "highest_observed_layer": best,
+        "separated_from_all_other_layers": separated,
+        "not_separated_from_highest": not_separated,
+        "recommendation_basis": basis,
+        "selection_statement": statement,
         "recommended_layer": None if reason else best,   # None on a tie or when nothing beats chance
         "no_recommendation_reason": reason,
         "top_layer_by_balanced_accuracy": best,
@@ -322,10 +354,33 @@ def load_inputs(cfg: LayerSelectionConfig, cols: bd.Columns | None = None):
     episodes = bd.build_episode_table(root / cfg.results_dir, cfg.source_splits, cfg.text_fields)
     labels = pd.read_csv(root / cfg.labels_csv)
     manifest = pd.read_csv(root / cfg.manifest_csv)
-    aligned, align_diag = bd.align_episodes(episodes, labels, manifest, cols, cfg.index_column)
+    aligned, align_diag = bd.align_episodes(episodes, labels, manifest, cols, cfg.index_column,
+                                            excluded=cfg.excluded_episodes)
     parts = [cfg.fit_partition, cfg.eval_partition] if cfg.protocol == "holdout" else DEV_PARTITIONS
     selected, sel_diag = bd.select_partitions(aligned, cols, parts)
-    return selected, {**align_diag, **sel_diag, "protocol": cfg.protocol}, cols
+    rule_versions = (sorted(labels["rule_version"].dropna().astype(str).unique().tolist())
+                     if "rule_version" in labels else [])
+    return selected, {**align_diag, **sel_diag, "protocol": cfg.protocol,
+                      "label_rule_versions": rule_versions}, cols
+
+
+def provenance(cfg: LayerSelectionConfig) -> dict:
+    """Exact inputs and environment of a run: file hashes, code state and package versions."""
+    root = Path(cfg.capstone_data_root)
+    try:
+        uncommitted = get_git_diff_sha256()
+    except RuntimeError:
+        uncommitted = "unknown"
+    return {
+        "labels_sha256": sha256_file(root / cfg.labels_csv),
+        "manifest_sha256": sha256_file(root / cfg.manifest_csv),
+        "git_commit": get_git_commit(),
+        "uncommitted_changes_sha256": uncommitted,
+        "command": get_run_command(),
+        "python": sys.version.split()[0],
+        "platform": platform.platform(),
+        "packages": {p: get_package_version(p) for p in PROVENANCE_PACKAGES},
+    }
 
 
 def run(cfg: LayerSelectionConfig, cols: bd.Columns | None = None) -> Path:
@@ -361,7 +416,7 @@ def run(cfg: LayerSelectionConfig, cols: bd.Columns | None = None) -> Path:
     _write_table(res, run_dir / "layer_comparison.csv")
     (run_dir / "layer_selection_summary.json").write_text(json.dumps(
         {"data_diagnostics": diag, "config": json.loads(json.dumps(asdict(cfg), default=str)),
-         "comparison": res}, indent=2, default=str))
+         "provenance": provenance(cfg), "comparison": res}, indent=2, default=str))
     logger.info("wrote %s", run_dir)
     return run_dir
 

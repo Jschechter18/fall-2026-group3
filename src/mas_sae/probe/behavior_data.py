@@ -10,24 +10,25 @@ The manifest is the only authority for which rows may be used. ``test`` and ``in
 sealed: ``select_partitions`` refuses to return them unless ``allow_sealed=True`` (reserved for the
 single final evaluation after the freeze, not for development).
 
-The dangerous failure is silent misalignment, so the join verifies Israel's definition of the
-manifest index (row number inside the tensor for that ``source_split``) against the row index the
-interactions file records for the same question, and raises if they disagree.
+The dangerous failure is silent misalignment, so the join is strict: every episode must find its
+labels and its manifest row (or be listed, with a reason, in ``excluded``), and every episode's
+manifest index (row number inside the tensor for that ``source_split``) must be present and agree
+with the row index the interactions file records for the same question. Anything else raises.
 """
 
 from __future__ import annotations
 
 import json
-import logging
 from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-logger = logging.getLogger(__name__)
+from mas_sae.data.production import PARTITIONS, PURPOSE_PARTITION
 
-SEALED_PARTITIONS = frozenset({"test", "intervention"})
+# The partition rules live in mas_sae.data.production; sealed = what only `evaluate`/`intervene` may read.
+SEALED_PARTITIONS = frozenset({PURPOSE_PARTITION["evaluate"], PURPOSE_PARTITION["intervene"]})
 
 
 class AlignmentError(RuntimeError):
@@ -52,7 +53,7 @@ def read_jsonl(path: Path) -> list[dict]:
 
 def load_tensor(path: Path) -> np.ndarray:
     """Load a saved activation tensor as a float32 numpy array (rows x dim)."""
-    import torch  # local import: keeps the pandas logic importable without torch
+    import torch
 
     obj = torch.load(path, map_location="cpu", weights_only=False)
     arr = obj.numpy() if hasattr(obj, "numpy") else np.asarray(obj)
@@ -95,26 +96,50 @@ def build_episode_table(
     return df
 
 
+def _examples(ids, n: int = 5) -> str:
+    ids = sorted(str(i) for i in ids)
+    return ", ".join(ids[:n]) + (" ..." if len(ids) > n else "")
+
+
 def align_episodes(
     episodes: pd.DataFrame, labels: pd.DataFrame, manifest: pd.DataFrame,
-    cols: Columns, index_column: str,
+    cols: Columns, index_column: str, excluded: dict[str, str] | None = None,
 ) -> tuple[pd.DataFrame, dict]:
     """Attach labels and the partition to every episode, and verify the index semantics.
 
     ``index_column`` is ``full_index`` for the full production run and ``scan_index`` for the
     nine-layer scan.
+
+    ``excluded`` maps question_id -> reason for episodes deliberately left out of the analysis.
+    They are dropped and recorded in the diagnostics. Any other episode that does not find its
+    labels and its manifest row raises, so the analysis sample can never shrink silently.
     """
+    excluded = {str(k): str(v) for k, v in (excluded or {}).items()}
     if cols.partition not in manifest.columns:
         raise AlignmentError(
             f"The manifest has no '{cols.partition}' column (columns: {list(manifest.columns)[:12]}). "
-            "This looks like the OLD canonical_split manifest. Layer selection now needs Israel's NEW "
-            "four-partition manifest (train / validation / test / intervention).")
+            "This looks like the OLD canonical_split manifest. Layer selection needs the frozen "
+            "four-partition split_manifest.csv (train / validation / test / intervention).")
     for needed in (cols.question_id, cols.source_split, index_column):
         if needed not in manifest.columns:
             raise AlignmentError(f"Manifest lacks required column '{needed}'.")
+    unknown = set(manifest[cols.partition].astype(str)) - set(PARTITIONS)
+    if unknown:
+        raise AlignmentError(f"Manifest has unknown partition value(s) {sorted(unknown)}; "
+                             f"expected a subset of {list(PARTITIONS)}.")
 
     diag: dict = {"n_episodes": len(episodes), "n_labels": len(labels), "n_manifest": len(manifest),
                   "index_column": index_column}
+
+    # ---- deliberate exclusions: must name real episodes, and are dropped before joining
+    episode_ids = set(episodes["ep_question_id"].astype(str))
+    stale = set(excluded) - episode_ids
+    if stale:
+        raise AlignmentError(f"{len(stale)} excluded question id(s) are not episodes of this run "
+                             f"({_examples(stale)}). Remove them from `excluded_episodes`.")
+    episodes = episodes[~episodes["ep_question_id"].astype(str).isin(excluded)]
+    diag["n_excluded"] = len(excluded)
+    diag["excluded_episodes"] = dict(sorted(excluded.items()))
 
     # ---- labels -> episodes (episode_id if both sides have it, else question_id)
     if cols.episode_id in labels and episodes["ep_episode_id"].notna().all():
@@ -128,39 +153,50 @@ def align_episodes(
     lab_cols = [lab_key, cols.target, cols.eligible] + ([cols.response] if cols.response in labels else [])
     try:
         df = episodes.merge(labels[lab_cols], left_on=ep_key, right_on=lab_key,
-                            how="inner", validate="one_to_one")
+                            how="left", validate="one_to_one", indicator="_in_labels")
         diag["labels_join"] = lab_key
         m = manifest[[cols.question_id, cols.partition, cols.source_split, index_column]].rename(
             columns={cols.question_id: "m_question_id", cols.source_split: "m_source_split",
                      index_column: "m_index"})
         df = df.merge(m, left_on="ep_question_id", right_on="m_question_id",
-                      how="inner", validate="many_to_one")
+                      how="left", validate="many_to_one", indicator="_in_manifest")
     except pd.errors.MergeError as e:
         raise AlignmentError(f"Join was not one-to-one: {e}") from e
+
+    # ---- every remaining episode must have found its labels and its manifest row
+    no_labels = df.loc[df["_in_labels"] == "left_only", "ep_question_id"]
+    no_manifest = df.loc[df["_in_manifest"] == "left_only", "ep_question_id"]
+    if len(no_labels) or len(no_manifest):
+        raise AlignmentError(
+            f"{len(no_labels)} episode(s) have no row in labels.csv ({_examples(no_labels)}) and "
+            f"{len(no_manifest)} have no row in the manifest ({_examples(no_manifest)}). Every episode "
+            "must be labelled and partitioned; to leave one out on purpose, list it with a reason "
+            "under `excluded_episodes`.")
+    df = df.drop(columns=["_in_labels", "_in_manifest"])
     if df.empty:
         raise AlignmentError("Join produced 0 rows.")
-    if len(df) < 0.98 * len(episodes):
-        logger.warning("Only %d of %d episodes matched labels+manifest.", len(df), len(episodes))
 
-    # ---- verify Israel's definition: index = row number inside that source_split's tensor
+    # ---- the manifest index must be the row number inside that source_split's tensor
     bad_split = df[df["m_source_split"].astype(str) != df["source_split"].astype(str)]
     if len(bad_split):
         raise AlignmentError(
             f"{len(bad_split)} questions sit in the '{bad_split['source_split'].iloc[0]}' folder but the "
             f"manifest says source_split='{bad_split['m_source_split'].iloc[0]}'. Do not proceed.")
-    has_index = df["m_index"].notna()
-    diag["index_verified_rows"] = int(has_index.sum())
-    if has_index.any():
-        bad = df[has_index & (df.loc[has_index, "m_index"].astype(int) != df.loc[has_index, "verify_index"])]
-        if len(bad):
-            raise AlignmentError(
-                f"Manifest {index_column} disagrees with attempt2_activation_index for {len(bad)} of "
-                f"{int(has_index.sum())} questions (e.g. {bad['ep_question_id'].iloc[0]}: manifest "
-                f"{int(bad['m_index'].iloc[0])} vs interactions {int(bad['verify_index'].iloc[0])}). "
-                "Check index_column (full_index vs scan_index) matches the run you pointed at. "
-                "Do not proceed; ask Israel what the index refers to.")
-    else:
-        logger.warning("No %s values on matched rows: index semantics could not be verified.", index_column)
+    missing_index = df["m_index"].isna()
+    if missing_index.any():
+        raise AlignmentError(
+            f"{int(missing_index.sum())} of {len(df)} episodes have no {index_column} in the manifest "
+            f"({_examples(df.loc[missing_index, 'ep_question_id'])}), so their activation rows cannot be "
+            f"verified. Check index_column (full_index vs scan_index) matches the run you pointed at.")
+    bad = df[df["m_index"].astype(int) != df["verify_index"]]
+    if len(bad):
+        raise AlignmentError(
+            f"Manifest {index_column} disagrees with attempt2_activation_index for {len(bad)} of "
+            f"{len(df)} questions (e.g. {bad['ep_question_id'].iloc[0]}: manifest "
+            f"{int(bad['m_index'].iloc[0])} vs interactions {int(bad['verify_index'].iloc[0])}). "
+            "Check index_column (full_index vs scan_index) matches the run you pointed at, and "
+            "that the manifest and the activation export come from the same behavior package.")
+    diag["index_verified_rows"] = len(df)
     diag["n_joined"] = len(df)
     return df, diag
 

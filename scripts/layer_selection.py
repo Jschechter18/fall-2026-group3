@@ -34,12 +34,9 @@ def main() -> None:
     show = ["name", "balanced_accuracy", "ci95_lo", "ci95_hi", "within_noise_of_best", "median_chosen_C"]
     print("\n" + df[show].to_string(index=False, float_format=lambda v: f"{v:.3f}"))
     comp = json.loads((run_dir / "layer_selection_summary.json").read_text())["comparison"]
-    if comp["recommended_layer"]:
-        print(f"\nRecommended layer: {comp['recommended_layer']}")
-    else:
-        print(f"\nNO RECOMMENDATION ({comp['no_recommendation_reason']}). Top by balanced accuracy: "
-              f"{comp['top_layer_by_balanced_accuracy']}; tied with: {comp['tied_with_top'] or 'none'}")
-    print(f"Layers indistinguishable from the top: {comp['layers_indistinguishable_from_best']}")
+    print(f"\nHighest observed layer: {comp['highest_observed_layer']}")
+    print(f"Not statistically separated from it: {', '.join(comp['not_separated_from_highest']) or 'none'}")
+    print(comp["selection_statement"])
     print(f"Full results: {run_dir}")
 
 
