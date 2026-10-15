@@ -60,10 +60,46 @@ def load_tensor(path: Path) -> np.ndarray:
     return arr.astype(np.float32, copy=False)
 
 
+TRUE_VALUES = frozenset({"true", "1", "yes"})
+FALSE_VALUES = frozenset({"false", "0", "no"})
+
+
+def _parse_bool(value) -> bool | None:
+    """True/False for a recognised representation; None for nulls and anything unrecognised."""
+    if isinstance(value, (bool, np.bool_)):
+        return bool(value)
+    if isinstance(value, (int, float, np.integer, np.floating)):
+        # CSV parsing turns a 0/1 column into int, or into float (1.0/0.0) when it has blanks.
+        return {1: True, 0: False}.get(value) if not pd.isna(value) else None
+    if isinstance(value, str):
+        text = value.strip().lower()
+        return True if text in TRUE_VALUES else False if text in FALSE_VALUES else None
+    return None
+
+
 def as_bool(series: pd.Series) -> pd.Series:
+    """Strict boolean parsing: nulls and unrecognised values raise instead of becoming False,
+    so a malformed eligibility column can never silently remove experimental rows."""
     if series.dtype == bool:
         return series
-    return series.astype(str).str.strip().str.lower().isin({"true", "1", "yes"})
+    parsed = series.map(_parse_bool)
+    bad = series[parsed.isna()]
+    if len(bad):
+        raise AlignmentError(
+            f"{len(bad)} value(s) in '{series.name}' are null or not a recognised boolean "
+            f"(e.g. {_examples(bad.astype(str).unique())}). Expected one of "
+            f"{sorted(TRUE_VALUES)} or {sorted(FALSE_VALUES)}.")
+    return parsed.astype(bool)
+
+
+def _strict_index(value, field_name: str, question_id) -> int:
+    """An activation row index as an int, refusing nulls, strings, bools and non-integral floats
+    instead of truncating them."""
+    if isinstance(value, (int, np.integer)) and not isinstance(value, (bool, np.bool_)):
+        return int(value)
+    if isinstance(value, (float, np.floating)) and np.isfinite(value) and float(value).is_integer():
+        return int(value)
+    raise AlignmentError(f"{field_name}={value!r} for question {question_id} is not an integer row index.")
 
 
 def build_episode_table(
@@ -74,11 +110,15 @@ def build_episode_table(
     for split in source_splits:
         records = read_jsonl(Path(results_dir) / split / "interactions.jsonl")
         for r in records:
+            qid = r.get("question_id")
             row = {
                 "source_split": split,
-                "activation_row": int(r["attempt2_activation_index"]),
+                "activation_row": _strict_index(r.get("attempt2_activation_index"),
+                                                "attempt2_activation_index", qid),
                 # exported partition files re-index rows and keep the original in source_activation_index
-                "verify_index": int(r.get("source_activation_index", r["attempt2_activation_index"])),
+                "verify_index": _strict_index(
+                    r.get("source_activation_index", r.get("attempt2_activation_index")),
+                    "source_activation_index", qid),
                 "ep_episode_id": r.get("episode_id"),
                 "ep_question_id": r.get("question_id"),
             }
@@ -188,7 +228,8 @@ def align_episodes(
             f"{int(missing_index.sum())} of {len(df)} episodes have no {index_column} in the manifest "
             f"({_examples(df.loc[missing_index, 'ep_question_id'])}), so their activation rows cannot be "
             f"verified. Check index_column (full_index vs scan_index) matches the run you pointed at.")
-    bad = df[df["m_index"].astype(int) != df["verify_index"]]
+    df["m_index"] = [_strict_index(v, index_column, q) for v, q in zip(df["m_index"], df["ep_question_id"])]
+    bad = df[df["m_index"] != df["verify_index"]]
     if len(bad):
         raise AlignmentError(
             f"Manifest {index_column} disagrees with attempt2_activation_index for {len(bad)} of "
@@ -196,9 +237,30 @@ def align_episodes(
             f"{int(bad['m_index'].iloc[0])} vs interactions {int(bad['verify_index'].iloc[0])}). "
             "Check index_column (full_index vs scan_index) matches the run you pointed at, and "
             "that the manifest and the activation export come from the same behavior package.")
+    check_activation_rows(df)
     diag["index_verified_rows"] = len(df)
     diag["n_joined"] = len(df)
     return df, diag
+
+
+def check_activation_rows(df: pd.DataFrame) -> None:
+    """Both index sources can agree on an invalid value, so validate the rows themselves: every
+    index is non-negative, and each question maps to its own row (one-to-one within a source_split)."""
+    for column in ("activation_row", "verify_index"):
+        negative = df[df[column] < 0]
+        if len(negative):
+            raise AlignmentError(
+                f"{len(negative)} episode(s) have a negative {column} "
+                f"({_examples(negative['ep_question_id'])}); NumPy would silently read from the end.")
+        shared = df[df.duplicated(["source_split", column], keep=False)]
+        if len(shared):
+            raise AlignmentError(
+                f"{len(shared)} episodes share an activation row ({column}) within a source_split "
+                f"({_examples(shared['ep_question_id'])}); each question needs its own row.")
+    repeated = df[df.duplicated(["source_split", "ep_question_id"], keep=False)]
+    if len(repeated):
+        raise AlignmentError(f"Question(s) appear more than once within a source_split "
+                             f"({_examples(repeated['ep_question_id'].unique())}).")
 
 
 def target_names(series: pd.Series, positive: str = "adopted_critic", negative: str = "not_adopted") -> pd.Series:
@@ -252,10 +314,15 @@ def load_layer_matrix(
     for split, g in df.groupby("source_split"):
         arr = load_tensor(Path(layer_dir) / activation_file.format(split=split))
         rows = g["activation_row"].to_numpy()
-        if rows.max() >= arr.shape[0]:
+        if not np.issubdtype(rows.dtype, np.integer):
+            raise AlignmentError(f"activation_row for '{split}' is {rows.dtype}, not integer row indices.")
+        if rows.min() < 0 or rows.max() >= arr.shape[0]:
             raise AlignmentError(
                 f"{layer_dir}/{activation_file.format(split=split)} has {arr.shape[0]} rows "
-                f"but interactions reference row {rows.max()}.")
+                f"but interactions reference rows {rows.min()}..{rows.max()}.")
+        if len(np.unique(rows)) != len(rows):
+            raise AlignmentError(f"Two episodes reference the same row of "
+                                 f"{layer_dir}/{activation_file.format(split=split)}.")
         if out is None:
             out = np.empty((len(df), arr.shape[1]), dtype=np.float32)
         positions = np.flatnonzero((df["source_split"] == split).to_numpy())

@@ -10,6 +10,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import pytest
 import torch
 
 from mas_sae.experiments.artifacts import sha256_file
@@ -427,6 +428,120 @@ def test_summary_records_label_hash_rule_version_and_package_versions(tmp_path):
     assert prov["manifest_sha256"] == sha256_file(tmp_path / "manifest.csv")
     assert set(prov["packages"]) == set(ls.PROVENANCE_PACKAGES) and prov["python"]
     assert summary["data_diagnostics"]["label_rule_versions"] == ["behavior_v0.1.1_candidate"]
+
+
+def test_negative_activation_row_is_rejected():
+    ep, lab, man = _tiny()
+    _raises_alignment(ep.assign(activation_row=[0, -1, 2]), lab, man, bd.Columns(), "full_index",
+                      match="negative activation_row")
+
+
+def test_negative_index_is_rejected_even_when_manifest_and_interactions_agree():
+    ep, lab, man = _tiny()
+    _raises_alignment(ep.assign(verify_index=[10, -1, 12]), lab, man.assign(full_index=[10, -1, 12]),
+                      bd.Columns(), "full_index", match="negative verify_index")
+
+
+def test_non_integral_manifest_index_is_rejected_instead_of_truncated():
+    ep, lab, man = _tiny()
+    _raises_alignment(ep, lab, man.assign(full_index=[10.0, 11.5, 12.0]), bd.Columns(), "full_index",
+                      match="not an integer row index")
+
+
+def test_integral_float_manifest_index_from_csv_is_accepted():
+    ep, lab, man = _tiny()
+    df, _ = bd.align_episodes(ep, lab, man.assign(full_index=[10.0, 11.0, 12.0]), bd.Columns(), "full_index")
+    assert list(df["m_index"]) == [10, 11, 12]
+
+
+def test_two_questions_referencing_the_same_activation_row_are_rejected():
+    ep, lab, man = _tiny()
+    _raises_alignment(ep.assign(activation_row=[0, 1, 1]), lab, man, bd.Columns(), "full_index",
+                      match="share an activation row")
+
+
+def _write_interactions(path: Path, indices):
+    path.mkdir(parents=True)
+    with open(path / "interactions.jsonl", "w") as f:
+        for i, idx in enumerate(indices):
+            f.write(json.dumps({"question_id": f"q{i}", "attempt2_activation_index": idx,
+                                "solver_attempt_1": "a"}) + "\n")
+
+
+@pytest.mark.parametrize("bad", [1.5, "1", None, True])
+def test_non_integer_index_in_interactions_is_rejected(tmp_path, bad):
+    _write_interactions(tmp_path / "train", [0, bad])
+    with pytest.raises(bd.AlignmentError, match="not an integer row index"):
+        bd.build_episode_table(tmp_path, ["train"], ["solver_attempt_1"])
+
+
+def _matrix_rows(rows):
+    return pd.DataFrame({"source_split": ["train"] * len(rows), "activation_row": rows})
+
+
+@pytest.mark.parametrize("rows,match", [
+    ([0, 3], "has 3 rows"),          # out of range
+    ([0, -1], "has 3 rows"),         # negative: NumPy would read the last row
+    ([1, 1], "same row"),            # two episodes, one row
+])
+def test_load_layer_matrix_rejects_invalid_rows(tmp_path, rows, match):
+    layer = tmp_path / "layer_33"
+    layer.mkdir()
+    torch.save(torch.arange(6, dtype=torch.float32).reshape(3, 2), layer / "train_attempt2.pt")
+    with pytest.raises(bd.AlignmentError, match=match):
+        bd.load_layer_matrix(_matrix_rows(rows), layer)
+
+
+def test_load_layer_matrix_rejects_float_rows(tmp_path):
+    layer = tmp_path / "layer_33"
+    layer.mkdir()
+    torch.save(torch.zeros(3, 2), layer / "train_attempt2.pt")
+    with pytest.raises(bd.AlignmentError, match="not integer"):
+        bd.load_layer_matrix(_matrix_rows([0.0, 1.0]), layer)
+
+
+@pytest.mark.parametrize("values,expected", [
+    ([True, False], [True, False]),
+    (["true", "false"], [True, False]),
+    (["TRUE", " False "], [True, False]),
+    (["yes", "no"], [True, False]),
+    (["1", "0"], [True, False]),
+    ([1, 0], [True, False]),
+    ([1.0, 0.0], [True, False]),
+])
+def test_as_bool_accepts_known_representations(values, expected):
+    assert bd.as_bool(pd.Series(values, name="eligible_primary")).tolist() == expected
+
+
+@pytest.mark.parametrize("values", [
+    [True, None], ["true", np.nan], ["TRUEE", "false"], ["true", "maybe"], [1, 2], [0.5, 1.0],
+])
+def test_as_bool_rejects_nulls_and_malformed_values(values):
+    with pytest.raises(bd.AlignmentError, match="not a recognised boolean"):
+        bd.as_bool(pd.Series(values, name="eligible_primary"))
+
+
+def test_malformed_eligibility_stops_selection_instead_of_dropping_rows():
+    ep, lab, man = _tiny()
+    df, _ = bd.align_episodes(ep, lab.assign(eligible_primary=["true", "TRUEE", "false"]), man,
+                              bd.Columns(), "full_index")
+    with pytest.raises(bd.AlignmentError, match="TRUEE"):
+        bd.select_partitions(df, bd.Columns(), ["train"])
+
+
+def test_defaults_and_entry_point_use_the_official_full9_export():
+    repo = Path(__file__).resolve().parents[3]
+    cfg = ls.LayerSelectionConfig.from_yaml(repo / "configs/layer_selection_full9.yaml")
+    default = ls.LayerSelectionConfig()
+    for c in (cfg, default):
+        assert c.layers == [4, 8, 17, 25, 29, 30, 31, 32, 33]
+        assert "natural_4b_full9_partitioned" in c.activations_dir
+        assert "natural_4b_full9_partitioned" in c.results_dir
+        assert "behavior_v012_official_20261011" in c.labels_csv
+        assert "behavior_v012_official_20261011" in c.manifest_csv
+        assert (c.protocol, c.fit_partition, c.eval_partition) == ("holdout", "train", "validation")
+    assert "layer_selection_full9.yaml" in (repo / "scripts/layer_selection.py").read_text()
+    assert not list((repo / "configs").glob("layer_selection_scan*.yaml"))
 
 
 def test_stale_labels_path_is_refused_until_both_files_are_set(tmp_path):

@@ -1,8 +1,9 @@
 """Layer selection under the 6 Oct split contract (development partitions only).
 
-    python scripts/layer_selection.py --config configs/layer_selection_scan.yaml --inspect   # FIRST
-    python scripts/layer_selection.py --config configs/layer_selection_scan.yaml             # nine layers: fit train, rank validation
-    python scripts/layer_selection.py --config configs/layer_selection_full.yaml             # full run, same protocol
+Uses the official full nine-layer export and Behavior v0.1.2 labels:
+
+    python scripts/layer_selection.py --config configs/layer_selection_full9.yaml --inspect   # FIRST
+    python scripts/layer_selection.py --config configs/layer_selection_full9.yaml             # fit train, rank validation
 """
 
 import argparse
@@ -18,7 +19,7 @@ from mas_sae.probe.layer_selection import LayerSelectionConfig, inspect_inputs, 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--config", type=Path, default=Path("configs/layer_selection_full.yaml"))
+    parser.add_argument("--config", type=Path, default=Path("configs/layer_selection_full9.yaml"))
     parser.add_argument("--inspect", action="store_true",
                         help="print schemas of labels/manifest/interactions + alignment check, then exit")
     args = parser.parse_args()

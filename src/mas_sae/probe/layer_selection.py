@@ -3,8 +3,8 @@
 Two protocols, both restricted to the DEVELOPMENT partitions (``test`` and ``intervention`` are
 sealed and can never be requested):
 
-  holdout  fit the probe on `train`, rank layers on `validation`   (the contract; used for both
-           the nine-layer scan and the full-run layers)
+  holdout  fit the probe on `train`, rank layers on `validation`   (the contract; used by
+           configs/layer_selection_full9.yaml, the authoritative run)
   cv       question-grouped CV over `train` + `validation`          (NOT the contract: it fits on
            validation rows; no config uses it)
 
@@ -57,19 +57,20 @@ PROVENANCE_PACKAGES = ("numpy", "pandas", "scikit-learn", "scipy", "torch", "pyy
 
 @dataclass
 class LayerSelectionConfig:
-    capstone_data_root: Path = Path("data/capstone-data")  # the downloaded shared Drive folder
+    # Defaults match configs/layer_selection_full9.yaml: the official full nine-layer export
+    # (activations and interactions from the same export) and the Behavior v0.1.2 package.
+    capstone_data_root: Path = Path(".")
     # partitioned export: folders are named by partition, not by MuSiQue source split
-    activations_dir: str = "natural_4b_partitioned/data/activations/natural_4b_partitioned"  # <dir>/layer_NN/{split}_attempt2.pt
-    results_dir: str = "natural_4b_partitioned/results/collection/natural_4b_partitioned"    # <dir>/{split}/interactions.jsonl
-    # labels.csv and split_manifest.csv are written together into ONE behavior package folder;
-    # point both at the NEW package (the one whose manifest has a `partition` column).
-    labels_csv: str = "REPLACE_ME/labels.csv"
-    manifest_csv: str = "REPLACE_ME/split_manifest.csv"
-    index_column: str = "full_index"                       # "scan_index" for the nine-layer scan
+    activations_dir: str = "data/activations/natural_4b_full9_partitioned"  # <dir>/layer_NN/{split}_attempt2.pt
+    results_dir: str = "results/collection/natural_4b_full9_partitioned"    # <dir>/{split}/interactions.jsonl
+    # labels.csv and split_manifest.csv come from ONE behavior package folder.
+    labels_csv: str = "results/behavior/behavior_v012_official_20261011/labels.csv"
+    manifest_csv: str = "results/behavior/behavior_v012_official_20261011/split_manifest.csv"
+    index_column: str = "full_index"
     # question_id -> reason, for episodes deliberately left out. Any other episode missing from the
     # labels or the manifest stops the run; these are dropped and recorded in the summary.
     excluded_episodes: dict = field(default_factory=dict)
-    layers: list = field(default_factory=lambda: [8, 17, 25, 33])
+    layers: list = field(default_factory=lambda: [4, 8, 17, 25, 29, 30, 31, 32, 33])
     source_splits: list = field(default_factory=lambda: ["train", "validation"])  # folder names
     activation_file: str = "{split}_attempt2.pt"           # Solver activations before A2
     # primary_target is binary (1 = adopted the Critic, 0 = retained A1 or third answer); solver_response
@@ -95,7 +96,7 @@ class LayerSelectionConfig:
     # Layers whose balanced accuracy differs from the top by <= this are TIED -> no recommendation.
     tie_tolerance: float = 1e-9
     n_permutations: int = 0  # >0: label-shuffle control on the top layer only
-    output_dir: Path = Path("results/layer_selection")
+    output_dir: Path = Path("results/layer_selection_full9")
 
     @classmethod
     def from_yaml(cls, path: Path) -> "LayerSelectionConfig":
@@ -450,15 +451,26 @@ def inspect_inputs(cfg: LayerSelectionConfig, cols: bd.Columns | None = None) ->
     print("== labels.csv ==")
     labels = pd.read_csv(root / cfg.labels_csv)
     print(labels.dtypes.to_string(), "\n", labels.head(3).to_string(), "\n")
+    print(f"labels.csv sha256: {sha256_file(root / cfg.labels_csv)}")
+    if "rule_version" in labels:
+        print(f"label rule versions: {sorted(labels['rule_version'].dropna().astype(str).unique())}\n")
     print("== manifest ==")
     manifest = pd.read_csv(root / cfg.manifest_csv)
     print(manifest.dtypes.to_string(), "\n", manifest.head(3).to_string(), "\n")
     first = bd.read_jsonl(root / cfg.results_dir / cfg.source_splits[0] / "interactions.jsonl")[0]
     print("== interactions.jsonl: keys of first record ==\n", sorted(first), "\n")
-    layer_dir = root / cfg.activations_dir / f"layer_{int(cfg.layers[0]):02d}"
-    for split in cfg.source_splits:
-        arr = bd.load_tensor(layer_dir / cfg.activation_file.format(split=split))
-        print(f"== tensor {layer_dir.name}/{cfg.activation_file.format(split=split)}: {arr.shape} ==")
+    print("== activation tensors (every configured layer must exist) ==")
+    missing = []
+    for layer in cfg.layers:
+        layer_dir = root / cfg.activations_dir / f"layer_{int(layer):02d}"
+        for split in cfg.source_splits:
+            path = layer_dir / cfg.activation_file.format(split=split)
+            if not path.is_file():
+                missing.append(str(path))
+                continue
+            print(f"{layer_dir.name}/{path.name}: {tuple(bd.load_tensor(path).shape)}")
+    if missing:
+        raise FileNotFoundError(f"Missing activation tensors: {missing}")
     print("\n== alignment check + eligible rows per partition and class ==")
     _, diag, _ = load_inputs(cfg, cols)
     print(json.dumps(diag, indent=2, default=str))
