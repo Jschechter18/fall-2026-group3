@@ -45,6 +45,31 @@ class TrainingResult:
         return self.run_directory / "checkpoints" / "best_checkpoint.pt"
 
 
+def _saved_hyperparameters(config: dict) -> HP:
+    """Read saved hyperparameters with explicit defaults for legacy runs.
+
+    Parameters
+    ----------
+    config : dict
+        Saved run configuration, including any recorded hyperparameters.
+
+    Returns
+    -------
+    HP
+        Saved settings. Runs predating AuxK use a zero auxiliary coefficient;
+        runs predating tied initialization retain independent initialization.
+    """
+    resolved = {
+        "early_stopping_min_delta": 0.0,
+        "tied_initialization": False,
+        "aux_coefficient": 0.0,
+        "aux_k": 512,
+        "aux_dead_window_examples": 10000,
+        **config,
+    }
+    return HP(**{field.name: resolved[field.name] for field in fields(HP)})
+
+
 def train_sae(
     hp: HP,
     activation_location: Path,
@@ -119,8 +144,9 @@ def train_sae(
         manifest = json.loads((run_directory / "manifest.json").read_text())
         if manifest.get("finalized") or saved_config.get("evaluate_test", True):
             raise ValueError("Only unfinalized, validation-only trials can be continued.")
+        saved_hp = _saved_hyperparameters(saved_config)
         for name, value in asdict(hp).items():
-            if name not in {"epochs", "input_dim"} and value != saved_config[name]:
+            if name not in {"epochs", "input_dim"} and value != getattr(saved_hp, name):
                 raise ValueError(f"Cannot change {name} when continuing a trial.")
         if layer != saved_config["layer"] or activation_run_name != saved_config["activation_run_name"]:
             raise ValueError("Cannot change the activation source or layer on continuation.")
@@ -209,6 +235,7 @@ def train_sae(
             latent_dim=hp.latent_dim,
             sparsity_mode=hp.sparsity_mode,
             top_k=hp.top_k,
+            tied_initialization=hp.tied_initialization,
         ).to(device)
 
         assert isinstance(train_dataloader.dataset, ActivationDataset)
@@ -235,9 +262,17 @@ def train_sae(
             ),
             "total_loss": (
                 "reconstruction_loss + sparsity_coefficient * sparsity_loss"
-                if hp.sparsity_mode == "l1" else "reconstruction_loss"
+                if hp.sparsity_mode == "l1" else
+                "reconstruction_loss + aux_coefficient * aux_loss"
+                if hp.aux_coefficient > 0 else "reconstruction_loss"
             ),
+            "auxiliary_loss": "Training-only mean squared error against the detached RMS-normalized reconstruction residual, decoded without bias using eligible inactive features; zero when disabled or no features qualify.",
+            "auxiliary_eligibility": "No positive main-path activation in the last aux_dead_window_examples training examples, measured after the current batch; disabled until the window has elapsed. Auxiliary activations do not reset counters.",
+            "auxiliary_metrics": "Training auxiliary loss, weighted auxiliary loss, and eligible feature fraction are averaged with example weighting across batches.",
+            "auxiliary_effectiveness": "train_auxiliary groups eligible fraction, measured_examples, positive features per example, positive encoder activation fraction across eligible feature/example pairs before auxiliary selection, prediction and residual RMS in normalized units, and 1 - auxiliary error SSE / residual SSE. Effectiveness uses only batches with eligible features; RMS and reduction use accumulated squared sums. Undefined values are null; negative reduction means worse than predicting zero.",
             "selection_metric": "val_loss",
+            "early_stopping": "Stop after patience epochs without validation loss decreasing by more than early_stopping_min_delta from the last significant improvement. The threshold is absolute, and smaller improvements accumulate. Checkpoint selection still saves the lowest validation loss.",
+            "selection_loss": "Main-path validation loss, excluding AuxK; reconstruction loss for TopK and reconstruction plus weighted sparsity loss for L1.",
             "variance_explained": "1 - reconstruction SSE / SSE around the training-mean activation; null if baseline SSE is zero.",
             "persistent_inactivity": "No positive activation in the last inactivity_window_examples training examples; null until that many examples have been observed. Evaluations do not update counters.",
             "firing_frequencies": "Fraction of examples with positive activation per feature; percentiles include unused features.",
@@ -264,10 +299,13 @@ def train_sae(
             model, sparsity_coefficient=hp.sparsity_coefficient, optimizer=optimizer,
             training_mean=train_activations.float().mean(dim=0),
             inactivity_window_examples=hp.inactivity_window_examples,
+            aux_coefficient=hp.aux_coefficient,
+            aux_k=hp.aux_k,
+            aux_dead_window_examples=hp.aux_dead_window_examples,
         )
 
         checkpoint_evaluator = CheckpointEvaluatorCallback(run_directory / "checkpoints")
-        early_stopping = EarlyStoppingCallback(hp.patience)
+        early_stopping = EarlyStoppingCallback(hp.patience, hp.early_stopping_min_delta)
 
         epoch_history = []
         stopped = False
@@ -289,6 +327,20 @@ def train_sae(
                 f"Train Loss: {train_metrics['loss']:.4f} - "
                 f"Val Loss: {val_metrics['loss']:.4f}"
             )
+            auxiliary = train_metrics.get("auxiliary")
+            if auxiliary is not None:
+                if auxiliary["measured_examples"]:
+                    reduction = auxiliary["residual_error_reduction"]
+                    reduction_text = f"{reduction:.1%}" if reduction is not None else "n/a"
+                    print(
+                        f"Auxiliary: eligible={auxiliary['eligible_feature_fraction']:.1%} | "
+                        f"eligible-positive={auxiliary['eligible_positive_activation_fraction']:.3%} | "
+                        f"positive/example={auxiliary['mean_positive_features']:.2f} | "
+                        f"RMS={auxiliary['prediction_rms']:.4f}/{auxiliary['residual_rms']:.4f} | "
+                        f"reduction={reduction_text} | examples={auxiliary['measured_examples']}"
+                    )
+                else:
+                    print("Auxiliary: no eligible batches this epoch")
 
             if not all(torch.isfinite(torch.tensor(metrics["loss"]))
                        for metrics in (train_metrics, val_metrics)):
@@ -435,7 +487,7 @@ def finish_run(run_directory: Path, epochs: int, project_root: Path) -> Training
     manifest = json.loads((source / "manifest.json").read_text())
     if manifest.get("finalized"):
         raise ValueError("Only unfinalized trials can be continued.")
-    hp = HP(**{field.name: config[field.name] for field in fields(HP)})
+    hp = _saved_hyperparameters(config)
     hp.epochs = epochs
     validate_hyperparameters(hp)
     record_path: Path | None = None

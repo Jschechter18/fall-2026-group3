@@ -1,0 +1,31 @@
+{
+  "run_id": "20261014T042728323390Z-35e93bdfd4fe",
+  "run_name": "sae-l12888",
+  "layer": 33,
+  "created_at": "2026-10-14T04:27:28.323390+00:00",
+  "git_commit": "35e93bdfd4fe5b1d5602a4b16c5665f384c447fa",
+  "command": "/home/ubuntu/miniconda3/envs/capstone/bin/python scripts/train_sae.py --hp-tune --config configs/sae_hp_tuning/layer_33_l1.yaml",
+  "status": "completed",
+  "error_message": "",
+  "tuning": {
+    "study_directory": "results/sae/musique/tuning/layer_33/20261013T234044861337Z-35e93bdfd4fe",
+    "trial_id": 9,
+    "group": "l1_coarse"
+  },
+  "git_dirty": true,
+  "git_status": "?? results/sae/musique/tuning/layer_33/20261013T234044861337Z-35e93bdfd4fe/config.json\n?? results/sae/musique/tuning/layer_33/20261013T234044861337Z-35e93bdfd4fe/manifest.json\n?? results/sae/musique/tuning/layer_33/20261013T234044861337Z-35e93bdfd4fe/trials.csv\n?? results/sae/musique/tuning/layer_33/20261013T234044861337Z-35e93bdfd4fe/trials.json\n?? results/sae/musique/tuning/layer_33/20261013T234044861337Z-35e93bdfd4fe/trials/trial_0001/config.json\n?? results/sae/musique/tuning/layer_33/20261013T234044861337Z-35e93bdfd4fe/trials/trial_0001/feature_frequencies.json\n?? results/sae/musique/tuning/layer_33/20261013T234044861337Z-35e93bdfd4fe/trials/trial_0001/history.json\n?? results/sae/musique/tuning/layer_33/20261013T234044861337Z-35e93bdfd4fe/trials/trial_0001/manifest.json\n?? results/sae/musique/tuning/layer_33/20261013T234044861337Z-35e93bdfd4fe/trials/trial_0002/config.json\n?? results/sae/musique/tuning/layer_33/20261013T234044861337Z-35e93bdfd4fe/trials/trial_0002/feature_frequencies.json\n?? results/sae/musique/tuning/layer_33/20261013T234044861337Z-35e93bdfd4fe/trials/trial_0002/history.json\n?? results/sae/musique/tuning/layer_33/20261013T234044861337Z-35e93bdfd4fe/trials/trial_0002/manifest.json\n?? results/sae/musique/tuning/layer_33/20261013T234044861337Z-35e93bdfd4fe/trials/trial_0003/config.json\n?? results/sae/musique/tuning/layer_33/20261013T234044861337Z-35e93bdfd4fe/trials/trial_0003/feature_frequencies.json\n?? results/sae/musique/tuning/layer_33/20261013T234044861337Z-35e93bdfd4fe/trials/trial_0003/history.json\n?? results/sae/musique/tuning/layer_33/20261013T234044861337Z-35e93bdfd4fe/trials/trial_0003/manifest.json\n?? results/sae/musique/tuning/layer_33/20261013T234044861337Z-35e93bdfd4fe/trials/trial_0004/config.json\n?? results/sae/musique/tuning/layer_33/20261013T234044861337Z-35e93bdfd4fe/trials/trial_0004/feature_frequencies.json\n?? results/sae/musique/tuning/layer_33/20261013T234044861337Z-35e93bdfd4fe/trials/trial_0004/history.json\n?? results/sae/musique/tuning/layer_33/20261013T234044861337Z-35e93bdfd4fe/trials/trial_0004/manifest.json\n?? results/sae/musique/tuning/layer_33/20261013T234044861337Z-35e93bdfd4fe/trials/trial_0005/config.json\n?? results/sae/musique/tuning/layer_33/20261013T234044861337Z-35e93bdfd4fe/trials/trial_0005/feature_frequencies.json\n?? results/sae/musique/tuning/layer_33/20261013T234044861337Z-35e93bdfd4fe/trials/trial_0005/history.json\n?? results/sae/musique/tuning/layer_33/20261013T234044861337Z-35e93bdfd4fe/trials/trial_0005/manifest.json\n?? results/sae/musique/tuning/layer_33/20261013T234044861337Z-35e93bdfd4fe/trials/trial_0006/config.json\n?? results/sae/musique/tuning/layer_33/20261013T234044861337Z-35e93bdfd4fe/trials/trial_0006/feature_frequencies.json\n?? results/sae/musique/tuning/layer_33/20261013T234044861337Z-35e93bdfd4fe/trials/trial_0006/history.json\n?? results/sae/musique/tuning/layer_33/20261013T234044861337Z-35e93bdfd4fe/trials/trial_0006/manifest.json\n?? results/sae/musique/tuning/layer_33/20261013T234044861337Z-35e93bdfd4fe/trials/trial_0007/config.json\n?? results/sae/musique/tuning/layer_33/20261013T234044861337Z-35e93bdfd4fe/trials/trial_0007/feature_frequencies.json\n?? results/sae/musique/tuning/layer_33/20261013T234044861337Z-35e93bdfd4fe/trials/trial_0007/history.json\n?? results/sae/musique/tuning/layer_33/20261013T234044861337Z-35e93bdfd4fe/trials/trial_0007/manifest.json\n?? results/sae/musique/tuning/layer_33/20261013T234044861337Z-35e93bdfd4fe/trials/trial_0008/config.json\n?? results/sae/musique/tuning/layer_33/20261013T234044861337Z-35e93bdfd4fe/trials/trial_0008/feature_frequencies.json\n?? results/sae/musique/tuning/layer_33/20261013T234044861337Z-35e93bdfd4fe/trials/trial_0008/history.json\n?? results/sae/musique/tuning/layer_33/20261013T234044861337Z-35e93bdfd4fe/trials/trial_0008/manifest.json\n",
+  "git_diff": "",
+  "git_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "git_diff_scope": "Staged and unstaged tracked changes relative to HEAD; untracked contents excluded.",
+  "activation_files": {
+    "train": {
+      "path": "/home/ubuntu/capstone/fall-2026-group3/data/activations/natural_4b_full9_partitioned/layer_33/train.pt",
+      "sha256": "064aef25bb43a08ffecb23480557d726b48f49e824a9c130cdd06b2365c6b646"
+    },
+    "validation": {
+      "path": "/home/ubuntu/capstone/fall-2026-group3/data/activations/natural_4b_full9_partitioned/layer_33/validation.pt",
+      "sha256": "98a3f60ffe5b53af749a376612810b265b5f1e65dca6e50b3045cda70f0d11ee"
+    }
+  },
+  "updated_at": "2026-10-14T05:27:38.726815+00:00"
+}

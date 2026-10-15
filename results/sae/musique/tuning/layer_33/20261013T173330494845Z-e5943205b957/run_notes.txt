@@ -1,0 +1,13 @@
+- top k sweep results for preliminary presentation
+- used trial 3 as proposed SAE checkpoint
+- key configs:
+    - top_k = 128
+    - aux_coefficient = 0.0078125
+- selected because:
+    - good reconstruction (relative to top_k = 64)
+    - still has good sparsity (not as big as 256 or 512)
+    - better reconstruction than trial 4 (larger aux_coefficient = 0.03125)
+
+- limitations
+    - there are about 70% dead features. this means that it learns only on about 30% of the features.
+    - this could be a severe limitation in the causality pipeline, as some features likely are just not learned

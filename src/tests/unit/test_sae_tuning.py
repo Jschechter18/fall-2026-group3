@@ -94,10 +94,30 @@ def test_selection_uses_common_metrics_not_total_loss():
     assert tuning.compare_trials(trials, {}) is None
 
 
-@pytest.mark.parametrize("mode", ["l1", "topk"])
-def test_continuation_matches_uninterrupted_training(setup, mode):
+@pytest.mark.parametrize("settings", [
+    {"aux_coefficient": -1}, {"aux_coefficient": float("nan")},
+    {"aux_coefficient": float("inf")}, {"aux_coefficient": True},
+    {"aux_k": 0}, {"aux_k": True}, {"aux_dead_window_examples": 0},
+    {"aux_dead_window_examples": 1.5},
+    {"aux_coefficient": 0.25, "aux_k": 7},
+    {"sparsity_mode": "l1", "aux_coefficient": 0.25, "aux_k": 2},
+])
+def test_invalid_auxk_search_rejected_before_outputs(config, tmp_path, settings):
+    config["groups"] = [{"name": "auxk", "fixed": {
+        "sparsity_mode": "topk", **settings,
+    }}]
+    config["defaults"]["top_k"] = 2
+    with pytest.raises(ValueError):
+        tuning.run_tuning(config, tmp_path)
+    assert not (tmp_path / "results").exists()
+
+
+@pytest.mark.parametrize("mode, aux_coefficient", [("l1", 0.0), ("topk", 0.0), ("topk", 0.25)])
+def test_continuation_matches_uninterrupted_training(setup, mode, aux_coefficient):
     hp = Hyperparameters(epochs=3, latent_dim=6, batch_size=3, top_k=2,
-                         sparsity_mode=mode, inactivity_window_examples=8)
+                         sparsity_mode=mode, inactivity_window_examples=8,
+                         aux_coefficient=aux_coefficient, aux_k=2, aux_dead_window_examples=2,
+                         early_stopping_min_delta=0.0001)
     full = training.train_sae(hp, **setup)
     trial = training.train_sae(replace(hp, epochs=1), **setup,
                                evaluate_test=False, register_version=False)
@@ -108,11 +128,111 @@ def test_continuation_matches_uninterrupted_training(setup, mode):
     full_history = json.loads((full.run_directory / "history.json").read_text())
     resumed_history = json.loads((resumed.run_directory / "history.json").read_text())
     assert full_history == resumed_history
+    if aux_coefficient:
+        assert any(row["train_aux_loss"] > 0 for row in full_history["history"])
+        assert all(row["val_loss"] == row["val_rec_loss"] for row in full_history["history"])
     full_state = torch.load(full.checkpoint_path, weights_only=True)["model_state_dict"]
     resumed_state = torch.load(resumed.checkpoint_path, weights_only=True)["model_state_dict"]
     assert all(torch.equal(value, resumed_state[key]) for key, value in full_state.items())
     with pytest.raises(ValueError, match="unfinalized"):
         training.finish_run(trial.run_directory, 4, setup["project_root"])
+
+
+@pytest.mark.parametrize("remove_tied", [False, True])
+def test_finish_legacy_config_without_auxk_fields(setup, remove_tied):
+    hp = Hyperparameters(epochs=1, latent_dim=6, batch_size=3, top_k=2,
+                         sparsity_mode="topk", tied_initialization=not remove_tied)
+    trial = training.train_sae(hp, **setup, evaluate_test=False, register_version=False)
+    path = trial.run_directory / "config.json"
+    config = json.loads(path.read_text())
+    for key in ("aux_coefficient", "aux_k", "aux_dead_window_examples"):
+        del config[key]
+    del config["early_stopping_min_delta"]
+    if remove_tied:
+        del config["tied_initialization"]
+    path.write_text(json.dumps(config))
+    result = training.finish_run(trial.run_directory, 2, setup["project_root"])
+    saved = json.loads((result.run_directory / "config.json").read_text())
+    assert saved["aux_coefficient"] == 0.0
+    assert saved["early_stopping_min_delta"] == 0.0
+    assert saved["tied_initialization"] == (not remove_tied)
+    history = json.loads((result.run_directory / "history.json").read_text())
+    assert len(history["history"]) == 2
+    assert all(row["train_aux_loss"] == 0 for row in history["history"])
+
+
+@pytest.mark.parametrize("change", [
+    {"aux_coefficient": 0.5}, {"aux_k": 3}, {"aux_dead_window_examples": 4},
+])
+def test_continuation_rejects_auxk_setting_changes(setup, change):
+    hp = Hyperparameters(epochs=1, latent_dim=6, batch_size=3, top_k=2,
+                         sparsity_mode="topk", aux_coefficient=0.25, aux_k=2,
+                         aux_dead_window_examples=2)
+    trial = training.train_sae(hp, **setup, evaluate_test=False, register_version=False)
+    with pytest.raises(ValueError, match="Cannot change aux_"):
+        training.train_sae(replace(hp, epochs=2, **change), **setup,
+                           evaluate_test=False, register_version=False,
+                           resume_directory=trial.run_directory)
+
+
+def test_auxk_study_records_settings_and_training_objective(setup, config, capsys):
+    config["groups"] = [{"name": "auxk", "fixed": {
+        "sparsity_mode": "topk", "top_k": 1, "aux_k": 2,
+        "aux_dead_window_examples": 2,
+    }, "grid": {"aux_coefficient": [0.0, 0.25]}}]
+    study = tuning.run_tuning(config, setup["project_root"])
+    with (study / "trials.csv").open() as file:
+        rows = list(csv.DictReader(file))
+    assert {float(row["aux_coefficient"]) for row in rows} == {0.0, 0.25}
+    for path in (study / "trials").glob("*/config.json"):
+        saved = json.loads(path.read_text())
+        assert saved["aux_k"] == 2
+        assert saved["aux_dead_window_examples"] == 2
+        assert ("aux_coefficient * aux_loss" in saved["total_loss"]) == (saved["aux_coefficient"] > 0)
+        history = json.loads((path.parent / "history.json").read_text())
+        row = history["history"][0]
+        assert ("train_auxiliary" in row) == (saved["aux_coefficient"] > 0)
+        if saved["aux_coefficient"] > 0:
+            assert row["train_auxiliary"]["measured_examples"] > 0
+        assert "val_auxiliary" not in row
+    assert "Auxiliary: eligible=" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("value", [-0.1, float("nan"), float("inf"), True, "0.0001"])
+def test_invalid_stopping_threshold_rejected_before_outputs(config, tmp_path, value):
+    config["defaults"]["early_stopping_min_delta"] = value
+    with pytest.raises(ValueError, match="early_stopping_min_delta"):
+        tuning.run_tuning(config, tmp_path)
+    assert not (tmp_path / "results").exists()
+
+
+def test_training_uses_stopping_threshold_and_saves_lowest_loss(setup, monkeypatch):
+    original = training.ModelRunner.val_epoch
+    losses = iter([0.5, 0.49997, 0.49994])
+
+    def controlled_validation(runner, loader):
+        metrics = original(runner, loader)
+        loss = next(losses, None)
+        if loss is not None:
+            metrics["loss"] = metrics["rec_loss"] = loss
+        return metrics
+
+    monkeypatch.setattr(training.ModelRunner, "val_epoch", controlled_validation)
+    hp = Hyperparameters(epochs=10, patience=2, latent_dim=6, top_k=2,
+                         sparsity_mode="topk", early_stopping_min_delta=0.0001)
+    result = training.train_sae(hp, **setup, evaluate_test=False, register_version=False)
+    history = json.loads((result.run_directory / "history.json").read_text())
+    assert history["summary"]["stop_reason"] == "early_stopping"
+    assert len(history["history"]) == 3
+    assert result.best_epoch == 3
+    checkpoint = torch.load(result.checkpoint_path, weights_only=True)
+    assert checkpoint["val_loss"] == pytest.approx(0.49994)
+    saved = json.loads((result.run_directory / "config.json").read_text())
+    assert saved["early_stopping_min_delta"] == 0.0001
+    with pytest.raises(ValueError, match="Cannot change early_stopping_min_delta"):
+        training.train_sae(replace(hp, early_stopping_min_delta=0), **setup,
+                           evaluate_test=False, register_version=False,
+                           resume_directory=result.run_directory)
 
 
 @pytest.mark.parametrize("study_trial", [False, True])
