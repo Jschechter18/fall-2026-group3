@@ -1,0 +1,113 @@
+{
+  "git_commit": "544f1afab1f7bf5849491bad49a2e29a3156e7c1",
+  "uncommitted_changes_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "package": "/home/ubuntu/capstone-artifacts/natural_4b_full9/behavior_v011_frozen_full9",
+  "manifest_sha256": "581baa65b2ebf9c968a0de68d0e3d7b83222295b9542a1e311c223fc9270acc6",
+  "labels_sha256": "476d66c635975bce9f375636ce1a4208a7ce940d50fe193e0dcadb9bc2725cb2",
+  "frozen_partitions": "/home/ubuntu/worktrees/natural-4b-full9-collection/results/behavior/behavior_v011_split80_10_10_20261006/partitions.csv",
+  "frozen_partitions_sha256": "b0c717d5c4f41129a5d2a838e132df057f6e4f5a72644aa889a41e55cc884389",
+  "partition_rule": {
+    "frozen_partitions": "results/behavior/behavior_v011_split80_10_10_20261006/partitions.csv",
+    "frozen_partitions_sha256": "b0c717d5c4f41129a5d2a838e132df057f6e4f5a72644aa889a41e55cc884389",
+    "coverage": "complete",
+    "questions": {
+      "expected": 22332,
+      "collected": 22332,
+      "missing": 0
+    },
+    "rule": "membership taken from the frozen mapping; only activation indices were rebuilt for this run"
+  },
+  "source_run": "full",
+  "source_results": "results/collection/natural_4b_full9",
+  "source_activations": "data/activations/natural_4b_full9",
+  "export_run_name": "natural_4b_full9_partitioned",
+  "layers": [
+    4,
+    8,
+    17,
+    25,
+    29,
+    30,
+    31,
+    32,
+    33
+  ],
+  "partitions_written": [
+    "train",
+    "validation"
+  ],
+  "partition_counts": {
+    "train": {
+      "questions": 15936,
+      "rows": 31872
+    },
+    "validation": {
+      "questions": 2413,
+      "rows": 4826
+    },
+    "test": {
+      "questions": 1992,
+      "rows": 0
+    },
+    "intervention": {
+      "questions": 1991,
+      "rows": 0
+    }
+  },
+  "file_sha256": {
+    "/home/ubuntu/capstone-artifacts/natural_4b_full9/partitioned/data/activations/natural_4b_full9_partitioned/layer_04/train_attempt1.pt": "0a19584b27725e7654e66107e9810bb2c920b436cf126621ca9c0e367c4b4f8b",
+    "/home/ubuntu/capstone-artifacts/natural_4b_full9/partitioned/data/activations/natural_4b_full9_partitioned/layer_04/train_attempt2.pt": "571c86c23e162e580c4d38bb1f1dc052cd8683046277671dd27682f08aa6f4ea",
+    "/home/ubuntu/capstone-artifacts/natural_4b_full9/partitioned/data/activations/natural_4b_full9_partitioned/layer_04/train.pt": "3dfdfef514c7b3684f5b940c18ea97b7296858b60e25d3c30ea4edab421fffb5",
+    "/home/ubuntu/capstone-artifacts/natural_4b_full9/partitioned/data/activations/natural_4b_full9_partitioned/layer_08/train_attempt1.pt": "b83292b84a13be9bf42a28b3428b2231ef566bf5ceeb4559e2669ea65c536d6b",
+    "/home/ubuntu/capstone-artifacts/natural_4b_full9/partitioned/data/activations/natural_4b_full9_partitioned/layer_08/train_attempt2.pt": "b9baeffd048f05734f24192f4e3f7b246a8d8aed543167a48064a6fdbf57c077",
+    "/home/ubuntu/capstone-artifacts/natural_4b_full9/partitioned/data/activations/natural_4b_full9_partitioned/layer_08/train.pt": "e1bb5e4360e57422a3d6dd473c8257fa742afd4231a74731515dcb58770798c7",
+    "/home/ubuntu/capstone-artifacts/natural_4b_full9/partitioned/data/activations/natural_4b_full9_partitioned/layer_17/train_attempt1.pt": "ccd9991787164f6f92aa191bbc08ebbf5c42bcc0d1d1f76480c0be160d31a5d8",
+    "/home/ubuntu/capstone-artifacts/natural_4b_full9/partitioned/data/activations/natural_4b_full9_partitioned/layer_17/train_attempt2.pt": "27a3a122a52dae3113d1816a745b019a6bed9b982677163f78510a88b4f2c1c3",
+    "/home/ubuntu/capstone-artifacts/natural_4b_full9/partitioned/data/activations/natural_4b_full9_partitioned/layer_17/train.pt": "23e94b61ac7259de2744efa75831abb81d398ce5510d8e88d946f0b22fb3ebd6",
+    "/home/ubuntu/capstone-artifacts/natural_4b_full9/partitioned/data/activations/natural_4b_full9_partitioned/layer_25/train_attempt1.pt": "d1e4cddcd340ca429e0ce2d4938f5dc0f7f283f3c0b15d6f157c918824cee8a6",
+    "/home/ubuntu/capstone-artifacts/natural_4b_full9/partitioned/data/activations/natural_4b_full9_partitioned/layer_25/train_attempt2.pt": "76768140eb4db164f6650abbb86ead24814e6b30cf0d4da3661ca6bdc3b93ddf",
+    "/home/ubuntu/capstone-artifacts/natural_4b_full9/partitioned/data/activations/natural_4b_full9_partitioned/layer_25/train.pt": "3f45088fdbd80a0d6737d8e388c5abc580e04cb0fa2593f6313d1c16f4c13e7d",
+    "/home/ubuntu/capstone-artifacts/natural_4b_full9/partitioned/data/activations/natural_4b_full9_partitioned/layer_29/train_attempt1.pt": "ed37a832fd048562e25af4faa364486727f40b19c343a70e0d56a5a39e9384e5",
+    "/home/ubuntu/capstone-artifacts/natural_4b_full9/partitioned/data/activations/natural_4b_full9_partitioned/layer_29/train_attempt2.pt": "fc4a7bd4eb81173d6814b8901d884398987cff293abe16d1e8120b35ce4dea9a",
+    "/home/ubuntu/capstone-artifacts/natural_4b_full9/partitioned/data/activations/natural_4b_full9_partitioned/layer_29/train.pt": "b8bb28dabc60cca50647fb6eee4de73e706ce6d0459912eb885ba0fe80f47543",
+    "/home/ubuntu/capstone-artifacts/natural_4b_full9/partitioned/data/activations/natural_4b_full9_partitioned/layer_30/train_attempt1.pt": "dcec5d8f7da99c25b86ee4d0625e8db451524f3e9596efdd728c5fda5fb671c4",
+    "/home/ubuntu/capstone-artifacts/natural_4b_full9/partitioned/data/activations/natural_4b_full9_partitioned/layer_30/train_attempt2.pt": "5a81bbb330916dd906fd072505840dfc11fda087a53debbbcaef1dd9e98afdc6",
+    "/home/ubuntu/capstone-artifacts/natural_4b_full9/partitioned/data/activations/natural_4b_full9_partitioned/layer_30/train.pt": "0bb105747f505883ed8bd1c625020534378da7f033673a039fe3c954d19b4133",
+    "/home/ubuntu/capstone-artifacts/natural_4b_full9/partitioned/data/activations/natural_4b_full9_partitioned/layer_31/train_attempt1.pt": "0f645ee40748e9765799437f0d28ab19444eb7f3d1dae68a2b001ca28cba734b",
+    "/home/ubuntu/capstone-artifacts/natural_4b_full9/partitioned/data/activations/natural_4b_full9_partitioned/layer_31/train_attempt2.pt": "f3f0576c4d1cfe7896e8702b031fc04a07a34f1f956a58edadae6f967adc2fe4",
+    "/home/ubuntu/capstone-artifacts/natural_4b_full9/partitioned/data/activations/natural_4b_full9_partitioned/layer_31/train.pt": "581076e8097da41291e59ec33935a90323f0051e2ad0bf855a0ae5ab6b912171",
+    "/home/ubuntu/capstone-artifacts/natural_4b_full9/partitioned/data/activations/natural_4b_full9_partitioned/layer_32/train_attempt1.pt": "170bfdf19a8cbc69b69d33167d09fbadb56c7a1a3985b411acd344e37f202122",
+    "/home/ubuntu/capstone-artifacts/natural_4b_full9/partitioned/data/activations/natural_4b_full9_partitioned/layer_32/train_attempt2.pt": "4c503db1dc23f39b214ad0c3a4f3a76da155f96f9501e6305515236bec215c3d",
+    "/home/ubuntu/capstone-artifacts/natural_4b_full9/partitioned/data/activations/natural_4b_full9_partitioned/layer_32/train.pt": "1b02dc700097ba04cd2417a642c191d72d68a057fec31dc1a92adc423dfc93df",
+    "/home/ubuntu/capstone-artifacts/natural_4b_full9/partitioned/data/activations/natural_4b_full9_partitioned/layer_33/train_attempt1.pt": "4ced1dabe03b53bc09c32b682d266ad0efa66d911647968ead647639f47d72de",
+    "/home/ubuntu/capstone-artifacts/natural_4b_full9/partitioned/data/activations/natural_4b_full9_partitioned/layer_33/train_attempt2.pt": "4c979beb7bdc575ad7930cb5d07b72e6f4c9c5111d77227d70d538bc9cfc1f2b",
+    "/home/ubuntu/capstone-artifacts/natural_4b_full9/partitioned/data/activations/natural_4b_full9_partitioned/layer_33/train.pt": "064aef25bb43a08ffecb23480557d726b48f49e824a9c130cdd06b2365c6b646",
+    "/home/ubuntu/capstone-artifacts/natural_4b_full9/partitioned/data/activations/natural_4b_full9_partitioned/layer_04/validation_attempt1.pt": "4e1580171f3bb5a9b556c680ec4b4ac8507dcef5e5c0834bcb21f21d626741b5",
+    "/home/ubuntu/capstone-artifacts/natural_4b_full9/partitioned/data/activations/natural_4b_full9_partitioned/layer_04/validation_attempt2.pt": "2c117d565d30e044b8f5d2d16faccf628c6b4c25e84681cb30784742d0534eb9",
+    "/home/ubuntu/capstone-artifacts/natural_4b_full9/partitioned/data/activations/natural_4b_full9_partitioned/layer_04/validation.pt": "c7580c9ed51d6dd17f9494c4ac8d0729a2f213d78f52a5bd724eae3e38402a8a",
+    "/home/ubuntu/capstone-artifacts/natural_4b_full9/partitioned/data/activations/natural_4b_full9_partitioned/layer_08/validation_attempt1.pt": "0d30461605b315f7235be77efb508f347f8b7c34a25e5d6d05e884f57c3f571b",
+    "/home/ubuntu/capstone-artifacts/natural_4b_full9/partitioned/data/activations/natural_4b_full9_partitioned/layer_08/validation_attempt2.pt": "d4ba53212211625c859157dd745c3c0688a4e3b515968ed2ae1562ef7494e590",
+    "/home/ubuntu/capstone-artifacts/natural_4b_full9/partitioned/data/activations/natural_4b_full9_partitioned/layer_08/validation.pt": "d5ebf17ad9b502b5148974f4eda904f810497ff8f1c1d7ec07d536863ec20890",
+    "/home/ubuntu/capstone-artifacts/natural_4b_full9/partitioned/data/activations/natural_4b_full9_partitioned/layer_17/validation_attempt1.pt": "616029353e5692b816f601b3856c831f57bc921f3d38690a414ac59899bb8ef1",
+    "/home/ubuntu/capstone-artifacts/natural_4b_full9/partitioned/data/activations/natural_4b_full9_partitioned/layer_17/validation_attempt2.pt": "50b3e7a25040cc628225f29b20ac2960994d579750c5b26641b0485e0315c4cc",
+    "/home/ubuntu/capstone-artifacts/natural_4b_full9/partitioned/data/activations/natural_4b_full9_partitioned/layer_17/validation.pt": "d1d9d86df25aed261476607b030bc14c6bbba94873b5057fc5ab2fec968b83f6",
+    "/home/ubuntu/capstone-artifacts/natural_4b_full9/partitioned/data/activations/natural_4b_full9_partitioned/layer_25/validation_attempt1.pt": "8336f6eba2d3619994913176f7542ce3db5415a996f8d01d182943a0b8ff5296",
+    "/home/ubuntu/capstone-artifacts/natural_4b_full9/partitioned/data/activations/natural_4b_full9_partitioned/layer_25/validation_attempt2.pt": "f3821ecadba646c9279fbbe4a045828d47cca0d19cb035a179bf816f528e74dd",
+    "/home/ubuntu/capstone-artifacts/natural_4b_full9/partitioned/data/activations/natural_4b_full9_partitioned/layer_25/validation.pt": "b5f099dce94db0f28f217bda5422f1f217cfc742d825982edde556d2ca2b21c0",
+    "/home/ubuntu/capstone-artifacts/natural_4b_full9/partitioned/data/activations/natural_4b_full9_partitioned/layer_29/validation_attempt1.pt": "6b56c687888bd7c1edc273f8cd0298192817e7e574a6fdb00ced76e5a497f8a8",
+    "/home/ubuntu/capstone-artifacts/natural_4b_full9/partitioned/data/activations/natural_4b_full9_partitioned/layer_29/validation_attempt2.pt": "c217c0f8a0feb4becbc06abd52c0f2b4ce1e0e62c463189af7525acd1efe1fc7",
+    "/home/ubuntu/capstone-artifacts/natural_4b_full9/partitioned/data/activations/natural_4b_full9_partitioned/layer_29/validation.pt": "9fb00f1159ae996c077371fce326308964a00c7b3a8ea2ad60c0496d20381401",
+    "/home/ubuntu/capstone-artifacts/natural_4b_full9/partitioned/data/activations/natural_4b_full9_partitioned/layer_30/validation_attempt1.pt": "2cb2c4ca09e078cd1a358bf0cc46aa6d602c84c4456187c978274ca3ef40bb2e",
+    "/home/ubuntu/capstone-artifacts/natural_4b_full9/partitioned/data/activations/natural_4b_full9_partitioned/layer_30/validation_attempt2.pt": "832ef3dd21e04413d4ac7801becdcbb293c34efb2cb811dd14a3d612866c80ca",
+    "/home/ubuntu/capstone-artifacts/natural_4b_full9/partitioned/data/activations/natural_4b_full9_partitioned/layer_30/validation.pt": "b978b63c2327dbbf47cc1d439aea72ccc827e0f5fcbab008bbd79fcc4445efed",
+    "/home/ubuntu/capstone-artifacts/natural_4b_full9/partitioned/data/activations/natural_4b_full9_partitioned/layer_31/validation_attempt1.pt": "2374a33c9e84354ba9132c03127922154fada20dee6ac951a504f9cd30c1909c",
+    "/home/ubuntu/capstone-artifacts/natural_4b_full9/partitioned/data/activations/natural_4b_full9_partitioned/layer_31/validation_attempt2.pt": "763f51f979ddfbfb3e86570c61e4383c0b386c5dec7185199e8ef47ef3aa4fca",
+    "/home/ubuntu/capstone-artifacts/natural_4b_full9/partitioned/data/activations/natural_4b_full9_partitioned/layer_31/validation.pt": "754dd71954b0096fe1db1d2a1dcf077594406358d73b7d157ba31a429183d9f6",
+    "/home/ubuntu/capstone-artifacts/natural_4b_full9/partitioned/data/activations/natural_4b_full9_partitioned/layer_32/validation_attempt1.pt": "4346e1bc52dd97989fa4d705df632b1fd378465f05a5532b4b925c96f3c5ec60",
+    "/home/ubuntu/capstone-artifacts/natural_4b_full9/partitioned/data/activations/natural_4b_full9_partitioned/layer_32/validation_attempt2.pt": "f25a5a4b76736cfa41b0ee42284e0c54944ac4bb97414340851922d08f9c7893",
+    "/home/ubuntu/capstone-artifacts/natural_4b_full9/partitioned/data/activations/natural_4b_full9_partitioned/layer_32/validation.pt": "6a6a17781c0f1bb721928d543b525e272ea839bc95972569a0bba4f164468a74",
+    "/home/ubuntu/capstone-artifacts/natural_4b_full9/partitioned/data/activations/natural_4b_full9_partitioned/layer_33/validation_attempt1.pt": "33c67441b71321eac5d98449bdb6f6630b514835528a95f0b801e72f4bd28b8f",
+    "/home/ubuntu/capstone-artifacts/natural_4b_full9/partitioned/data/activations/natural_4b_full9_partitioned/layer_33/validation_attempt2.pt": "70fe19bd1c56bac20c85836d98c8e1a4083596bca9b90e8417421fe1774c5310",
+    "/home/ubuntu/capstone-artifacts/natural_4b_full9/partitioned/data/activations/natural_4b_full9_partitioned/layer_33/validation.pt": "98a3f60ffe5b53af749a376612810b265b5f1e65dca6e50b3045cda70f0d11ee"
+  }
+}
