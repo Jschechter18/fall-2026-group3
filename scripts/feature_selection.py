@@ -19,7 +19,7 @@ def main() -> None:
     parser.add_argument("--config", type=Path, default=Path("configs/feature_selection_layer33.yaml"))
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
-    run_dir = run(FeatureSelectionConfig.from_yaml(args.config))
+    run_dir = run(FeatureSelectionConfig.from_yaml(args.config), config_path=args.config)
 
     summary = json.loads((run_dir / "feature_selection_summary.json").read_text())
     for name, s in summary["saes"].items():

@@ -27,6 +27,7 @@ import pandas as pd
 import yaml
 
 from mas_sae.causal import offline
+from mas_sae.experiments.artifacts import get_untracked_files, get_untracked_sha256, sha256_file
 from mas_sae.probe import behavior_data as bd
 from mas_sae.probe import layer_selection as ls
 from mas_sae.probe.cv_eval import balanced_accuracy, bootstrap_ci, grouped_bootstrap_indices
@@ -35,15 +36,18 @@ from mas_sae.utils.versioning import create_versioned_run_dir
 logger = logging.getLogger(__name__)
 
 ACCEPT = "adopted_critic"
+CODE_DIRS = ("src", "scripts", "configs")
+PATH_KEYS = ("capstone_data_root", "activations_dir", "results_dir", "labels_csv", "manifest_csv")
 
 
 @dataclass
 class FeatureSelectionConfig:
-    capstone_data_root: Path = Path(".")
-    activations_dir: str = "data/activations/natural_4b_full9_partitioned"
-    results_dir: str = "results/collection/natural_4b_full9_partitioned"
-    labels_csv: str = "results/behavior/behavior_v012_official_20261011/labels.csv"
-    manifest_csv: str = "results/behavior/behavior_v012_official_20261011/split_manifest.csv"
+    # Data paths have no defaults: they come from the config passed to scripts/feature_selection.py.
+    capstone_data_root: Path
+    activations_dir: str
+    results_dir: str
+    labels_csv: str
+    manifest_csv: str
     index_column: str = "full_index"
     layer: int = 33
     activation_file: str = "{split}_attempt2.pt"
@@ -67,6 +71,9 @@ class FeatureSelectionConfig:
         unknown = set(raw) - {f.name for f in fields(cls)}
         if unknown:
             raise ValueError(f"Unknown config keys: {sorted(unknown)}")
+        missing = [k for k in PATH_KEYS if not raw.get(k)]
+        if missing:
+            raise ValueError(f"Config {path} must set {missing}.")
         for k in ("capstone_data_root", "output_dir"):
             if k in raw:
                 raw[k] = Path(raw[k])
@@ -96,6 +103,41 @@ def load_sae(spec: dict, root: Path, layer: int):
     from mas_sae.sae.pretrained import load_gemma_scope_sae
     sae, config = load_gemma_scope_sae(path, expected_layer=layer)
     return sae, {"kind": "gemma_scope", "path": str(spec["path"]), **config}
+
+
+def sae_files(spec: dict, root: Path) -> list[Path]:
+    path = root / spec["path"]
+    if spec["kind"] == "custom":
+        return [path / "checkpoints" / "best_checkpoint.pt"]
+    return [path / "config.json", path / "params.safetensors"]
+
+
+def provenance(cfg: FeatureSelectionConfig, config_path: Path | None) -> dict:
+    """Layer-selection provenance plus hashes of every input this run reads, and the code state.
+
+    ``git diff`` cannot see new files, so untracked files under src/, scripts/ and configs/ are
+    hashed and listed too: a run made from uncommitted code says so.
+    """
+    root = Path(cfg.capstone_data_root)
+    layer_dir = root / cfg.activations_dir / f"layer_{cfg.layer:02d}"
+    inputs = {str(p.relative_to(root)): sha256_file(p) for p in
+              [layer_dir / cfg.activation_file.format(split=s) for s in (cfg.fit_partition, cfg.eval_partition)]
+              + [root / cfg.results_dir / s / "interactions.jsonl" for s in (cfg.fit_partition, cfg.eval_partition)]}
+    saes = {name: {str(p.relative_to(root)): sha256_file(p) for p in sae_files(spec, root)}
+            for name, spec in cfg.saes.items()}
+    untracked = get_untracked_files(*CODE_DIRS)
+    if untracked:
+        logger.warning("running with %d untracked code files; commit them for a reproducible run: %s",
+                       len(untracked), untracked)
+    return {
+        **ls.provenance(cfg.layer_selection_config()),
+        "config_path": str(config_path) if config_path else None,
+        "config_sha256": sha256_file(config_path) if config_path else None,
+        "input_sha256": inputs,
+        "sae_sha256": saes,
+        "untracked_code_files": untracked,
+        "untracked_code_sha256": get_untracked_sha256(*CODE_DIRS),
+    }
 
 
 def rank_features(probe, Z_fit: np.ndarray) -> pd.DataFrame:
@@ -200,11 +242,11 @@ def results_table(observed_pct: float, readout_pct: float, sae_summaries: dict) 
     return pd.DataFrame(rows)
 
 
-def run(cfg: FeatureSelectionConfig) -> Path:
+def run(cfg: FeatureSelectionConfig, config_path: Path | None = None) -> Path:
     if not cfg.saes:
         raise ValueError("Configure at least one SAE under `saes`.")
-    lcfg = cfg.layer_selection_config()
-    selected, diag, cols = ls.load_inputs(lcfg)
+    prov = provenance(cfg, config_path)                    # before any run artifacts are written
+    selected, diag, cols = ls.load_inputs(cfg.layer_selection_config())
     root = Path(cfg.capstone_data_root)
     X = bd.load_layer_matrix(selected, root / cfg.activations_dir / f"layer_{cfg.layer:02d}", cfg.activation_file)
     y = (selected["target_name"] == ACCEPT).astype(int).to_numpy()
@@ -236,7 +278,7 @@ def run(cfg: FeatureSelectionConfig) -> Path:
     (run_dir / "feature_selection_summary.json").write_text(json.dumps({
         "data_diagnostics": diag,
         "config": json.loads(json.dumps(asdict(cfg), default=str)),
-        "provenance": ls.provenance(lcfg),
+        "provenance": prov,
         "readout": {"chosen_C": readout_c, "n_fit": int(fit.sum()), "n_eval": int(ev.sum()),
                     "mean_p_accept_eval": float(p_orig.mean()),
                     "observed_accept_rate_eval": float(y[ev].mean()),

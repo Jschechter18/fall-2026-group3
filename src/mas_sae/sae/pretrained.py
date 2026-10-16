@@ -18,7 +18,7 @@ from torch import Tensor, nn
 
 
 class JumpReLUSAE(nn.Module):
-    """Gemma Scope JumpReLU SAE: z = pre * (pre > threshold), pre = x @ W_enc + b_enc."""
+    """Gemma Scope JumpReLU SAE: z = relu(pre) * (pre > threshold), pre = x @ W_enc + b_enc."""
 
     def __init__(self, w_enc: Tensor, b_enc: Tensor, w_dec: Tensor, b_dec: Tensor, threshold: Tensor):
         super().__init__()
@@ -34,7 +34,8 @@ class JumpReLUSAE(nn.Module):
 
     def encoder(self, activation: Tensor) -> Tensor:
         pre = activation @ self.w_enc + self.b_enc
-        return pre * (pre > self.threshold)
+        # relu as well as the gate, so a negative threshold can never let a negative latent through
+        return torch.relu(pre) * (pre > self.threshold)
 
     def decoder(self, sparse_features: Tensor) -> Tensor:
         return sparse_features @ self.w_dec + self.b_dec

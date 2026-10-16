@@ -60,6 +60,19 @@ def get_git_diff_sha256() -> str:
     return hashlib.sha256(get_git_diff()).hexdigest()
 
 
+def get_untracked_files(*paths: str) -> list[str]:
+    """Untracked, non-ignored files under ``paths``, sorted."""
+    try:
+        result = subprocess.run(
+            ["git", "ls-files", "--others", "--exclude-standard", "-z", "--", *paths],
+            check=True,
+            capture_output=True,
+        )
+    except (OSError, subprocess.CalledProcessError) as error:
+        raise RuntimeError("Could not list untracked files.") from error
+    return sorted(name.decode() for name in result.stdout.split(b"\0") if name)
+
+
 def get_untracked_sha256(*paths: str) -> str:
     """SHA-256 of untracked, non-ignored files under ``paths``: names and bytes.
 

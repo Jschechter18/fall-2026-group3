@@ -31,6 +31,16 @@ def test_jump_relu_zeroes_features_below_threshold():
     assert torch.allclose(sae(x)[1], z @ sae.w_dec + sae.b_dec)
 
 
+def test_jump_relu_never_emits_negative_latents_with_a_negative_threshold():
+    params = _jump_relu()
+    params["threshold"] = torch.full((6,), -1.0)
+    sae = JumpReLUSAE(**params)
+    pre = torch.tensor([[-2.0, -0.5, 0.0, 0.5, 3.0, -1.0]])
+    sae.w_enc.data, sae.b_enc.data = torch.zeros(4, 6), pre[0]   # pre-activation = b_enc for x = 0
+    z = sae.encoder(torch.zeros(1, 4))
+    assert torch.equal(z, torch.tensor([[0.0, 0.0, 0.0, 0.5, 3.0, 0.0]]))
+
+
 def _write_gemma_scope(path, hook="model.layers.33.output", arch="jump_relu"):
     path.mkdir(parents=True)
     (path / "config.json").write_text(json.dumps({"architecture": arch, "hf_hook_point_in": hook}))
@@ -96,7 +106,7 @@ def test_feature_pushing_toward_acceptance_gets_a_positive_coefficient():
     Z = rng.exponential(1.0, size=(600, 5)).astype(np.float32)
     Z[y == 1, 2] += 2.0                                    # feature 2 fires more when accepting
     Z[y == 0, 4] += 2.0                                    # feature 4 fires more when not accepting
-    cfg = fs.FeatureSelectionConfig(c_grid=[1.0], inner_folds=2)
+    cfg = fs.FeatureSelectionConfig(**{k: "." for k in fs.PATH_KEYS}, c_grid=[1.0], inner_folds=2)
     model, *_ = ls._fit_counting_warnings(lambda c: ls._activation_model(c, 0), Z, y,
                                           np.arange(600).astype(str), cfg)
     r = fs.rank_features(model, Z).set_index("feature")
@@ -126,9 +136,19 @@ def test_results_table_has_the_presentation_columns():
     assert t.loc[0, "Outcome"] == "observed"
 
 
+PATHS_YAML = "".join(f"{k}: .\n" for k in fs.PATH_KEYS)
+
+
+def test_config_requires_the_data_paths(tmp_path):
+    p = tmp_path / "c.yaml"
+    p.write_text(PATHS_YAML.replace("labels_csv: .\n", ""))
+    with pytest.raises(ValueError, match="labels_csv"):
+        fs.FeatureSelectionConfig.from_yaml(p)
+
+
 def test_config_rejects_unknown_sae_kinds(tmp_path):
     p = tmp_path / "c.yaml"
-    p.write_text("saes:\n  X:\n    kind: something\n    path: a\n")
+    p.write_text(PATHS_YAML + "saes:\n  X:\n    kind: something\n    path: a\n")
     with pytest.raises(ValueError, match="kind"):
         fs.FeatureSelectionConfig.from_yaml(p)
 
@@ -139,3 +159,26 @@ def test_committed_config_loads_with_three_saes():
     cfg = fs.FeatureSelectionConfig.from_yaml(repo / "configs/feature_selection_layer33.yaml")
     assert set(cfg.saes) == {"TopK SAE", "L1 SAE", "Pretrained SAE"}
     assert (cfg.layer, cfg.fit_partition, cfg.eval_partition) == (33, "train", "validation")
+
+
+def test_provenance_hashes_every_input_and_sae_file(tmp_path, monkeypatch):
+    for f in ["acts/layer_33/train_attempt2.pt", "acts/layer_33/validation_attempt2.pt",
+              "res/train/interactions.jsonl", "res/validation/interactions.jsonl",
+              "topk/checkpoints/best_checkpoint.pt", "gs/config.json", "gs/params.safetensors"]:
+        (tmp_path / f).parent.mkdir(parents=True, exist_ok=True)
+        (tmp_path / f).write_text(f)
+    (tmp_path / "cfg.yaml").write_text("x")
+    monkeypatch.setattr(fs.ls, "provenance", lambda cfg: {"git_commit": "abc"})
+    monkeypatch.setattr(fs, "get_untracked_files", lambda *d: ["src/new.py"])
+    monkeypatch.setattr(fs, "get_untracked_sha256", lambda *d: "u")
+    cfg = fs.FeatureSelectionConfig(capstone_data_root=tmp_path, activations_dir="acts", results_dir="res",
+                                    labels_csv="l", manifest_csv="m",
+                                    saes={"T": {"kind": "custom", "path": "topk"},
+                                          "G": {"kind": "gemma_scope", "path": "gs"}})
+    prov = fs.provenance(cfg, tmp_path / "cfg.yaml")
+    assert prov["git_commit"] == "abc" and prov["untracked_code_files"] == ["src/new.py"]
+    assert prov["config_sha256"] == fs.sha256_file(tmp_path / "cfg.yaml")
+    assert set(prov["input_sha256"]) == {"acts/layer_33/train_attempt2.pt", "acts/layer_33/validation_attempt2.pt",
+                                         "res/train/interactions.jsonl", "res/validation/interactions.jsonl"}
+    assert set(prov["sae_sha256"]["T"]) == {"topk/checkpoints/best_checkpoint.pt"}
+    assert set(prov["sae_sha256"]["G"]) == {"gs/config.json", "gs/params.safetensors"}
