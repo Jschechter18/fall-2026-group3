@@ -86,7 +86,7 @@
   "provenance": {
     "labels_sha256": "8d9d1a49a1ff562ec44ea531aea544b9844244cf785514d91409b0365fe2bf6b",
     "manifest_sha256": "aa576d11773091080b444cebcdbe633314cd7826f18f0f8baf182d8d6a81ec5b",
-    "git_commit": "d7bde3938cbfb02ae4e075078095d2f8fa3cd614",
+    "git_commit": "abb663226ec522b53bfeff352d8c4c1859971c34",
     "uncommitted_changes_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "command": "/opt/miniconda3/envs/capstone/bin/python scripts/feature_selection.py --config configs/feature_selection_layer33.yaml",
     "python": "3.11.16",
@@ -98,7 +98,29 @@
       "scipy": "1.17.1",
       "torch": "2.13.0",
       "pyyaml": "6.0.3"
-    }
+    },
+    "config_path": "configs/feature_selection_layer33.yaml",
+    "config_sha256": "efa8019e7bf0b2aeabd08a3631f17f991d91cd78134b5b6f5ecec518faa26337",
+    "input_sha256": {
+      "data/activations/natural_4b_full9_partitioned/layer_33/train_attempt2.pt": "4c979beb7bdc575ad7930cb5d07b72e6f4c9c5111d77227d70d538bc9cfc1f2b",
+      "data/activations/natural_4b_full9_partitioned/layer_33/validation_attempt2.pt": "70fe19bd1c56bac20c85836d98c8e1a4083596bca9b90e8417421fe1774c5310",
+      "results/collection/natural_4b_full9_partitioned/train/interactions.jsonl": "d8a73d1bfe4d651567c67a42ed0d5c4c108f18c6302b6dd24d289eac68016b30",
+      "results/collection/natural_4b_full9_partitioned/validation/interactions.jsonl": "7ed5195afedf4f830b07d2246b9293b4f7da279b4759a0779abe7f67dc6fd746"
+    },
+    "sae_sha256": {
+      "TopK SAE": {
+        "results/sae/musique/runs/layer_33/20261013T233444019723Z-e5943205b957/checkpoints/best_checkpoint.pt": "3b7ad0ee31879accc56cf6b9a45fcee2cff1e1a0299342d2940bde33019a98a2"
+      },
+      "L1 SAE": {
+        "results/sae/musique/runs/layer_33/20261014T161949048498Z-edfc89a42125/checkpoints/best_checkpoint.pt": "14f923707ad2e899de5725dba13bccd96ab4eac98d9d084ef8cc14a41cd6e8ea"
+      },
+      "Pretrained SAE": {
+        "results/sae/pretrained/gemma-scope-2-4b-it/resid_post_all/layer_33_width_16k_l0_big/config.json": "35d2b83867cf2798b5f95251f37f6d4bcc076abb7582380d543ceeec838c1b2b",
+        "results/sae/pretrained/gemma-scope-2-4b-it/resid_post_all/layer_33_width_16k_l0_big/params.safetensors": "003f624325bd50b7fa9031fbaf83d60ddce2f523e4f5abb42e98c475ec3be707"
+      }
+    },
+    "untracked_code_files": [],
+    "untracked_code_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
   },
   "readout": {
     "chosen_C": 0.001,
