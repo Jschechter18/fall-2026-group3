@@ -292,7 +292,9 @@ def run(cfg: FeatureSelectionConfig, config_path: Path | None = None) -> Path:
     return run_dir
 
 
-def _plot(table: pd.DataFrame, path: Path) -> None:
+def _plot(table: pd.DataFrame, path: Path,
+          title: str = "Offline SAE ablation on real layer-33 activations (validation)",
+          xlabel: str = "Δ predicted acceptance vs. that SAE's no-ablation control (pp, 95% CI)") -> None:
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
@@ -307,8 +309,8 @@ def _plot(table: pd.DataFrame, path: Path) -> None:
     ax.errorbar(d, ypos, xerr=[d - np.array(lo), np.array(hi) - d], fmt="o", capsize=3, color="#3266ad")
     ax.axvline(0, color="#888", lw=1)
     ax.set_yticks(ypos, labels)
-    ax.set_xlabel("Δ predicted acceptance vs. that SAE's no-ablation control (pp, 95% CI)")
-    ax.set_title("Offline SAE ablation on real layer-33 activations (validation)")
+    ax.set_xlabel(xlabel)
+    ax.set_title(title)
     fig.tight_layout()
     fig.savefig(path, format="svg")
     plt.close(fig)
