@@ -1,0 +1,53 @@
+{
+  "status": "completed",
+  "trial_id": 4,
+  "source_trial_directory": "results/sae/musique/tuning/layer_25/20261016T225755678732Z-c55f92b510ae/trials/trial_0004",
+  "run_directory": "results/sae/musique/runs/layer_25/20261017T155308837412Z-2f1f8393aedd",
+  "checkpoint_path": "results/sae/musique/runs/layer_25/20261017T155308837412Z-2f1f8393aedd/checkpoints/best_checkpoint.pt",
+  "total_epoch_budget": 200,
+  "best_epoch": 142,
+  "metrics": {
+    "train": {
+      "loss": 0.0023412006041296876,
+      "rec_loss": 0.0023412006041296876,
+      "weighted_sparsity_loss": 0.0,
+      "mean_active_features": 128.0,
+      "inactive_feature_fraction": 0.8851645588874817,
+      "firing_frequency_min": 0.0,
+      "firing_frequency_p50": 0.0,
+      "firing_frequency_p90": 0.0010667670285329223,
+      "firing_frequency_p99": 0.2434511035680771,
+      "firing_frequency_max": 1.0,
+      "mean_baseline_rec_loss": 0.0359676569311255,
+      "variance_explained": 0.9349081701759763
+    },
+    "validation": {
+      "loss": 0.004200737071279521,
+      "rec_loss": 0.004200737071279521,
+      "weighted_sparsity_loss": 0.0,
+      "mean_active_features": 128.0,
+      "inactive_feature_fraction": 0.8869491219520569,
+      "firing_frequency_min": 0.0,
+      "firing_frequency_p50": 0.0,
+      "firing_frequency_p90": 0.0006216328474693,
+      "firing_frequency_p99": 0.2543904781341553,
+      "firing_frequency_max": 1.0,
+      "mean_baseline_rec_loss": 0.036622731732200695,
+      "variance_explained": 0.8852970034568447
+    },
+    "test": {
+      "loss": 0.0028832715844368958,
+      "rec_loss": 0.0028832715844368958,
+      "weighted_sparsity_loss": 0.0,
+      "mean_active_features": 128.0,
+      "inactive_feature_fraction": 0.8904407620429993,
+      "firing_frequency_min": 0.0,
+      "firing_frequency_p50": 0.0,
+      "firing_frequency_p90": 0.0007530120201408863,
+      "firing_frequency_p99": 0.24422690272331238,
+      "firing_frequency_max": 1.0,
+      "mean_baseline_rec_loss": 0.0366546653929245,
+      "variance_explained": 0.9213395742798554
+    }
+  }
+}
