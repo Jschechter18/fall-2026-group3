@@ -2,8 +2,8 @@
 # spliced into layer 33, with no / random / targeted ablation of the #89 features.
 # Solver settings are the full9 collection's (configs/collection/v2/natural_4b_full9_*.yaml).
 capstone_data_root: .
-# intervention episodes from the natural_4b_full9 run (not in the train/validation export)
-interactions_jsonl: results/collection/natural_4b_full9_partitioned/intervention/interactions.jsonl
+# intervention episodes from the natural_4b_full9 run (separate intervention-only export)
+interactions_jsonl: results/collection/natural_4b_full9_intervention_partitioned/intervention/interactions.jsonl
 labels_csv: results/behavior/behavior_v012_official_20261011/labels.csv
 partition: intervention
 # targeted features and frequency-matched random draws per SAE, and the SAE hashes they belong to
