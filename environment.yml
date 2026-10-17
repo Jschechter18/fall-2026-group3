@@ -13,6 +13,7 @@ dependencies:
   - matplotlib
   - seaborn
   - ipykernel
+  - nbconvert
   - pytorch=2.13
   - pip
   - pip:

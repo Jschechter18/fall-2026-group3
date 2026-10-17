@@ -1,0 +1,3 @@
+Strategy,Selected configuration,Validation evidence,Why selected,Tradeoff accepted
+TopK + AuxK,k=128; aux=0.0078125; lr=0.0003,MSE 0.0434; 83.2% variance explained; 128.0 active/example; 24.2% dictionary usage,Balances reconstruction and sparsity within the TopK sweep.,Limited dictionary coverage; more active features than selected L1.
+L1,L1 coefficient=5; lr=0.0001,MSE 0.0589; 77.2% variance explained; 66.0 active/example; 97.3% dictionary usage,Broad dictionary coverage with sparse individual representations.,Higher reconstruction error than selected TopK + AuxK.
