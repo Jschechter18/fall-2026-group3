@@ -1,8 +1,9 @@
 """Tiny stand-ins for a CPU smoke test of the causal replay (issue #90).
 
-``smoke_components`` builds a randomly initialised Gemma 3 with the real architecture (so the
-layer-33 module path, hook and ``generate`` loop are the real ones) but a 16-dimensional residual
-stream, a byte-level processor, and tiny random SAEs of each kind. Everything else (episode
+``smoke_components`` builds a randomly initialised Gemma 3 with the real architecture, deep enough
+for the requested layer (so the module path, hook and ``generate`` loop are the real ones) but with
+a 16-dimensional residual stream and a byte-level processor; the caller passes the layer, the SAEs
+and their feature sets (``tiny_saes`` and ``tiny_features`` make random ones). Everything else (episode
 loading, labeling, resumable output, the table) is the real pipeline. The numbers it produces are
 meaningless: it checks that the replay runs end to end and writes the expected files and columns.
 """
@@ -13,6 +14,7 @@ import numpy as np
 import torch
 from transformers import BatchEncoding, Gemma3Config, Gemma3ForConditionalGeneration
 
+from mas_sae.activations.sites import resolve_solver_sites
 from mas_sae.agents.solver import Solver
 from mas_sae.causal.replay import Components
 from mas_sae.sae.pretrained import JumpReLUSAE
@@ -37,7 +39,7 @@ class ByteProcessor:
         return bytes(int(t) % 256 for t in token_ids).decode("utf-8", errors="ignore")
 
 
-def tiny_gemma(layers: int = 34, seed: int = 0) -> Gemma3ForConditionalGeneration:
+def tiny_gemma(layers: int, seed: int = 0) -> Gemma3ForConditionalGeneration:
     cfg = Gemma3Config(
         text_config=dict(vocab_size=256, hidden_size=HIDDEN, intermediate_size=32, num_hidden_layers=layers,
                          num_attention_heads=2, num_key_value_heads=1, head_dim=8, sliding_window=64,
@@ -73,10 +75,11 @@ def tiny_features(saes: dict, n_targeted: int = 3, n_random_draws: int = 2, seed
     return out
 
 
-def smoke_components(paragraphs: dict, n_random_draws: int = 2, max_new_tokens: int = 4) -> Components:
-    model = tiny_gemma()
+def smoke_components(paragraphs: dict, layer: int, saes: dict, features: dict,
+                     max_new_tokens: int = 4) -> Components:
+    """Components for a tiny Gemma 3 with ``layer`` as its last layer, spliced at ``layer``."""
+    model = tiny_gemma(layers=layer + 1)
     solver = Solver(model, ByteProcessor(), max_new_tokens=max_new_tokens)
-    saes = tiny_saes()
-    return Components(solver=solver, model=model, site="model.language_model.layers.33", saes=saes,
-                      features=tiny_features(saes, n_random_draws=n_random_draws), paragraphs=paragraphs,
+    site = resolve_solver_sites(model, "gemma3", [layer])[0]
+    return Components(solver=solver, model=model, site=site, saes=saes, features=features, paragraphs=paragraphs,
                       info={"smoke": "tiny random Gemma 3 + random SAEs; outputs check the pipeline only"})

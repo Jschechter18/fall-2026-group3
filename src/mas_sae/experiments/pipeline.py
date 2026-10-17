@@ -353,6 +353,8 @@ def run_question(
                 "critic_review": getattr(critic, "generation_history", [])[telemetry_start:],
                 "solver_a1": a1_telemetry,
                 "solver_a2": getattr(solver, "last_generation", None),
+                # exact A2 prompt token ids, so a causal replay can check it rebuilt the same prompt
+                "solver_a2_prompt": getattr(solver, "last_prompt", None),
                 "critic_blind": blind_telemetry,
                 "validator": getattr(validator, "last_generation", None),
             }

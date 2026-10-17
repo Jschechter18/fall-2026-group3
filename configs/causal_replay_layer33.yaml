@@ -1,5 +1,7 @@
 # Causal replay (issue #90): regenerate Solver A2 on the intervention partition with each SAE
-# spliced into layer 33, with no / random / targeted ablation of the #89 features.
+# spliced into layer 33 at the final prompt token of the A2 prefill only (decode steps untouched),
+# with no / random / targeted ablation of the #89 features, as a reconstruction splice and as an
+# error-preserving splice (x + decode(z_ablated) - decode(z)).
 # Solver settings are the full9 collection's (configs/collection/v2/natural_4b_full9_*.yaml).
 capstone_data_root: .
 # intervention episodes from the natural_4b_full9 run (separate intervention-only export)
@@ -27,7 +29,14 @@ saes:
   Pretrained SAE:
     kind: gemma_scope
     path: results/sae/pretrained/gemma-scope-2-4b-it/resid_post_all/layer_33_width_16k_l0_big
-n_random_draws: 5
+# 20 of the 50 frequency-matched draws in the feature-selection summary: the targeted-vs-random CI
+# resamples draws as well as questions, and the draw-rank p can reach 1/21. ~130 generations per
+# episode with error_preserving (about 15 h for 517 episodes at the smoke run's 0.83 s each).
+n_random_draws: 20
+error_preserving: true
+# plain replay must reproduce collection before any SAE condition runs (see replay_check.json)
+min_replay_label_match: 0.98
+on_replay_check_fail: stop
 seed: 42
 n_bootstrap: 1000
 n_permutations: 10000
