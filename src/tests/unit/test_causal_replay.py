@@ -215,14 +215,15 @@ def test_validate_features_refuses_unfair_or_out_of_range_sets(change, match):
 
 # ---- end to end on the tiny model
 
-def _smoke(tmp_path, layer=33, n_episodes=None):
+def _smoke(tmp_path, layer=33, n_layers=None):
     _write_inputs(tmp_path, _episodes())
     _summary(tmp_path)
     cfg = _cfg(tmp_path, layer=layer)
     episodes = replay.load_episodes(cfg)
     paragraphs = {q: [{"idx": 0, "title": "T", "paragraph_text": "text"}] for q in episodes.question_id}
     saes = tiny_saes()
-    comp = smoke_components(paragraphs, layer, saes, tiny_features(saes, n_random_draws=2), max_new_tokens=2)
+    comp = smoke_components(paragraphs, layer, saes, tiny_features(saes, n_random_draws=2), max_new_tokens=2,
+                            n_layers=n_layers)
     return cfg, episodes, comp
 
 
@@ -507,7 +508,7 @@ def test_targeted_vs_random_is_a_direct_paired_comparison():
     lo, hi = r["ci95_pp_questions_and_draws"]
     assert lo <= r["delta_pp"] <= hi
     assert r["n_random_draws"] == 4 and len(r["random_draw_vs_control_pp"]) == 4
-    assert r["draw_rank_p"] == pytest.approx(1 / 5)              # no draw moves as much as targeted
+    assert r["draw_tail_fraction"] == pytest.approx(1 / 5)       # no draw moves as much as targeted
 
 
 def test_holm_adjusts_in_input_order():
@@ -539,3 +540,66 @@ def test_analyse_writes_the_direct_comparison_and_diagnostics(tmp_path):
             .eq("No ablation (= plain replay)").sum() == 3)
     s = json.loads((run_dir / "causal_replay_summary.json").read_text())
     assert s["validated"] is False                                # the tiny model cannot reproduce collection
+
+
+# ---- follow-up review: generated first token, stored feature ids, match rates, layer-aware scope
+
+def test_first_token_is_the_one_generation_chose_not_the_raw_argmax(tmp_path):
+    cfg, episodes, comp = _smoke(tmp_path)
+    ep = episodes.iloc[0].to_dict()
+    plain = replay.conditions(comp.features)[0]
+    with replay.FirstTokenLogits(comp.model) as f:
+        comp.solver.revise(ep["question"], comp.paragraphs[ep["question_id"]], ep["solver_attempt_1"],
+                           ep["critic_feedback"])
+    raw = int(f.logprobs.argmax())
+    comp.solver.generation_settings["suppress_tokens"] = [raw]       # logits processing changes the choice
+    row = replay.generate(comp, ep, plain)
+    assert row["first_token_id"] == comp.solver.last_generated_token_ids[0] != raw
+    assert row["first_token_logprob"] == pytest.approx(float(f.logprobs[row["first_token_id"]]), abs=1e-5)
+    assert row["first_token_logprob"] < float(f.logprobs[raw])     # scored by the model's raw log-probs
+
+
+@pytest.mark.parametrize("targeted, random", [
+    ([1.9, 2], [[3, 4], [5, 6]]),
+    ([1, 2], [[3.8, 4], [5, 6]]),
+    ([True, 2], [[3, 4], [5, 6]]),
+    (["1", 2], [[3, 4], [5, 6]]),
+])
+def test_stored_feature_ids_are_validated_as_stored_before_the_model_loads(tmp_path, monkeypatch, targeted, random):
+    from mas_sae.models import roles
+    from mas_sae.probe import feature_selection as fs
+    (tmp_path / "fs.json").write_text(json.dumps({
+        "config": {"layer": 33}, "provenance": {"sae_sha256": {"TopK SAE": {}}},
+        "saes": {"TopK SAE": {"targeted_features": targeted, "random_control_draws": random}}}))
+    cfg = _cfg(tmp_path, saes={"TopK SAE": {"kind": "custom", "path": "x"}})
+    assert replay.feature_sets(cfg, {"TopK SAE": {}})["TopK SAE"]["targeted"] == targeted   # not coerced
+    monkeypatch.setattr(fs, "sae_files", lambda spec, root: [])
+    monkeypatch.setattr(fs, "load_sae", lambda spec, root, layer: (tiny_saes()["TopK SAE"], {}))
+    monkeypatch.setattr(roles, "load_spec", lambda spec: pytest.fail("loaded the model before validating"))
+    with pytest.raises(ValueError, match="integers"):
+        replay.load_components(cfg, pd.DataFrame({"question_id": [], "source_split": []}))
+
+
+def test_replay_check_match_rates_do_not_depend_on_the_mismatch_kind():
+    manifest = pd.DataFrame({"question_id": ["a", "b"], "stored_solver_response": ["adopted_critic"] * 2})
+    rows = pd.DataFrame([{"question_id": q, "experiment": replay.BASELINE, "solver_attempt_2": a,
+                          "stored_solver_attempt_2": "Lyon", "solver_response": r, "adopted": int(r == "adopted_critic"),
+                          "prompt_matches_stored": p}
+                         for q, a, r, p in (("a", "Lyon", "adopted_critic", True),
+                                            ("b", "Paris", "retained_a1", False))])   # prompt AND label differ
+    check = replay.replay_check(rows, manifest, min_label_match=0.9)
+    assert check["mismatch_counts"] == {"exact_match": 1, "prompt_differs": 1}
+    assert check["solver_response_match_rate"] == 0.5 and check["a2_exact_match_rate"] == 0.5
+    assert len(check["failures"]) == 2                                    # prompt difference and label match
+
+
+def test_intervention_description_depends_on_whether_the_layer_is_final(tmp_path):
+    assert "first token" in replay.intervention_description(33, 34)
+    assert "keys and values" in replay.intervention_description(2, 4)
+    assert "keys and values" in replay.intervention_description(33, None)
+    cfg, episodes, comp = _smoke(tmp_path, layer=2, n_layers=4)
+    assert comp.site == "model.language_model.layers.2" and replay.num_layers(comp.model) == 4
+    run_dir = replay.replay(cfg, episodes.head(1), comp, tmp_path / "run")
+    replay.analyse(run_dir)
+    s = json.loads((run_dir / "causal_replay_summary.json").read_text())
+    assert s["provenance"]["num_layers"] == 4 and "not the final layer" in s["intervention"]["description"]

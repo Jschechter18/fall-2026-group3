@@ -91,6 +91,8 @@ class Agent:
         self.chat_template_kwargs: dict[str, Any] = {}
         # Digest of the exact tokenized prompt of the last generation.
         self.last_prompt: dict[str, Any] | None = None
+        # Token ids the last generation produced (after any logits processing).
+        self.last_generated_token_ids: list[int] | None = None
 
     def _generate(self, prompt: str) -> str:
         messages = [
@@ -134,6 +136,7 @@ class Agent:
             )
 
         count = int(output.shape[-1] - prompt_tokens)
+        self.last_generated_token_ids = [int(t) for t in output[0][prompt_tokens:]]
         self.last_generation = {
             "generated_tokens": count,
             "max_new_tokens": self.max_new_tokens,

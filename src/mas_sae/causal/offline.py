@@ -127,11 +127,13 @@ def targeted_vs_random(targeted: np.ndarray, random: np.ndarray, control: np.nda
 
     ``targeted`` and ``control`` are one value per question; ``random`` is questions x draws. The
     direct comparison is targeted - mean over draws, with a question bootstrap CI and sign-flip
-    p-value (both conditional on the draws used), plus a CI that also resamples the draws, so it
-    includes the uncertainty from which random feature sets were chosen. ``draw_rank_p`` is the
-    share of random sets (plus the targeted set itself) whose effect against the control is at
-    least as large in magnitude as the targeted set's: a test over feature sets, limited by the
-    number of draws (its smallest value is 1 / (draws + 1)).
+    p-value. Both are conditional on the draws used; ``ci95_pp_questions_and_draws`` also resamples
+    the draws, so it includes the uncertainty from which random feature sets were chosen.
+
+    ``draw_tail_fraction`` is descriptive only: the share of feature sets (the random draws plus
+    the targeted set itself) whose effect against the control is at least as large in magnitude as
+    the targeted set's. It is not a p-value, because the probe-selected targeted set and the
+    frequency-matched random sets have not been shown to be exchangeable under a null hypothesis.
     """
     targeted, control = np.asarray(targeted, float), np.asarray(control, float)
     random = np.asarray(random, float)
@@ -147,7 +149,7 @@ def targeted_vs_random(targeted: np.ndarray, random: np.ndarray, control: np.nda
             "n_random_draws": int(n_draws),
             "targeted_vs_control_pp": 100 * float(t_effect),
             "random_draw_vs_control_pp": [100 * float(e) for e in draw_effects],
-            "draw_rank_p": float((1 + np.sum(np.abs(draw_effects) >= abs(t_effect) - 1e-15)) / (1 + n_draws))}
+            "draw_tail_fraction": float((1 + np.sum(np.abs(draw_effects) >= abs(t_effect) - 1e-15)) / (1 + n_draws))}
 
 
 def holm(p_values) -> list[float]:

@@ -76,10 +76,14 @@ def tiny_features(saes: dict, n_targeted: int = 3, n_random_draws: int = 2, seed
 
 
 def smoke_components(paragraphs: dict, layer: int, saes: dict, features: dict,
-                     max_new_tokens: int = 4) -> Components:
-    """Components for a tiny Gemma 3 with ``layer`` as its last layer, spliced at ``layer``."""
-    model = tiny_gemma(layers=layer + 1)
+                     max_new_tokens: int = 4, n_layers: int | None = None) -> Components:
+    """Components for a tiny Gemma 3 of ``n_layers`` layers (default: ``layer`` is the last), spliced at ``layer``."""
+    n_layers = layer + 1 if n_layers is None else n_layers
+    if not 0 <= layer < n_layers:
+        raise ValueError(f"layer {layer} is not in a {n_layers}-layer model.")
+    model = tiny_gemma(layers=n_layers)
     solver = Solver(model, ByteProcessor(), max_new_tokens=max_new_tokens)
     site = resolve_solver_sites(model, "gemma3", [layer])[0]
     return Components(solver=solver, model=model, site=site, saes=saes, features=features, paragraphs=paragraphs,
-                      info={"smoke": "tiny random Gemma 3 + random SAEs; outputs check the pipeline only"})
+                      info={"smoke": "tiny random Gemma 3 + random SAEs; outputs check the pipeline only",
+                            "num_layers": n_layers})

@@ -30,7 +30,7 @@ saes:
     kind: gemma_scope
     path: results/sae/pretrained/gemma-scope-2-4b-it/resid_post_all/layer_33_width_16k_l0_big
 # 20 of the 50 frequency-matched draws in the feature-selection summary: the targeted-vs-random CI
-# resamples draws as well as questions, and the draw-rank p can reach 1/21. ~130 generations per
+# resamples draws as well as questions over these 20. ~130 generations per
 # episode with error_preserving (about 15 h for 517 episodes at the smoke run's 0.83 s each).
 n_random_draws: 20
 error_preserving: true

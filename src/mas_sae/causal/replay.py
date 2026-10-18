@@ -4,13 +4,15 @@ For each eligible episode of one frozen partition, the stored A1 and Critic feed
 through the Solver's revise prompt with the same model, revision, prompt and greedy settings as
 collection. The intervention is a final-prompt-token, prefill-only intervention: during the A2
 prefill, the configured layer's output at the final prompt token (exactly where the collected
-activations, probes and SAE features were measured) is replaced, and nothing else is. Earlier
-positions, the attention cache they produce and later decode steps are not modified; at the last
-layer the change reaches only the logits of the first generated token, and any later effect comes
-through a different generated token. So a null result says the features do not matter at this
-position for this step, not that they are unimportant throughout answer generation. Each row
-records the first generated token and its log-probability, and the log-probability under the
-condition of the token its control chose, as a continuous measure beside answer-level acceptance.
+activations, probes and SAE features were measured) is replaced, and nothing else is: earlier
+positions and decode-step computations at that layer are not modified. At the final layer the change
+reaches only the logits of the first generated token, so any later effect comes through a different
+generated token. At an earlier layer it also changes that position's keys and values in the layers
+above, which every decode step attends to, so the answer can change even when the first token does
+not. Either way, a null result says the features do not matter at this position, not that they are
+unimportant throughout answer generation. Each row records the first token generation actually
+produced and its log-probability, and the log-probability under the condition of the token its
+control produced, as a continuous measure beside answer-level acceptance.
 
 Two splices per SAE, with z = encode(x) at that position:
   reconstruction     x' = decode(z with chosen features zeroed)    (estimand: inside the SAE-reconstructed model)
@@ -206,7 +208,11 @@ class SAESplice:
 
 
 class FirstTokenLogits:
-    """Log-probabilities of the first generated token: the model's output at the last prefill position."""
+    """The model's log-probabilities for the first generated token (its output at the last prefill position).
+
+    These are the raw model outputs, before any logits processing ``generate`` applies; the token
+    generation chose is read from the Solver, not from their argmax.
+    """
 
     def __init__(self, model: torch.nn.Module):
         self.model, self.logprobs, self._handle = model, None, None
@@ -315,8 +321,9 @@ def feature_sets(cfg: ReplayConfig, sae_hashes: dict) -> dict:
         draws = s["random_control_draws"]
         if len(draws) < cfg.n_random_draws:
             raise ValueError(f"{name}: only {len(draws)} random draws available.")
-        out[name] = {"targeted": [int(f) for f in s["targeted_features"]],
-                     "random": [[int(f) for f in d] for d in draws[:cfg.n_random_draws]]}
+        # ids are kept exactly as stored: validate_features rejects anything that is not an integer
+        out[name] = {"targeted": list(s["targeted_features"]),
+                     "random": [list(d) for d in draws[:cfg.n_random_draws]]}
     return out
 
 
@@ -405,6 +412,8 @@ def load_components(cfg: ReplayConfig, episodes: pd.DataFrame) -> Components:
     hashes = {name: {str(p.relative_to(root)): sha256_file(p) for p in sae_files(spec, root)}
               for name, spec in cfg.saes.items()}
     features = feature_sets(cfg, hashes)
+    saes = {name: load_sae(sae_spec, root, cfg.layer)[0].eval() for name, sae_spec in cfg.saes.items()}
+    validate_features(features, saes)                    # before the (slow) model load
     paragraphs = load_paragraphs(episodes, cfg.musique_revision)
 
     spec = resolve_role_spec("solver", cfg.solver, default_max_new_tokens=64)
@@ -412,14 +421,30 @@ def load_components(cfg: ReplayConfig, episodes: pd.DataFrame) -> Components:
     solver = Solver(model, processor)
     configure_agent(solver, spec)
     site = resolve_solver_sites(model, spec["loader"], [cfg.layer])[0]
-    saes = {}
-    for name, sae_spec in cfg.saes.items():
-        sae, _ = load_sae(sae_spec, root, cfg.layer)
-        saes[name] = sae.to(model.device).eval()
+    saes = {name: sae.to(model.device) for name, sae in saes.items()}
     return Components(solver, model, site, saes, features, paragraphs,
-                      {"solver_spec": spec, "sae_sha256": hashes,
+                      {"solver_spec": spec, "sae_sha256": hashes, "num_layers": num_layers(model),
                        "device": str(model.device),
                        "device_name": torch.cuda.get_device_name(model.device) if model.device.type == "cuda" else None})
+
+
+def num_layers(model) -> int | None:
+    """Number of decoder layers of a (possibly multimodal) Hugging Face model, if its config says."""
+    config = getattr(model, "config", None)
+    text = getattr(config, "text_config", None) or config
+    return getattr(text, "num_hidden_layers", None)
+
+
+def intervention_description(layer: int, n_layers: int | None) -> str:
+    """What a final-prompt-token, prefill-only splice at ``layer`` can affect, for the summary."""
+    base = ("The layer output at the final prompt token of the A2 prefill is replaced; earlier positions "
+            "and decode-step computations at this layer are not. ")
+    if n_layers is not None and layer == n_layers - 1:
+        return base + ("This is the final layer, so the change reaches only the first generated token's logits: "
+                       "any effect on the answer comes through a different first token.")
+    return base + ("This is not the final layer (or the depth is unknown), so the change also alters that "
+                   "position's keys and values in later layers, which every decode step attends to: the answer "
+                   "can change even when the first token does not.")
 
 
 def generate(comp: Components, ep: dict, cond: dict, control_token: int | None = None) -> dict:
@@ -441,7 +466,9 @@ def generate(comp: Components, ep: dict, cond: dict, control_token: int | None =
     gen = comp.solver.last_generation or {}
     prompt = comp.solver.last_prompt or {}
     stats = splice.stats if isinstance(splice, SAESplice) else {}
-    token = int(first.logprobs.argmax())
+    # the token generation actually chose (after any logits processing), scored by the model's raw log-probs
+    generated = comp.solver.last_generated_token_ids or []
+    token = generated[0] if generated else None
     stored_prompt = ep.get("stored_a2_input_ids_sha256")
     stored_prompt = stored_prompt if isinstance(stored_prompt, str) else None
     return {"question_id": ep["question_id"], "experiment": cond["experiment"],
@@ -453,7 +480,8 @@ def generate(comp: Components, ep: dict, cond: dict, control_token: int | None =
             "generated_tokens": gen.get("generated_tokens"), "reached_token_budget": gen.get("reached_token_budget"),
             "prompt_tokens": prompt.get("prompt_tokens"), "input_ids_sha256": prompt.get("input_ids_sha256"),
             "prompt_matches_stored": None if stored_prompt is None else prompt.get("input_ids_sha256") == stored_prompt,
-            "first_token_id": token, "first_token_logprob": float(first.logprobs[token]),
+            "first_token_id": token,
+            "first_token_logprob": None if token is None else float(first.logprobs[token]),
             "control_first_token_logprob": None if control_token is None else float(first.logprobs[control_token]),
             "n_active_features": stats.get("n_active"), "n_ablated_active": stats.get("n_ablated_active"),
             "removed_rel_norm": stats.get("removed_rel_norm"),
@@ -616,7 +644,9 @@ def _plain(rows: pd.DataFrame, manifest: pd.DataFrame) -> pd.DataFrame:
 def replay_check(rows: pd.DataFrame, manifest: pd.DataFrame, min_label_match: float) -> dict:
     """Does the plain replay reproduce collection? Counts each kind of mismatch and applies the criterion.
 
-    Kinds, in order of precedence: ``prompt_differs`` (prompt token ids differ from collection's,
+    Match rates compare answers and labels directly. Each episode also gets one kind, in order of
+    precedence (so a prompt difference that also changed the label counts as ``prompt_differs``):
+    ``prompt_differs`` (prompt token ids differ from collection's,
     where collection recorded them), ``exact_match``, ``label_changed`` (the regenerated A2 gets a
     different Behavior label), ``formatting_only`` (same text up to case, punctuation and spacing)
     and ``text_differs_same_label`` (a different answer with the same label, e.g. numerical noise).
@@ -625,7 +655,9 @@ def replay_check(rows: pd.DataFrame, manifest: pd.DataFrame, min_label_match: fl
     base = _plain(rows, manifest)
     n = len(base)
     counts = base.kind.value_counts().to_dict() if n else {}
-    label_match = float(1 - counts.get("label_changed", 0) / n) if n else float("nan")
+    # match rates come from direct comparisons; the kinds (one per episode) only explain mismatches
+    label_match = float((base.solver_response == base.stored_solver_response).mean()) if n else float("nan")
+    text_match = float((base.solver_attempt_2 == base.stored_solver_attempt_2).mean()) if n else float("nan")
     failures = []
     if n < len(manifest):
         failures.append(f"{len(manifest) - n} episodes have no plain replay yet")
@@ -634,7 +666,7 @@ def replay_check(rows: pd.DataFrame, manifest: pd.DataFrame, min_label_match: fl
     if n and label_match < min_label_match:
         failures.append(f"label match {label_match:.3f} < {min_label_match}")
     return {"n_episodes": n, "n_planned": int(len(manifest)), "mismatch_counts": counts,
-            "a2_exact_match_rate": float(counts.get("exact_match", 0) / n) if n else float("nan"),
+            "a2_exact_match_rate": text_match,
             "solver_response_match_rate": label_match,
             "n_prompt_hashes_compared": int(base.prompt_matches_stored.notna().sum()) if n else 0,
             "stored_acceptance_pct": 100 * float((base.stored_solver_response == ACCEPT).mean()) if n else None,
@@ -712,7 +744,7 @@ def _read_rows(path: Path) -> list[dict]:
 ROW_FIELDS = ("mode", "first_token_id", "first_token_logprob", "control_first_token_logprob", "removed_rel_norm",
               "n_ablated_active", "recon_rel_error", "prompt_matches_stored", "reached_token_budget")
 TVR_COLUMNS = ["Experiment", "Splice", "N", "Random draws", "Targeted − random (pp)", "95% CI (questions)",
-               "95% CI (questions + draws)", "p-value", "p-value (Holm)", "Draw-rank p"]
+               "95% CI (questions + draws)", "p-value", "p-value (Holm)", "Draw tail fraction (exploratory)"]
 
 
 def analyse(run_dir: Path, n_bootstrap: int | None = None, n_permutations: int | None = None) -> pd.DataFrame:
@@ -806,7 +838,8 @@ def analyse(run_dir: Path, n_bootstrap: int | None = None, n_permutations: int |
     pd.DataFrame([{"Experiment": x["experiment"], "Splice": x["splice"], "N": n, "Random draws": x["n_random_draws"],
                    "Targeted − random (pp)": x["delta_pp"], "95% CI (questions)": _ci(x["ci95_pp"]),
                    "95% CI (questions + draws)": _ci(x["ci95_pp_questions_and_draws"]), "p-value": x["p_value"],
-                   "p-value (Holm)": x.get("p_value_holm"), "Draw-rank p": x["draw_rank_p"]} for x in tvr],
+                   "p-value (Holm)": x.get("p_value_holm"),
+                   "Draw tail fraction (exploratory)": x["draw_tail_fraction"]} for x in tvr],
                  columns=TVR_COLUMNS).to_csv(run_dir / "targeted_vs_random.csv", index=False)
     pd.DataFrame(draws).to_csv(run_dir / "random_draws.csv", index=False)
 
@@ -851,9 +884,7 @@ def analyse(run_dir: Path, n_bootstrap: int | None = None, n_permutations: int |
         "n_generations": int(len(rows)),
         "intervention": {
             "name": INTERVENTION,
-            "description": ("The layer output at the final prompt token of the A2 prefill is replaced; earlier "
-                            "positions, their attention cache and decode steps are not. Effects on the answer "
-                            "come through the first generated token."),
+            "description": intervention_description(cfg["layer"], (meta.get("provenance") or {}).get("num_layers")),
             "splices": {"reconstruction": "decode(z_ablated)",
                         "error_preserving": "x + decode(z_ablated) - decode(z)"}},
         "validated": check["passed"],
@@ -861,9 +892,13 @@ def analyse(run_dir: Path, n_bootstrap: int | None = None, n_permutations: int |
         "effects": effects,
         "targeted_vs_random": tvr,
         "multiple_comparisons": ("Confirmatory family: targeted minus mean random ablation with the reconstruction "
-                                 "splice, one test per SAE, Holm-adjusted (p_value_holm). Error-preserving, "
-                                 "per-condition, per-draw and diagnostic results are sensitivity / exploratory "
-                                 "and not adjusted."),
+                                 "splice, one test per SAE, Holm-adjusted (p_value_holm). These p-values are "
+                                 "conditional on the random draws used; ci95_pp_questions_and_draws also resamples "
+                                 "the draws, a broader source of uncertainty. draw_tail_fraction is a descriptive "
+                                 "tail fraction, not a test: the probe-selected targeted set and the frequency-"
+                                 "matched random sets are not shown to be exchangeable under a null. "
+                                 "Error-preserving, per-condition, per-draw and diagnostic results are sensitivity / "
+                                 "exploratory and not adjusted."),
         "reconstruction_damage": damage,
         "diagnostics": diagnostics,
         "solver_response_counts": {f"{e} · {c}": g.solver_response.value_counts().to_dict()
