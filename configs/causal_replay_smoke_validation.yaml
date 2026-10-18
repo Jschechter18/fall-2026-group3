@@ -1,0 +1,37 @@
+# CPU smoke test of the causal replay (scripts/causal_replay.py --smoke): real validation episodes,
+# labels and MuSiQue paragraphs; tiny random model and SAEs, so the numbers mean nothing.
+# Everything else matches configs/causal_replay_layer33.yaml.
+capstone_data_root: .
+interactions_jsonl: results/collection/natural_4b_full9_partitioned/validation/interactions.jsonl
+labels_csv: results/behavior/behavior_v012_official_20261011/labels.csv
+partition: validation
+feature_selection_summary: results/feature_selection/20261016T003252665105Z/feature_selection_summary.json
+musique_revision: c8f4f8c9465fb69d31a8eae894c3fd509c4ca321
+layer: 33
+solver:
+  id: google/gemma-3-4b-it
+  revision: 093f9f388b31de276ce2de164bdc2081324b9767
+  loader: gemma3
+  dtype: bfloat16
+  device: cuda:0
+  generation: {max_new_tokens: 64, do_sample: false}
+saes:
+  TopK SAE:
+    kind: custom
+    path: results/sae/musique/runs/layer_33/20261013T233444019723Z-e5943205b957
+  L1 SAE:
+    kind: custom
+    path: results/sae/musique/runs/layer_33/20261014T161949048498Z-edfc89a42125
+  Pretrained SAE:
+    kind: gemma_scope
+    path: results/sae/pretrained/gemma-scope-2-4b-it/resid_post_all/layer_33_width_16k_l0_big
+n_random_draws: 2
+error_preserving: true
+min_replay_label_match: 0.98
+# a random tiny model cannot reproduce collection, so the smoke run continues, marked unvalidated
+on_replay_check_fail: mark_unvalidated
+limit: 3
+seed: 42
+n_bootstrap: 1000
+n_permutations: 10000
+output_dir: results/causal_replay_smoke

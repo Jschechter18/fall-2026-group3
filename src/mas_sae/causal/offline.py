@@ -119,3 +119,46 @@ def paired_effect(outcome: np.ndarray, reference: np.ndarray, groups: np.ndarray
     return {"delta_pp": 100 * float(observed),
             "ci95_pp": [100 * float(np.quantile(means, 0.025)), 100 * float(np.quantile(means, 0.975))],
             "p_value": float(p)}
+
+
+def targeted_vs_random(targeted: np.ndarray, random: np.ndarray, control: np.ndarray, groups: np.ndarray,
+                       n_bootstrap: int, n_permutations: int, seed: int) -> dict:
+    """Targeted ablation against the random-ablation controls, paired by question, in percentage points.
+
+    ``targeted`` and ``control`` are one value per question; ``random`` is questions x draws. The
+    direct comparison is targeted - mean over draws, with a question bootstrap CI and sign-flip
+    p-value. Both are conditional on the draws used; ``ci95_pp_questions_and_draws`` also resamples
+    the draws, so it includes the uncertainty from which random feature sets were chosen.
+
+    ``draw_tail_fraction`` is descriptive only: the share of feature sets (the random draws plus
+    the targeted set itself) whose effect against the control is at least as large in magnitude as
+    the targeted set's. It is not a p-value, because the probe-selected targeted set and the
+    frequency-matched random sets have not been shown to be exchangeable under a null hypothesis.
+    """
+    targeted, control = np.asarray(targeted, float), np.asarray(control, float)
+    random = np.asarray(random, float)
+    direct = paired_effect(targeted, random.mean(1), groups, n_bootstrap, n_permutations, seed)
+    rng = np.random.default_rng(seed + 1)
+    n_draws = random.shape[1]
+    both = [targeted[i].mean() - random[i][:, rng.integers(0, n_draws, n_draws)].mean()
+            for i in grouped_bootstrap_indices(groups, n_bootstrap, seed)]
+    t_effect = (targeted - control).mean()
+    draw_effects = (random - control[:, None]).mean(0)
+    return {**direct,
+            "ci95_pp_questions_and_draws": [100 * float(np.quantile(both, q)) for q in (0.025, 0.975)],
+            "n_random_draws": int(n_draws),
+            "targeted_vs_control_pp": 100 * float(t_effect),
+            "random_draw_vs_control_pp": [100 * float(e) for e in draw_effects],
+            "draw_tail_fraction": float((1 + np.sum(np.abs(draw_effects) >= abs(t_effect) - 1e-15)) / (1 + n_draws))}
+
+
+def holm(p_values) -> list[float]:
+    """Holm step-down adjusted p-values (family-wise error control), in the input order."""
+    p = np.asarray(p_values, float)
+    order = np.argsort(p)
+    adjusted = np.empty_like(p)
+    running = 0.0
+    for rank, i in enumerate(order):
+        running = max(running, min(1.0, (len(p) - rank) * p[i]))
+        adjusted[i] = running
+    return adjusted.tolist()

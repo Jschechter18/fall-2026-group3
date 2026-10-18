@@ -287,12 +287,14 @@ def run(cfg: FeatureSelectionConfig, config_path: Path | None = None) -> Path:
         "outcome_note": ("Acceptance rates for SAE conditions are a raw-activation probe's mean predicted "
                          "P(accept) on validation activations, not regenerated Solver answers."),
     }, indent=2, default=str))
-    _plot(table, run_dir / "causal_proxy_effects.svg")
+    _plot(table, run_dir / "causal_proxy_effects.svg",
+          title=f"Offline SAE ablation on real layer-{cfg.layer} activations ({cfg.eval_partition})",
+          xlabel="Δ predicted acceptance vs. that SAE's no-ablation control (pp, 95% CI)")
     logger.info("wrote %s", run_dir)
     return run_dir
 
 
-def _plot(table: pd.DataFrame, path: Path) -> None:
+def _plot(table: pd.DataFrame, path: Path, title: str, xlabel: str) -> None:
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
@@ -307,8 +309,8 @@ def _plot(table: pd.DataFrame, path: Path) -> None:
     ax.errorbar(d, ypos, xerr=[d - np.array(lo), np.array(hi) - d], fmt="o", capsize=3, color="#3266ad")
     ax.axvline(0, color="#888", lw=1)
     ax.set_yticks(ypos, labels)
-    ax.set_xlabel("Δ predicted acceptance vs. that SAE's no-ablation control (pp, 95% CI)")
-    ax.set_title("Offline SAE ablation on real layer-33 activations (validation)")
+    ax.set_xlabel(xlabel)
+    ax.set_title(title)
     fig.tight_layout()
     fig.savefig(path, format="svg")
     plt.close(fig)
