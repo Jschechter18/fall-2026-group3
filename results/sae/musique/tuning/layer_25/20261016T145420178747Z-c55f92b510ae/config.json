@@ -1,0 +1,41 @@
+{
+  "activation_run_name": "natural_4b_full9_partitioned",
+  "layer": 25,
+  "defaults": {
+    "latent_dim": 12888,
+    "epochs": 200,
+    "batch_size": 256,
+    "seed": 42,
+    "train_shuffle": true,
+    "patience": 20,
+    "early_stopping_min_delta": 0.0001,
+    "lr_patience": 5,
+    "inactivity_window_examples": 10000
+  },
+  "groups": [
+    {
+      "name": "l1_coarse",
+      "fixed": {
+        "sparsity_mode": "l1",
+        "tied_initialization": true,
+        "aux_coefficient": 0.0
+      },
+      "grid": {
+        "lr": [
+          0.0001,
+          0.0003
+        ],
+        "sparsity_coefficient": [
+          2.0,
+          3.0,
+          4.0,
+          5.0,
+          7.0
+        ]
+      }
+    }
+  ],
+  "selection": {
+    "max_mean_active_features": 128
+  }
+}
