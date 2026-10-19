@@ -210,6 +210,8 @@ Local paths are mirrored beneath the group S3 prefix:
 | ------------------- | ---------------------------------------------------- |
 | `data/activations/` | `s3://dats-capstone/shared/group3/data/activations/` |
 | `results/sae/`      | `s3://dats-capstone/shared/group3/results/sae/`      |
+| `results/causal_replay/` | `s3://dats-capstone/shared/group3/results/causal_replay/` |
+| `results/collection/` (`interactions.jsonl`) | `s3://dats-capstone/shared/group3/results/collection/` |
 
 ### Upload Activations
 
