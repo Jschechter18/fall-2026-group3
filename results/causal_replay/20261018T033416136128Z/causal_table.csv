@@ -1,0 +1,21 @@
+Experiment,Condition,Outcome,N,Acceptance Rate (%),Δ vs. SAE Control (pp),95% CI for Δ,p-value
+Baseline,No SAE (stored A2),observed,517,88.58800773694391,,,
+Baseline,No SAE (replayed A2),regenerated,517,88.58800773694391,,,
+TopK SAE,No ablation,regenerated,517,86.65377176015474,Reference,,
+TopK SAE,Random ablation,regenerated,517,86.47001934235978,-0.18375241779497103,"[-0.69, 0.23]",0.4891510848915108
+TopK SAE,Targeted ablation,regenerated,517,85.88007736943906,-0.7736943907156674,"[-1.55, -0.19]",0.12068793120687932
+TopK SAE · error-preserving,No ablation (= plain replay),regenerated,517,88.58800773694391,Reference,,
+TopK SAE · error-preserving,Random ablation,regenerated,517,88.44294003868471,-0.1450676982591876,"[-0.42, 0.04]",0.25517448255174485
+TopK SAE · error-preserving,Targeted ablation,regenerated,517,88.39458413926499,-0.19342359767891684,"[-0.77, 0.00]",1.0
+L1 SAE,No ablation,regenerated,517,85.68665377176016,Reference,,
+L1 SAE,Random ablation,regenerated,517,85.45454545454545,-0.23210831721470018,"[-0.43, -0.09]",0.0024997500249975004
+L1 SAE,Targeted ablation,regenerated,517,85.68665377176016,0.0,"[-0.97, 1.16]",1.0
+L1 SAE · error-preserving,No ablation (= plain replay),regenerated,517,88.58800773694391,Reference,,
+L1 SAE · error-preserving,Random ablation,regenerated,517,88.4139264990329,-0.17408123791102512,"[-0.35, -0.04]",0.014498550144985502
+L1 SAE · error-preserving,Targeted ablation,regenerated,517,88.00773694390716,-0.5802707930367506,"[-1.55, 0.19]",0.3805619438056194
+Pretrained SAE,No ablation,regenerated,517,88.20116054158608,Reference,,
+Pretrained SAE,Random ablation,regenerated,517,88.11411992263056,-0.08704061895551259,"[-0.19, -0.01]",0.06359364063593641
+Pretrained SAE,Targeted ablation,regenerated,517,88.20116054158608,0.0,"[0.00, 0.00]",1.0
+Pretrained SAE · error-preserving,No ablation (= plain replay),regenerated,517,88.58800773694391,Reference,,
+Pretrained SAE · error-preserving,Random ablation,regenerated,517,88.58800773694391,0.0,"[0.00, 0.00]",1.0
+Pretrained SAE · error-preserving,Targeted ablation,regenerated,517,88.58800773694391,0.0,"[0.00, 0.00]",1.0
