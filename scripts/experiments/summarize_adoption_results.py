@@ -1,10 +1,10 @@
 """Export paired preliminary presentation tables from completed adoption runs."""
 import argparse
-from collections import Counter
-import csv
-import hashlib
 import json
 from pathlib import Path
+
+from mas_sae.experiments.artifacts import sha256_file as sha
+from mas_sae.experiments.records import read_jsonl, write_csv
 
 METHODS = [
     ("Original revision baseline", "controlled_100q", {}),
@@ -15,10 +15,6 @@ METHODS = [
     ("Anonymous candidates: critic first", "anonymization_100q", {"instruction_condition": "anonymous", "candidate_order": "critic_first"}),
     ("Labeled candidates: randomized order", "randomized_order_100q", {}),
 ]
-
-
-def sha(path):
-    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def read_methods(root):
@@ -38,7 +34,7 @@ def read_methods(root):
                 sample_hash = provenance["sample_sha256"]
             if provenance["sample_sha256"] != sample_hash:
                 raise ValueError("Runs use different question samples")
-            cache[folder] = [json.loads(line) for line in (directory / "episodes.jsonl").read_text().splitlines() if line.strip()]
+            cache[folder] = read_jsonl(directory / "episodes.jsonl")
             for filename in ("summary.json", "provenance.json", "episodes.jsonl"):
                 path = directory / filename
                 input_hashes[str(path)] = sha(path)
@@ -82,13 +78,6 @@ def summarize(name, rows):
                 retained_against_correct=sum(r["retained_a1"] for r in correct),
                 other_against_correct=sum(not r["adopted_target"] and not r["retained_a1"] for r in correct),
                 final_correct=sum(r["a2_correct"] for r in rows))
-
-
-def write_csv(path, rows):
-    with path.open("w", newline="", encoding="utf-8") as file:
-        writer = csv.DictWriter(file, fieldnames=list(rows[0]))
-        writer.writeheader()
-        writer.writerows(rows)
 
 
 def table(headers, rows):
@@ -227,24 +216,9 @@ A fixed first-candidate heuristic scored {100 * heuristic['balanced_accuracy']:.
 - provenance.json: input checksums and source sample checksum.
 '''
     if args.natural_run:
-        from mas_sae.experiments.natural_adoption import CONDITIONS, PROTOCOL, summarize_natural
+        from mas_sae.experiments.natural_adoption import CONDITIONS, load_natural_run
         natural_path = args.natural_run
-        natural_summary = json.loads((natural_path / "summary.json").read_text())
-        natural_provenance = json.loads((natural_path / "provenance.json").read_text())
-        if natural_summary.get("protocol") != PROTOCOL or natural_provenance.get("protocol") != PROTOCOL:
-            raise ValueError("Expected completed Natural paired experiment")
-        natural_records = [json.loads(line) for line in (natural_path / "episodes.jsonl").read_text().splitlines() if line.strip()]
-        natural_index = {(r["question_id"], r["instruction_condition"]): r for r in natural_records}
-        ids = {r["question_id"] for r in natural_records}
-        if not ids or len(natural_index) != len(natural_records) or set(natural_index) != {(qid, c) for qid in ids for c in CONDITIONS}:
-            raise ValueError("Natural results must contain exactly two paired records per question")
-        for qid in ids:
-            a, b = (natural_index[(qid, c)] for c in CONDITIONS)
-            for key in ("question", "context", "ground_truth", "solver_attempt_1", "critic_advocated_answer", "critic_feedback", "candidate_order"):
-                if a[key] != b[key]:
-                    raise ValueError(f"Unpaired Natural inputs: {qid}, {key}")
-        if summarize_natural(natural_records) != natural_summary:
-            raise ValueError("Natural summary does not match saved episodes")
+        natural_summary = load_natural_run(natural_path)
         natural_table = [{"method": c, **natural_summary["conditions"][c]} for c in CONDITIONS]
         write_csv(args.output / "natural_slide_table.csv", natural_table)
         headers = ["Condition", "Questions", "Adopted", "Retained A1", "Other", "Overlap", "A2 correct"]

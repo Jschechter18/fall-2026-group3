@@ -466,3 +466,15 @@ PYTHONPATH=src python scripts/experiments/summarize_adoption_results.py \
 The controlled chart remains controlled-only. The report appends the Natural
 section and exports `natural_slide_table.csv` without pooling or assuming that
 the Natural and controlled question samples match.
+
+### Code organization
+
+The experiment CLI shares sample checksum verification and validated training-row
+selection through `experiments/adoption_experiment.py`. Natural coherence joining
+and completed-run validation live in `experiments/natural_adoption.py`, so analysis
+code can reuse them without invoking the CLI. Protocol runners share
+`evaluation/scoring.score_revision`, with the gold-alias adoption policy supplied
+explicitly by each protocol. File hashes and prompt hashes use `experiments/artifacts`;
+JSONL and flat CSV I/O use `experiments/records`. The original sample checksum
+serialization is retained for compatibility. Protocol prompts, sampling, generation
+order, scoring policies and output schemas are unchanged by this refactor.

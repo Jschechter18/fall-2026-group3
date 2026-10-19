@@ -13,6 +13,7 @@ from mas_sae.agents.solver import Solver
 from mas_sae.data.musique import hop_group
 from mas_sae.evaluation.behavior_labels import classify_candidate
 from mas_sae.evaluation.scoring import answer_matches
+from mas_sae.experiments.artifacts import sha256_text
 from mas_sae.experiments.records import append_jsonl
 
 ARMS = ("original", "no_verdict", "answer_only", "no_feedback")
@@ -27,6 +28,15 @@ def digest(value):
     return hashlib.sha256(json.dumps(value, sort_keys=True).encode()).hexdigest()
 
 
+def load_sample(path, *, checksum_error="Sample/config checksum mismatch"):
+    """Read a frozen sample and return its payload and verified legacy checksum."""
+    packet = json.loads(Path(path).read_text())
+    expected = packet.pop("sha256")
+    if digest(packet) != expected:
+        raise ValueError(checksum_error)
+    return packet, expected
+
+
 def stratum(row):
     def flag(value):
         return str(value) if type(value) is bool else "unknown"
@@ -35,20 +45,17 @@ def stratum(row):
                        "critic=" + flag(row.get("critic_feedback_correct"))))
 
 
-def sample_rows(rows, partitions_path, size=100, seed=42):
-    """Equal allocation across available correctness × hop strata, capped by capacity.
+def training_natural_rows(rows, partitions_path):
+    """Validate source episodes and return only frozen MuSiQue-training members.
 
-    Membership comes exclusively from the frozen research partition file.
-    No selection uses A2 or its adoption label.
+    Preserve input order; do not inspect A2, eligibility or behavior labels.
     """
-    if size <= 0:
-        raise ValueError("size must be positive")
     with open(partitions_path, newline="") as f:
         entries = list(csv.DictReader(f))
     partitions = {r["question_id"]: r for r in entries}
     if len(partitions) != len(entries):
         raise ValueError("Duplicate question IDs in partition file")
-    groups = defaultdict(list)
+    selected = []
     seen = set()
     for row in rows:
         if row.get("critic_condition") != "natural":
@@ -67,6 +74,20 @@ def sample_rows(rows, partitions_path, size=100, seed=42):
         for key in ("question", "solver_attempt_1", "critic_feedback", "ground_truth"):
             if not isinstance(row.get(key), str) or not row[key].strip():
                 raise ValueError(f"{qid}: missing {key}")
+        selected.append(row)
+    return selected
+
+
+def sample_rows(rows, partitions_path, size=100, seed=42):
+    """Equal allocation across available correctness × hop strata, capped by capacity.
+
+    Membership comes exclusively from the frozen research partition file.
+    No selection uses A2 or its adoption label.
+    """
+    if size <= 0:
+        raise ValueError("size must be positive")
+    groups = defaultdict(list)
+    for row in training_natural_rows(rows, partitions_path):
         groups[stratum(row)].append(row)
     if sum(map(len, groups.values())) < size:
         raise ValueError("Not enough training questions for requested sample")
@@ -138,7 +159,7 @@ def run_experiment(rows, examples, solver, output_dir, provenance=None):
                                                     row["solver_attempt_1"], feedback)
                 a2 = solver.revise(row["question"], example["paragraphs"], row["solver_attempt_1"], feedback)
                 record.update(status="completed", solver_attempt_2=a2,
-                              prompt_sha256=hashlib.sha256(prompt.encode()).hexdigest(),
+                              prompt_sha256=sha256_text(prompt),
                               generation=getattr(solver, "last_generation", None),
                               historical_a2=row.get("solver_attempt_2"),
                               a1_correct=answer_matches(row["solver_attempt_1"], example["answer"], example.get("answer_aliases", [])),

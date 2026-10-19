@@ -92,6 +92,13 @@ def test_paired_run_preserves_natural_inputs_and_exports_separate_table(tmp_path
     runpy.run_path(str(root / "scripts/experiments/summarize_adoption_results.py"), run_name="__main__")
     assert (report / "natural_slide_table.csv").exists()
     assert "separate paired sample" in (report / "presentation_summary.md").read_text()
+    from mas_sae.experiments.natural_adoption import load_natural_run
+    assert load_natural_run(output) == summary
+    summary_path = output / "summary.json"
+    summary_path.write_text(json.dumps({**summary, "paired": {}}))
+    with pytest.raises(ValueError, match="summary does not match"):
+        load_natural_run(output)
+    summary_path.write_text(json.dumps(summary, indent=2) + "\n")
     with pytest.raises(FileExistsError):
         run_natural(rows, {row["question_id"]: ex}, Original(), Candidate(), output)
 

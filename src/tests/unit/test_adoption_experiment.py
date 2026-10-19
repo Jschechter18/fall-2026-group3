@@ -96,3 +96,21 @@ def test_paired_replay_and_automatic_outputs(tmp_path):
     assert not (output / "review_private_key.json").exists()
     with pytest.raises(FileExistsError):
         run_experiment([row], {example["id"]: example}, solver, output)
+
+
+def test_load_sample_accepts_existing_manifest_and_rejects_tampering(tmp_path):
+    from pathlib import Path
+    from mas_sae.experiments.adoption_experiment import load_sample
+
+    # Compatibility with the existing checksum format, not a newly generated one.
+    original = Path(__file__).resolve().parents[3] / "results/adoption_experiment/sample_100q/sample.json"
+    packet, checksum = load_sample(original)
+    assert len(packet["rows"]) == 100
+    assert checksum == json.loads(original.read_text())["sha256"]
+    packet["seed"] += 1
+    path = tmp_path / "tampered.json"
+    path.write_text(json.dumps({**packet, "sha256": checksum}))
+    with pytest.raises(ValueError, match="Sample/config checksum mismatch"):
+        load_sample(path)
+    with pytest.raises(ValueError, match="Excluded sample checksum mismatch"):
+        load_sample(path, checksum_error="Excluded sample checksum mismatch")

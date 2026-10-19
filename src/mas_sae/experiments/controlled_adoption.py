@@ -5,7 +5,6 @@ are target-generation instructions, not independently established properties.
 """
 from collections import Counter
 from dataclasses import asdict
-import hashlib
 import json
 import logging
 from pathlib import Path
@@ -13,11 +12,12 @@ from pathlib import Path
 from mas_sae.agents.critic import Critic, CriticCondition, CriticFeedback, _parse_answer_json
 from mas_sae.agents.solver import Solver
 from mas_sae.evaluation.behavior_labels import answer_kind, classify_candidate
-from mas_sae.evaluation.scoring import answer_matches
+from mas_sae.evaluation.scoring import answer_matches, score_revision
 from mas_sae.experiments.adoption_experiment import stratum
 from mas_sae.experiments.controlled_targets import (
     MAX_TARGET_WORDS, ControlledTargetError, choose_controlled_incorrect_target,
 )
+from mas_sae.experiments.artifacts import sha256_text
 from mas_sae.experiments.records import append_jsonl
 
 logger = logging.getLogger(__name__)
@@ -182,11 +182,11 @@ def run_controlled(rows, examples, solver, proposer, output_dir, provenance=None
                 a2 = solver.revise(row["question"], example["paragraphs"], row["solver_attempt_1"], feedback)
                 record.update(status="completed", critic_feedback=feedback, critic_advocated_answer=answer,
                               critic_noncommittal=False, solver_attempt_2=a2,
-                              prompt_sha256=hashlib.sha256(prompt.encode()).hexdigest(),
+                              prompt_sha256=sha256_text(prompt),
                               generation=dict(getattr(solver, "last_generation", None) or {}),
-                              a2_correct=answer_matches(a2, example["answer"], example.get("answer_aliases", [])),
-                              adopted_target=answer_matches(a2, answer, example.get("answer_aliases", []) if arm == "correct_correction" else ()),
-                              retained_a1=answer_matches(a2, row["solver_attempt_1"]))
+                              **score_revision(a2, row["solver_attempt_1"], answer, example["answer"],
+                                               example.get("answer_aliases", []),
+                                               accept_gold_aliases=arm == "correct_correction"))
                 record["candidate_label"] = classify_candidate(record)
             append_jsonl(output / "episodes.jsonl", record)
             records.append(record)

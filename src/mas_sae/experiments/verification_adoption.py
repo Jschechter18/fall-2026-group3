@@ -1,14 +1,13 @@
 """Paired original versus evidence-verification instructions on frozen feedback."""
 import csv
-import hashlib
 import json
 import logging
 from pathlib import Path
 
 from mas_sae.agents.solver import Solver
 from mas_sae.evaluation.behavior_labels import classify_candidate
-from mas_sae.evaluation.scoring import answer_matches
-from mas_sae.experiments.artifacts import sha256_file
+from mas_sae.evaluation.scoring import answer_matches, score_revision
+from mas_sae.experiments.artifacts import sha256_file, sha256_text
 from mas_sae.experiments.controlled_adoption import ARMS, PROTOCOL as SOURCE_PROTOCOL, summarize_controlled
 from mas_sae.experiments.records import append_jsonl, read_jsonl
 
@@ -184,10 +183,10 @@ def run_verification(rows, examples, sources, solvers, output_dir, provenance=No
                     prompt = solver.build_revise_prompt(source["question"], example["paragraphs"], source["solver_attempt_1"], source["critic_feedback"])
                     a2 = solver.revise(source["question"], example["paragraphs"], source["solver_attempt_1"], source["critic_feedback"])
                     record.update(solver_attempt_2=a2, generation=dict(getattr(solver, "last_generation", None) or {}),
-                                  prompt_sha256=hashlib.sha256(prompt.encode()).hexdigest(),
-                                  a2_correct=answer_matches(a2, example["answer"], example.get("answer_aliases", [])),
-                                  adopted_target=answer_matches(a2, source["critic_advocated_answer"], example.get("answer_aliases", []) if source["arm"] == "correct_correction" else ()),
-                                  retained_a1=answer_matches(a2, source["solver_attempt_1"]),
+                                  prompt_sha256=sha256_text(prompt),
+                                  **score_revision(a2, source["solver_attempt_1"], source["critic_advocated_answer"],
+                                                   example["answer"], example.get("answer_aliases", []),
+                                                   accept_gold_aliases=source["arm"] == "correct_correction"),
                                   matches_source_a2=answer_matches(a2, source["solver_attempt_2"]))
                     record["candidate_label"] = classify_candidate(record)
                 append_jsonl(output / "episodes.jsonl", record)

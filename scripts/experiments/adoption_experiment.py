@@ -1,15 +1,20 @@
 """Prepare a frozen sample and run feedback, instruction, and anonymity experiments."""
 import argparse
-import csv
 import json
 import logging
 from pathlib import Path
 
 import yaml
 
-from mas_sae.experiments.adoption_experiment import digest, run_experiment, sample_rows
+from mas_sae.experiments.adoption_experiment import digest, load_sample, run_experiment, sample_rows
 from mas_sae.experiments.artifacts import sha256_file
 from mas_sae.experiments.records import read_jsonl, write_jsonl
+
+
+def experiment_source_sha(filename):
+    """Hash an experiment implementation relative to this CLI's repository."""
+    directory = Path(__file__).resolve().parents[2] / "src/mas_sae/experiments"
+    return sha256_file(directory / filename)
 
 
 def main():
@@ -68,25 +73,10 @@ def main():
         source_rows = read_jsonl(args.interactions)
         natural_metadata = {}
         if args.command == "prepare-natural":
-            from mas_sae.experiments.natural_adoption import SAMPLE_PROTOCOL, screen_natural
-            # Validate source IDs/partitions before filtering any rows.
-            sample_rows(source_rows, args.partitions, size=1, seed=args.seed)
-            with args.partitions.open(newline="") as file:
-                train_ids = {r["question_id"] for r in csv.DictReader(file)
-                             if r["partition"] == "train" and r["source_split"] == "train"}
-            source_rows = [r for r in source_rows if r.get("critic_condition") == "natural" and r["question_id"] in train_ids]
-            excluded = set()
-            if args.exclude_sample:
-                previous = json.loads(args.exclude_sample.read_text())
-                previous_hash = previous.pop("sha256")
-                if digest(previous) != previous_hash:
-                    raise ValueError("Excluded sample checksum mismatch")
-                excluded = {r["question_id"] for r in previous["rows"]}
-            source_rows = [r for r in source_rows if r["question_id"] not in excluded]
-            with args.audit.open(newline="") as file:
-                source_rows, screening = screen_natural(source_rows, list(csv.DictReader(file)))
-            natural_metadata = {"screening": screening, "excluded_prior_questions": len(excluded),
-                                "eligibility": "automatic_screen_only_not_human_confirmed"}
+            from mas_sae.experiments.natural_adoption import SAMPLE_PROTOCOL, prepare_natural_pool
+            source_rows, natural_metadata = prepare_natural_pool(
+                source_rows, args.partitions, args.audit, args.exclude_sample,
+            )
         selected, sampling = sample_rows(source_rows, args.partitions, args.size, args.seed)
         packet = {"protocol": "adoption_feedback_ablation_v1", "seed": args.seed,
                   "solver": spec, "dataset": config["dataset"], "sampling": sampling,
@@ -104,10 +94,7 @@ def main():
         print(f"Prepared {len(selected)} questions across {len(sampling)} strata: {args.output / 'sample.json'}")
         return
 
-    packet = json.loads(args.sample.read_text())
-    expected = packet.pop("sha256")
-    if digest(packet) != expected:
-        raise ValueError("Sample/config checksum mismatch")
+    packet, expected = load_sample(args.sample)
     wanted_protocol = "adoption_natural_sample_v1" if args.command == "run-natural" else "adoption_feedback_ablation_v1"
     if packet["protocol"] != wanted_protocol:
         raise ValueError("Unsupported adoption experiment protocol")
@@ -123,13 +110,13 @@ def main():
     seed_everything(packet["seed"])
     examples = load_musique_examples_by_id("train", [r["question_id"] for r in packet["rows"]],
                                          revision=packet["dataset"]["revision"])
+    examples = {e["id"]: e for e in examples}
     if args.command in {"run-verification", "run-anonymization", "run-randomized-order"}:
-        validate_sources(packet["rows"], {e["id"]: e for e in examples}, source_records)
+        validate_sources(packet["rows"], examples, source_records)
     if args.command == "run-natural":
         # Validate pinned input before loading model weights.
-        by_id = {e["id"]: e for e in examples}
         for row in packet["rows"]:
-            if row["question"] != by_id[row["question_id"]]["question"] or row["ground_truth"] != by_id[row["question_id"]]["answer"]:
+            if row["question"] != examples[row["question_id"]]["question"] or row["ground_truth"] != examples[row["question_id"]]["answer"]:
                 raise ValueError("Natural sample differs from pinned dataset")
     weights = load_role_models({"solver": packet["solver"]})
     solver = Solver(*weights["solver"])
@@ -137,18 +124,19 @@ def main():
     provenance = {
         "sample_sha256": expected, "solver": packet["solver"], "dataset": packet["dataset"],
         "revise_template": Solver.REVISE_PROMPT_V1,
-        "implementation_sha256": sha256_file(Path(__file__).resolve().parents[2] / "src/mas_sae/experiments/adoption_experiment.py"),
+        "implementation_sha256": experiment_source_sha("adoption_experiment.py"),
         "cli_sha256": sha256_file(Path(__file__)),
     }
-    if args.command == "run-natural":
+    if args.command in {"run-natural", "run-anonymization", "run-randomized-order"}:
         from mas_sae.experiments.anonymized_adoption import CandidateSolver
-        from mas_sae.experiments.natural_adoption import run_natural
         candidate_solver = CandidateSolver(*weights["solver"])
         configure_agent(candidate_solver, packet["solver"])
+    if args.command == "run-natural":
+        from mas_sae.experiments.natural_adoption import run_natural
         provenance.update(screening=packet["screening"], input_hashes=packet["input_hashes"],
-                          implementation_hashes={name: sha256_file(Path(__file__).resolve().parents[2] / "src/mas_sae/experiments" / name)
+                          implementation_hashes={name: experiment_source_sha(name)
                               for name in ("natural_adoption.py", "randomized_adoption.py", "anonymized_adoption.py")})
-        summary = run_natural(packet["rows"], {e["id"]: e for e in examples}, solver, candidate_solver,
+        summary = run_natural(packet["rows"], examples, solver, candidate_solver,
                               args.output, seed=args.order_seed, provenance=provenance)
     elif args.command == "run-controlled":
         from mas_sae.experiments.controlled_adoption import (
@@ -162,39 +150,34 @@ def main():
         configure_agent(proposer, proposer_spec)
         provenance.update(protocol=PROTOCOL, target_generator=proposer_spec,
                           target_generator_prompt=PROPOSAL_PROMPT, target_generator_rules=GENERATOR_RULES,
-                          controlled_implementation_sha256=sha256_file(Path(__file__).resolve().parents[2] / "src/mas_sae/experiments/controlled_adoption.py"),
-                          controlled_targets_sha256=sha256_file(Path(__file__).resolve().parents[2] / "src/mas_sae/experiments/controlled_targets.py"))
-        summary = run_controlled(packet["rows"], {e["id"]: e for e in examples}, solver, proposer,
+                          controlled_implementation_sha256=experiment_source_sha("controlled_adoption.py"),
+                          controlled_targets_sha256=experiment_source_sha("controlled_targets.py"))
+        summary = run_controlled(packet["rows"], examples, solver, proposer,
                                  args.output, provenance=provenance)
     elif args.command == "run-verification":
         from mas_sae.experiments.verification_adoption import EvidenceVerificationSolver, run_verification
         verification_solver = EvidenceVerificationSolver(*weights["solver"])
         configure_agent(verification_solver, packet["solver"])
         provenance.update(controlled_run=str(args.controlled_run), source_hashes=source_hashes,
-                          verification_implementation_sha256=sha256_file(Path(__file__).resolve().parents[2] / "src/mas_sae/experiments/verification_adoption.py"))
-        summary = run_verification(packet["rows"], {e["id"]: e for e in examples}, source_records,
+                          verification_implementation_sha256=experiment_source_sha("verification_adoption.py"))
+        summary = run_verification(packet["rows"], examples, source_records,
                                    {"original": solver, "evidence_verification": verification_solver},
                                    args.output, provenance=provenance)
     elif args.command == "run-anonymization":
-        from mas_sae.experiments.anonymized_adoption import CandidateSolver, run_anonymization
-        candidate_solver = CandidateSolver(*weights["solver"])
-        configure_agent(candidate_solver, packet["solver"])
+        from mas_sae.experiments.anonymized_adoption import run_anonymization
         provenance.update(controlled_run=str(args.controlled_run), source_hashes=source_hashes,
-                          anonymization_implementation_sha256=sha256_file(Path(__file__).resolve().parents[2] / "src/mas_sae/experiments/anonymized_adoption.py"))
-        summary = run_anonymization(packet["rows"], {e["id"]: e for e in examples}, source_records,
+                          anonymization_implementation_sha256=experiment_source_sha("anonymized_adoption.py"))
+        summary = run_anonymization(packet["rows"], examples, source_records,
                                     candidate_solver, args.output, provenance=provenance)
     elif args.command == "run-randomized-order":
-        from mas_sae.experiments.anonymized_adoption import CandidateSolver
         from mas_sae.experiments.randomized_adoption import run_randomized_order
-        candidate_solver = CandidateSolver(*weights["solver"])
-        configure_agent(candidate_solver, packet["solver"])
         provenance.update(controlled_run=str(args.controlled_run), source_hashes=source_hashes,
-                          randomized_implementation_sha256=sha256_file(Path(__file__).resolve().parents[2] / "src/mas_sae/experiments/randomized_adoption.py"),
-                          candidate_implementation_sha256=sha256_file(Path(__file__).resolve().parents[2] / "src/mas_sae/experiments/anonymized_adoption.py"))
-        summary = run_randomized_order(packet["rows"], {e["id"]: e for e in examples}, source_records,
+                          randomized_implementation_sha256=experiment_source_sha("randomized_adoption.py"),
+                          candidate_implementation_sha256=experiment_source_sha("anonymized_adoption.py"))
+        summary = run_randomized_order(packet["rows"], examples, source_records,
                                        candidate_solver, args.output, seed=args.order_seed, provenance=provenance)
     else:
-        summary = run_experiment(packet["rows"], {e["id"]: e for e in examples}, solver, args.output, provenance=provenance)
+        summary = run_experiment(packet["rows"], examples, solver, args.output, provenance=provenance)
     print(json.dumps(summary, indent=2))
 
 

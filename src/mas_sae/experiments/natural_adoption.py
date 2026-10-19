@@ -5,18 +5,18 @@ combined audit candidate_status and correctness never decide inclusion.
 """
 from collections import Counter
 import csv
-import hashlib
 import json
 from pathlib import Path
 
 from mas_sae.agents.critic import Critic
 from mas_sae.agents.solver import Solver
 from mas_sae.evaluation.behavior import textual_relation
-from mas_sae.evaluation.scoring import answer_matches
-from mas_sae.experiments.adoption_experiment import stratum
-from mas_sae.experiments.anonymized_adoption import CANDIDATE_TEMPLATE
+from mas_sae.evaluation.scoring import answer_matches, score_revision
+from mas_sae.experiments.adoption_experiment import load_sample, stratum, training_natural_rows
+from mas_sae.experiments.anonymized_adoption import CANDIDATE_TEMPLATE, ORDERS
 from mas_sae.experiments.randomized_adoption import assign_orders, order_only_baseline
-from mas_sae.experiments.records import append_jsonl
+from mas_sae.experiments.artifacts import sha256_text
+from mas_sae.experiments.records import append_jsonl, read_jsonl, write_csv
 
 SAMPLE_PROTOCOL = "adoption_natural_sample_v1"
 PROTOCOL = "adoption_natural_paired_v1"
@@ -71,6 +71,26 @@ def screen_natural(rows, audit_rows):
     return selected, {"input_questions": len(rows), "screen_pass": len(selected), "excluded": dict(counts)}
 
 
+def prepare_natural_pool(rows, partitions_path, audit_path, exclude_sample=None):
+    """Validate training membership, exclude prior questions, then join coherence.
+
+    Return the screened pool and selection metadata; sampling remains the caller's
+    responsibility. Existing behavior labels and historical A2 never filter rows.
+    """
+    rows = training_natural_rows(rows, partitions_path)
+    if not rows:
+        raise ValueError("Not enough training questions for requested sample")
+    excluded = set()
+    if exclude_sample:
+        previous, _ = load_sample(exclude_sample, checksum_error="Excluded sample checksum mismatch")
+        excluded = {r["question_id"] for r in previous["rows"]}
+    rows = [r for r in rows if r["question_id"] not in excluded]
+    with Path(audit_path).open(newline="") as file:
+        rows, screening = screen_natural(rows, list(csv.DictReader(file)))
+    return rows, {"screening": screening, "excluded_prior_questions": len(excluded),
+                  "eligibility": "automatic_screen_only_not_human_confirmed"}
+
+
 def summarize_natural(records):
     def counts(rows):
         return dict(trials=len(rows), questions=len({r["question_id"] for r in rows}),
@@ -94,9 +114,31 @@ def summarize_natural(records):
                        "accuracy_gains": sum(not a["a2_correct"] and b["a2_correct"] for a, b in pairs),
                        "accuracy_losses": sum(a["a2_correct"] and not b["a2_correct"] for a, b in pairs),
                        "original_matches_historical_a2": sum(a["matches_historical_a2"] for a, _ in pairs)},
-            "by_candidate_order": {o: counts([r for r in candidate if r["candidate_order"] == o]) for o in ("a1_first", "critic_first")},
+            "by_candidate_order": {o: counts([r for r in candidate if r["candidate_order"] == o]) for o in ORDERS},
             "order_only_baseline": order_only_baseline(candidate),
             "note": "Natural recommendations, separate from controlled targets. Original receives full feedback; candidates receive answer only. Automatic lexical labels and eligibility require semantic review. No activation capture."}
+
+
+def load_natural_run(directory):
+    """Load a completed run only if paired inputs and saved summary agree."""
+    natural_path = Path(directory)
+    natural_summary = json.loads((natural_path / "summary.json").read_text())
+    natural_provenance = json.loads((natural_path / "provenance.json").read_text())
+    if natural_summary.get("protocol") != PROTOCOL or natural_provenance.get("protocol") != PROTOCOL:
+        raise ValueError("Expected completed Natural paired experiment")
+    natural_records = read_jsonl(natural_path / "episodes.jsonl")
+    natural_index = {(r["question_id"], r["instruction_condition"]): r for r in natural_records}
+    ids = {r["question_id"] for r in natural_records}
+    if not ids or len(natural_index) != len(natural_records) or set(natural_index) != {(qid, c) for qid in ids for c in CONDITIONS}:
+        raise ValueError("Natural results must contain exactly two paired records per question")
+    for qid in ids:
+        a, b = (natural_index[(qid, c)] for c in CONDITIONS)
+        for key in ("question", "context", "ground_truth", "solver_attempt_1", "critic_advocated_answer", "critic_feedback", "candidate_order"):
+            if a[key] != b[key]:
+                raise ValueError(f"Unpaired Natural inputs: {qid}, {key}")
+    if summarize_natural(natural_records) != natural_summary:
+        raise ValueError("Natural summary does not match saved episodes")
+    return natural_summary
 
 
 def run_natural(rows, examples, solver, candidate_solver, output_dir, seed=42, provenance=None):
@@ -136,8 +178,9 @@ def run_natural(rows, examples, solver, candidate_solver, output_dir, seed=42, p
                     prompt = candidate_solver.build_candidate_prompt(row["question"], ex["paragraphs"], a1, target, "labeled", assignments[qid])
                     agent = candidate_solver
                 a2 = agent._generate(prompt)
-                adopted = answer_matches(a2, target, ex.get("answer_aliases", []) if correct else ())
-                retained = answer_matches(a2, a1)
+                scores = score_revision(a2, a1, target, ex["answer"], ex.get("answer_aliases", []),
+                                        accept_gold_aliases=correct)
+                adopted, retained = scores["adopted_target"], scores["retained_a1"]
                 response = "ambiguous_overlap" if adopted and retained else "adopted" if adopted else "retained_a1" if retained else "other"
                 record = dict(protocol=PROTOCOL, label_version=LABEL_VERSION, recommendation_source="natural",
                               question_id=qid, arm="natural", instruction_condition=condition, status="completed",
@@ -146,11 +189,11 @@ def run_natural(rows, examples, solver, candidate_solver, output_dir, seed=42, p
                               answer_aliases=ex.get("answer_aliases", []), solver_attempt_1=a1,
                               critic_advocated_answer=target, critic_feedback=row["critic_feedback"],
                               historical_a2=row.get("solver_attempt_2"), evaluation_prompt=prompt,
-                              prompt_sha256=hashlib.sha256(prompt.encode()).hexdigest(),
+                              prompt_sha256=sha256_text(prompt),
                               solver_attempt_2=a2, adopted_target=adopted, retained_a1=retained,
                               response_class=response, recommendation_correct=correct,
                               a1_correct=answer_matches(a1, ex["answer"], ex.get("answer_aliases", [])),
-                              a2_correct=answer_matches(a2, ex["answer"], ex.get("answer_aliases", [])),
+                              a2_correct=scores["a2_correct"],
                               matches_historical_a2=answer_matches(a2, row.get("solver_attempt_2") or ""),
                               stratum=stratum(row), natural_screen=row["natural_screen"],
                               generation=dict(getattr(agent, "last_generation", None) or {}))
@@ -164,15 +207,10 @@ def run_natural(rows, examples, solver, candidate_solver, output_dir, seed=42, p
                 for key in ("solver_attempt_2", "response_class", "a2_correct", "adopted_target", "retained_a1"):
                     pair[f"{condition}_{key}"] = record[key]
             pairs.append(pair)
-    with (output / "comparisons.csv").open("w", newline="") as file:
-        writer = csv.DictWriter(file, fieldnames=list(pairs[0]))
-        writer.writeheader()
-        writer.writerows(pairs)
+    write_csv(output / "comparisons.csv", pairs)
     summary = summarize_natural(records)
-    with (output / "slide_table.csv").open("w", newline="") as file:
-        table = [{"recommendation_source": "natural", "method": c, **v} for c, v in summary["conditions"].items()]
-        writer = csv.DictWriter(file, fieldnames=list(table[0]))
-        writer.writeheader()
-        writer.writerows(table)
+    table = [{"recommendation_source": "natural", "method": c, **v}
+             for c, v in summary["conditions"].items()]
+    write_csv(output / "slide_table.csv", table)
     (output / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
     return summary

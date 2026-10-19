@@ -1,14 +1,14 @@
 """Cross source-label visibility with answer order on frozen controlled targets."""
 import csv
-import hashlib
 import json
 import logging
 from pathlib import Path
 
 from mas_sae.agents.solver import Solver
 from mas_sae.evaluation.behavior_labels import classify_candidate
-from mas_sae.evaluation.scoring import answer_matches
+from mas_sae.evaluation.scoring import answer_matches, score_revision
 from mas_sae.experiments.controlled_adoption import ARMS, summarize_controlled
+from mas_sae.experiments.artifacts import sha256_text
 from mas_sae.experiments.records import append_jsonl
 from mas_sae.experiments.verification_adoption import RESULT_COLUMNS, result_csv_row, validate_sources
 
@@ -140,8 +140,9 @@ def run_anonymization(rows, examples, sources, solver, output_dir, provenance=No
                     answers = {"a1": a1, "critic": target}
                     prompt = solver.build_candidate_prompt(source["question"], example["paragraphs"], a1, target, condition, order)
                     a2 = solver.compare_candidates(source["question"], example["paragraphs"], a1, target, condition, order)
-                    adopted = answer_matches(a2, target, example.get("answer_aliases", []) if source["arm"] == "correct_correction" else ())
-                    retained = answer_matches(a2, a1)
+                    scores = score_revision(a2, a1, target, example["answer"], example.get("answer_aliases", []),
+                                            accept_gold_aliases=source["arm"] == "correct_correction")
+                    adopted, retained = scores["adopted_target"], scores["retained_a1"]
                     selected = ("A" if first == "critic" else "B") if adopted else (("A" if first == "a1" else "B") if retained else "neither")
                     record.update(critic_advocated_answer=target, critic_noncommittal=False,
                                   source_feedback=source["critic_feedback"], source_a2=source["solver_attempt_2"],
@@ -149,8 +150,8 @@ def run_anonymization(rows, examples, sources, solver, output_dir, provenance=No
                                   candidate_a_source=first, candidate_b_source=second, selected_candidate=selected,
                                   evaluation_prompt=prompt, solver_attempt_2=a2,
                                   generation=dict(getattr(solver, "last_generation", None) or {}),
-                                  prompt_sha256=hashlib.sha256(prompt.encode()).hexdigest(),
-                                  a2_correct=answer_matches(a2, example["answer"], example.get("answer_aliases", [])),
+                                  prompt_sha256=sha256_text(prompt),
+                                  a2_correct=scores["a2_correct"],
                                   adopted_target=adopted, retained_a1=retained,
                                   matches_source_a2=answer_matches(a2, source["solver_attempt_2"]))
                     record["candidate_label"] = classify_candidate(record)
