@@ -155,12 +155,12 @@ or approval step is required.
 
 Outputs in `results/adoption_experiment/controlled_100q/`:
 
-| File | Contents |
-|---|---|
-| `provenance.json` | Source sample hash, model and dataset settings, fixed Solver template, proposal instructions and implementation hashes |
-| `targets.jsonl` | Per-question assigned targets and generation metadata, saved before any revision |
-| `episodes.jsonl` | Three condition records per sampled question, including skipped conditions; completed records include exact feedback, A2 and automatic scores |
-| `summary.json` | Per-arm adoption, retention, correctness, corrections, harms, hop breakdowns, skips and paired plausible/obvious comparisons |
+| File              | Contents                                                                                                                                      |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `provenance.json` | Source sample hash, model and dataset settings, fixed Solver template, proposal instructions and implementation hashes                        |
+| `targets.jsonl`   | Per-question assigned targets and generation metadata, saved before any revision                                                              |
+| `episodes.jsonl`  | Three condition records per sampled question, including skipped conditions; completed records include exact feedback, A2 and automatic scores |
+| `summary.json`    | Per-arm adoption, retention, correctness, corrections, harms, hop breakdowns, skips and paired plausible/obvious comparisons                  |
 
 For 100 sampled questions, `episodes.jsonl` ends at 300 records. This is **not 300
 solver revisions**: correct A1s get two revisions, wrong A1s get one, and excluded
@@ -214,13 +214,13 @@ not the scoring rules, and does not establish that the model actually verifies.
 
 Outputs are written to the new directory:
 
-| File | Contents |
-|---|---|
-| `results.csv` | All condition records: question, passages, gold, A1, recommendation, feedback, instruction condition, A2, adoption/retention/correctness, lexical response, correction/harm flags, source A2, target source/type check, status and telemetry |
-| `comparisons.csv` | One row per question/feedback arm, with both fresh A2s and outcomes side by side, plus adoption-to-retention transitions and accuracy gains/losses |
-| `episodes.jsonl` | Complete structured records for both instruction conditions |
-| `summary.json` | Per-condition/feedback-arm counts and rates, paired retention/adoption changes, accuracy gains/losses and original-prompt reproduction counts |
-| `provenance.json` | Both exact revision templates, model/dataset settings, sample/source hashes and implementation hashes |
+| File              | Contents                                                                                                                                                                                                                                     |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `results.csv`     | All condition records: question, passages, gold, A1, recommendation, feedback, instruction condition, A2, adoption/retention/correctness, lexical response, correction/harm flags, source A2, target source/type check, status and telemetry |
+| `comparisons.csv` | One row per question/feedback arm, with both fresh A2s and outcomes side by side, plus adoption-to-retention transitions and accuracy gains/losses                                                                                           |
+| `episodes.jsonl`  | Complete structured records for both instruction conditions                                                                                                                                                                                  |
+| `summary.json`    | Per-condition/feedback-arm counts and rates, paired retention/adoption changes, accuracy gains/losses and original-prompt reproduction counts                                                                                                |
+| `provenance.json` | Both exact revision templates, model/dataset settings, sample/source hashes and implementation hashes                                                                                                                                        |
 
 CSV files quote multiline context and feedback correctly. They include **all
 source skips**, with statuses and blank response/outcome cells; skips never count
@@ -259,12 +259,12 @@ It generates no new targets and loads only the configured solver weights. Add
 
 Every completed source trial has four cells:
 
-| Condition | Candidate A | Candidate B |
-|---|---|---|
-| `labeled`, `a1_first` | A1, labeled “your previous answer” | target, labeled “the reviewer's recommendation” |
-| `labeled`, `critic_first` | target, with its source label | A1, with its source label |
-| `anonymous`, `a1_first` | A1, without source label | target, without source label |
-| `anonymous`, `critic_first` | target, without source label | A1, without source label |
+| Condition                   | Candidate A                        | Candidate B                                     |
+| --------------------------- | ---------------------------------- | ----------------------------------------------- |
+| `labeled`, `a1_first`       | A1, labeled “your previous answer” | target, labeled “the reviewer's recommendation” |
+| `labeled`, `critic_first`   | target, with its source label      | A1, with its source label                       |
+| `anonymous`, `a1_first`     | A1, without source label           | target, without source label                    |
+| `anonymous`, `critic_first` | target, without source label       | A1, without source label                        |
 
 The instructions and candidate layout are identical across labeled and anonymous
 conditions; only the parenthetical source labels differ. Both use the same
@@ -313,3 +313,65 @@ scoring; candidate letters alone are not converted to answers. No human review
 step or activation collection is introduced. Historical revision answers are
 reference values, not a matched-layout control; use the fresh labeled cells to
 assess the source-label effect.
+
+## Results
+
+- Anonymously passing into the solver seems to help make the solver less prone to adoption
+- Anonymous did not improve overall accuracy, it only changed adoption rates
+
+## Randomized order with labeled candidates
+
+```bash
+python scripts/experiments/adoption_experiment.py run-randomized-order \
+  --sample results/adoption_experiment/sample_100q/sample.json \
+  --controlled-run results/adoption_experiment/controlled_100q \
+  --order-seed 42 \
+  --output results/adoption_experiment/randomized_order_100q
+```
+
+This uses the same labeled candidate prompt as the anonymization experiment, but
+runs only **one preassigned order per question**, rather than all four cells.
+It does not change the solver model, decoding, answer candidates, or instructions
+between orders. It does not generate new recommendations or select orders using
+A2 outcomes. No human annotation or activation capture is introduced.
+
+Order is block-randomized by hop group and recomputed A1 correctness. Within each
+block and across the sampled questions, the two order counts differ by at most
+one. The seed and sorted question IDs make assignment reproducible and independent
+of input ordering. All critic conditions of a question receive the same order;
+research partition membership is unchanged. The full mapping is written to
+`order_assignments.json` before any revised answer is generated.
+
+Assignment balances **questions**, not forced response labels. Target failures,
+source skips, and the differing number of critic conditions per question can
+leave completed trial counts less balanced. `summary.json` reports both assigned
+question counts and completed trial counts. Different seeds are separate planned
+replicates; do not choose a seed based on the resulting adoption rate.
+
+Outputs include:
+
+- `order_assignments.json`: one saved order per question.
+- `results.csv`: every assigned trial, with order, labeled candidates, exact prompt,
+  answer, adoption/retention/correctness, telemetry and source skips.
+- `comparisons.csv`: source A2 and new outcomes; `assigned_order` identifies the
+  populated labeled-order columns. Unassigned cells and source-skip outcomes
+  remain blank. No anonymous cells are run.
+- `episodes.jsonl`, `provenance.json`, `summary.json`: structured outputs, model and
+  input hashes, order seed, assignment counts, per-arm and per-order outcomes.
+
+The summary includes a fixed **order-only baseline**: predict adoption whenever
+the critic is first, and non-adoption otherwise. It reports accuracy, balanced
+accuracy when both outcome classes exist, a confusion matrix, and always/never
+adopt accuracies. Results are provided for all completed adoption/non-adoption
+trials and separately for strict adoption-versus-retention trials. The heuristic
+is not fit to these outcomes and is not a trained or held-out linear probe.
+Future probes should be evaluated by order and against an appropriate order-only
+baseline on their own held-out questions; all variants of one question stay in
+one partition.
+
+With the existing 98 completed source trials, this command makes **98 generations**
+and writes 300 trial records including source skips. Both output paths and source
+inputs remain separate from earlier experiments. The destination must be new;
+there is no resume support. CSV files update during execution; the summary is
+written on successful completion. Randomization prevents source identity from
+always occupying the same position, but does not remove the solver's position bias.

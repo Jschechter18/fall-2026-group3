@@ -98,29 +98,41 @@ PAIR_COLUMNS = PAIR_BASE + [f"{c}_{o}_{field}" for c, o in CELLS for field in
                            ("status", "solver_attempt_2", "adopted_target", "retained_a1", "a2_correct", "selected_candidate")]
 
 
-def run_anonymization(rows, examples, sources, solver, output_dir, provenance=None):
+def run_anonymization(rows, examples, sources, solver, output_dir, provenance=None, assigned_orders=None, order_seed=None):
     validate_sources(rows, examples, sources)
+    if assigned_orders is not None:
+        if set(assigned_orders) != {r["question_id"] for r in rows} or any(order not in ORDERS for order in assigned_orders.values()):
+            raise ValueError("Every sampled question must have exactly one valid assigned order")
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=False)
     metadata = {**(provenance or {}), "protocol": PROTOCOL, "candidate_template": CANDIDATE_TEMPLATE,
                 "source_labels": LABELS, "conditions": CONDITIONS, "orders": ORDERS}
+    if assigned_orders is not None:
+        from mas_sae.experiments.randomized_adoption import PROTOCOL as RANDOMIZED_PROTOCOL
+        metadata.update(protocol=RANDOMIZED_PROTOCOL, conditions=("labeled",), order_seed=order_seed,
+                        assignment_unit="question", assignment_strata="hop_group x recomputed_a1_correctness")
+        # Save the entire assignment before generating any revised answer.
+        (output / "order_assignments.json").write_text(json.dumps(assigned_orders, indent=2, sort_keys=True) + "\n")
     (output / "provenance.json").write_text(json.dumps(metadata, indent=2) + "\n")
     records = []
     with (output / "results.csv").open("w", newline="", encoding="utf-8") as rf, \
          (output / "comparisons.csv").open("w", newline="", encoding="utf-8") as pf:
         writer = csv.DictWriter(rf, fieldnames=RESULT_COLUMNS + EXTRA_COLUMNS)
-        pair_writer = csv.DictWriter(pf, fieldnames=PAIR_COLUMNS)
+        pair_writer = csv.DictWriter(pf, fieldnames=PAIR_COLUMNS + (["assigned_order"] if assigned_orders is not None else []))
         writer.writeheader()
         pair_writer.writeheader()
         for i, source in enumerate(sources):
             example = examples[source["question_id"]]
             pair_row = {key: source.get(key, "") for key in PAIR_BASE}
             pair_row["source_a2"] = source.get("solver_attempt_2", "")
-            for condition, order in CELLS:
+            cells = CELLS if assigned_orders is None else (("labeled", assigned_orders[source["question_id"]]),)
+            if assigned_orders is not None:
+                pair_row["assigned_order"] = assigned_orders[source["question_id"]]
+            for condition, order in cells:
                 record = {key: source[key] for key in (
                     "question_id", "arm", "question", "ground_truth", "answer_aliases", "context",
                     "solver_attempt_1", "stratum", "target_metadata", "status")}
-                record.update(protocol=PROTOCOL, instruction_condition=condition, candidate_order=order,
+                record.update(protocol=metadata["protocol"], instruction_condition=condition, candidate_order=order,
                               a1_correct=answer_matches(source["solver_attempt_1"], example["answer"], example.get("answer_aliases", [])))
                 if source["status"] == "completed":
                     a1, target = source["solver_attempt_1"], source["critic_advocated_answer"]
@@ -153,7 +165,11 @@ def run_anonymization(rows, examples, sources, solver, output_dir, provenance=No
             pair_writer.writerow(pair_row)
             pf.flush()
             if (i + 1) % 10 == 0 or i + 1 == len(sources):
-                logger.info("Anonymization: %d/%d saved question/arm records processed", i + 1, len(sources))
-    summary = summarize_anonymization(records)
+                logger.info("Candidate evaluation: %d/%d saved question/arm records processed", i + 1, len(sources))
+    if assigned_orders is None:
+        summary = summarize_anonymization(records)
+    else:
+        from mas_sae.experiments.randomized_adoption import summarize_randomized_order
+        summary = summarize_randomized_order(records, assigned_orders, order_seed)
     (output / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
     return summary

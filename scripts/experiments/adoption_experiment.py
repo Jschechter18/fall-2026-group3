@@ -35,6 +35,11 @@ def main():
     anonymization.add_argument("--sample", type=Path, required=True)
     anonymization.add_argument("--controlled-run", type=Path, required=True)
     anonymization.add_argument("--output", type=Path, required=True)
+    randomized = commands.add_parser("run-randomized-order", help="Labeled candidate evaluation with a frozen balanced random order per question")
+    randomized.add_argument("--sample", type=Path, required=True)
+    randomized.add_argument("--controlled-run", type=Path, required=True)
+    randomized.add_argument("--order-seed", type=int, default=42)
+    randomized.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     if args.command == "prepare":
@@ -73,13 +78,13 @@ def main():
     from mas_sae.data.musique import load_musique_examples_by_id
     from mas_sae.experiments.reproducibility import seed_everything
     from mas_sae.models.roles import configure_agent, load_role_models
-    if args.command in {"run-verification", "run-anonymization"}:
+    if args.command in {"run-verification", "run-anonymization", "run-randomized-order"}:
         from mas_sae.experiments.verification_adoption import load_controlled_source, validate_sources
         source_records, source_hashes = load_controlled_source(args.controlled_run, packet, expected)
     seed_everything(packet["seed"])
     examples = load_musique_examples_by_id("train", [r["question_id"] for r in packet["rows"]],
                                          revision=packet["dataset"]["revision"])
-    if args.command in {"run-verification", "run-anonymization"}:
+    if args.command in {"run-verification", "run-anonymization", "run-randomized-order"}:
         validate_sources(packet["rows"], {e["id"]: e for e in examples}, source_records)
     weights = load_role_models({"solver": packet["solver"]})
     solver = Solver(*weights["solver"])
@@ -123,6 +128,16 @@ def main():
                           anonymization_implementation_sha256=sha256_file(Path(__file__).resolve().parents[2] / "src/mas_sae/experiments/anonymized_adoption.py"))
         summary = run_anonymization(packet["rows"], {e["id"]: e for e in examples}, source_records,
                                     candidate_solver, args.output, provenance=provenance)
+    elif args.command == "run-randomized-order":
+        from mas_sae.experiments.anonymized_adoption import CandidateSolver
+        from mas_sae.experiments.randomized_adoption import run_randomized_order
+        candidate_solver = CandidateSolver(*weights["solver"])
+        configure_agent(candidate_solver, packet["solver"])
+        provenance.update(controlled_run=str(args.controlled_run), source_hashes=source_hashes,
+                          randomized_implementation_sha256=sha256_file(Path(__file__).resolve().parents[2] / "src/mas_sae/experiments/randomized_adoption.py"),
+                          candidate_implementation_sha256=sha256_file(Path(__file__).resolve().parents[2] / "src/mas_sae/experiments/anonymized_adoption.py"))
+        summary = run_randomized_order(packet["rows"], {e["id"]: e for e in examples}, source_records,
+                                       candidate_solver, args.output, seed=args.order_seed, provenance=provenance)
     else:
         summary = run_experiment(packet["rows"], {e["id"]: e for e in examples}, solver, args.output, provenance=provenance)
     print(json.dumps(summary, indent=2))

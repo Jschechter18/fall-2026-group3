@@ -1,0 +1,8 @@
+method,wrong_recommendation_trials,incorrect_accept,correct_nonadoption,retained_against_wrong,other_against_wrong,correct_recommendation_trials,correct_accept,incorrect_nonadoption,retained_against_correct,other_against_correct
+Original revision baseline,53,51,2,1,1,45,38,7,3,4
+Evidence verification,53,48,5,4,1,45,38,7,4,3
+Labeled candidates: A1 first,53,16,37,37,0,45,19,26,24,2
+Labeled candidates: critic first,53,18,35,34,1,45,18,27,25,2
+Anonymous candidates: A1 first,53,3,50,42,8,45,7,38,31,7
+Anonymous candidates: critic first,53,14,39,30,9,45,12,33,20,13
+Labeled candidates: randomized order,53,16,37,37,0,45,16,29,28,1
