@@ -375,3 +375,94 @@ inputs remain separate from earlier experiments. The destination must be new;
 there is no resume support. CSV files update during execution; the summary is
 written on successful completion. Randomization prevents source identity from
 always occupying the same position, but does not remove the solver's position bias.
+
+## Paired extension using Natural Critic recommendations
+
+The next experiment freezes two conditions on a separate training sample:
+
+| Recommendation source | Protocol | Delivered content |
+| --- | --- | --- |
+| Natural | Original revision | Saved A1 and full saved Critic feedback |
+| Natural | Labeled candidates, randomized order | Saved A1 and saved Critic recommendation only |
+
+This tests transfer of the **whole protocol change**, including removal of the
+verdict and explanation. It does not isolate candidate layout alone. The seven
+controlled-target table rows remain unchanged; Natural results are separate and
+must not be pooled with them. No A1 or Critic generations are repeated. No
+activations are captured at this stage; activation collection, SAE reconstruction
+checks and downstream probing remain subsequent work.
+
+### Freeze a training sample
+
+Use the train-only `audit.csv` from #115 / PR #137 and the original Natural
+collection inputs. These artifacts are external inputs, not bundled here.
+
+```bash
+PYTHONPATH=src python scripts/experiments/adoption_experiment.py prepare-natural \
+  --interactions /path/to/original/train/interactions.jsonl \
+  --partitions results/behavior/behavior_v011_split80_10_10_20261006/partitions.csv \
+  --config configs/collection/v2/natural_4b_full_train.yaml \
+  --audit /path/to/issue115/train/audit.csv \
+  --exclude-sample results/adoption_experiment/sample_100q/sample.json \
+  --size 50 --seed 42 --output /tmp/adoption_natural_sample
+```
+
+Preparation validates frozen training membership, checks audit A1 and delivered
+Critic fields against the source episode, and requires the parser to reproduce
+the saved feedback. Missing, duplicate or stale joins fail. Only `consistent`
+coherence and textually different A1/recommendations pass. Existing audit
+`candidate_status`, historical A2 warnings, eligibility and behavior labels never
+decide inclusion. Sampling retains the existing hop/A1-correctness/Critic-correctness
+stratification, so aggregate rates are not population estimates. `--exclude-sample`
+excludes earlier development questions; omit it only for an explicitly reused
+sample. Insufficient eligible questions fail rather than silently reducing size.
+
+**Automatic screening is not human confirmation.** Inspect `sampled_episodes.jsonl`
+for semantic equivalence, premise objections, refusals, and genuine disagreement
+before spending on inference. Do not interpret `consistent` as proof of usable
+feedback. Any manually curated replacement sample must be frozen before generating
+A2 and document its selection; do not select or remove examples based on new A2.
+The sample records screening counts, source hashes and its own checksum.
+
+### Run and inspect the paired comparison
+
+```bash
+PYTHONPATH=src python scripts/experiments/adoption_experiment.py run-natural \
+  --sample /tmp/adoption_natural_sample/sample.json \
+  --order-seed 42 --output /tmp/adoption_natural_run
+```
+
+Pinned dataset question/gold are checked before loading the configured Solver.
+Both conditions share weights and greedy decoding. Candidate order is frozen
+before inference using the existing question-level block randomization by hop and
+A1 correctness. Both answers branch from the same saved A1. Use a new output
+folder; interruption leaves partial episodes without a completion summary and
+there is no resume support.
+
+Outputs: `provenance.json` (templates, input hashes and code hashes),
+`order_assignments.json`, `episodes.jsonl` (exact prompts, generation telemetry,
+historical and fresh A2, automatic scores), `results.csv`, `comparisons.csv`,
+`summary.json`, and the two-row `slide_table.csv`.
+
+Labels are explicitly versioned `natural_adoption_lexical_v1`; official behavior
+labels are not changed. Adoption uses normalized recommendation matching, accepting
+gold aliases when the recommendation matches gold; retention matches saved A1.
+Third answers and uncertainty remain `other`. Outputs matching both under alias
+scoring are explicitly `ambiguous_overlap`, not silently assigned to a binary
+class. All completed outputs remain in denominators. Review semantic matches and
+partial revisions manually before interpreting counts as adoption versus rejection.
+The summary includes paired response transitions, correctness gains/losses,
+original-versus-historical A2 reproduction, and candidate-order breakdowns.
+
+Optionally append the separate Natural table to a **new** presentation export:
+
+```bash
+PYTHONPATH=src python scripts/experiments/summarize_adoption_results.py \
+  --results-root results/adoption_experiment \
+  --natural-run /tmp/adoption_natural_run \
+  --output /tmp/adoption_combined_summary
+```
+
+The controlled chart remains controlled-only. The report appends the Natural
+section and exports `natural_slide_table.csv` without pooling or assuming that
+the Natural and controlled question samples match.

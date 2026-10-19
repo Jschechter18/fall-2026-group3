@@ -150,6 +150,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--results-root", type=Path, default=Path("results/adoption_experiment"))
     parser.add_argument("--output", type=Path, default=Path("results/adoption_experiment/presentation_summary"))
+    parser.add_argument("--natural-run", type=Path, help="Completed run-natural directory; append a separate paired Natural table")
     parser.add_argument("--chart", action="store_true", help="Also generate PNG/SVG charts (requires matplotlib)")
     args = parser.parse_args()
     methods, hashes, sample_hash = read_methods(args.results_root)
@@ -225,6 +226,34 @@ A fixed first-candidate heuristic scored {100 * heuristic['balanced_accuracy']:.
 - adoption_comparison.png / .svg: slide-ready chart, when --chart is enabled.
 - provenance.json: input checksums and source sample checksum.
 '''
+    if args.natural_run:
+        from mas_sae.experiments.natural_adoption import CONDITIONS, PROTOCOL, summarize_natural
+        natural_path = args.natural_run
+        natural_summary = json.loads((natural_path / "summary.json").read_text())
+        natural_provenance = json.loads((natural_path / "provenance.json").read_text())
+        if natural_summary.get("protocol") != PROTOCOL or natural_provenance.get("protocol") != PROTOCOL:
+            raise ValueError("Expected completed Natural paired experiment")
+        natural_records = [json.loads(line) for line in (natural_path / "episodes.jsonl").read_text().splitlines() if line.strip()]
+        natural_index = {(r["question_id"], r["instruction_condition"]): r for r in natural_records}
+        ids = {r["question_id"] for r in natural_records}
+        if not ids or len(natural_index) != len(natural_records) or set(natural_index) != {(qid, c) for qid in ids for c in CONDITIONS}:
+            raise ValueError("Natural results must contain exactly two paired records per question")
+        for qid in ids:
+            a, b = (natural_index[(qid, c)] for c in CONDITIONS)
+            for key in ("question", "context", "ground_truth", "solver_attempt_1", "critic_advocated_answer", "critic_feedback", "candidate_order"):
+                if a[key] != b[key]:
+                    raise ValueError(f"Unpaired Natural inputs: {qid}, {key}")
+        if summarize_natural(natural_records) != natural_summary:
+            raise ValueError("Natural summary does not match saved episodes")
+        natural_table = [{"method": c, **natural_summary["conditions"][c]} for c in CONDITIONS]
+        write_csv(args.output / "natural_slide_table.csv", natural_table)
+        headers = ["Condition", "Questions", "Adopted", "Retained A1", "Other", "Overlap", "A2 correct"]
+        natural_display = [[r["method"], r["questions"], r["adopted"], r["retained_a1"], r["other"], r["ambiguous_overlap"], r["a2_correct"]] for r in natural_table]
+        text += "\n## Natural-recommendation extension (separate paired sample)\n\n" + table(headers, natural_display)
+        text += "\n\nOriginal revision receives full saved Natural feedback; labeled randomized candidates receive only the saved recommendation. This tests the whole protocol change. Counts are not pooled with controlled targets. Eligibility and behavior labels are automatic and require semantic review. Overlap reports outputs matching both candidates under aliases. No activations are captured.\n"
+        for filename in ("summary.json", "provenance.json", "episodes.jsonl"):
+            path = natural_path / filename
+            hashes[str(path)] = sha(path)
     (args.output / "presentation_summary.md").write_text(text)
     (args.output / "provenance.json").write_text(json.dumps({"sample_sha256": sample_hash, "input_sha256": hashes,
                                                          "script_sha256": sha(Path(__file__))}, indent=2) + "\n")

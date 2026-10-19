@@ -1,5 +1,6 @@
 """Prepare a frozen sample and run feedback, instruction, and anonymity experiments."""
 import argparse
+import csv
 import json
 import logging
 from pathlib import Path
@@ -21,6 +22,16 @@ def main():
     prepare.add_argument("--output", type=Path, required=True)
     prepare.add_argument("--size", type=int, default=100)
     prepare.add_argument("--seed", type=int, default=42)
+    natural_prepare = commands.add_parser("prepare-natural", help="Freeze a train sample screened by #115 coherence, without selecting on A2")
+    for name in ("interactions", "partitions", "config", "output", "audit"):
+        natural_prepare.add_argument("--" + name, type=Path, required=True)
+    natural_prepare.add_argument("--size", type=int, default=50)
+    natural_prepare.add_argument("--seed", type=int, default=42)
+    natural_prepare.add_argument("--exclude-sample", type=Path, help="Prior sample.json whose questions must be excluded")
+    natural_run = commands.add_parser("run-natural", help="Paired original and randomized labeled A2 using saved Natural recommendations")
+    natural_run.add_argument("--sample", type=Path, required=True)
+    natural_run.add_argument("--output", type=Path, required=True)
+    natural_run.add_argument("--order-seed", type=int, default=42)
     run = commands.add_parser("run", help="Replay the frozen sample using the configured solver")
     run.add_argument("--sample", type=Path, required=True)
     run.add_argument("--output", type=Path, required=True)
@@ -42,7 +53,7 @@ def main():
     randomized.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-    if args.command == "prepare":
+    if args.command in {"prepare", "prepare-natural"}:
         config = yaml.safe_load(args.config.read_text())
         # Validate before producing any artifacts; only the solver is loaded later.
         from mas_sae.models.roles import resolve_role_spec
@@ -54,11 +65,38 @@ def main():
             raise ValueError("This paired diagnostic requires deterministic decoding")
         if config["dataset"]["source_split"] != "train":
             raise ValueError("Use the original MuSiQue-train collection config")
-        selected, sampling = sample_rows(read_jsonl(args.interactions), args.partitions, args.size, args.seed)
+        source_rows = read_jsonl(args.interactions)
+        natural_metadata = {}
+        if args.command == "prepare-natural":
+            from mas_sae.experiments.natural_adoption import SAMPLE_PROTOCOL, screen_natural
+            # Validate source IDs/partitions before filtering any rows.
+            sample_rows(source_rows, args.partitions, size=1, seed=args.seed)
+            with args.partitions.open(newline="") as file:
+                train_ids = {r["question_id"] for r in csv.DictReader(file)
+                             if r["partition"] == "train" and r["source_split"] == "train"}
+            source_rows = [r for r in source_rows if r.get("critic_condition") == "natural" and r["question_id"] in train_ids]
+            excluded = set()
+            if args.exclude_sample:
+                previous = json.loads(args.exclude_sample.read_text())
+                previous_hash = previous.pop("sha256")
+                if digest(previous) != previous_hash:
+                    raise ValueError("Excluded sample checksum mismatch")
+                excluded = {r["question_id"] for r in previous["rows"]}
+            source_rows = [r for r in source_rows if r["question_id"] not in excluded]
+            with args.audit.open(newline="") as file:
+                source_rows, screening = screen_natural(source_rows, list(csv.DictReader(file)))
+            natural_metadata = {"screening": screening, "excluded_prior_questions": len(excluded),
+                                "eligibility": "automatic_screen_only_not_human_confirmed"}
+        selected, sampling = sample_rows(source_rows, args.partitions, args.size, args.seed)
         packet = {"protocol": "adoption_feedback_ablation_v1", "seed": args.seed,
                   "solver": spec, "dataset": config["dataset"], "sampling": sampling,
                   "input_hashes": {str(p): sha256_file(p) for p in (args.interactions, args.partitions, args.config)},
                   "rows": selected}
+        if args.command == "prepare-natural":
+            packet.update(protocol=SAMPLE_PROTOCOL, **natural_metadata)
+            packet["input_hashes"][str(args.audit)] = sha256_file(args.audit)
+            if args.exclude_sample:
+                packet["input_hashes"][str(args.exclude_sample)] = sha256_file(args.exclude_sample)
         packet["sha256"] = digest(packet)
         args.output.mkdir(parents=True, exist_ok=False)
         (args.output / "sample.json").write_text(json.dumps(packet, indent=2) + "\n")
@@ -70,7 +108,8 @@ def main():
     expected = packet.pop("sha256")
     if digest(packet) != expected:
         raise ValueError("Sample/config checksum mismatch")
-    if packet["protocol"] != "adoption_feedback_ablation_v1":
+    wanted_protocol = "adoption_natural_sample_v1" if args.command == "run-natural" else "adoption_feedback_ablation_v1"
+    if packet["protocol"] != wanted_protocol:
         raise ValueError("Unsupported adoption experiment protocol")
     if args.output.exists():
         raise FileExistsError(args.output)
@@ -86,6 +125,12 @@ def main():
                                          revision=packet["dataset"]["revision"])
     if args.command in {"run-verification", "run-anonymization", "run-randomized-order"}:
         validate_sources(packet["rows"], {e["id"]: e for e in examples}, source_records)
+    if args.command == "run-natural":
+        # Validate pinned input before loading model weights.
+        by_id = {e["id"]: e for e in examples}
+        for row in packet["rows"]:
+            if row["question"] != by_id[row["question_id"]]["question"] or row["ground_truth"] != by_id[row["question_id"]]["answer"]:
+                raise ValueError("Natural sample differs from pinned dataset")
     weights = load_role_models({"solver": packet["solver"]})
     solver = Solver(*weights["solver"])
     configure_agent(solver, packet["solver"])
@@ -95,7 +140,17 @@ def main():
         "implementation_sha256": sha256_file(Path(__file__).resolve().parents[2] / "src/mas_sae/experiments/adoption_experiment.py"),
         "cli_sha256": sha256_file(Path(__file__)),
     }
-    if args.command == "run-controlled":
+    if args.command == "run-natural":
+        from mas_sae.experiments.anonymized_adoption import CandidateSolver
+        from mas_sae.experiments.natural_adoption import run_natural
+        candidate_solver = CandidateSolver(*weights["solver"])
+        configure_agent(candidate_solver, packet["solver"])
+        provenance.update(screening=packet["screening"], input_hashes=packet["input_hashes"],
+                          implementation_hashes={name: sha256_file(Path(__file__).resolve().parents[2] / "src/mas_sae/experiments" / name)
+                              for name in ("natural_adoption.py", "randomized_adoption.py", "anonymized_adoption.py")})
+        summary = run_natural(packet["rows"], {e["id"]: e for e in examples}, solver, candidate_solver,
+                              args.output, seed=args.order_seed, provenance=provenance)
+    elif args.command == "run-controlled":
         from mas_sae.experiments.controlled_adoption import (
             ControlledProposer, GENERATOR_RULES, GENERATOR_TOKENS, PROPOSAL_PROMPT, PROTOCOL, run_controlled,
         )
