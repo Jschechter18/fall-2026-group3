@@ -11,11 +11,12 @@ from pathlib import Path
 from mas_sae.agents.critic import Critic
 from mas_sae.agents.solver import Solver
 from mas_sae.evaluation.behavior import textual_relation
+from mas_sae.evaluation.behavior_labels import classify_candidate
 from mas_sae.evaluation.scoring import answer_matches, score_revision
 from mas_sae.experiments.adoption_experiment import load_sample, stratum, training_natural_rows
 from mas_sae.experiments.anonymized_adoption import CANDIDATE_TEMPLATE, ORDERS
 from mas_sae.experiments.randomized_adoption import assign_orders, order_only_baseline
-from mas_sae.experiments.artifacts import sha256_text
+from mas_sae.experiments.artifacts import sha256_file, sha256_text
 from mas_sae.experiments.records import append_jsonl, read_jsonl, write_csv
 
 SAMPLE_PROTOCOL = "adoption_natural_sample_v1"
@@ -24,14 +25,17 @@ LABEL_VERSION = "natural_adoption_lexical_v1"
 CONDITIONS = ("original", "labeled_randomized")
 
 
-def screen_natural(rows, audit_rows):
-    """Join #115 train coherence to original inputs; fail on stale/missing joins.
+def screen_natural(rows, audit_rows=None):
+    """Screen saved recommendations, optionally joining #115 train coherence.
 
+    Without an audit, coherence is explicitly 'not_assessed'. Parsed feedback must
+    match its saved delivery and recommendations must differ lexically from A1.
+    With an audit, stale or missing joins fail and only consistent rows pass.
     'consistent' is absence of detected warnings, not human-confirmed coherence.
     Textually different answers can still be semantically equivalent.
     """
     audit = {}
-    for entry in audit_rows:
+    for entry in audit_rows or []:
         if entry["partition"] != "train":
             raise ValueError("Natural screening requires a train-only audit")
         qid = entry["question_id"]
@@ -41,26 +45,36 @@ def screen_natural(rows, audit_rows):
     selected, counts = [], Counter()
     for row in rows:
         qid = row["question_id"]
-        if qid not in audit:
+        if audit_rows is not None and qid not in audit:
             raise ValueError(f"Missing audit question: {qid}")
-        entry = audit[qid]
+        entry = audit.get(qid, {"coherence": "not_assessed", "coherence_reasons": ""})
         feedback = Critic.parse_natural(row["critic_raw_output"])
         for key, expected in (("solver_a1", row["solver_attempt_1"]),
                               ("delivered_verdict", feedback.verdict or ""),
                               ("delivered_advocated_answer", feedback.advocated_answer or ""),
                               ("delivered_explanation", feedback.explanation)):
-            if entry[key] != expected:
+            if audit_rows is not None and entry[key] != expected:
                 raise ValueError(f"Stale audit input: {qid}, {key}")
         if feedback.to_solver_text() != row["critic_feedback"]:
             raise ValueError(f"Saved feedback differs from parsed delivery: {qid}")
         if feedback.advocated_answer != row.get("critic_advocated_answer"):
             raise ValueError(f"Saved recommendation differs from parsed delivery: {qid}")
-        if entry["coherence"] not in ("consistent", "uncertain", "inconsistent", "unusable"):
+        if audit_rows is not None and entry["coherence"] not in ("consistent", "uncertain", "inconsistent", "unusable"):
             raise ValueError(f"Unknown coherence: {qid}")
-        if entry["coherence"] != "consistent":
+        # Reuse existing input-kind rules, never supplying historical A2.
+        input_labels = classify_candidate({
+            "solver_attempt_1": row["solver_attempt_1"],
+            "critic_advocated_answer": feedback.advocated_answer,
+            "critic_noncommittal": feedback.noncommittal,
+        })
+        if audit_rows is not None and entry["coherence"] != "consistent":
             counts[entry["coherence"]] += 1
         elif feedback.noncommittal or not feedback.advocated_answer:
             counts["missing_recommendation"] += 1
+        elif input_labels["a1_kind"] != "answer":
+            counts["a1_" + input_labels["a1_kind"]] += 1
+        elif input_labels["feedback_type"] != "answer":
+            counts["critic_" + input_labels["feedback_type"]] += 1
         elif textual_relation(row["solver_attempt_1"], feedback.advocated_answer) != "different":
             counts["no_clear_lexical_conflict"] += 1
         else:
@@ -68,10 +82,11 @@ def screen_natural(rows, audit_rows):
                 "coherence": entry["coherence"], "coherence_reasons": entry["coherence_reasons"],
                 "eligibility": "automatic_screen_only_not_human_confirmed",
             }})
-    return selected, {"input_questions": len(rows), "screen_pass": len(selected), "excluded": dict(counts)}
+    return selected, {"method": "issue115_coherence" if audit_rows is not None else "saved_feedback_lexical_conflict",
+                      "input_questions": len(rows), "screen_pass": len(selected), "excluded": dict(counts)}
 
 
-def prepare_natural_pool(rows, partitions_path, audit_path, exclude_sample=None):
+def prepare_natural_pool(rows, partitions_path, audit_path=None, exclude_sample=None):
     """Validate training membership, exclude prior questions, then join coherence.
 
     Return the screened pool and selection metadata; sampling remains the caller's
@@ -85,9 +100,14 @@ def prepare_natural_pool(rows, partitions_path, audit_path, exclude_sample=None)
         previous, _ = load_sample(exclude_sample, checksum_error="Excluded sample checksum mismatch")
         excluded = {r["question_id"] for r in previous["rows"]}
     rows = [r for r in rows if r["question_id"] not in excluded]
-    with Path(audit_path).open(newline="") as file:
-        rows, screening = screen_natural(rows, list(csv.DictReader(file)))
-    return rows, {"screening": screening, "excluded_prior_questions": len(excluded),
+    audit_rows = None
+    if audit_path is not None:
+        with Path(audit_path).open(newline="") as file:
+            audit_rows = list(csv.DictReader(file))
+    rows, screening = screen_natural(rows, audit_rows)
+    return rows, {"screening": screening,
+                  "screening_implementation_sha256": sha256_file(__file__),
+                  "excluded_prior_questions": len(excluded),
                   "eligibility": "automatic_screen_only_not_human_confirmed"}
 
 
@@ -141,19 +161,25 @@ def load_natural_run(directory):
     return natural_summary
 
 
-def run_natural(rows, examples, solver, candidate_solver, output_dir, seed=42, provenance=None):
+def run_natural(rows, examples, solver, candidate_solver, output_dir, seed=42, provenance=None,
+                assigned_orders=None, require_conflict=True):
     """Freeze order before inference, replay only A2, and save paired outputs."""
     for row in rows:
         example = examples[row["question_id"]]
-        if row.get("critic_condition") != "natural" or row.get("natural_screen", {}).get("coherence") != "consistent":
+        if row.get("critic_condition") != "natural" or row.get("natural_screen", {}).get("coherence") not in ("consistent", "not_assessed"):
             raise ValueError("Expected screened Natural episodes")
         if row["question"] != example["question"] or row["ground_truth"] != example["answer"]:
             raise ValueError("Sample differs from pinned dataset")
-        if textual_relation(row["solver_attempt_1"], row["critic_advocated_answer"]) != "different":
+        if require_conflict and textual_relation(row["solver_attempt_1"], row["critic_advocated_answer"]) != "different":
             raise ValueError("Natural candidates must differ")
     if solver.REVISE_PROMPT_V1 != Solver.REVISE_PROMPT_V1:
         raise ValueError("Unexpected original revision template")
-    assignments = assign_orders(rows, examples, seed)
+    if assigned_orders is None:
+        assignments = assign_orders(rows, examples, seed)
+    else:
+        if set(assigned_orders) != {r["question_id"] for r in rows} or any(v not in ORDERS for v in assigned_orders.values()):
+            raise ValueError("Every matched question requires an original valid order")
+        assignments = dict(assigned_orders)
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=False)
     metadata = {**(provenance or {}), "protocol": PROTOCOL, "label_version": LABEL_VERSION,

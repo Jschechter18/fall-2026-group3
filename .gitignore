@@ -60,3 +60,6 @@ results/sae/musique/runs/*/*/checkpoints/
 
 # Tuning and continuation checkpoints
 /results/sae/musique/tuning/**/checkpoints/
+
+# Archived adoption experiment artifacts
+/results/adoption_experiment/archive/

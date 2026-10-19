@@ -1,5 +1,68 @@
 # Feedback adoption experiment: initial 100-question study
 
+The active result is the eight-row controlled comparison in
+`results/adoption_experiment/presentation_summary`. See
+`results/adoption_experiment/README.md` for the active folders and regeneration
+command. Natural runs, their supporting artifacts, earlier `run_100q` ablations,
+and the superseded presentation export now live under the Git-ignored
+`results/adoption_experiment/archive/`. The Natural workflows below describe
+archived exploratory work, not the active controlled comparison.
+
+## Archived comparison: original questions, no #115 screening
+
+The current design reuses `sample_100q/sample.json`; it does not draw another
+sample. `prepare-natural-matched` retains the original randomized order and
+records source availability before any new A2 generation. It uses no #115 audit,
+coherence screen, input-kind screen, historical A2 eligibility, or A2 outcome filter.
+Natural agreement cases remain and can be labeled as matching both candidates.
+
+Of the original 100 questions, 80 have completed controlled targets. Twenty lack
+a completed controlled trial; another 29 of the 80 lack a parsed Natural
+recommendation. The shared available cohort is therefore **51 questions**. Every
+row in the matched chart uses exactly these 51 question IDs. Controlled rows have
+61 recommendation trials on those questions; Natural rows have 51 trials. Multiple
+controlled recommendations on a question are repeated trials, not extra questions.
+Recommendation source and prompt are experimental factors; recommendations are
+held fixed within each source's prompt comparisons. This is not a fully crossed
+source-by-prompt experiment, and protocol changes still include wording and
+explanation removal.
+
+Prepare without a model (already prepared in `natural_sample_matched`):
+
+```bash
+python scripts/experiments/adoption_experiment.py prepare-natural-matched \
+  --sample results/adoption_experiment/sample_100q/sample.json \
+  --controlled-run results/adoption_experiment/controlled_100q \
+  --randomized-run results/adoption_experiment/randomized_order_100q \
+  --output results/adoption_experiment/archive/natural_sample_matched
+```
+
+Generate the missing paired Natural A2 responses on the GPU machine:
+
+```bash
+python scripts/experiments/adoption_experiment.py run-natural \
+  --sample results/adoption_experiment/archive/natural_sample_matched/sample.json \
+  --order-seed 42 \
+  --output results/adoption_experiment/archive/natural_paired_matched
+```
+
+Then generate the aligned visualization:
+
+```bash
+PYTHONPATH=src python scripts/experiments/summarize_adoption_results.py \
+  --results-root results/adoption_experiment \
+  --natural-run results/adoption_experiment/archive/natural_paired_matched \
+  --matched-cohort --chart --replace-output \
+  --output results/adoption_experiment/archive/presentation_summary_latest
+```
+
+Use new directories for sample preparation and inference. The presentation command
+explicitly replaces generated files in `presentation_summary_latest`. The chart exporter checks the original sample hash,
+model/dataset settings, question identities, A1s and passages, and rejects unrelated
+or screened Natural runs in matched mode. Earlier separately sampled Natural
+experiments remain exploratory artifacts and are not part of this comparison.
+
+
 This is a behavioral development experiment, not a probe training set or an
 activation collection run. Keep the solver checkpoint, revision, decoding,
 paragraphs, A1, and revision instruction fixed. Change only the feedback supplied
@@ -394,20 +457,26 @@ checks and downstream probing remain subsequent work.
 
 ### Freeze a training sample
 
-Use the train-only `audit.csv` from #115 / PR #137 and the original Natural
-collection inputs. These artifacts are external inputs, not bundled here.
+Use the original Natural collection inputs. The experiment runs independently
+of #115. Optionally supply its train-only `audit.csv` with `--audit` for additional
+coherence screening.
 
 ```bash
 PYTHONPATH=src python scripts/experiments/adoption_experiment.py prepare-natural \
   --interactions /path/to/original/train/interactions.jsonl \
   --partitions results/behavior/behavior_v011_split80_10_10_20261006/partitions.csv \
   --config configs/collection/v2/natural_4b_full_train.yaml \
-  --audit /path/to/issue115/train/audit.csv \
   --exclude-sample results/adoption_experiment/sample_100q/sample.json \
   --size 50 --seed 42 --output /tmp/adoption_natural_sample
 ```
 
-Preparation validates frozen training membership, checks audit A1 and delivered
+Without `--audit`, preparation requires parsed saved feedback to match delivery,
+a clear recommendation, and a lexical disagreement with A1. Coherence is recorded
+as `not_assessed`, not assumed consistent. The sample records the screening method. Both modes reuse the existing input-kind
+rules to exclude non-answer/uncertain A1s and Critic refusals or premise objections.
+These checks never receive historical A2 and do not filter on `eligible_primary`.
+
+When `--audit` is supplied, preparation validates frozen training membership, checks audit A1 and delivered
 Critic fields against the source episode, and requires the parser to reproduce
 the saved feedback. Missing, duplicate or stale joins fail. Only `consistent`
 coherence and textually different A1/recommendations pass. Existing audit
@@ -478,3 +547,22 @@ explicitly by each protocol. File hashes and prompt hashes use `experiments/arti
 JSONL and flat CSV I/O use `experiments/records`. The original sample checksum
 serialization is retained for compatibility. Protocol prompts, sampling, generation
 order, scoring policies and output schemas are unchanged by this refactor.
+
+### Updated behavioral comparison chart
+
+To place the two screened Natural rows above the seven controlled protocols:
+
+```bash
+PYTHONPATH=src python scripts/experiments/summarize_adoption_results.py \
+  --results-root results/adoption_experiment \
+  --natural-run results/adoption_experiment/archive/natural_paired_50q_screened \
+  --output /tmp/adoption_presentation_updated --chart
+```
+
+Use a new output directory. With Natural runs supplied, the chart uses one panel with
+Natural rows first, a cohort separator, percentage bar widths and count labels. All chart rows use direct
+normalized matching to the recommendation and A1, without gold aliases; this can
+change older plotted counts relative to saved alias-aware summaries. Saved labels
+are not modified. The existing report tables retain saved scoring; exact chart
+counts and input/code hashes are in `behavior_chart_data.csv` and
+`chart_provenance.json`. No correctness metrics appear in the updated chart.

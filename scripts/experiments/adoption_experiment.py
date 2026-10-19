@@ -27,12 +27,16 @@ def main():
     prepare.add_argument("--output", type=Path, required=True)
     prepare.add_argument("--size", type=int, default=100)
     prepare.add_argument("--seed", type=int, default=42)
-    natural_prepare = commands.add_parser("prepare-natural", help="Freeze a train sample screened by #115 coherence, without selecting on A2")
-    for name in ("interactions", "partitions", "config", "output", "audit"):
+    natural_prepare = commands.add_parser("prepare-natural", help="Freeze a Natural train sample without selecting on A2; optionally apply #115 coherence")
+    for name in ("interactions", "partitions", "config", "output"):
         natural_prepare.add_argument("--" + name, type=Path, required=True)
+    natural_prepare.add_argument("--audit", type=Path, help="Optional #115 train audit CSV for additional coherence screening")
     natural_prepare.add_argument("--size", type=int, default=50)
     natural_prepare.add_argument("--seed", type=int, default=42)
     natural_prepare.add_argument("--exclude-sample", type=Path, help="Prior sample.json whose questions must be excluded")
+    matched_prepare = commands.add_parser("prepare-natural-matched", help="Reuse original questions and order; no audit or resampling")
+    for name in ("sample", "controlled-run", "randomized-run", "output"):
+        matched_prepare.add_argument("--" + name, type=Path, required=True)
     natural_run = commands.add_parser("run-natural", help="Paired original and randomized labeled A2 using saved Natural recommendations")
     natural_run.add_argument("--sample", type=Path, required=True)
     natural_run.add_argument("--output", type=Path, required=True)
@@ -58,6 +62,12 @@ def main():
     randomized.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    if args.command == "prepare-natural-matched":
+        from mas_sae.experiments.matched_adoption import prepare_matched_sample
+        packet = prepare_matched_sample(args.sample, args.controlled_run, args.randomized_run, args.output)
+        print(json.dumps(packet["screening"], indent=2))
+        print(f"Prepared matched sample: {args.output / 'sample.json'}")
+        return
     if args.command in {"prepare", "prepare-natural"}:
         config = yaml.safe_load(args.config.read_text())
         # Validate before producing any artifacts; only the solver is loaded later.
@@ -84,7 +94,8 @@ def main():
                   "rows": selected}
         if args.command == "prepare-natural":
             packet.update(protocol=SAMPLE_PROTOCOL, **natural_metadata)
-            packet["input_hashes"][str(args.audit)] = sha256_file(args.audit)
+            if args.audit is not None:
+                packet["input_hashes"][str(args.audit)] = sha256_file(args.audit)
             if args.exclude_sample:
                 packet["input_hashes"][str(args.exclude_sample)] = sha256_file(args.exclude_sample)
         packet["sha256"] = digest(packet)
@@ -100,6 +111,8 @@ def main():
         raise ValueError("Unsupported adoption experiment protocol")
     if args.output.exists():
         raise FileExistsError(args.output)
+    if args.command == "run-natural" and packet.get("cohort_mode") == "matched_original" and args.order_seed != packet["order_seed"]:
+        raise ValueError("Matched experiment must retain the original order seed")
     from mas_sae.agents.solver import Solver
     from mas_sae.data.musique import load_musique_examples_by_id
     from mas_sae.experiments.reproducibility import seed_everything
@@ -136,8 +149,13 @@ def main():
         provenance.update(screening=packet["screening"], input_hashes=packet["input_hashes"],
                           implementation_hashes={name: experiment_source_sha(name)
                               for name in ("natural_adoption.py", "randomized_adoption.py", "anonymized_adoption.py")})
+        matched = packet.get("cohort_mode") == "matched_original"
+        if matched:
+            provenance.update(cohort_mode=packet["cohort_mode"], original_sample_sha256=packet["original_sample_sha256"],
+                              matched_question_ids=[r["question_id"] for r in packet["rows"]])
         summary = run_natural(packet["rows"], examples, solver, candidate_solver,
-                              args.output, seed=args.order_seed, provenance=provenance)
+                              args.output, seed=args.order_seed, provenance=provenance,
+                              assigned_orders=packet.get("order_assignments"), require_conflict=not matched)
     elif args.command == "run-controlled":
         from mas_sae.experiments.controlled_adoption import (
             ControlledProposer, GENERATOR_RULES, GENERATOR_TOKENS, PROPOSAL_PROMPT, PROTOCOL, run_controlled,

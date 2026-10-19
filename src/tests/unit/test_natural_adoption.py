@@ -48,9 +48,10 @@ def test_screen_excludes_agreement_and_uncertain_feedback():
     assert screen_natural([row], [dict(audit, coherence="uncertain")])[0] == []
 
 
-def test_paired_run_preserves_natural_inputs_and_exports_separate_table(tmp_path, monkeypatch):
+@pytest.mark.parametrize("use_audit", [True, False])
+def test_paired_run_preserves_natural_inputs_and_exports_separate_table(tmp_path, monkeypatch, use_audit):
     row, audit = inputs()
-    rows, _ = screen_natural([row], [audit])
+    rows, _ = screen_natural([row], [audit] if use_audit else None)
     output = tmp_path / "natural"
 
     class Original(Solver):
@@ -158,3 +159,29 @@ def test_prepare_natural_cli_freezes_fresh_train_only_sample(tmp_path, monkeypat
     assert [r["question_id"] for r in packet["rows"]] == ["2hop__1"]
     assert packet["screening"]["input_questions"] == 1
     assert str(audit_path) in packet["input_hashes"]
+
+
+def test_screen_without_audit_uses_saved_feedback_and_marks_coherence_unassessed():
+    row, _ = inputs()
+    selected, counts = screen_natural([row])
+    assert selected[0]["natural_screen"]["coherence"] == "not_assessed"
+    assert counts["method"] == "saved_feedback_lexical_conflict"
+    changed = dict(row, solver_attempt_2="Paris", label={"eligible_primary": False})
+    assert screen_natural([changed])[1] == counts
+    agreed, _ = inputs(target="Paris")
+    assert screen_natural([agreed])[0] == []
+    missing = dict(row, critic_raw_output="invalid JSON", critic_advocated_answer=None,
+                   critic_feedback=Critic.parse_natural("invalid JSON").to_solver_text())
+    assert screen_natural([missing])[1]["excluded"] == {"missing_recommendation": 1}
+
+
+@pytest.mark.parametrize("a1,target,reason", [
+    ("I don't know", "Rome", "a1_nonanswer"),
+    ("Paris", "I don't know", "critic_refusal"),
+])
+def test_input_screen_reuses_answer_kind_rules_without_historical_a2(a1, target, reason):
+    row, audit = inputs(target=target, a1=a1)
+    for audit_rows in (None, [audit]):
+        assert screen_natural([row], audit_rows)[1]["excluded"] == {reason: 1}
+        row["solver_attempt_2"] = "A completely different historical output"
+        assert screen_natural([row], audit_rows)[1]["excluded"] == {reason: 1}

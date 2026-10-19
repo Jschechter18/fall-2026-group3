@@ -13,6 +13,7 @@ Same 98 completed question/recommendation trials from 80 unique questions in eac
 | Anonymous candidates: A1 first | 10 | 73 | 15 | 3/53 | 7/45 |
 | Anonymous candidates: critic first | 26 | 50 | 22 | 14/53 | 12/45 |
 | Labeled candidates: randomized order | 32 | 65 | 1 | 16/53 | 16/45 |
+| Anonymous candidates: randomized order | 18 | 61 | 19 | 9/53 | 9/45 |
 
 ## Suggested slide takeaway
 
@@ -48,6 +49,8 @@ A fixed first-candidate heuristic scored 46.2% balanced accuracy on adoption/non
 - The data are controlled recommendation tests; they do not improve or measure the natural Qwen critic's accuracy. No new activation or probe result is reported.
 
 ## Files
+
+- The anonymous randomized row selects saved anonymous responses using the exact same question-level order assignments as the labeled randomized row. No new inference or resampling is performed.
 
 - slide_table.csv: compact presentation table.
 - method_summary.csv: counts, percentages, final correctness, distinct questions and baseline deltas.

@@ -14,11 +14,16 @@ METHODS = [
     ("Anonymous candidates: A1 first", "anonymization_100q", {"instruction_condition": "anonymous", "candidate_order": "a1_first"}),
     ("Anonymous candidates: critic first", "anonymization_100q", {"instruction_condition": "anonymous", "candidate_order": "critic_first"}),
     ("Labeled candidates: randomized order", "randomized_order_100q", {}),
+    ("Anonymous candidates: randomized order", "anonymization_100q",
+     {"instruction_condition": "anonymous", "candidate_order": "assigned"}),
 ]
 
 
 def read_methods(root):
     cache, input_hashes = {}, {}
+    assignment_path = root / "randomized_order_100q/order_assignments.json"
+    assignments = json.loads(assignment_path.read_text())
+    input_hashes[str(assignment_path)] = sha(assignment_path)
     reference = None
     sample_hash = None
     result = []
@@ -38,7 +43,13 @@ def read_methods(root):
             for filename in ("summary.json", "provenance.json", "episodes.jsonl"):
                 path = directory / filename
                 input_hashes[str(path)] = sha(path)
-        rows = [r for r in cache[folder] if r["status"] == "completed" and all(r.get(k) == v for k, v in filters.items())]
+        assigned_order = filters.get("candidate_order") == "assigned"
+        cell_filters = {k: v for k, v in filters.items() if not (assigned_order and k == "candidate_order")}
+        rows = [r for r in cache[folder] if r["status"] == "completed"
+                and all(r.get(k) == v for k, v in cell_filters.items())
+                and (not assigned_order or r["candidate_order"] == assignments[r["question_id"]])]
+        if folder == "randomized_order_100q" and any(r["candidate_order"] != assignments[r["question_id"]] for r in rows):
+            raise ValueError("Labeled randomized records differ from saved order assignments")
         index = {(r["question_id"], r["arm"]): r for r in rows}
         if len(index) != len(rows) or not rows:
             raise ValueError(f"Duplicate or empty completed trials: {name}")
@@ -140,15 +151,30 @@ def main():
     parser.add_argument("--results-root", type=Path, default=Path("results/adoption_experiment"))
     parser.add_argument("--output", type=Path, default=Path("results/adoption_experiment/presentation_summary"))
     parser.add_argument("--natural-run", type=Path, help="Completed run-natural directory; append a separate paired Natural table")
+    parser.add_argument("--additional-natural-run", type=Path, action="append", default=[], help="Additional completed Natural runs for the behavior chart")
+    parser.add_argument("--replace-output", action="store_true", help="Replace generated presentation files in the specified output directory")
+    parser.add_argument("--matched-cohort", action="store_true", help="Require Natural to use the original sample and align every row to shared question IDs")
     parser.add_argument("--chart", action="store_true", help="Also generate PNG/SVG charts (requires matplotlib)")
     args = parser.parse_args()
     methods, hashes, sample_hash = read_methods(args.results_root)
+    if args.matched_cohort:
+        if not args.natural_run or args.additional_natural_run:
+            raise ValueError("Matched chart requires exactly one matched Natural run")
+        from mas_sae.experiments.natural_adoption import load_natural_run
+        from mas_sae.experiments.matched_adoption import align_matched_methods
+        load_natural_run(args.natural_run)
+        matched_metadata = json.loads((args.natural_run / "provenance.json").read_text())
+        controlled_metadata = json.loads((args.results_root / "controlled_100q/provenance.json").read_text())
+        for key in ("solver", "dataset"):
+            if matched_metadata[key] != controlled_metadata[key]:
+                raise ValueError(f"Matched experiment differs in {key}")
+        methods = align_matched_methods(methods, read_jsonl(args.natural_run / "episodes.jsonl"), matched_metadata, sample_hash)
     summary = [summarize(name, rows) for name, rows in methods]
     baseline = summary[0]
     for row in summary:
         for field in ("adopted", "retained_a1", "incorrect_accept", "correct_accept", "final_correct"):
             row[field + "_delta_vs_baseline"] = row[field] - baseline[field]
-    args.output.mkdir(parents=True, exist_ok=False)
+    args.output.mkdir(parents=True, exist_ok=args.replace_output)
     write_csv(args.output / "method_summary.csv", summary)
     slide = [dict(method=r["method"], adopted=r["adopted"], retained_a1=r["retained_a1"], other=r["other"],
                   incorrectly_accepted_wrong=f"{r['incorrect_accept']}/{r['wrong_recommendation_trials']}",
@@ -156,7 +182,8 @@ def main():
     write_csv(args.output / "slide_table.csv", slide)
     outcomes = [{key: r[key] for key in ("method", "wrong_recommendation_trials", "incorrect_accept", "correct_nonadoption", "retained_against_wrong", "other_against_wrong", "correct_recommendation_trials", "correct_accept", "incorrect_nonadoption", "retained_against_correct", "other_against_correct")} for r in summary]
     write_csv(args.output / "recommendation_outcomes.csv", outcomes)
-    randomized = methods[-1][1]
+    randomized = next(rows for name, rows in methods if name == "Labeled candidates: randomized order")
+    randomized_counts = next(row for row in summary if row["method"] == "Labeled candidates: randomized order")
     orders = []
     for order in ("a1_first", "critic_first"):
         rows = [r for r in randomized if r["candidate_order"] == order]
@@ -178,7 +205,7 @@ Same {baseline['completed_trials']} completed question/recommendation trials fro
 
 ## Suggested slide takeaway
 
-**Presenting both answers as labeled candidates yielded substantial adoption and retention without explicitly instructing rejection.** In this selected sample, randomized labeled presentation changed the strict class counts from {baseline['adopted']} adoptions / {baseline['retained_a1']} retentions to {summary[-1]['adopted']} / {summary[-1]['retained_a1']}.
+**Presenting both answers as labeled candidates yielded substantial adoption and retention without explicitly instructing rejection.** In this selected sample, randomized labeled presentation changed the strict class counts from {baseline['adopted']} adoptions / {baseline['retained_a1']} retentions to {randomized_counts['adopted']} / {randomized_counts['retained_a1']}.
 
 This is a change of interaction protocol: original feedback revision versus labeled candidate evaluation. It does not establish that deference in the original system has been fixed.
 
@@ -208,6 +235,8 @@ A fixed first-candidate heuristic scored {100 * heuristic['balanced_accuracy']:.
 
 ## Files
 
+- The anonymous randomized row selects saved anonymous responses using the exact same question-level order assignments as the labeled randomized row. No new inference or resampling is performed.
+
 - slide_table.csv: compact presentation table.
 - method_summary.csv: counts, percentages, final correctness, distinct questions and baseline deltas.
 - recommendation_outcomes.csv: four recommendation-following outcomes with retention/other splits.
@@ -232,7 +261,42 @@ A fixed first-candidate heuristic scored {100 * heuristic['balanced_accuracy']:.
     (args.output / "provenance.json").write_text(json.dumps({"sample_sha256": sample_hash, "input_sha256": hashes,
                                                          "script_sha256": sha(Path(__file__))}, indent=2) + "\n")
     if args.chart:
-        render_chart(args.output, summary)
+        natural_paths = ([args.natural_run] if args.natural_run else []) + args.additional_natural_run
+        if natural_paths:
+            from mas_sae.experiments.adoption_plot import summarize_behavior, render_behavior_chart
+            from mas_sae.experiments.natural_adoption import CONDITIONS, load_natural_run
+            cohorts = [("Controlled recommendations", [summarize_behavior(name, rows) for name, rows in methods])]
+            for natural_path in natural_paths:
+                load_natural_run(natural_path)
+                provenance = json.loads((natural_path / "provenance.json").read_text())
+                screened = provenance.get("screening", {}).get("method") == "issue115_coherence"
+                title = ("Natural recommendations — same questions, no audit" if args.matched_cohort else
+                         "Natural recommendations — #115 screened" if screened else "Natural recommendations — basic screening")
+                records = read_jsonl(natural_path / "episodes.jsonl")
+                labels = {"original": "Original revision", "labeled_randomized": "Labeled candidates: randomized order"}
+                rows = [summarize_behavior(labels[c], [r for r in records if r["instruction_condition"] == c]) for c in CONDITIONS]
+                cohorts.append((title, rows))
+                for filename in ("summary.json", "provenance.json", "episodes.jsonl"):
+                    source = natural_path / filename
+                    hashes[str(source)] = sha(source)
+            # Put Natural pairs above the controlled protocol comparison.
+            cohorts = cohorts[1:] + cohorts[:1]
+            chart_rows = [{"cohort": title, **row} for title, rows in cohorts for row in rows]
+            write_csv(args.output / "behavior_chart_data.csv", chart_rows)
+            (args.output / "chart_provenance.json").write_text(json.dumps({
+                "matching_basis": "direct_normalized_no_gold_aliases", "inputs": hashes,
+                "matched_cohort": args.matched_cohort,
+                "shared_question_ids": sorted({r["question_id"] for r in methods[0][1]}) if args.matched_cohort else None,
+                "plot_code_sha256": sha(Path(__file__).resolve().parents[2] / "src/mas_sae/experiments/adoption_plot.py"),
+                "script_sha256": sha(Path(__file__)),
+            }, indent=2) + "\n")
+            render_behavior_chart(args.output, cohorts, matched=args.matched_cohort)
+            if args.matched_cohort:
+                (args.output / "MATCHED_COMPARISON_PENDING.md").unlink(missing_ok=True)
+            with (args.output / "presentation_summary.md").open("a") as report:
+                report.write("\n## Updated behavioral chart\n\nAll chart cohorts use direct normalized answer matching without gold aliases. In matched-cohort mode every row uses the same question IDs; controlled questions may contribute multiple recommendation trials. Otherwise cohorts are separate samples and are not pooled. See behavior_chart_data.csv and chart_provenance.json; the earlier tables retain saved experiment scoring.\n")
+        else:
+            render_chart(args.output, summary)
     print(main_table)
     print(f"\nSaved presentation artifacts to {args.output}")
 
