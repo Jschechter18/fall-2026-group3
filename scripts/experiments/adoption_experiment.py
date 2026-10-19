@@ -5,7 +5,7 @@ from pathlib import Path
 
 import yaml
 
-from mas_sae.experiments.adoption_pilot import digest, run_pilot, sample_rows
+from mas_sae.experiments.adoption_experiment import digest, run_experiment, sample_rows
 from mas_sae.experiments.artifacts import sha256_file
 from mas_sae.experiments.records import read_jsonl, write_jsonl
 
@@ -53,7 +53,7 @@ def main():
     if digest(packet) != expected:
         raise ValueError("Sample/config checksum mismatch")
     if packet["protocol"] != "adoption_feedback_ablation_v1":
-        raise ValueError("Unsupported pilot protocol")
+        raise ValueError("Unsupported adoption experiment protocol")
     if args.output.exists():
         raise FileExistsError(args.output)
     from mas_sae.agents.solver import Solver
@@ -69,10 +69,10 @@ def main():
     provenance = {
         "sample_sha256": expected, "solver": packet["solver"], "dataset": packet["dataset"],
         "revise_template": Solver.REVISE_PROMPT_V1,
-        "implementation_sha256": sha256_file(Path(__file__).resolve().parents[1] / "src/mas_sae/experiments/adoption_pilot.py"),
+        "implementation_sha256": sha256_file(Path(__file__).resolve().parents[2] / "src/mas_sae/experiments/adoption_experiment.py"),
         "cli_sha256": sha256_file(Path(__file__)),
     }
-    summary = run_pilot(packet["rows"], {e["id"]: e for e in examples}, solver, args.output, provenance=provenance)
+    summary = run_experiment(packet["rows"], {e["id"]: e for e in examples}, solver, args.output, provenance=provenance)
     print(json.dumps(summary, indent=2))
 
 

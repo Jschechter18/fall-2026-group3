@@ -1,4 +1,4 @@
-# Diagnosing excessive adoption with a 100-question pilot
+# Feedback adoption experiment: initial 100-question study
 
 This is a behavioral development experiment, not a probe training set or an
 activation collection run. Keep the solver checkpoint, revision, decoding,
@@ -52,15 +52,15 @@ correctness uses automated matching and also needs review.
 From the repository root in the existing capstone environment:
 
 ```bash
-PYTHONPATH=src python scripts/adoption_pilot.py prepare \
+PYTHONPATH=src python scripts/experiments/adoption_experiment.py prepare \
   --interactions /path/to/natural_4b_full/train/interactions.jsonl \
   --partitions results/behavior/behavior_v011_split80_10_10_20261006/partitions.csv \
   --config configs/collection/v2/natural_4b_full_train.yaml \
-  --size 100 --seed 42 --output /tmp/adoption_pilot_sample
+  --size 100 --seed 42 --output /tmp/adoption_experiment_sample
 
-PYTHONPATH=src python scripts/adoption_pilot.py run \
-  --sample /tmp/adoption_pilot_sample/sample.json \
-  --output /tmp/adoption_pilot_run
+PYTHONPATH=src python scripts/experiments/adoption_experiment.py run \
+  --sample /tmp/adoption_experiment_sample/sample.json \
+  --output /tmp/adoption_experiment_run
 ```
 
 Preparation needs the Python dependencies but no GPU, network, dataset download,

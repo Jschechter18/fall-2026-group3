@@ -110,7 +110,7 @@ def feedback_for(row, arm):
     raise ValueError(f"Unknown arm: {arm}")
 
 
-def run_pilot(rows, examples, solver, output_dir, provenance=None):
+def run_experiment(rows, examples, solver, output_dir, provenance=None):
     """Run all arms from saved A1. Output directory must be new; fail loudly on errors."""
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=False)

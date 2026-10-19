@@ -3,7 +3,7 @@ import json
 
 import pytest
 
-from mas_sae.experiments.adoption_pilot import ARMS, feedback_for, run_pilot, sample_rows
+from mas_sae.experiments.adoption_experiment import ARMS, feedback_for, run_experiment, sample_rows
 from mas_sae.agents.solver import Solver
 
 
@@ -80,7 +80,7 @@ def test_paired_replay_and_review_outputs(tmp_path):
                    paragraphs=[dict(idx=0, title="Source", paragraph_text="Liverpool.")])
     solver = FakeSolver()
     output = tmp_path / "run"
-    summary = run_pilot([row], {example["id"]: example}, solver, output)
+    summary = run_experiment([row], {example["id"]: example}, solver, output)
     assert len(solver.calls) == len(ARMS)
     assert all(call[2] == "Liverpool" for call in solver.calls)
     assert summary["arms"]["original"]["candidate_adoption_rate"] == 1
@@ -95,4 +95,4 @@ def test_paired_replay_and_review_outputs(tmp_path):
     assert "arm" not in reviewed[0]
     assert len(json.loads((output / "review_private_key.json").read_text())) == 4
     with pytest.raises(FileExistsError):
-        run_pilot([row], {example["id"]: example}, solver, output)
+        run_experiment([row], {example["id"]: example}, solver, output)
