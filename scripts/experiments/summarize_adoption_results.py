@@ -96,7 +96,7 @@ def table(headers, rows):
                      ["| " + " | ".join(map(str, row)) + " |" for row in rows])
 
 
-def render_chart(path, summary):
+def render_chart(path, summary, *, natural=False):
     import os
     import tempfile
     os.environ.setdefault("MPLCONFIGDIR", tempfile.mkdtemp(prefix="adoption-summary-mpl-"))
@@ -108,8 +108,12 @@ def render_chart(path, summary):
     y = np.arange(len(summary))
     fig, (left, right) = plt.subplots(1, 2, figsize=(14, 7.5), gridspec_kw={"width_ratios": [1.1, 1]})
     colors = {"adopted": "#4575b4", "retained_a1": "#1b9e77", "other": "#bdbdbd"}
+    segments = [("adopted", "Adopted"), ("retained_a1", "Retained A1"), ("other", "Other")]
+    if natural:
+        colors["overlap"] = "#e6ab02"
+        segments.append(("overlap", "Matches both"))
     starts = np.zeros(len(summary))
-    for key, label in (("adopted", "Adopted"), ("retained_a1", "Retained A1"), ("other", "Other")):
+    for key, label in segments:
         values = np.array([r[key] for r in summary])
         left.barh(y, values, left=starts, color=colors[key], label=label, height=.65)
         for i, value in enumerate(values):
@@ -121,26 +125,31 @@ def render_chart(path, summary):
     left.set_xlim(0, summary[0]["completed_trials"])
     left.set_xlabel("Completed trials (counts)")
     left.set_title("Behavioral class balance", fontsize=12)
-    left.legend(loc="upper center", bbox_to_anchor=(.5, -.13), ncol=3, frameon=False, fontsize=9)
+    left.legend(loc="upper center", bbox_to_anchor=(.5, -.13), ncol=len(segments), frameon=False, fontsize=9)
     for offset, key, label, color in ((-.18, "incorrect_accept_pct", "Adopted wrong recommendation", "#d95f02"),
                                       (.18, "correct_accept_pct", "Adopted correct recommendation", "#7570b3")):
         values = [r[key] for r in summary]
         right.barh(y + offset, values, height=.32, label=label, color=color)
         for i, value in enumerate(values):
-            right.text(value + 1, i + offset, f"{value:.0f}%", va="center", fontsize=9)
+            right.text(value + 1 if np.isfinite(value) else 1, i + offset,
+                       f"{value:.0f}%" if np.isfinite(value) else "N/A", va="center", fontsize=9)
     right.set_yticks(y, [""] * len(summary))
     right.invert_yaxis()
     right.set_xlim(0, 110)
     right.set_xticks([0, 25, 50, 75, 100])
     right.set_xlabel("Adoption rate (%) within recommendation group")
-    right.set_title("Wrong recommendations (n=53) vs correct (n=45)", fontsize=12)
+    right.set_title(f"Wrong recommendations (n={summary[0]['wrong_recommendation_trials']}) vs correct (n={summary[0]['correct_recommendation_trials']})", fontsize=12)
     right.legend(loc="upper center", bbox_to_anchor=(.5, -.13), frameon=False, fontsize=9)
     for axis in (left, right):
         axis.spines[["top", "right"]].set_visible(False)
-    fig.suptitle("Answer adoption depends on the interaction protocol", fontsize=16, y=.97)
+    fig.suptitle("Answer adoption with natural critic feedback" if natural else "Answer adoption with fixed critic feedback", fontsize=16, y=.97)
     fig.text(.5, .91, f"Preliminary paired comparison: {summary[0]['completed_trials']} trials from {summary[0]['distinct_questions']} unique questions", ha="center", fontsize=11)
     fig.subplots_adjust(left=.27, right=.97, top=.84, bottom=.24, wspace=.2)
-    fig.text(.02, .035, "Same selected development sample; repeated trials are not independent questions. Automatic answer matching and controlled targets.\nNon-adoption may be retention, a third answer, or uncertainty. These results do not establish a mechanism or population performance.", fontsize=9, color="#444444")
+    note = (f"Same {summary[0]['distinct_questions']} questions as the fixed-feedback plot; one natural recommendation per question, shared across protocols.\n"
+            f"{summary[0]['saved_feedback']} saved recommendations; {summary[0]['regenerated_feedback']} regenerated. Original/verification see full feedback; candidates see the answer only.\n"
+            "Matches both is ambiguous adoption/retention. Automatic alias-aware matching; selected development sample."
+            if natural else "Same selected development sample; repeated trials are not independent questions. Automatic answer matching and controlled targets.\nNon-adoption may be retention, a third answer, or uncertainty. These results do not establish a mechanism or population performance.")
+    fig.text(.02, .035, note, fontsize=9, color="#444444")
     fig.savefig(path / "adoption_comparison.png", dpi=240)
     fig.savefig(path / "adoption_comparison.svg")
     plt.close(fig)

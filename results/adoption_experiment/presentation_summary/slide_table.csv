@@ -1,9 +1,0 @@
-method,adopted,retained_a1,other,incorrectly_accepted_wrong,correctly_accepted_correct
-Original revision baseline,89,4,5,51/53,38/45
-Evidence verification,86,8,4,48/53,38/45
-Labeled candidates: A1 first,35,61,2,16/53,19/45
-Labeled candidates: critic first,36,59,3,18/53,18/45
-Anonymous candidates: A1 first,10,73,15,3/53,7/45
-Anonymous candidates: critic first,26,50,22,14/53,12/45
-Labeled candidates: randomized order,32,65,1,16/53,16/45
-Anonymous candidates: randomized order,18,61,19,9/53,9/45

@@ -1,0 +1,9 @@
+method,completed_trials,distinct_questions,saved_feedback,regenerated_feedback,adopted,retained_a1,other,overlap,wrong_recommendation_trials,incorrect_accept_pct,correct_recommendation_trials,correct_accept_pct
+Original revision baseline,80,80,51,29,38,6,12,24,46,60.869565217391305,34,100.0
+Evidence verification,80,80,51,29,41,6,9,24,46,67.3913043478261,34,100.0
+Labeled candidates: A1 first,80,80,51,29,23,26,6,25,46,50.0,34,73.52941176470588
+Labeled candidates: critic first,80,80,51,29,20,31,4,25,46,45.65217391304348,34,70.58823529411765
+Anonymous candidates: A1 first,80,80,51,29,9,31,15,25,46,30.434782608695652,34,58.8235294117647
+Anonymous candidates: critic first,80,80,51,29,17,24,14,25,46,43.47826086956522,34,64.70588235294117
+Labeled candidates: randomized order,80,80,51,29,20,32,3,25,46,47.82608695652174,34,67.6470588235294
+Anonymous candidates: randomized order,80,80,51,29,13,26,16,25,46,34.78260869565217,34,64.70588235294117
