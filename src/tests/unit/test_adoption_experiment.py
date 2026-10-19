@@ -74,7 +74,7 @@ class FakeSolver(Solver):
         return "Liverpool" if feedback.startswith("No additional") else "London"
 
 
-def test_paired_replay_and_review_outputs(tmp_path):
+def test_paired_replay_and_automatic_outputs(tmp_path):
     row = episode("2hop__1")
     example = dict(id=row["question_id"], question="Where?", answer="Liverpool",
                    paragraphs=[dict(idx=0, title="Source", paragraph_text="Liverpool.")])
@@ -88,11 +88,11 @@ def test_paired_replay_and_review_outputs(tmp_path):
     assert summary["arms"]["no_feedback"]["retained_a1"] == 1
     assert summary["arms"]["original"]["harmed"] == 1
     assert summary["arms"]["answer_only"]["paired_with_original"]["both_candidate_eligible"] == 1
-    with (output / "review.csv").open() as f:
-        reviewed = list(csv.DictReader(f))
-    assert len(reviewed) == 4
-    assert all(not r["solver_response"] for r in reviewed)
-    assert "arm" not in reviewed[0]
-    assert len(json.loads((output / "review_private_key.json").read_text())) == 4
+    records = [json.loads(line) for line in (output / "episodes.jsonl").read_text().splitlines()]
+    assert len(records) == 4
+    assert all("candidate_label" in record for record in records)
+    assert json.loads((output / "summary.json").read_text()) == summary
+    assert not (output / "review.csv").exists()
+    assert not (output / "review_private_key.json").exists()
     with pytest.raises(FileExistsError):
         run_experiment([row], {example["id"]: example}, solver, output)

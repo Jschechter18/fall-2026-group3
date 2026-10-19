@@ -18,8 +18,7 @@ input and activations; that is the experimental treatment, not untrustworthiness
    template, with “No additional reviewer feedback is available.” Measures answer
    changes without a recommendation. Retaining A1 here is not critic rejection.
 4. **Later: verified correct/incorrect recommendations (B/C).** Branch from the
-   same A1 with plausible alternatives of the appropriate answer type. Independently
-   review actual explanations and recommendations. This is a separate collection
+   same A1 with plausible alternatives of the appropriate answer type. This is a separate collection
    experiment; the present script does not generate new critic feedback.
 5. **Later: independent or cross-model critic.** Use existing blind-first critic
    support to test whether incoherence or anchoring is contributing. A stronger
@@ -45,7 +44,7 @@ Ambiguous feedback stays in the sample for diagnosis. Sorting plus a seeded RNG
 makes input row order irrelevant. The manifest records population/sample counts
 and inclusion probabilities. This enriched mix is not representative of the full
 run; do not interpret aggregate rates as population estimates. Recorded
-correctness uses automated matching and also needs review.
+correctness uses automated matching.
 
 ## Run
 
@@ -85,19 +84,232 @@ corrections, harms, retention, per-stratum counts, and paired transitions agains
 the original arm on common candidate-eligible questions. No-feedback has no
 adoption target. Third answers remain separate from retention.
 
-**Automatic labels reuse the existing, known imperfect rules. They are diagnostic
-only and cannot validate themselves.** Review `review.csv` using `docs/qc_guide.md`,
-adding notes about irrelevant recommendations, contradictions, and truncation.
-The file hides arm names and automatic labels, but feedback wording can reveal the
-condition, so blinding is partial. Keep `review_private_key.json` from reviewers.
-Two independent copies can be compared with `scripts/qc_agreement.py`; adjudicate
-eligibility and outcome before drawing a class-balance conclusion. The no-feedback
-control should be analyzed as reconsideration, outside the critic-adoption target.
+Labels and summaries are generated automatically using the existing classifier;
+no human annotation or approval step is required.
 
-Compare paired outcomes after review and inspect original-arm reproduction first.
+Compare paired outcomes and original-arm reproduction.
 Different historical outputs can reflect changed software/hardware or configuration,
 not a feedback effect. Examine truncation telemetry before treating responses as
 behavior. On 100 questions, treat subgroup findings as exploratory. A useful
 mitigation increases **reliable retention without sacrificing supported
 corrections**, not simply the fraction of negatives. If retention remains rare,
 report that limitation rather than repeatedly adjusting conditions to force balance.
+
+## Controlled feedback extension
+
+Reuse the existing prepared sample; do not rerun preparation or overwrite the
+completed ablation run:
+
+```bash
+python scripts/experiments/adoption_experiment.py run-controlled \
+  --sample results/adoption_experiment/sample_100q/sample.json \
+  --output results/adoption_experiment/controlled_100q
+```
+
+Add `PYTHONPATH=src` before `python` if the package is not installed in your
+Python environment. Run in the same GPU environment as the first experiment.
+The output directory must be new. This command supports no resume; an interrupted
+run keeps durable partial outputs and must be rerun into a different directory.
+
+The original 100-question selection stays fixed. A1 correctness is recomputed
+against the pinned dataset gold and aliases. A1 refusals, uncertain answers, and
+answers longer than eight words are skipped rather than put into a binary
+adoption comparison. Short answer-like text is a lexical eligibility criterion,
+not a semantic guarantee of clarity. This version does not resample the cohort
+or independently establish that every correct A1 cites supporting evidence.
+
+- **Correct A1:** two branches with different incorrect recommendations:
+  `plausible_incorrect` and `obvious_incorrect`.
+- **Incorrect A1:** one `correct_correction` branch recommending the dataset gold.
+- Other arm/question combinations are recorded as skipped, with explicit reasons.
+
+All active branches use the existing `CriticFeedback.to_solver_text()` with the
+same disagree verdict and a short recommended answer, with no explanation. The
+condition names are never shown to the solver. Solver weights, generation
+settings, paragraphs, A1, and revision instructions stay fixed.
+
+Plausible targets reuse `choose_controlled_incorrect_target`: a compatible
+intermediate-hop answer, a numeric span from non-supporting context, or a
+model-generated distractor. The obvious-target arm uses a distinct model-generated
+alternative, instructed to be real, of the same answer type, and obviously
+unrelated to the evidence. Both exclude gold, aliases, and A1; the obvious target
+also excludes the plausible recommendation. The existing type checks and
+short-answer checks apply. There are at most three model proposals per arm;
+unavailable targets become explicit skips, never fallback nonsense.
+
+The proposer is a specialized `Critic` agent using **the already loaded solver
+weights**, greedy decoding, and a 128-token budget. It reuses the agent generation and JSON answer parser, with a target-specific
+proposal prompt so the obvious-target instruction does not conflict with the
+original distractor prompt’s request for a plausible answer. Its prompts and generation settings do not replace
+the Solver agent's prompts or generation settings. There is no second model load
+or free-form critic explanation. This separates agents but does not provide an
+independent model as a judge of target quality.
+
+**The plausibility levels are intended generation conditions.** Automatic
+checks establish a gold/alias mismatch and heuristic type compatibility;
+they cannot prove that every target is factually wrong or that the two levels
+have distinct perceived plausibility. Entity typing of generated targets relies
+partly on the generation instruction. Output records retain target source,
+type-check result, proposal attempts, and failure reasons. No human annotation
+or approval step is required.
+
+Outputs in `results/adoption_experiment/controlled_100q/`:
+
+| File | Contents |
+|---|---|
+| `provenance.json` | Source sample hash, model and dataset settings, fixed Solver template, proposal instructions and implementation hashes |
+| `targets.jsonl` | Per-question assigned targets and generation metadata, saved before any revision |
+| `episodes.jsonl` | Three condition records per sampled question, including skipped conditions; completed records include exact feedback, A2 and automatic scores |
+| `summary.json` | Per-arm adoption, retention, correctness, corrections, harms, hop breakdowns, skips and paired plausible/obvious comparisons |
+
+For 100 sampled questions, `episodes.jsonl` ends at 300 records. This is **not 300
+solver revisions**: correct A1s get two revisions, wrong A1s get one, and excluded
+A1s or failed targets reduce that count. Model proposals add generation time.
+The console logs question progress. `summary.json` appears at successful completion.
+
+Unlike the original candidate-eligibility adoption rate, controlled adoption rates
+use **all completed trials with assigned targets** as their denominator. Unresolved,
+non-answer, and third-answer A2s remain in the counts and are not silently removed.
+They do not count as retention unless they match A1. Correct-correction adoption
+also accepts dataset gold aliases. Plausible-versus-obvious comparisons use only
+questions completed in both conditions. Correct-correction trials come from a
+different A1-correctness group; their rates are not a paired comparison against
+the wrong-recommendation arms. No activations are captured in this extension.
+
+## Original versus evidence-verification instructions
+
+Replay the exact saved recommendations from the completed controlled experiment:
+
+```bash
+python scripts/experiments/adoption_experiment.py run-verification \
+  --sample results/adoption_experiment/sample_100q/sample.json \
+  --controlled-run results/adoption_experiment/controlled_100q \
+  --output results/adoption_experiment/verification_100q
+```
+
+The new output directory must not already exist. Use the same capstone/GPU
+environment. Add `PYTHONPATH=src` if needed for package imports. The command checks
+that source sample, model, dataset, original revision template, A1, context, and
+arm membership match before inference. It saves hashes of the source files.
+A completed source run with `provenance.json`, `episodes.jsonl`, and `summary.json`
+is required. It never regenerates recommendations or reruns target selection.
+
+Every completed saved trial runs twice, from the same saved A1:
+
+1. `original`: the unmodified production Solver revision instructions.
+2. `evidence_verification`: those same instructions, with this added sentence block:
+
+> Evaluate the reviewer's recommendation against the provided passages. The
+> reviewer may be mistaken. Change your previous answer when the passages support
+> a correction. Otherwise, retain your answer if it remains supported. If neither
+> answer is supported, give the best supported answer or state that the evidence
+> is insufficient.
+
+Both conditions retain answer-only output. They use separate stateless Solver
+agents sharing the same model weights, generation settings, paragraphs, question,
+A1, and exact feedback. The production `Solver` prompt is not edited; a subclass
+provides the additional instruction only for the new condition. No proposer model
+or target-generation calls are needed. This changes the experimental instruction,
+not the scoring rules, and does not establish that the model actually verifies.
+
+Outputs are written to the new directory:
+
+| File | Contents |
+|---|---|
+| `results.csv` | All condition records: question, passages, gold, A1, recommendation, feedback, instruction condition, A2, adoption/retention/correctness, lexical response, correction/harm flags, source A2, target source/type check, status and telemetry |
+| `comparisons.csv` | One row per question/feedback arm, with both fresh A2s and outcomes side by side, plus adoption-to-retention transitions and accuracy gains/losses |
+| `episodes.jsonl` | Complete structured records for both instruction conditions |
+| `summary.json` | Per-condition/feedback-arm counts and rates, paired retention/adoption changes, accuracy gains/losses and original-prompt reproduction counts |
+| `provenance.json` | Both exact revision templates, model/dataset settings, sample/source hashes and implementation hashes |
+
+CSV files quote multiline context and feedback correctly. They include **all
+source skips**, with statuses and blank response/outcome cells; skips never count
+as rejection. `results.csv`, `comparisons.csv`, and `episodes.jsonl` are updated as
+the run progresses, while the final summary is written at successful completion.
+There is no resume support; partial files remain available after interruption.
+No human annotation or approval step is required, and no activations are saved.
+
+For the completed `controlled_100q` run with 98 completed trials, expect **196
+new revisions**, 600 condition records in `results.csv`/`episodes.jsonl` including
+preserved skips, and 300 rows in `comparisons.csv`. A CSV has one header record in
+addition to its data records; `wc -l` is not a CSV row count because fields contain
+newlines. The original-prompt rerun permits checking baseline reproducibility
+instead of assuming an old run is directly comparable.
+
+The primary success criterion is more adoption-to-retention transitions on wrong
+recommendations, while maintaining correct corrections. Refusals and third answers
+remain visible and do not count as retention. Rates retain all completed trials
+in their denominators. Increased retention on correct corrections can be harmful;
+`accuracy_losses` reports this explicitly. Interpret conditions separately if you
+later extend this to activation collection.
+
+## Anonymous versus source-labeled candidates
+
+```bash
+python scripts/experiments/adoption_experiment.py run-anonymization \
+  --sample results/adoption_experiment/sample_100q/sample.json \
+  --controlled-run results/adoption_experiment/controlled_100q \
+  --output results/adoption_experiment/anonymization_100q
+```
+
+The command reuses the exact A1/recommendation pairs and preserves source skips.
+It validates the same source provenance and context checks as `run-verification`.
+It generates no new targets and loads only the configured solver weights. Add
+`PYTHONPATH=src` if the package is not installed in your environment.
+
+Every completed source trial has four cells:
+
+| Condition | Candidate A | Candidate B |
+|---|---|---|
+| `labeled`, `a1_first` | A1, labeled “your previous answer” | target, labeled “the reviewer's recommendation” |
+| `labeled`, `critic_first` | target, with its source label | A1, with its source label |
+| `anonymous`, `a1_first` | A1, without source label | target, without source label |
+| `anonymous`, `critic_first` | target, without source label | A1, without source label |
+
+The instructions and candidate layout are identical across labeled and anonymous
+conditions; only the parenthetical source labels differ. Both use the same
+question and full passages, allow another answer or insufficient evidence, and
+request final answer text only. Neither uses the old agree/disagree verdict or
+explanation. Anonymous prompts contain no metadata identifying which candidate
+came from which agent. The source mapping remains in output records for scoring.
+The production Solver prompt is unchanged; `CandidateSolver` implements the new
+candidate evaluation task.
+
+The labeled layout control is included to separate an anonymity effect from
+changing the revision task into candidate evaluation. It is distinct from the
+original production revision prompt. Both orders are deliberately run, rather
+than choosing one random order, so position-driven choices remain measurable.
+A reduction in critic-answer selection in only one order may reflect position
+bias. The main mitigation signal is retention of A1 against wrong recommendations
+across both orders while preserving correct corrections. This is an adaptation
+of response anonymization, not an exact reproduction of a published benchmark.
+
+For the existing source run, expect **392 new generations**: 98 completed saved
+trials × 2 source-label conditions × 2 orders. The 100 sampled questions produce
+1,200 total condition records including skips, and 300 comparison rows. These
+repeated conditions are not independent questions. The output directory must be
+new; partial CSV/JSONL files are preserved on interruption, without resume support.
+
+Outputs under `results/adoption_experiment/anonymization_100q/`:
+
+- `results.csv`: all outcomes and skips, with candidate order, candidate text,
+  source mapping, selected candidate, exact evaluation prompt, target adoption,
+  A1 retention, correctness, automatic response class and generation telemetry.
+  The `source_feedback` column preserves old feedback for reference; it is not
+  shown in the candidate-evaluation prompt. `critic_feedback` is blank here.
+- `comparisons.csv`: all four cells side by side per question/feedback arm,
+  including candidate selections, outcomes, statuses, and historical source A2.
+- `summary.json`: counts/rates for each cell, paired labeled-to-anonymous changes
+  at each order, and order effects including first/second-position preference
+  and retention/adoption in both orders.
+- `episodes.jsonl` and `provenance.json`: full records, source hashes, model/dataset
+  settings, exact candidate template and source labels, and code hashes.
+
+CSV output is updated during execution and quotes multiline fields correctly.
+Skipped conditions have blank outcome fields and are excluded from rates. All
+completed answers, including refusals and unresolved responses, remain in the
+rate denominators. Final answers are matched as answer text using the existing
+scoring; candidate letters alone are not converted to answers. No human review
+step or activation collection is introduced. Historical revision answers are
+reference values, not a matched-layout control; use the fresh labeled cells to
+assess the source-label effect.

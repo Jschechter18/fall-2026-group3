@@ -1,6 +1,6 @@
 """Paired feedback ablations with frozen A1 and unchanged Solver prompts.
 
-Automatic behavior labels are diagnostic candidates, never human ground truth.
+Behavior labels are computed using the existing automatic classifier.
 """
 from collections import Counter, defaultdict
 import csv
@@ -149,7 +149,6 @@ def run_experiment(rows, examples, solver, output_dir, provenance=None):
             records.append(record)
     summary = summarize(records)
     (output / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
-    export_review(records, output)
     return summary
 
 
@@ -188,22 +187,4 @@ def summarize(records):
             "retained_to_adopted": sum(a["candidate_label"]["solver_response"] == "retained_a1" and b["candidate_label"]["solver_response"] == "adopted_critic" for a, b in eligible_pairs),
             "accuracy_gains": sum(not a["a2_correct"] and b["a2_correct"] for a, b in pairs),
             "accuracy_losses": sum(a["a2_correct"] and not b["a2_correct"] for a, b in pairs)}
-    return {"warning": "Enriched development sample; automatic labels require human QC. No-feedback is a reconsideration control, not rejection.", "arms": result}
-
-
-def export_review(records, output):
-    completed = [r for r in records if r["status"] == "completed"]
-    random.Random(42).shuffle(completed)
-    columns = ["review_id", "question", "context", "solver_a1", "critic_feedback", "solver_a2",
-               "feedback_type", "solver_response", "eligible_primary", "annotator_confidence", "notes"]
-    key = []
-    with (output / "review.csv").open("w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=columns)
-        writer.writeheader()
-        for i, row in enumerate(completed):
-            review_id = f"P{i + 1:04d}"
-            writer.writerow({"review_id": review_id, "question": row["question"], "context": row["context"],
-                             "solver_a1": row["solver_attempt_1"], "critic_feedback": row["critic_feedback"],
-                             "solver_a2": row["solver_attempt_2"]})
-            key.append({"review_id": review_id, "question_id": row["question_id"], "arm": row["arm"]})
-    (output / "review_private_key.json").write_text(json.dumps(key, indent=2) + "\n")
+    return {"warning": "Enriched development sample. No-feedback is a reconsideration control, not rejection.", "arms": result}
