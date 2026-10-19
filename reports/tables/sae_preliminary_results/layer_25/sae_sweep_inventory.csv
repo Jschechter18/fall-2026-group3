@@ -1,0 +1,3 @@
+Study,Status,Completed trials,Listed trials,Included,Reason,study_id
+Coarse L1 sweep,completed,10,10,True,Completed presentation sweep,20261016T145420178747Z-c55f92b510ae
+TopK + AuxK sweep,completed,4,4,True,Completed presentation sweep,20261016T225755678732Z-c55f92b510ae
