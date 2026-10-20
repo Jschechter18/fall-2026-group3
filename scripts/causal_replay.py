@@ -1,5 +1,15 @@
 """Causal replay (issue #90): regenerate Solver A2 with SAE ablations at the configured layer and write the table.
 
+Steering (issue #139) runs the same replay with each feature set clamped to s * ref instead of zeroed. The
+reference activations come from the layer's feature-selection run, and are computed once per layer first:
+
+    python scripts/feature_reference_activations.py --config configs/feature_selection_layer33.yaml \
+        --summary results/feature_selection/20261016T003252665105Z/feature_selection_summary.json
+    python scripts/causal_replay.py --config configs/causal_steering_layer33.yaml --limit 5    # check s/generation
+    python scripts/causal_replay.py --config configs/causal_steering_layer33.yaml
+
+(and the same with configs/feature_selection_layer25.yaml, its summary and configs/causal_steering_layer25.yaml).
+
     # GPU smoke test (a few episodes, real model and SAEs), then the full run
     python scripts/causal_replay.py --config configs/causal_replay_layer33.yaml --limit 5
     python scripts/causal_replay.py --config configs/causal_replay_layer33.yaml

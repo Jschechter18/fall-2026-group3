@@ -192,6 +192,12 @@ def test_committed_configs_load():
     assert (real.partition, real.layer, real.solver["revision"]) == ("intervention", 33, "093f9f388b31de276ce2de164bdc2081324b9767")
     assert real.feature_selection_summary == smoke.feature_selection_summary
     assert (real.on_replay_check_fail, smoke.on_replay_check_fail) == ("stop", "mark_unvalidated")
+    for layer in (33, 25):
+        steer = replay.ReplayConfig.from_yaml(repo / f"configs/causal_steering_layer{layer}.yaml")
+        assert (steer.layer, steer.ablation, steer.steer_strengths, steer.n_random_draws) == (layer, False, [-2, 2, 5], 7)
+        assert all(f"layer_{layer}" in spec["path"] for spec in steer.saes.values())
+        assert Path(steer.feature_reference).parent == Path(steer.feature_selection_summary).parent
+    assert smoke.steer_strengths and smoke.ablation
 
 
 @pytest.mark.parametrize("change, match", [
@@ -529,7 +535,7 @@ def test_analyse_writes_the_direct_comparison_and_diagnostics(tmp_path):
     assert dmg.Experiment.tolist() == ["TopK SAE", "L1 SAE", "Pretrained SAE"]
     diag = pd.read_csv(run_dir / "diagnostics.csv")
     assert {"Answer changed vs. control (%)", "First token changed vs. control (%)", "Empty answer (%)",
-            "Ablated features all inactive (%)", "Mean removed norm (rel. to |x|)"} <= set(diag.columns)
+            "Edited features all inactive before the edit (%)", "Mean edit norm (rel. to |x|)"} <= set(diag.columns)
     trans = pd.read_csv(run_dir / "transitions.csv")
     per_cond = trans.groupby(["experiment", "condition"])["count"].sum()
     assert (per_cond.xs("random_ablation", level="condition") == 2 * len(episodes)).all()   # 2 draws pooled
@@ -603,3 +609,178 @@ def test_intervention_description_depends_on_whether_the_layer_is_final(tmp_path
     replay.analyse(run_dir)
     s = json.loads((run_dir / "causal_replay_summary.json").read_text())
     assert s["provenance"]["num_layers"] == 4 and "not the final layer" in s["intervention"]["description"]
+
+
+# ---- steering: clamping features to s * ref
+
+def test_splice_clamps_features_to_the_given_values():
+    sae = tiny_saes()["TopK SAE"]
+    m = _host()
+    h = torch.randn(1, 4, 16)
+    feats, values = [1, 2, 3], [2.0, -1.5, 0.5]
+    with replay.SAESplice(m, "layer", sae, feats, values=values) as sp:
+        out = m.layer(h)
+    z = offline.encode(sae, h[0, -1].numpy()[None])
+    z[:, feats] = values
+    assert np.allclose(out[0, -1].numpy(), offline.decode(sae, z)[0], atol=1e-5)
+    assert set(sp.stats) == {"n_active", "recon_rel_error", "n_ablated_active", "removed_rel_norm"}
+    with replay.SAESplice(m, "layer", sae, feats, values=[0.0] * 3) as zeros:
+        a = m.layer(h)
+    with replay.SAESplice(m, "layer", sae, feats) as ablate:
+        b = m.layer(h)
+    assert torch.equal(a, b) and zeros.stats == ablate.stats             # clamping to 0 is ablation
+    z = offline.encode(sae, h[0, -1].numpy()[None])
+    with replay.SAESplice(m, "layer", sae, feats, mode="error_preserving", values=z[0, feats].tolist()):
+        same = m.layer(h)
+    assert torch.allclose(same, h, atol=1e-5)                            # setting features to their own value: no edit
+    with pytest.raises(ValueError, match="3 features but 2 values"):
+        replay.SAESplice(m, "layer", sae, feats, values=[1.0, 2.0])
+
+
+def test_steering_conditions_clamp_each_set_to_strength_times_ref():
+    feats = tiny_features(tiny_saes(), n_random_draws=2)
+    conds = replay.conditions(feats, error_preserving=True, ablation=False, steer_strengths=[-2, 5])
+    per_sae = (1 + 2) * 2 * 2 + 1                     # (targeted + draws) x strengths x splices + reconstruction only
+    assert len(conds) == 1 + 3 * per_sae
+    assert not any("ablation" in c["condition"] and c["condition"] != "no_ablation" for c in conds)
+    t = next(c for c in conds if c["condition"] == "targeted_steer_-2" and c["experiment"] == "L1 SAE")
+    ref = feats["L1 SAE"]["ref"]
+    assert t["features"] == feats["L1 SAE"]["targeted"] and t["strength"] == -2
+    assert t["values"] == pytest.approx([-2 * ref[str(i)] for i in t["features"]])
+    r = next(c for c in conds if c["condition"] == "random_steer_+5" and c["draw"] == 1 and c["mode"] == "error_preserving")
+    assert r["values"] == pytest.approx([5 * feats[r["sae"]]["ref"][str(i)] for i in feats[r["sae"]]["random"][1]])
+    seen = set()
+    for c in conds:                                    # controls still come first
+        ctl = replay.control_key(c)
+        assert ctl is None or ctl in seen
+        seen.add((c["experiment"], c["condition"], c["draw"]))
+    assert replay.condition_label("targeted_steer_+5") == "Targeted steer (+5× ref)"
+    assert replay.split_condition("random_steer_-2") == ("random", "steer_-2")
+    assert replay.split_condition("no_ablation") is None
+    both = replay.conditions(feats, steer_strengths=[2])
+    assert [c["condition"] for c in both[1:1 + 1 + 3 + 3]] == (
+        ["no_ablation", "targeted_ablation", "random_ablation", "random_ablation",
+         "targeted_steer_+2", "random_steer_+2", "random_steer_+2"])
+
+
+def test_config_checks_the_steering_settings(tmp_path):
+    p = tmp_path / "c.yaml"
+    base = "capstone_data_root: .\ninteractions_jsonl: a\nlabels_csv: b\nfeature_selection_summary: c\nlayer: 25\n"
+    for extra, match in (("steer_strengths: [0, 2]\nfeature_reference: r\n", "nonzero"),
+                         ("steer_strengths: [2, 2]\nfeature_reference: r\n", "distinct"),
+                         ("steer_strengths: 2\nfeature_reference: r\n", "list"),
+                         ("steer_strengths: [2]\n", "feature_reference"),
+                         ("ablation: false\n", "Nothing to run"),
+                         ("max_hours: 0\n", "max_hours")):
+        p.write_text(base + extra)
+        with pytest.raises(ValueError, match=match):
+            replay.ReplayConfig.from_yaml(p)
+    p.write_text(base + "ablation: false\nsteer_strengths: [-2, 2.5]\nfeature_reference: r\nmax_hours: 23\n")
+    cfg = replay.ReplayConfig.from_yaml(p)
+    assert (cfg.layer, cfg.steer_strengths, cfg.max_hours) == (25, [-2, 2.5], 23)
+
+
+def _reference(tmp_path, layer=33, summary_sha=None, sae_hash="h"):
+    from mas_sae.experiments.artifacts import sha256_file
+    ref = {"layer": layer, "feature_selection_summary_sha256": summary_sha or sha256_file(tmp_path / "fs.json"),
+           "saes": {"TopK SAE": {"sae_sha256": {"ckpt": sae_hash},
+                                 "features": {str(i): {"ref": 0.5 * i} for i in range(1, 9)}}}}
+    (tmp_path / "ref.json").write_text(json.dumps(ref))
+
+
+def test_feature_sets_attach_reference_activations_of_the_same_inputs(tmp_path):
+    hashes = _summary(tmp_path)
+    cfg = _cfg(tmp_path, saes={"TopK SAE": {"kind": "custom", "path": "x"}}, steer_strengths=[2],
+               feature_reference="ref.json")
+    _reference(tmp_path)
+    f = replay.feature_sets(cfg, hashes)["TopK SAE"]
+    assert f["ref"] == {"1": 0.5, "2": 1.0, "3": 1.5, "4": 2.0, "5": 2.5, "6": 3.0}   # only features in use
+    for kw, match in ((dict(layer=25), "layer 25"), (dict(summary_sha="x"), "different feature-selection"),
+                      (dict(sae_hash="other"), "reference activations used")):
+        _reference(tmp_path, **kw)
+        with pytest.raises(ValueError, match=match):
+            replay.feature_sets(cfg, hashes)
+
+
+def test_validate_features_needs_a_positive_ref_for_every_steered_feature():
+    saes = tiny_saes()
+    feats = tiny_features(saes, n_random_draws=2)
+    replay.validate_features(feats, saes)
+    feats["TopK SAE"]["ref"][str(feats["TopK SAE"]["random"][1][0])] = 0.0
+    with pytest.raises(ValueError, match="no positive reference"):
+        replay.validate_features(feats, saes)
+    del feats["L1 SAE"]["ref"][str(feats["L1 SAE"]["targeted"][0])]
+    feats["TopK SAE"]["ref"] = {k: 1.0 for k in feats["TopK SAE"]["ref"]}
+    with pytest.raises(ValueError, match="L1 SAE targeted: no positive reference"):
+        replay.validate_features(feats, saes)
+
+
+@pytest.mark.parametrize("layer, n_layers", [(33, None), (5, 8)])
+def test_steering_run_writes_dose_response_and_bidirectional_tables(tmp_path, layer, n_layers):
+    cfg, episodes, comp = _smoke(tmp_path, layer=layer, n_layers=n_layers)
+    cfg = dataclasses.replace(cfg, steer_strengths=[-2, 2], max_hours=1e-9)
+    run_dir = replay.replay(cfg, episodes.head(3), comp, tmp_path / "run")
+    rows = replay._read_rows(run_dir / "per_row.jsonl")
+    n_conds = 1 + 3 * ((1 + 3 * 3) + 3 * 3)              # ablation + 2 strengths, (targeted + 2 draws) each
+    assert len(rows) == 3 * n_conds
+    steered = [r for r in rows if "steer" in r["condition"]]
+    assert {r["strength"] for r in steered} == {-2, 2} and all(r["removed_rel_norm"] > 0 for r in steered)
+    table = replay.analyse(run_dir)
+    assert len(table) == 2 + 6 * (1 + 2 * 3)
+    assert "Targeted steer (+2× ref)" in set(table.Condition)
+    tvr = pd.read_csv(run_dir / "targeted_vs_random.csv")
+    assert list(tvr.columns) == replay.TVR_COLUMNS and len(tvr) == 6 * 3
+    assert tvr.loc[tvr.Splice == "reconstruction", "p-value (Holm)"].notna().all()
+    dose = pd.read_csv(run_dir / "dose_response.csv")
+    assert len(dose) == 6 * 3
+    assert dose[dose.Experiment == "TopK SAE"]["Strength (× ref)"].tolist() == [-2.0, 0.0, 2.0]
+    bi = pd.read_csv(run_dir / "steering_bidirectional.csv")
+    assert len(bi) == 6 and (bi["Strength (× ref)"] == 2).all()
+    s = json.loads((run_dir / "causal_replay_summary.json").read_text())
+    assert s["intervention"]["arms"] == ["ablation", "steer_-2", "steer_+2"]
+    assert meta_layer(run_dir) == layer
+
+
+def meta_layer(run_dir):
+    return json.loads((run_dir / "replay_config.json").read_text())["config"]["layer"]
+
+
+def test_steering_only_run_skips_ablation(tmp_path):
+    cfg, episodes, comp = _smoke(tmp_path)
+    cfg = dataclasses.replace(cfg, ablation=False, steer_strengths=[3])
+    run_dir = replay.replay(cfg, episodes.head(2), comp, tmp_path / "run")
+    assert not any("ablation" in r["condition"] and r["condition"] != "no_ablation"
+                   for r in replay._read_rows(run_dir / "per_row.jsonl"))
+    replay.analyse(run_dir)
+    assert pd.read_csv(run_dir / "targeted_vs_random.csv").Arm.unique().tolist() == ["steer_+3"]
+    assert pd.read_csv(run_dir / "steering_bidirectional.csv").empty      # no -3 to compare with
+
+
+def test_reference_activations_are_mean_nonzero_values_on_the_fit_partition(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    from mas_sae.probe import feature_selection as fs
+    sae = tiny_saes()["TopK SAE"]
+    X = np.random.default_rng(0).normal(size=(40, 16)).astype(np.float32)
+    part = np.array(["train"] * 30 + ["validation"] * 10)
+    monkeypatch.setattr(fs.ls, "load_inputs", lambda c: (pd.DataFrame({"p": part}), None, SimpleNamespace(partition="p")))
+    monkeypatch.setattr(fs.bd, "load_layer_matrix", lambda *a: X)
+    monkeypatch.setattr(fs, "sae_files", lambda spec, root: [])
+    monkeypatch.setattr(fs, "load_sae", lambda spec, root, layer: (sae, {}))
+    Z = offline.encode(sae, X[:30])
+    live = [int(i) for i in np.flatnonzero((Z > 0).any(0))][:4]
+    summary = {"config": {"layer": 25}, "provenance": {"sae_sha256": {"TopK SAE": {}}},
+               "saes": {"TopK SAE": {"targeted_features": live[:2], "random_control_draws": [live[2:]]}}}
+    cfg = fs.FeatureSelectionConfig(capstone_data_root=tmp_path, activations_dir="a", results_dir="r", labels_csv="l",
+                                    manifest_csv="m", layer=25, saes={"TopK SAE": {"kind": "custom", "path": "x"}})
+    out = fs.reference_activations(cfg, summary)["TopK SAE"]["features"]
+    assert sorted(out) == sorted(str(i) for i in live)
+    for i in live:
+        col = Z[:, i]
+        assert out[str(i)]["ref"] == pytest.approx(col[col > 0].mean())
+        assert out[str(i)]["firing_frequency"] == pytest.approx((col > 0).mean())
+    with pytest.raises(ValueError, match="layer 25, not 33"):
+        fs.reference_activations(dataclasses.replace(cfg, layer=33), summary)
+    dead = int(np.flatnonzero(~(Z > 0).any(0))[0])
+    summary["saes"]["TopK SAE"]["targeted_features"] = [dead]
+    with pytest.raises(ValueError, match="never fires"):
+        fs.reference_activations(cfg, summary)
