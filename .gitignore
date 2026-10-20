@@ -66,3 +66,7 @@ results/sae/musique/runs/*/*/checkpoints/
 
 # Tuning and continuation checkpoints
 /results/sae/musique/tuning/**/checkpoints/
+
+# Large artifacts mirrored to s3://dats-capstone/shared/group3/
+results/sae/pretrained/
+results/causal_replay/*/per_row.jsonl
