@@ -1,0 +1,1600 @@
+{
+  "n_episodes_complete": 517,
+  "n_episodes_planned": 517,
+  "n_generations": 67210,
+  "intervention": {
+    "name": "final_prompt_token_prefill_only",
+    "description": "The layer output at the final prompt token of the A2 prefill is replaced; earlier positions and decode-step computations at this layer are not. This is the final layer, so the change reaches only the first generated token's logits: any effect on the answer comes through a different first token.",
+    "splices": {
+      "reconstruction": "decode(z_ablated)",
+      "error_preserving": "x + decode(z_ablated) - decode(z)"
+    }
+  },
+  "validated": true,
+  "replay_check": {
+    "n_episodes": 517,
+    "n_planned": 517,
+    "mismatch_counts": {
+      "exact_match": 517
+    },
+    "a2_exact_match_rate": 1.0,
+    "solver_response_match_rate": 1.0,
+    "n_prompt_hashes_compared": 0,
+    "stored_acceptance_pct": 88.58800773694391,
+    "replayed_acceptance_pct": 88.58800773694391,
+    "criterion": {
+      "min_label_match": 0.98,
+      "max_prompt_differences": 0
+    },
+    "passed": true,
+    "failures": []
+  },
+  "effects": {
+    "TopK SAE__random_ablation": {
+      "delta_pp": -0.18375241779497103,
+      "ci95_pp": [
+        -0.6866537717601549,
+        0.23210831721470018
+      ],
+      "p_value": 0.4891510848915108
+    },
+    "TopK SAE__targeted_ablation": {
+      "delta_pp": -0.7736943907156674,
+      "ci95_pp": [
+        -1.5473887814313347,
+        -0.19342359767891684
+      ],
+      "p_value": 0.12068793120687932
+    },
+    "TopK SAE \u00b7 error-preserving__random_ablation": {
+      "delta_pp": -0.1450676982591876,
+      "ci95_pp": [
+        -0.4158607350096712,
+        0.03868471953578337
+      ],
+      "p_value": 0.25517448255174485
+    },
+    "TopK SAE \u00b7 error-preserving__targeted_ablation": {
+      "delta_pp": -0.19342359767891684,
+      "ci95_pp": [
+        -0.7736943907156674,
+        0.0
+      ],
+      "p_value": 1.0
+    },
+    "L1 SAE__random_ablation": {
+      "delta_pp": -0.23210831721470018,
+      "ci95_pp": [
+        -0.42553191489361697,
+        -0.08704061895551256
+      ],
+      "p_value": 0.0024997500249975004
+    },
+    "L1 SAE__targeted_ablation": {
+      "delta_pp": 0.0,
+      "ci95_pp": [
+        -0.9719535783365568,
+        1.160541586073501
+      ],
+      "p_value": 1.0
+    },
+    "L1 SAE \u00b7 error-preserving__random_ablation": {
+      "delta_pp": -0.17408123791102512,
+      "ci95_pp": [
+        -0.34816247582205023,
+        -0.03868471953578336
+      ],
+      "p_value": 0.014498550144985502
+    },
+    "L1 SAE \u00b7 error-preserving__targeted_ablation": {
+      "delta_pp": -0.5802707930367506,
+      "ci95_pp": [
+        -1.5473887814313347,
+        0.19342359767891684
+      ],
+      "p_value": 0.3805619438056194
+    },
+    "Pretrained SAE__random_ablation": {
+      "delta_pp": -0.08704061895551259,
+      "ci95_pp": [
+        -0.19342359767891681,
+        -0.009671179883945849
+      ],
+      "p_value": 0.06359364063593641
+    },
+    "Pretrained SAE__targeted_ablation": {
+      "delta_pp": 0.0,
+      "ci95_pp": [
+        0.0,
+        0.0
+      ],
+      "p_value": 1.0
+    },
+    "Pretrained SAE \u00b7 error-preserving__random_ablation": {
+      "delta_pp": 0.0,
+      "ci95_pp": [
+        0.0,
+        0.0
+      ],
+      "p_value": 1.0
+    },
+    "Pretrained SAE \u00b7 error-preserving__targeted_ablation": {
+      "delta_pp": 0.0,
+      "ci95_pp": [
+        0.0,
+        0.0
+      ],
+      "p_value": 1.0
+    }
+  },
+  "targeted_vs_random": [
+    {
+      "experiment": "TopK SAE",
+      "splice": "reconstruction",
+      "delta_pp": -0.5899419729206963,
+      "ci95_pp": [
+        -1.2287234042553192,
+        -0.07712765957446825
+      ],
+      "p_value": 0.05629437056294371,
+      "ci95_pp_questions_and_draws": [
+        -1.276595744680853,
+        -0.00942940038685358
+      ],
+      "n_random_draws": 20,
+      "targeted_vs_control_pp": -0.7736943907156674,
+      "random_draw_vs_control_pp": [
+        -0.3868471953578337,
+        0.19342359767891684,
+        -0.3868471953578337,
+        0.0,
+        -0.3868471953578337,
+        -0.5802707930367506,
+        -0.19342359767891684,
+        0.0,
+        0.19342359767891684,
+        -0.19342359767891684,
+        -0.19342359767891684,
+        0.19342359767891684,
+        -0.9671179883945842,
+        0.3868471953578337,
+        -0.3868471953578337,
+        0.19342359767891684,
+        -0.3868471953578337,
+        -0.3868471953578337,
+        0.19342359767891684,
+        -0.5802707930367506
+      ],
+      "draw_tail_fraction": 0.09523809523809523,
+      "p_value_holm": 0.16888311168883113
+    },
+    {
+      "experiment": "TopK SAE \u00b7 error-preserving",
+      "splice": "error_preserving",
+      "delta_pp": -0.04835589941972923,
+      "ci95_pp": [
+        -0.3387330754352032,
+        0.15473887814313345
+      ],
+      "p_value": 0.8051194880511949,
+      "ci95_pp_questions_and_draws": [
+        -0.3677466150870365,
+        0.19342359767892114
+      ],
+      "n_random_draws": 20,
+      "targeted_vs_control_pp": -0.19342359767891684,
+      "random_draw_vs_control_pp": [
+        0.0,
+        -0.19342359767891684,
+        -0.19342359767891684,
+        -0.19342359767891684,
+        0.0,
+        -0.19342359767891684,
+        -0.19342359767891684,
+        -0.19342359767891684,
+        -0.19342359767891684,
+        0.0,
+        -0.19342359767891684,
+        -0.19342359767891684,
+        -0.19342359767891684,
+        0.19342359767891684,
+        -0.19342359767891684,
+        -0.19342359767891684,
+        -0.19342359767891684,
+        -0.19342359767891684,
+        0.0,
+        -0.3868471953578337
+      ],
+      "draw_tail_fraction": 0.8095238095238095
+    },
+    {
+      "experiment": "L1 SAE",
+      "splice": "reconstruction",
+      "delta_pp": 0.23210831721470018,
+      "ci95_pp": [
+        -0.8029497098646035,
+        1.3152804642166342
+      ],
+      "p_value": 0.7187281271872813,
+      "ci95_pp_questions_and_draws": [
+        -0.8123791102514488,
+        1.334864603481631
+      ],
+      "n_random_draws": 20,
+      "targeted_vs_control_pp": 0.0,
+      "random_draw_vs_control_pp": [
+        -0.19342359767891684,
+        -0.19342359767891684,
+        0.0,
+        0.0,
+        -0.19342359767891684,
+        -0.19342359767891684,
+        0.0,
+        0.0,
+        -1.5473887814313347,
+        0.0,
+        -0.19342359767891684,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.3539651837524178,
+        0.0,
+        0.0,
+        -0.3868471953578337,
+        -0.3868471953578337
+      ],
+      "draw_tail_fraction": 1.0,
+      "p_value_holm": 0.7187281271872813
+    },
+    {
+      "experiment": "L1 SAE \u00b7 error-preserving",
+      "splice": "error_preserving",
+      "delta_pp": -0.40618955512572535,
+      "ci95_pp": [
+        -1.276595744680851,
+        0.34816247582205023
+      ],
+      "p_value": 0.3805619438056194,
+      "ci95_pp_questions_and_draws": [
+        -1.3056092843326872,
+        0.36798839458413485
+      ],
+      "n_random_draws": 20,
+      "targeted_vs_control_pp": -0.5802707930367506,
+      "random_draw_vs_control_pp": [
+        -0.19342359767891684,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.3539651837524178,
+        -0.19342359767891684,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.3539651837524178,
+        0.0,
+        -0.19342359767891684,
+        -0.19342359767891684,
+        0.0
+      ],
+      "draw_tail_fraction": 0.14285714285714285
+    },
+    {
+      "experiment": "Pretrained SAE",
+      "splice": "reconstruction",
+      "delta_pp": 0.08704061895551259,
+      "ci95_pp": [
+        0.009671179883945849,
+        0.19342359767891681
+      ],
+      "p_value": 0.06359364063593641,
+      "ci95_pp_questions_and_draws": [
+        0.0,
+        0.24177949709864865
+      ],
+      "n_random_draws": 20,
+      "targeted_vs_control_pp": 0.0,
+      "random_draw_vs_control_pp": [
+        0.0,
+        -0.5802707930367506,
+        -0.3868471953578337,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -0.19342359767891684,
+        0.0,
+        0.0,
+        -0.19342359767891684,
+        0.0,
+        0.0,
+        -0.3868471953578337,
+        0.0
+      ],
+      "draw_tail_fraction": 1.0,
+      "p_value_holm": 0.16888311168883113
+    },
+    {
+      "experiment": "Pretrained SAE \u00b7 error-preserving",
+      "splice": "error_preserving",
+      "delta_pp": 0.0,
+      "ci95_pp": [
+        0.0,
+        0.0
+      ],
+      "p_value": 1.0,
+      "ci95_pp_questions_and_draws": [
+        0.0,
+        0.0
+      ],
+      "n_random_draws": 20,
+      "targeted_vs_control_pp": 0.0,
+      "random_draw_vs_control_pp": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "draw_tail_fraction": 1.0
+    }
+  ],
+  "multiple_comparisons": "Confirmatory family: targeted minus mean random ablation with the reconstruction splice, one test per SAE, Holm-adjusted (p_value_holm). These p-values are conditional on the random draws used; ci95_pp_questions_and_draws also resamples the draws, a broader source of uncertainty. draw_tail_fraction is a descriptive tail fraction, not a test: the probe-selected targeted set and the frequency-matched random sets are not shown to be exchangeable under a null. Error-preserving, per-condition, per-draw and diagnostic results are sensitivity / exploratory and not adjusted.",
+  "reconstruction_damage": [
+    {
+      "Experiment": "TopK SAE",
+      "N": 517,
+      "Plain replay acceptance (%)": 88.58800773694391,
+      "Reconstruction-only acceptance (%)": 86.65377176015474,
+      "\u0394 (pp)": -1.9342359767891684,
+      "95% CI for \u0394": "[-3.29, -0.77]",
+      "p-value": 0.0059994000599940004,
+      "Answer changed vs. control (%)": 5.029013539651837,
+      "Label changed vs. control (%)": 3.481624758220503,
+      "First token changed vs. control (%)": 5.029013539651837,
+      "\u0394 log p(control's first token)": -0.26864132880706076,
+      "95% CI for \u0394 log p": "[-0.413, -0.146]",
+      "Mean reconstruction error (rel. to |x|)": 0.13626366757879635
+    },
+    {
+      "Experiment": "L1 SAE",
+      "N": 517,
+      "Plain replay acceptance (%)": 88.58800773694391,
+      "Reconstruction-only acceptance (%)": 85.68665377176016,
+      "\u0394 (pp)": -2.9013539651837523,
+      "95% CI for \u0394": "[-4.45, -1.55]",
+      "p-value": 9.999000099990002e-05,
+      "Answer changed vs. control (%)": 5.802707930367505,
+      "Label changed vs. control (%)": 4.061895551257253,
+      "First token changed vs. control (%)": 5.996131528046422,
+      "\u0394 log p(control's first token)": -0.5881166797112938,
+      "95% CI for \u0394 log p": "[-0.860, -0.376]",
+      "Mean reconstruction error (rel. to |x|)": 0.15861324156045453
+    },
+    {
+      "Experiment": "Pretrained SAE",
+      "N": 517,
+      "Plain replay acceptance (%)": 88.58800773694391,
+      "Reconstruction-only acceptance (%)": 88.20116054158608,
+      "\u0394 (pp)": -0.3868471953578337,
+      "95% CI for \u0394": "[-1.16, 0.39]",
+      "p-value": 0.6262373762623737,
+      "Answer changed vs. control (%)": 3.0947775628626695,
+      "Label changed vs. control (%)": 1.9342359767891684,
+      "First token changed vs. control (%)": 3.0947775628626695,
+      "\u0394 log p(control's first token)": -0.11903530392673989,
+      "95% CI for \u0394 log p": "[-0.218, -0.051]",
+      "Mean reconstruction error (rel. to |x|)": 0.31334585089748096
+    }
+  ],
+  "diagnostics": [
+    {
+      "Experiment": "Baseline",
+      "Condition": "No SAE (replayed A2)",
+      "Generations": 517,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 0.19342359767891684
+    },
+    {
+      "Experiment": "TopK SAE",
+      "Condition": "No ablation",
+      "Generations": 517,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 0.19342359767891684,
+      "Answer changed vs. control (%)": 5.029013539651837,
+      "Label changed vs. control (%)": 3.481624758220503,
+      "First token changed vs. control (%)": 5.029013539651837,
+      "\u0394 log p(control's first token)": -0.26864132880706076,
+      "95% CI for \u0394 log p": "[-0.413, -0.146]",
+      "Ablated features all inactive (%)": null,
+      "Mean ablated features active": null,
+      "Mean removed norm (rel. to |x|)": null,
+      "Mean reconstruction error (rel. to |x|)": 0.13626366757879635
+    },
+    {
+      "Experiment": "TopK SAE",
+      "Condition": "Targeted ablation",
+      "Generations": 517,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 0.19342359767891684,
+      "Answer changed vs. control (%)": 1.7408123791102514,
+      "Label changed vs. control (%)": 0.9671179883945842,
+      "First token changed vs. control (%)": 1.7408123791102514,
+      "\u0394 log p(control's first token)": -0.005514478275624498,
+      "95% CI for \u0394 log p": "[-0.016, 0.004]",
+      "Ablated features all inactive (%)": 0.0,
+      "Mean ablated features active": 7.1257253384912955,
+      "Mean removed norm (rel. to |x|)": 0.11200088390817495,
+      "Mean reconstruction error (rel. to |x|)": 0.13626366757879635
+    },
+    {
+      "Experiment": "TopK SAE",
+      "Condition": "Random ablation",
+      "Generations": 10340,
+      "Empty answer (%)": 0.00967117988394584,
+      "Reached token budget (%)": 0.19342359767891684,
+      "Answer changed vs. control (%)": 2.678916827852998,
+      "Label changed vs. control (%)": 1.3926499032882012,
+      "First token changed vs. control (%)": 2.756286266924565,
+      "\u0394 log p(control's first token)": -0.05683584386151012,
+      "95% CI for \u0394 log p": "[-0.079, -0.038]",
+      "Ablated features all inactive (%)": 0.0,
+      "Mean ablated features active": 7.614796905222438,
+      "Mean removed norm (rel. to |x|)": 0.14615621179489985,
+      "Mean reconstruction error (rel. to |x|)": 0.13626366757879635
+    },
+    {
+      "Experiment": "TopK SAE \u00b7 error-preserving",
+      "Condition": "Targeted ablation",
+      "Generations": 517,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 0.19342359767891684,
+      "Answer changed vs. control (%)": 1.7408123791102514,
+      "Label changed vs. control (%)": 0.7736943907156674,
+      "First token changed vs. control (%)": 1.7408123791102514,
+      "\u0394 log p(control's first token)": -0.01387360966313001,
+      "95% CI for \u0394 log p": "[-0.030, -0.002]",
+      "Ablated features all inactive (%)": 0.0,
+      "Mean ablated features active": 7.1257253384912955,
+      "Mean removed norm (rel. to |x|)": 0.11200088390817495,
+      "Mean reconstruction error (rel. to |x|)": 0.13626366757879635
+    },
+    {
+      "Experiment": "TopK SAE \u00b7 error-preserving",
+      "Condition": "Random ablation",
+      "Generations": 10340,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 0.19342359767891684,
+      "Answer changed vs. control (%)": 1.5473887814313347,
+      "Label changed vs. control (%)": 0.7446808510638299,
+      "First token changed vs. control (%)": 1.5473887814313347,
+      "\u0394 log p(control's first token)": -0.026377577259802627,
+      "95% CI for \u0394 log p": "[-0.043, -0.013]",
+      "Ablated features all inactive (%)": 0.0,
+      "Mean ablated features active": 7.614796905222438,
+      "Mean removed norm (rel. to |x|)": 0.14615621179489985,
+      "Mean reconstruction error (rel. to |x|)": 0.13626366757879635
+    },
+    {
+      "Experiment": "L1 SAE",
+      "Condition": "No ablation",
+      "Generations": 517,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 0.19342359767891684,
+      "Answer changed vs. control (%)": 5.802707930367505,
+      "Label changed vs. control (%)": 4.061895551257253,
+      "First token changed vs. control (%)": 5.996131528046422,
+      "\u0394 log p(control's first token)": -0.5881166797112938,
+      "95% CI for \u0394 log p": "[-0.860, -0.376]",
+      "Ablated features all inactive (%)": null,
+      "Mean ablated features active": null,
+      "Mean removed norm (rel. to |x|)": null,
+      "Mean reconstruction error (rel. to |x|)": 0.15861324156045453
+    },
+    {
+      "Experiment": "L1 SAE",
+      "Condition": "Targeted ablation",
+      "Generations": 517,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 0.19342359767891684,
+      "Answer changed vs. control (%)": 6.963249516441006,
+      "Label changed vs. control (%)": 2.9013539651837523,
+      "First token changed vs. control (%)": 6.963249516441006,
+      "\u0394 log p(control's first token)": -0.8275871564529593,
+      "95% CI for \u0394 log p": "[-1.181, -0.516]",
+      "Ablated features all inactive (%)": 0.0,
+      "Mean ablated features active": 1.7408123791102514,
+      "Mean removed norm (rel. to |x|)": 0.8045103774843756,
+      "Mean reconstruction error (rel. to |x|)": 0.15861324156045453
+    },
+    {
+      "Experiment": "L1 SAE",
+      "Condition": "Random ablation",
+      "Generations": 10340,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 0.19342359767891684,
+      "Answer changed vs. control (%)": 0.6769825918762089,
+      "Label changed vs. control (%)": 0.27079303675048355,
+      "First token changed vs. control (%)": 0.6769825918762089,
+      "\u0394 log p(control's first token)": -0.010716898923533802,
+      "95% CI for \u0394 log p": "[-0.016, -0.006]",
+      "Ablated features all inactive (%)": 51.40232108317214,
+      "Mean ablated features active": 0.6659574468085107,
+      "Mean removed norm (rel. to |x|)": 0.00849590157528961,
+      "Mean reconstruction error (rel. to |x|)": 0.15861324156045453
+    },
+    {
+      "Experiment": "L1 SAE \u00b7 error-preserving",
+      "Condition": "Targeted ablation",
+      "Generations": 517,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 0.3868471953578337,
+      "Answer changed vs. control (%)": 5.609284332688588,
+      "Label changed vs. control (%)": 1.9342359767891684,
+      "First token changed vs. control (%)": 5.609284332688588,
+      "\u0394 log p(control's first token)": -0.5679868482803814,
+      "95% CI for \u0394 log p": "[-0.851, -0.295]",
+      "Ablated features all inactive (%)": 0.0,
+      "Mean ablated features active": 1.7408123791102514,
+      "Mean removed norm (rel. to |x|)": 0.8045103774843756,
+      "Mean reconstruction error (rel. to |x|)": 0.15861324156045453
+    },
+    {
+      "Experiment": "L1 SAE \u00b7 error-preserving",
+      "Condition": "Random ablation",
+      "Generations": 10340,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 0.19342359767891684,
+      "Answer changed vs. control (%)": 0.6963249516441006,
+      "Label changed vs. control (%)": 0.3094777562862669,
+      "First token changed vs. control (%)": 0.6963249516441006,
+      "\u0394 log p(control's first token)": -0.014662997830961285,
+      "95% CI for \u0394 log p": "[-0.025, -0.006]",
+      "Ablated features all inactive (%)": 51.40232108317214,
+      "Mean ablated features active": 0.6659574468085107,
+      "Mean removed norm (rel. to |x|)": 0.00849590157528961,
+      "Mean reconstruction error (rel. to |x|)": 0.15861324156045453
+    },
+    {
+      "Experiment": "Pretrained SAE",
+      "Condition": "No ablation",
+      "Generations": 517,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 0.19342359767891684,
+      "Answer changed vs. control (%)": 3.0947775628626695,
+      "Label changed vs. control (%)": 1.9342359767891684,
+      "First token changed vs. control (%)": 3.0947775628626695,
+      "\u0394 log p(control's first token)": -0.11903530392673989,
+      "95% CI for \u0394 log p": "[-0.218, -0.051]",
+      "Ablated features all inactive (%)": null,
+      "Mean ablated features active": null,
+      "Mean removed norm (rel. to |x|)": null,
+      "Mean reconstruction error (rel. to |x|)": 0.31334585089748096
+    },
+    {
+      "Experiment": "Pretrained SAE",
+      "Condition": "Targeted ablation",
+      "Generations": 517,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 0.19342359767891684,
+      "Answer changed vs. control (%)": 0.0,
+      "Label changed vs. control (%)": 0.0,
+      "First token changed vs. control (%)": 0.0,
+      "\u0394 log p(control's first token)": 0.0019972718965358175,
+      "95% CI for \u0394 log p": "[0.000, 0.004]",
+      "Ablated features all inactive (%)": 1.7408123791102514,
+      "Mean ablated features active": 4.090909090909091,
+      "Mean removed norm (rel. to |x|)": 0.045574079563109854,
+      "Mean reconstruction error (rel. to |x|)": 0.31334585089748096
+    },
+    {
+      "Experiment": "Pretrained SAE",
+      "Condition": "Random ablation",
+      "Generations": 10340,
+      "Empty answer (%)": 0.08704061895551257,
+      "Reached token budget (%)": 0.19342359767891684,
+      "Answer changed vs. control (%)": 0.8994197292069633,
+      "Label changed vs. control (%)": 0.4448742746615087,
+      "First token changed vs. control (%)": 0.9090909090909091,
+      "\u0394 log p(control's first token)": -0.013017027790383199,
+      "95% CI for \u0394 log p": "[-0.018, -0.008]",
+      "Ablated features all inactive (%)": 2.1663442940038684,
+      "Mean ablated features active": 2.9720502901353965,
+      "Mean removed norm (rel. to |x|)": 0.06037393062811424,
+      "Mean reconstruction error (rel. to |x|)": 0.31334585089748096
+    },
+    {
+      "Experiment": "Pretrained SAE \u00b7 error-preserving",
+      "Condition": "Targeted ablation",
+      "Generations": 517,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 0.19342359767891684,
+      "Answer changed vs. control (%)": 0.19342359767891684,
+      "Label changed vs. control (%)": 0.0,
+      "First token changed vs. control (%)": 0.19342359767891684,
+      "\u0394 log p(control's first token)": -0.0004175858161425604,
+      "95% CI for \u0394 log p": "[-0.003, 0.002]",
+      "Ablated features all inactive (%)": 1.7408123791102514,
+      "Mean ablated features active": 4.090909090909091,
+      "Mean removed norm (rel. to |x|)": 0.045574079563109854,
+      "Mean reconstruction error (rel. to |x|)": 0.31334585089748096
+    },
+    {
+      "Experiment": "Pretrained SAE \u00b7 error-preserving",
+      "Condition": "Random ablation",
+      "Generations": 10340,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 0.19342359767891684,
+      "Answer changed vs. control (%)": 0.5802707930367506,
+      "Label changed vs. control (%)": 0.3094777562862669,
+      "First token changed vs. control (%)": 0.5802707930367506,
+      "\u0394 log p(control's first token)": -0.004717291979512859,
+      "95% CI for \u0394 log p": "[-0.008, -0.002]",
+      "Ablated features all inactive (%)": 2.1663442940038684,
+      "Mean ablated features active": 2.9720502901353965,
+      "Mean removed norm (rel. to |x|)": 0.06037393062811424,
+      "Mean reconstruction error (rel. to |x|)": 0.31334585089748096
+    }
+  ],
+  "solver_response_counts": {
+    "Baseline \u00b7 no_sae": {
+      "adopted_critic": 458,
+      "third_answer": 39,
+      "retained_a1": 20
+    },
+    "L1 SAE \u00b7 no_ablation": {
+      "adopted_critic": 443,
+      "third_answer": 44,
+      "retained_a1": 19,
+      "unresolved": 7,
+      "non_answer": 4
+    },
+    "L1 SAE \u00b7 random_ablation": {
+      "adopted_critic": 8836,
+      "third_answer": 896,
+      "retained_a1": 377,
+      "unresolved": 151,
+      "non_answer": 80
+    },
+    "L1 SAE \u00b7 targeted_ablation": {
+      "adopted_critic": 443,
+      "third_answer": 43,
+      "retained_a1": 21,
+      "unresolved": 8,
+      "non_answer": 2
+    },
+    "L1 SAE \u00b7 error-preserving \u00b7 random_ablation": {
+      "adopted_critic": 9142,
+      "third_answer": 782,
+      "retained_a1": 412,
+      "unresolved": 4
+    },
+    "L1 SAE \u00b7 error-preserving \u00b7 targeted_ablation": {
+      "adopted_critic": 455,
+      "third_answer": 38,
+      "retained_a1": 21,
+      "unresolved": 3
+    },
+    "Pretrained SAE \u00b7 no_ablation": {
+      "adopted_critic": 456,
+      "third_answer": 36,
+      "retained_a1": 20,
+      "unresolved": 3,
+      "non_answer": 2
+    },
+    "Pretrained SAE \u00b7 random_ablation": {
+      "adopted_critic": 9111,
+      "third_answer": 706,
+      "retained_a1": 398,
+      "unresolved": 87,
+      "non_answer": 38
+    },
+    "Pretrained SAE \u00b7 targeted_ablation": {
+      "adopted_critic": 456,
+      "third_answer": 36,
+      "retained_a1": 20,
+      "unresolved": 3,
+      "non_answer": 2
+    },
+    "Pretrained SAE \u00b7 error-preserving \u00b7 random_ablation": {
+      "adopted_critic": 9160,
+      "third_answer": 752,
+      "retained_a1": 410,
+      "unresolved": 18
+    },
+    "Pretrained SAE \u00b7 error-preserving \u00b7 targeted_ablation": {
+      "adopted_critic": 458,
+      "third_answer": 39,
+      "retained_a1": 20
+    },
+    "TopK SAE \u00b7 no_ablation": {
+      "adopted_critic": 448,
+      "third_answer": 39,
+      "retained_a1": 20,
+      "unresolved": 6,
+      "non_answer": 4
+    },
+    "TopK SAE \u00b7 random_ablation": {
+      "adopted_critic": 8941,
+      "third_answer": 792,
+      "retained_a1": 418,
+      "unresolved": 116,
+      "non_answer": 73
+    },
+    "TopK SAE \u00b7 targeted_ablation": {
+      "adopted_critic": 444,
+      "third_answer": 42,
+      "retained_a1": 20,
+      "unresolved": 8,
+      "non_answer": 3
+    },
+    "TopK SAE \u00b7 error-preserving \u00b7 random_ablation": {
+      "adopted_critic": 9145,
+      "third_answer": 758,
+      "retained_a1": 407,
+      "unresolved": 30
+    },
+    "TopK SAE \u00b7 error-preserving \u00b7 targeted_ablation": {
+      "adopted_critic": 457,
+      "third_answer": 39,
+      "retained_a1": 20,
+      "unresolved": 1
+    }
+  },
+  "seconds_per_generation": 0.822042322571046,
+  "features": {
+    "TopK SAE": {
+      "targeted": [
+        4781,
+        3357,
+        10876,
+        10179,
+        4432,
+        2186,
+        8404,
+        10914,
+        10205,
+        12844
+      ],
+      "random": [
+        [
+          10699,
+          410,
+          2080,
+          3305,
+          776,
+          2365,
+          6640,
+          9881,
+          607,
+          2440
+        ],
+        [
+          8757,
+          6749,
+          7165,
+          5036,
+          5294,
+          674,
+          4998,
+          607,
+          4519,
+          10611
+        ],
+        [
+          321,
+          3305,
+          3383,
+          11017,
+          6277,
+          2719,
+          4575,
+          8813,
+          7067,
+          8652
+        ],
+        [
+          4715,
+          11780,
+          2264,
+          11649,
+          2780,
+          959,
+          8813,
+          11513,
+          1318,
+          7385
+        ],
+        [
+          6882,
+          11798,
+          250,
+          6854,
+          2481,
+          11303,
+          12866,
+          11513,
+          1204,
+          10220
+        ],
+        [
+          12226,
+          11132,
+          10068,
+          993,
+          857,
+          2907,
+          8652,
+          4715,
+          9881,
+          250
+        ],
+        [
+          9357,
+          410,
+          10068,
+          7165,
+          12541,
+          12237,
+          12629,
+          2213,
+          6854,
+          10611
+        ],
+        [
+          993,
+          9881,
+          4575,
+          8722,
+          7892,
+          5360,
+          1321,
+          5734,
+          7067,
+          2370
+        ],
+        [
+          7747,
+          10220,
+          6749,
+          2565,
+          9414,
+          1516,
+          6640,
+          6930,
+          12319,
+          8423
+        ],
+        [
+          607,
+          2213,
+          10220,
+          3305,
+          2780,
+          7871,
+          3383,
+          4519,
+          1204,
+          5984
+        ],
+        [
+          9419,
+          9881,
+          9126,
+          1961,
+          6277,
+          5294,
+          4233,
+          11780,
+          458,
+          2370
+        ],
+        [
+          12541,
+          4998,
+          8155,
+          12226,
+          3805,
+          5420,
+          7082,
+          607,
+          8722,
+          5984
+        ],
+        [
+          607,
+          7385,
+          2080,
+          993,
+          1204,
+          5420,
+          12793,
+          5036,
+          7067,
+          9217
+        ],
+        [
+          6930,
+          250,
+          2264,
+          11649,
+          6277,
+          1327,
+          7767,
+          125,
+          5734,
+          172
+        ],
+        [
+          11132,
+          11780,
+          1321,
+          458,
+          2719,
+          10699,
+          7082,
+          321,
+          2565,
+          12793
+        ],
+        [
+          192,
+          1910,
+          2565,
+          3776,
+          776,
+          11283,
+          9250,
+          9420,
+          2719,
+          9126
+        ],
+        [
+          11132,
+          7767,
+          4998,
+          458,
+          12541,
+          12445,
+          1321,
+          8722,
+          8757,
+          5722
+        ],
+        [
+          1204,
+          9357,
+          11017,
+          12629,
+          7892,
+          5360,
+          2370,
+          8722,
+          8813,
+          10068
+        ],
+        [
+          9357,
+          7067,
+          4575,
+          4519,
+          7049,
+          4438,
+          6749,
+          876,
+          4715,
+          2093
+        ],
+        [
+          458,
+          876,
+          8652,
+          11967,
+          5420,
+          7020,
+          309,
+          706,
+          5734,
+          11780
+        ]
+      ]
+    },
+    "L1 SAE": {
+      "targeted": [
+        8545,
+        3513,
+        1446,
+        8023,
+        1416,
+        694,
+        8037,
+        6848,
+        6254,
+        2912
+      ],
+      "random": [
+        [
+          1071,
+          2565,
+          968,
+          5314,
+          207,
+          2595,
+          8910,
+          4804,
+          6727,
+          1209
+        ],
+        [
+          11448,
+          4792,
+          12848,
+          9268,
+          3709,
+          10216,
+          7775,
+          1603,
+          4275,
+          330
+        ],
+        [
+          3435,
+          11777,
+          12028,
+          11965,
+          2552,
+          3709,
+          5314,
+          9216,
+          1773,
+          7248
+        ],
+        [
+          5314,
+          6270,
+          9035,
+          7996,
+          2595,
+          1942,
+          11777,
+          9216,
+          4129,
+          11771
+        ],
+        [
+          5365,
+          5635,
+          7248,
+          11356,
+          5579,
+          9268,
+          3435,
+          6461,
+          2788,
+          10216
+        ],
+        [
+          8966,
+          11965,
+          4999,
+          4804,
+          7248,
+          1942,
+          12267,
+          1603,
+          3057,
+          10185
+        ],
+        [
+          4999,
+          2565,
+          3780,
+          9073,
+          207,
+          9476,
+          11077,
+          7996,
+          11736,
+          2486
+        ],
+        [
+          968,
+          11965,
+          10185,
+          9610,
+          11777,
+          12208,
+          7417,
+          4999,
+          8850,
+          11771
+        ],
+        [
+          3780,
+          10185,
+          5367,
+          8841,
+          4999,
+          11103,
+          8910,
+          330,
+          583,
+          5530
+        ],
+        [
+          89,
+          207,
+          5817,
+          9190,
+          11001,
+          5443,
+          6787,
+          9035,
+          1258,
+          11664
+        ],
+        [
+          8841,
+          11965,
+          1603,
+          1038,
+          3349,
+          10216,
+          2552,
+          11664,
+          5296,
+          3709
+        ],
+        [
+          11462,
+          9476,
+          2552,
+          4804,
+          12208,
+          11965,
+          7762,
+          1477,
+          7244,
+          9216
+        ],
+        [
+          89,
+          8966,
+          11751,
+          8827,
+          2552,
+          9919,
+          10794,
+          6283,
+          8850,
+          4999
+        ],
+        [
+          7996,
+          9216,
+          6270,
+          11448,
+          10216,
+          5880,
+          5635,
+          968,
+          3633,
+          7248
+        ],
+        [
+          11077,
+          9035,
+          1942,
+          10754,
+          11751,
+          2552,
+          7762,
+          11777,
+          3057,
+          5579
+        ],
+        [
+          2552,
+          5367,
+          2565,
+          3650,
+          330,
+          12138,
+          5347,
+          12460,
+          1773,
+          8841
+        ],
+        [
+          11077,
+          1477,
+          11103,
+          10754,
+          9476,
+          11001,
+          9190,
+          5635,
+          3633,
+          6283
+        ],
+        [
+          5347,
+          12460,
+          12208,
+          12848,
+          11771,
+          1389,
+          968,
+          10185,
+          2042,
+          2486
+        ],
+        [
+          4999,
+          9528,
+          6461,
+          1603,
+          2486,
+          1389,
+          11462,
+          330,
+          10610,
+          1821
+        ],
+        [
+          1603,
+          6461,
+          11751,
+          11356,
+          5530,
+          12589,
+          10754,
+          1477,
+          3633,
+          968
+        ]
+      ]
+    },
+    "Pretrained SAE": {
+      "targeted": [
+        3412,
+        2768,
+        10118,
+        6530,
+        640,
+        2261,
+        4643,
+        11835,
+        7734,
+        2550
+      ],
+      "random": [
+        [
+          460,
+          1045,
+          2548,
+          2305,
+          8144,
+          2940,
+          4236,
+          3316,
+          4968,
+          2672
+        ],
+        [
+          711,
+          1010,
+          14931,
+          12792,
+          5793,
+          13602,
+          4227,
+          5396,
+          7457,
+          5250
+        ],
+        [
+          3672,
+          2561,
+          2422,
+          1484,
+          6525,
+          1766,
+          2133,
+          1860,
+          3378,
+          1172
+        ],
+        [
+          2422,
+          542,
+          142,
+          3398,
+          7308,
+          4882,
+          8930,
+          1860,
+          3008,
+          11095
+        ],
+        [
+          619,
+          1440,
+          14931,
+          2189,
+          1216,
+          13809,
+          1918,
+          10315,
+          291,
+          4867
+        ],
+        [
+          1516,
+          1705,
+          1306,
+          2354,
+          3724,
+          7308,
+          2988,
+          11701,
+          2548,
+          6525
+        ],
+        [
+          398,
+          1440,
+          619,
+          2220,
+          14498,
+          2186,
+          5223,
+          15017,
+          373,
+          9468
+        ],
+        [
+          1045,
+          1705,
+          3706,
+          15582,
+          4767,
+          2945,
+          1516,
+          448,
+          3050,
+          5822
+        ],
+        [
+          2403,
+          5269,
+          7065,
+          471,
+          1124,
+          11837,
+          398,
+          9335,
+          2548,
+          4867
+        ],
+        [
+          5269,
+          4649,
+          1010,
+          11519,
+          7308,
+          1382,
+          10263,
+          919,
+          3706,
+          2117
+        ],
+        [
+          4649,
+          1705,
+          2403,
+          6887,
+          2072,
+          13602,
+          4357,
+          4537,
+          1303,
+          6525
+        ],
+        [
+          5672,
+          2548,
+          357,
+          5810,
+          3724,
+          13520,
+          131,
+          5396,
+          896,
+          2672
+        ],
+        [
+          5269,
+          291,
+          4649,
+          2354,
+          4882,
+          13520,
+          2403,
+          3561,
+          3050,
+          3546
+        ],
+        [
+          3074,
+          1306,
+          142,
+          3398,
+          2096,
+          2186,
+          9186,
+          8072,
+          2561,
+          5250
+        ],
+        [
+          1010,
+          476,
+          1303,
+          3596,
+          515,
+          2669,
+          1068,
+          448,
+          7457,
+          9009
+        ],
+        [
+          14931,
+          2756,
+          4236,
+          7094,
+          13171,
+          1766,
+          1327,
+          4784,
+          711,
+          4767
+        ],
+        [
+          1010,
+          6113,
+          3074,
+          3596,
+          14498,
+          1860,
+          1516,
+          2396,
+          1684,
+          1227
+        ],
+        [
+          3821,
+          460,
+          1327,
+          9030,
+          4353,
+          2945,
+          3074,
+          2396,
+          1010,
+          2688
+        ],
+        [
+          398,
+          373,
+          3706,
+          4227,
+          2391,
+          9766,
+          1582,
+          382,
+          4968,
+          732
+        ],
+        [
+          291,
+          9186,
+          373,
+          3244,
+          187,
+          515,
+          1440,
+          2243,
+          142,
+          7408
+        ]
+      ]
+    }
+  },
+  "provenance": {
+    "git_commit": "2f9d760c1b70ef73889c22846f95a826b8ef8121",
+    "code_tree_sha": {
+      "src": "68b5ad4c35c4c98b073baee7e39e59de2ca935d2",
+      "scripts": "d2c47f984e378a6c0b3cafaa8ebc47c9b33e10b5",
+      "configs": "178be01ef215e77251fe0795ce7669633380177e"
+    },
+    "uncommitted_changes_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "uncommitted_code_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "untracked_code_files": [],
+    "untracked_code_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "command": "/home/ubuntu/miniconda3/envs/capstone/bin/python scripts/causal_replay.py --config configs/causal_replay_layer33.yaml",
+    "config_path": "configs/causal_replay_layer33.yaml",
+    "config_sha256": "e32b80abd7310c8daa5e65411bf19c5001d147e160c824c99e390a059f0dc1d3",
+    "input_sha256": {
+      "results/collection/natural_4b_full9_intervention_partitioned/intervention/interactions.jsonl": "90d00f4b54dd9e1f5fd8a4ed3f8cf5eb442da082437db348ab98cbaf667da28a",
+      "results/behavior/behavior_v012_official_20261011/labels.csv": "8d9d1a49a1ff562ec44ea531aea544b9844244cf785514d91409b0365fe2bf6b",
+      "results/feature_selection/20261016T003252665105Z/feature_selection_summary.json": "478efbf330aef7c1034f9e3e1f0560da57485c1d7dd61a19efaab5f1d6e5d895"
+    },
+    "label_policy": "behavior_v0.1.2_qc_candidate",
+    "label_policy_sha256": "e21f78cbc0800cb6fa78f526a63e777913498b5dd5bc7fe9bf406ca8b1c319b2",
+    "packages": {
+      "torch": "2.13.0",
+      "transformers": "5.20.1",
+      "datasets": "5.1.0",
+      "numpy": "2.4.6",
+      "pandas": "3.0.6"
+    },
+    "site": "model.language_model.layers.33",
+    "intervention": "final_prompt_token_prefill_only",
+    "solver_spec": {
+      "id": "google/gemma-3-4b-it",
+      "revision": "093f9f388b31de276ce2de164bdc2081324b9767",
+      "loader": "gemma3",
+      "dtype": "bfloat16",
+      "device": "cuda:0",
+      "generation": {
+        "do_sample": false,
+        "max_new_tokens": 64
+      }
+    },
+    "sae_sha256": {
+      "TopK SAE": {
+        "results/sae/musique/runs/layer_33/20261013T233444019723Z-e5943205b957/checkpoints/best_checkpoint.pt": "3b7ad0ee31879accc56cf6b9a45fcee2cff1e1a0299342d2940bde33019a98a2"
+      },
+      "L1 SAE": {
+        "results/sae/musique/runs/layer_33/20261014T161949048498Z-edfc89a42125/checkpoints/best_checkpoint.pt": "14f923707ad2e899de5725dba13bccd96ab4eac98d9d084ef8cc14a41cd6e8ea"
+      },
+      "Pretrained SAE": {
+        "results/sae/pretrained/gemma-scope-2-4b-it/resid_post_all/layer_33_width_16k_l0_big/config.json": "35d2b83867cf2798b5f95251f37f6d4bcc076abb7582380d543ceeec838c1b2b",
+        "results/sae/pretrained/gemma-scope-2-4b-it/resid_post_all/layer_33_width_16k_l0_big/params.safetensors": "003f624325bd50b7fa9031fbaf83d60ddce2f523e4f5abb42e98c475ec3be707"
+      }
+    },
+    "num_layers": 34,
+    "device": "cuda:0",
+    "device_name": "NVIDIA A10G"
+  },
+  "outcome_note": "Acceptance = regenerated A2 labeled adopted_critic under Behavior v0.1.2 rules, on eligible disagreement episodes only; these results say nothing about correctness or harmful compliance. The intervention is final-prompt-token, prefill-only. \u0394 is paired by question against the condition's control: the same SAE's reconstruction-only run (reconstruction splice) or the plain replay (error-preserving splice). Random ablation is the per-question mean over the draws."
+}

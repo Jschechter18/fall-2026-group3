@@ -176,24 +176,36 @@ DISTRACTOR_PROMPT = (
 _JSON_DECODER = json.JSONDecoder()
 
 
-def _extract_first_json_object(
+def first_json_object_span(
     raw_output: str,
-) -> dict | None:
+) -> tuple[dict, int] | None:
+    """Return the first JSON object in ``raw_output`` and the index just past it.
+
+    The end index lets callers see text generated after the parsed object,
+    which never reaches the Solver.
+    """
     for index, char in enumerate(raw_output):
         if char != "{":
             continue
 
         try:
-            parsed, _ = _JSON_DECODER.raw_decode(
-                raw_output[index:]
+            parsed, end = _JSON_DECODER.raw_decode(
+                raw_output, index
             )
         except json.JSONDecodeError:
             continue
 
         if isinstance(parsed, dict):
-            return parsed
+            return parsed, end
 
     return None
+
+
+def _extract_first_json_object(
+    raw_output: str,
+) -> dict | None:
+    span = first_json_object_span(raw_output)
+    return None if span is None else span[0]
 
 
 def _parse_answer_json(raw_output: str) -> str | None:

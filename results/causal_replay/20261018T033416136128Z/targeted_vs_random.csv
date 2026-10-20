@@ -1,0 +1,7 @@
+Experiment,Splice,N,Random draws,Targeted − random (pp),95% CI (questions),95% CI (questions + draws),p-value,p-value (Holm),Draw tail fraction (exploratory)
+TopK SAE,reconstruction,517,20,-0.5899419729206963,"[-1.23, -0.08]","[-1.28, -0.01]",0.05629437056294371,0.16888311168883113,0.09523809523809523
+TopK SAE · error-preserving,error_preserving,517,20,-0.04835589941972923,"[-0.34, 0.15]","[-0.37, 0.19]",0.8051194880511949,,0.8095238095238095
+L1 SAE,reconstruction,517,20,0.23210831721470018,"[-0.80, 1.32]","[-0.81, 1.33]",0.7187281271872813,0.7187281271872813,1.0
+L1 SAE · error-preserving,error_preserving,517,20,-0.40618955512572535,"[-1.28, 0.35]","[-1.31, 0.37]",0.3805619438056194,,0.14285714285714285
+Pretrained SAE,reconstruction,517,20,0.08704061895551259,"[0.01, 0.19]","[0.00, 0.24]",0.06359364063593641,0.16888311168883113,1.0
+Pretrained SAE · error-preserving,error_preserving,517,20,0.0,"[0.00, 0.00]","[0.00, 0.00]",1.0,,1.0

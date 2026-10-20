@@ -88,11 +88,20 @@ MISSING_IDS_FILE = "missing_question_ids.json"   # frozen questions a partial ru
 COVERAGE_MODES = ("complete", "subset")
 
 
+def interaction_paths(results_dir, partitions=None):
+    """The run's ``interactions.jsonl`` files that can hold ``partitions`` (all when None)."""
+    if partitions is None:
+        sources = SUPPORTED_SOURCE_SPLITS
+    else:
+        sources = {"train" if p in TRAIN_SOURCE_PARTITIONS else "validation" for p in partitions}
+    return [Path(results_dir) / source_split / "interactions.jsonl" for source_split in sorted(sources)]
+
+
 def read_run_interactions(results_dir):
     """All episodes of one run: its train and validation ``interactions.jsonl`` together."""
     rows = []
-    for source_split in sorted(SUPPORTED_SOURCE_SPLITS):
-        rows.extend(read_jsonl(Path(results_dir) / source_split / "interactions.jsonl"))
+    for path in interaction_paths(results_dir):
+        rows.extend(read_jsonl(path))
     return rows
 
 
@@ -409,12 +418,16 @@ def authorize_rows(rows, manifest, *, purpose):
     return rows
 
 
-def load_labeled_rows(results_dir, package_dir):
+def load_labeled_rows(results_dir, package_dir, *, partitions=None):
     """Join a run's interactions with the labels and the partition manifest.
 
     ``results_dir`` holds ``train/`` and ``validation/`` folders, each with an
     ``interactions.jsonl`` (full run or layer scan). ``package_dir`` is the
     folder written by ``scripts/prepare_behavior_v01.py``.
+
+    With ``partitions``, only the interaction files that can hold them are
+    opened, and rows of other partitions sharing a file are dropped as soon as
+    their id is read, before any label is attached.
 
     Returns ``(rows, manifest)``. Each row is the original interaction with two
     additions: ``partition`` and ``label``.
@@ -423,7 +436,9 @@ def load_labeled_rows(results_dir, package_dir):
     manifest = read_manifest(package_dir / "split_manifest.csv")
     labels = read_labels(package_dir / "labels.csv")
 
-    rows = read_run_interactions(results_dir)
+    rows = [row for path in interaction_paths(results_dir, partitions) for row in read_jsonl(path)]
+    if partitions is not None:
+        rows = [row for row in rows if manifest[row["question_id"]]["partition"] in partitions]
     for row in rows:
         qid = row["question_id"]
         row["partition"] = manifest[qid]["partition"]

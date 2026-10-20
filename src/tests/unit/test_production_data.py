@@ -309,6 +309,11 @@ def test_load_labeled_rows_joins_labels_and_manifest(tmp_path):
     assert authorize_rows(rows[:1], loaded, purpose="fit") == rows[:1]
     assert authorize_rows(rows[1:], loaded, purpose="tune") == rows[1:]
 
+    # Asked for train only, the validation file is never opened.
+    (results / "validation" / "interactions.jsonl").write_text("{not json\n")
+    train_rows, _ = load_labeled_rows(results, package, partitions={"train"})
+    assert [r["question_id"] for r in train_rows] == ["2hop__1_1"]
+
 
 # ------------------------------------------------------------------ the export
 

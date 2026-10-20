@@ -1,0 +1,3300 @@
+{
+  "config": {
+    "capstone_data_root": ".",
+    "interactions_jsonl": "results/collection/natural_4b_full9_intervention_partitioned/intervention/interactions.jsonl",
+    "labels_csv": "results/behavior/behavior_v012_official_20261011/labels.csv",
+    "feature_selection_summary": "results/feature_selection/20261016T003252665105Z/feature_selection_summary.json",
+    "layer": 33,
+    "solver": {
+      "id": "google/gemma-3-4b-it",
+      "revision": "093f9f388b31de276ce2de164bdc2081324b9767",
+      "loader": "gemma3",
+      "dtype": "bfloat16",
+      "device": "cuda:0",
+      "generation": {
+        "max_new_tokens": 64,
+        "do_sample": false
+      }
+    },
+    "musique_revision": "c8f4f8c9465fb69d31a8eae894c3fd509c4ca321",
+    "partition": "intervention",
+    "saes": {
+      "TopK SAE": {
+        "kind": "custom",
+        "path": "results/sae/musique/runs/layer_33/20261013T233444019723Z-e5943205b957"
+      },
+      "L1 SAE": {
+        "kind": "custom",
+        "path": "results/sae/musique/runs/layer_33/20261014T161949048498Z-edfc89a42125"
+      },
+      "Pretrained SAE": {
+        "kind": "gemma_scope",
+        "path": "results/sae/pretrained/gemma-scope-2-4b-it/resid_post_all/layer_33_width_16k_l0_big"
+      }
+    },
+    "n_random_draws": 20,
+    "error_preserving": true,
+    "min_replay_label_match": 0.98,
+    "on_replay_check_fail": "stop",
+    "limit": null,
+    "seed": 42,
+    "n_bootstrap": 1000,
+    "n_permutations": 10000,
+    "output_dir": "results/causal_replay"
+  },
+  "conditions": [
+    {
+      "experiment": "Baseline",
+      "condition": "no_sae",
+      "draw": null,
+      "ablate": null,
+      "sae": null,
+      "mode": null
+    },
+    {
+      "experiment": "TopK SAE",
+      "sae": "TopK SAE",
+      "mode": "reconstruction",
+      "condition": "no_ablation",
+      "draw": null,
+      "ablate": []
+    },
+    {
+      "experiment": "TopK SAE",
+      "sae": "TopK SAE",
+      "mode": "reconstruction",
+      "condition": "targeted_ablation",
+      "draw": null,
+      "ablate": [
+        4781,
+        3357,
+        10876,
+        10179,
+        4432,
+        2186,
+        8404,
+        10914,
+        10205,
+        12844
+      ]
+    },
+    {
+      "experiment": "TopK SAE",
+      "sae": "TopK SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 0,
+      "ablate": [
+        10699,
+        410,
+        2080,
+        3305,
+        776,
+        2365,
+        6640,
+        9881,
+        607,
+        2440
+      ]
+    },
+    {
+      "experiment": "TopK SAE",
+      "sae": "TopK SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 1,
+      "ablate": [
+        8757,
+        6749,
+        7165,
+        5036,
+        5294,
+        674,
+        4998,
+        607,
+        4519,
+        10611
+      ]
+    },
+    {
+      "experiment": "TopK SAE",
+      "sae": "TopK SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 2,
+      "ablate": [
+        321,
+        3305,
+        3383,
+        11017,
+        6277,
+        2719,
+        4575,
+        8813,
+        7067,
+        8652
+      ]
+    },
+    {
+      "experiment": "TopK SAE",
+      "sae": "TopK SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 3,
+      "ablate": [
+        4715,
+        11780,
+        2264,
+        11649,
+        2780,
+        959,
+        8813,
+        11513,
+        1318,
+        7385
+      ]
+    },
+    {
+      "experiment": "TopK SAE",
+      "sae": "TopK SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 4,
+      "ablate": [
+        6882,
+        11798,
+        250,
+        6854,
+        2481,
+        11303,
+        12866,
+        11513,
+        1204,
+        10220
+      ]
+    },
+    {
+      "experiment": "TopK SAE",
+      "sae": "TopK SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 5,
+      "ablate": [
+        12226,
+        11132,
+        10068,
+        993,
+        857,
+        2907,
+        8652,
+        4715,
+        9881,
+        250
+      ]
+    },
+    {
+      "experiment": "TopK SAE",
+      "sae": "TopK SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 6,
+      "ablate": [
+        9357,
+        410,
+        10068,
+        7165,
+        12541,
+        12237,
+        12629,
+        2213,
+        6854,
+        10611
+      ]
+    },
+    {
+      "experiment": "TopK SAE",
+      "sae": "TopK SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 7,
+      "ablate": [
+        993,
+        9881,
+        4575,
+        8722,
+        7892,
+        5360,
+        1321,
+        5734,
+        7067,
+        2370
+      ]
+    },
+    {
+      "experiment": "TopK SAE",
+      "sae": "TopK SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 8,
+      "ablate": [
+        7747,
+        10220,
+        6749,
+        2565,
+        9414,
+        1516,
+        6640,
+        6930,
+        12319,
+        8423
+      ]
+    },
+    {
+      "experiment": "TopK SAE",
+      "sae": "TopK SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 9,
+      "ablate": [
+        607,
+        2213,
+        10220,
+        3305,
+        2780,
+        7871,
+        3383,
+        4519,
+        1204,
+        5984
+      ]
+    },
+    {
+      "experiment": "TopK SAE",
+      "sae": "TopK SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 10,
+      "ablate": [
+        9419,
+        9881,
+        9126,
+        1961,
+        6277,
+        5294,
+        4233,
+        11780,
+        458,
+        2370
+      ]
+    },
+    {
+      "experiment": "TopK SAE",
+      "sae": "TopK SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 11,
+      "ablate": [
+        12541,
+        4998,
+        8155,
+        12226,
+        3805,
+        5420,
+        7082,
+        607,
+        8722,
+        5984
+      ]
+    },
+    {
+      "experiment": "TopK SAE",
+      "sae": "TopK SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 12,
+      "ablate": [
+        607,
+        7385,
+        2080,
+        993,
+        1204,
+        5420,
+        12793,
+        5036,
+        7067,
+        9217
+      ]
+    },
+    {
+      "experiment": "TopK SAE",
+      "sae": "TopK SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 13,
+      "ablate": [
+        6930,
+        250,
+        2264,
+        11649,
+        6277,
+        1327,
+        7767,
+        125,
+        5734,
+        172
+      ]
+    },
+    {
+      "experiment": "TopK SAE",
+      "sae": "TopK SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 14,
+      "ablate": [
+        11132,
+        11780,
+        1321,
+        458,
+        2719,
+        10699,
+        7082,
+        321,
+        2565,
+        12793
+      ]
+    },
+    {
+      "experiment": "TopK SAE",
+      "sae": "TopK SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 15,
+      "ablate": [
+        192,
+        1910,
+        2565,
+        3776,
+        776,
+        11283,
+        9250,
+        9420,
+        2719,
+        9126
+      ]
+    },
+    {
+      "experiment": "TopK SAE",
+      "sae": "TopK SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 16,
+      "ablate": [
+        11132,
+        7767,
+        4998,
+        458,
+        12541,
+        12445,
+        1321,
+        8722,
+        8757,
+        5722
+      ]
+    },
+    {
+      "experiment": "TopK SAE",
+      "sae": "TopK SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 17,
+      "ablate": [
+        1204,
+        9357,
+        11017,
+        12629,
+        7892,
+        5360,
+        2370,
+        8722,
+        8813,
+        10068
+      ]
+    },
+    {
+      "experiment": "TopK SAE",
+      "sae": "TopK SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 18,
+      "ablate": [
+        9357,
+        7067,
+        4575,
+        4519,
+        7049,
+        4438,
+        6749,
+        876,
+        4715,
+        2093
+      ]
+    },
+    {
+      "experiment": "TopK SAE",
+      "sae": "TopK SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 19,
+      "ablate": [
+        458,
+        876,
+        8652,
+        11967,
+        5420,
+        7020,
+        309,
+        706,
+        5734,
+        11780
+      ]
+    },
+    {
+      "experiment": "TopK SAE \u00b7 error-preserving",
+      "sae": "TopK SAE",
+      "mode": "error_preserving",
+      "condition": "targeted_ablation",
+      "draw": null,
+      "ablate": [
+        4781,
+        3357,
+        10876,
+        10179,
+        4432,
+        2186,
+        8404,
+        10914,
+        10205,
+        12844
+      ]
+    },
+    {
+      "experiment": "TopK SAE \u00b7 error-preserving",
+      "sae": "TopK SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 0,
+      "ablate": [
+        10699,
+        410,
+        2080,
+        3305,
+        776,
+        2365,
+        6640,
+        9881,
+        607,
+        2440
+      ]
+    },
+    {
+      "experiment": "TopK SAE \u00b7 error-preserving",
+      "sae": "TopK SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 1,
+      "ablate": [
+        8757,
+        6749,
+        7165,
+        5036,
+        5294,
+        674,
+        4998,
+        607,
+        4519,
+        10611
+      ]
+    },
+    {
+      "experiment": "TopK SAE \u00b7 error-preserving",
+      "sae": "TopK SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 2,
+      "ablate": [
+        321,
+        3305,
+        3383,
+        11017,
+        6277,
+        2719,
+        4575,
+        8813,
+        7067,
+        8652
+      ]
+    },
+    {
+      "experiment": "TopK SAE \u00b7 error-preserving",
+      "sae": "TopK SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 3,
+      "ablate": [
+        4715,
+        11780,
+        2264,
+        11649,
+        2780,
+        959,
+        8813,
+        11513,
+        1318,
+        7385
+      ]
+    },
+    {
+      "experiment": "TopK SAE \u00b7 error-preserving",
+      "sae": "TopK SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 4,
+      "ablate": [
+        6882,
+        11798,
+        250,
+        6854,
+        2481,
+        11303,
+        12866,
+        11513,
+        1204,
+        10220
+      ]
+    },
+    {
+      "experiment": "TopK SAE \u00b7 error-preserving",
+      "sae": "TopK SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 5,
+      "ablate": [
+        12226,
+        11132,
+        10068,
+        993,
+        857,
+        2907,
+        8652,
+        4715,
+        9881,
+        250
+      ]
+    },
+    {
+      "experiment": "TopK SAE \u00b7 error-preserving",
+      "sae": "TopK SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 6,
+      "ablate": [
+        9357,
+        410,
+        10068,
+        7165,
+        12541,
+        12237,
+        12629,
+        2213,
+        6854,
+        10611
+      ]
+    },
+    {
+      "experiment": "TopK SAE \u00b7 error-preserving",
+      "sae": "TopK SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 7,
+      "ablate": [
+        993,
+        9881,
+        4575,
+        8722,
+        7892,
+        5360,
+        1321,
+        5734,
+        7067,
+        2370
+      ]
+    },
+    {
+      "experiment": "TopK SAE \u00b7 error-preserving",
+      "sae": "TopK SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 8,
+      "ablate": [
+        7747,
+        10220,
+        6749,
+        2565,
+        9414,
+        1516,
+        6640,
+        6930,
+        12319,
+        8423
+      ]
+    },
+    {
+      "experiment": "TopK SAE \u00b7 error-preserving",
+      "sae": "TopK SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 9,
+      "ablate": [
+        607,
+        2213,
+        10220,
+        3305,
+        2780,
+        7871,
+        3383,
+        4519,
+        1204,
+        5984
+      ]
+    },
+    {
+      "experiment": "TopK SAE \u00b7 error-preserving",
+      "sae": "TopK SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 10,
+      "ablate": [
+        9419,
+        9881,
+        9126,
+        1961,
+        6277,
+        5294,
+        4233,
+        11780,
+        458,
+        2370
+      ]
+    },
+    {
+      "experiment": "TopK SAE \u00b7 error-preserving",
+      "sae": "TopK SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 11,
+      "ablate": [
+        12541,
+        4998,
+        8155,
+        12226,
+        3805,
+        5420,
+        7082,
+        607,
+        8722,
+        5984
+      ]
+    },
+    {
+      "experiment": "TopK SAE \u00b7 error-preserving",
+      "sae": "TopK SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 12,
+      "ablate": [
+        607,
+        7385,
+        2080,
+        993,
+        1204,
+        5420,
+        12793,
+        5036,
+        7067,
+        9217
+      ]
+    },
+    {
+      "experiment": "TopK SAE \u00b7 error-preserving",
+      "sae": "TopK SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 13,
+      "ablate": [
+        6930,
+        250,
+        2264,
+        11649,
+        6277,
+        1327,
+        7767,
+        125,
+        5734,
+        172
+      ]
+    },
+    {
+      "experiment": "TopK SAE \u00b7 error-preserving",
+      "sae": "TopK SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 14,
+      "ablate": [
+        11132,
+        11780,
+        1321,
+        458,
+        2719,
+        10699,
+        7082,
+        321,
+        2565,
+        12793
+      ]
+    },
+    {
+      "experiment": "TopK SAE \u00b7 error-preserving",
+      "sae": "TopK SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 15,
+      "ablate": [
+        192,
+        1910,
+        2565,
+        3776,
+        776,
+        11283,
+        9250,
+        9420,
+        2719,
+        9126
+      ]
+    },
+    {
+      "experiment": "TopK SAE \u00b7 error-preserving",
+      "sae": "TopK SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 16,
+      "ablate": [
+        11132,
+        7767,
+        4998,
+        458,
+        12541,
+        12445,
+        1321,
+        8722,
+        8757,
+        5722
+      ]
+    },
+    {
+      "experiment": "TopK SAE \u00b7 error-preserving",
+      "sae": "TopK SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 17,
+      "ablate": [
+        1204,
+        9357,
+        11017,
+        12629,
+        7892,
+        5360,
+        2370,
+        8722,
+        8813,
+        10068
+      ]
+    },
+    {
+      "experiment": "TopK SAE \u00b7 error-preserving",
+      "sae": "TopK SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 18,
+      "ablate": [
+        9357,
+        7067,
+        4575,
+        4519,
+        7049,
+        4438,
+        6749,
+        876,
+        4715,
+        2093
+      ]
+    },
+    {
+      "experiment": "TopK SAE \u00b7 error-preserving",
+      "sae": "TopK SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 19,
+      "ablate": [
+        458,
+        876,
+        8652,
+        11967,
+        5420,
+        7020,
+        309,
+        706,
+        5734,
+        11780
+      ]
+    },
+    {
+      "experiment": "L1 SAE",
+      "sae": "L1 SAE",
+      "mode": "reconstruction",
+      "condition": "no_ablation",
+      "draw": null,
+      "ablate": []
+    },
+    {
+      "experiment": "L1 SAE",
+      "sae": "L1 SAE",
+      "mode": "reconstruction",
+      "condition": "targeted_ablation",
+      "draw": null,
+      "ablate": [
+        8545,
+        3513,
+        1446,
+        8023,
+        1416,
+        694,
+        8037,
+        6848,
+        6254,
+        2912
+      ]
+    },
+    {
+      "experiment": "L1 SAE",
+      "sae": "L1 SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 0,
+      "ablate": [
+        1071,
+        2565,
+        968,
+        5314,
+        207,
+        2595,
+        8910,
+        4804,
+        6727,
+        1209
+      ]
+    },
+    {
+      "experiment": "L1 SAE",
+      "sae": "L1 SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 1,
+      "ablate": [
+        11448,
+        4792,
+        12848,
+        9268,
+        3709,
+        10216,
+        7775,
+        1603,
+        4275,
+        330
+      ]
+    },
+    {
+      "experiment": "L1 SAE",
+      "sae": "L1 SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 2,
+      "ablate": [
+        3435,
+        11777,
+        12028,
+        11965,
+        2552,
+        3709,
+        5314,
+        9216,
+        1773,
+        7248
+      ]
+    },
+    {
+      "experiment": "L1 SAE",
+      "sae": "L1 SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 3,
+      "ablate": [
+        5314,
+        6270,
+        9035,
+        7996,
+        2595,
+        1942,
+        11777,
+        9216,
+        4129,
+        11771
+      ]
+    },
+    {
+      "experiment": "L1 SAE",
+      "sae": "L1 SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 4,
+      "ablate": [
+        5365,
+        5635,
+        7248,
+        11356,
+        5579,
+        9268,
+        3435,
+        6461,
+        2788,
+        10216
+      ]
+    },
+    {
+      "experiment": "L1 SAE",
+      "sae": "L1 SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 5,
+      "ablate": [
+        8966,
+        11965,
+        4999,
+        4804,
+        7248,
+        1942,
+        12267,
+        1603,
+        3057,
+        10185
+      ]
+    },
+    {
+      "experiment": "L1 SAE",
+      "sae": "L1 SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 6,
+      "ablate": [
+        4999,
+        2565,
+        3780,
+        9073,
+        207,
+        9476,
+        11077,
+        7996,
+        11736,
+        2486
+      ]
+    },
+    {
+      "experiment": "L1 SAE",
+      "sae": "L1 SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 7,
+      "ablate": [
+        968,
+        11965,
+        10185,
+        9610,
+        11777,
+        12208,
+        7417,
+        4999,
+        8850,
+        11771
+      ]
+    },
+    {
+      "experiment": "L1 SAE",
+      "sae": "L1 SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 8,
+      "ablate": [
+        3780,
+        10185,
+        5367,
+        8841,
+        4999,
+        11103,
+        8910,
+        330,
+        583,
+        5530
+      ]
+    },
+    {
+      "experiment": "L1 SAE",
+      "sae": "L1 SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 9,
+      "ablate": [
+        89,
+        207,
+        5817,
+        9190,
+        11001,
+        5443,
+        6787,
+        9035,
+        1258,
+        11664
+      ]
+    },
+    {
+      "experiment": "L1 SAE",
+      "sae": "L1 SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 10,
+      "ablate": [
+        8841,
+        11965,
+        1603,
+        1038,
+        3349,
+        10216,
+        2552,
+        11664,
+        5296,
+        3709
+      ]
+    },
+    {
+      "experiment": "L1 SAE",
+      "sae": "L1 SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 11,
+      "ablate": [
+        11462,
+        9476,
+        2552,
+        4804,
+        12208,
+        11965,
+        7762,
+        1477,
+        7244,
+        9216
+      ]
+    },
+    {
+      "experiment": "L1 SAE",
+      "sae": "L1 SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 12,
+      "ablate": [
+        89,
+        8966,
+        11751,
+        8827,
+        2552,
+        9919,
+        10794,
+        6283,
+        8850,
+        4999
+      ]
+    },
+    {
+      "experiment": "L1 SAE",
+      "sae": "L1 SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 13,
+      "ablate": [
+        7996,
+        9216,
+        6270,
+        11448,
+        10216,
+        5880,
+        5635,
+        968,
+        3633,
+        7248
+      ]
+    },
+    {
+      "experiment": "L1 SAE",
+      "sae": "L1 SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 14,
+      "ablate": [
+        11077,
+        9035,
+        1942,
+        10754,
+        11751,
+        2552,
+        7762,
+        11777,
+        3057,
+        5579
+      ]
+    },
+    {
+      "experiment": "L1 SAE",
+      "sae": "L1 SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 15,
+      "ablate": [
+        2552,
+        5367,
+        2565,
+        3650,
+        330,
+        12138,
+        5347,
+        12460,
+        1773,
+        8841
+      ]
+    },
+    {
+      "experiment": "L1 SAE",
+      "sae": "L1 SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 16,
+      "ablate": [
+        11077,
+        1477,
+        11103,
+        10754,
+        9476,
+        11001,
+        9190,
+        5635,
+        3633,
+        6283
+      ]
+    },
+    {
+      "experiment": "L1 SAE",
+      "sae": "L1 SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 17,
+      "ablate": [
+        5347,
+        12460,
+        12208,
+        12848,
+        11771,
+        1389,
+        968,
+        10185,
+        2042,
+        2486
+      ]
+    },
+    {
+      "experiment": "L1 SAE",
+      "sae": "L1 SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 18,
+      "ablate": [
+        4999,
+        9528,
+        6461,
+        1603,
+        2486,
+        1389,
+        11462,
+        330,
+        10610,
+        1821
+      ]
+    },
+    {
+      "experiment": "L1 SAE",
+      "sae": "L1 SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 19,
+      "ablate": [
+        1603,
+        6461,
+        11751,
+        11356,
+        5530,
+        12589,
+        10754,
+        1477,
+        3633,
+        968
+      ]
+    },
+    {
+      "experiment": "L1 SAE \u00b7 error-preserving",
+      "sae": "L1 SAE",
+      "mode": "error_preserving",
+      "condition": "targeted_ablation",
+      "draw": null,
+      "ablate": [
+        8545,
+        3513,
+        1446,
+        8023,
+        1416,
+        694,
+        8037,
+        6848,
+        6254,
+        2912
+      ]
+    },
+    {
+      "experiment": "L1 SAE \u00b7 error-preserving",
+      "sae": "L1 SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 0,
+      "ablate": [
+        1071,
+        2565,
+        968,
+        5314,
+        207,
+        2595,
+        8910,
+        4804,
+        6727,
+        1209
+      ]
+    },
+    {
+      "experiment": "L1 SAE \u00b7 error-preserving",
+      "sae": "L1 SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 1,
+      "ablate": [
+        11448,
+        4792,
+        12848,
+        9268,
+        3709,
+        10216,
+        7775,
+        1603,
+        4275,
+        330
+      ]
+    },
+    {
+      "experiment": "L1 SAE \u00b7 error-preserving",
+      "sae": "L1 SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 2,
+      "ablate": [
+        3435,
+        11777,
+        12028,
+        11965,
+        2552,
+        3709,
+        5314,
+        9216,
+        1773,
+        7248
+      ]
+    },
+    {
+      "experiment": "L1 SAE \u00b7 error-preserving",
+      "sae": "L1 SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 3,
+      "ablate": [
+        5314,
+        6270,
+        9035,
+        7996,
+        2595,
+        1942,
+        11777,
+        9216,
+        4129,
+        11771
+      ]
+    },
+    {
+      "experiment": "L1 SAE \u00b7 error-preserving",
+      "sae": "L1 SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 4,
+      "ablate": [
+        5365,
+        5635,
+        7248,
+        11356,
+        5579,
+        9268,
+        3435,
+        6461,
+        2788,
+        10216
+      ]
+    },
+    {
+      "experiment": "L1 SAE \u00b7 error-preserving",
+      "sae": "L1 SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 5,
+      "ablate": [
+        8966,
+        11965,
+        4999,
+        4804,
+        7248,
+        1942,
+        12267,
+        1603,
+        3057,
+        10185
+      ]
+    },
+    {
+      "experiment": "L1 SAE \u00b7 error-preserving",
+      "sae": "L1 SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 6,
+      "ablate": [
+        4999,
+        2565,
+        3780,
+        9073,
+        207,
+        9476,
+        11077,
+        7996,
+        11736,
+        2486
+      ]
+    },
+    {
+      "experiment": "L1 SAE \u00b7 error-preserving",
+      "sae": "L1 SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 7,
+      "ablate": [
+        968,
+        11965,
+        10185,
+        9610,
+        11777,
+        12208,
+        7417,
+        4999,
+        8850,
+        11771
+      ]
+    },
+    {
+      "experiment": "L1 SAE \u00b7 error-preserving",
+      "sae": "L1 SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 8,
+      "ablate": [
+        3780,
+        10185,
+        5367,
+        8841,
+        4999,
+        11103,
+        8910,
+        330,
+        583,
+        5530
+      ]
+    },
+    {
+      "experiment": "L1 SAE \u00b7 error-preserving",
+      "sae": "L1 SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 9,
+      "ablate": [
+        89,
+        207,
+        5817,
+        9190,
+        11001,
+        5443,
+        6787,
+        9035,
+        1258,
+        11664
+      ]
+    },
+    {
+      "experiment": "L1 SAE \u00b7 error-preserving",
+      "sae": "L1 SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 10,
+      "ablate": [
+        8841,
+        11965,
+        1603,
+        1038,
+        3349,
+        10216,
+        2552,
+        11664,
+        5296,
+        3709
+      ]
+    },
+    {
+      "experiment": "L1 SAE \u00b7 error-preserving",
+      "sae": "L1 SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 11,
+      "ablate": [
+        11462,
+        9476,
+        2552,
+        4804,
+        12208,
+        11965,
+        7762,
+        1477,
+        7244,
+        9216
+      ]
+    },
+    {
+      "experiment": "L1 SAE \u00b7 error-preserving",
+      "sae": "L1 SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 12,
+      "ablate": [
+        89,
+        8966,
+        11751,
+        8827,
+        2552,
+        9919,
+        10794,
+        6283,
+        8850,
+        4999
+      ]
+    },
+    {
+      "experiment": "L1 SAE \u00b7 error-preserving",
+      "sae": "L1 SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 13,
+      "ablate": [
+        7996,
+        9216,
+        6270,
+        11448,
+        10216,
+        5880,
+        5635,
+        968,
+        3633,
+        7248
+      ]
+    },
+    {
+      "experiment": "L1 SAE \u00b7 error-preserving",
+      "sae": "L1 SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 14,
+      "ablate": [
+        11077,
+        9035,
+        1942,
+        10754,
+        11751,
+        2552,
+        7762,
+        11777,
+        3057,
+        5579
+      ]
+    },
+    {
+      "experiment": "L1 SAE \u00b7 error-preserving",
+      "sae": "L1 SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 15,
+      "ablate": [
+        2552,
+        5367,
+        2565,
+        3650,
+        330,
+        12138,
+        5347,
+        12460,
+        1773,
+        8841
+      ]
+    },
+    {
+      "experiment": "L1 SAE \u00b7 error-preserving",
+      "sae": "L1 SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 16,
+      "ablate": [
+        11077,
+        1477,
+        11103,
+        10754,
+        9476,
+        11001,
+        9190,
+        5635,
+        3633,
+        6283
+      ]
+    },
+    {
+      "experiment": "L1 SAE \u00b7 error-preserving",
+      "sae": "L1 SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 17,
+      "ablate": [
+        5347,
+        12460,
+        12208,
+        12848,
+        11771,
+        1389,
+        968,
+        10185,
+        2042,
+        2486
+      ]
+    },
+    {
+      "experiment": "L1 SAE \u00b7 error-preserving",
+      "sae": "L1 SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 18,
+      "ablate": [
+        4999,
+        9528,
+        6461,
+        1603,
+        2486,
+        1389,
+        11462,
+        330,
+        10610,
+        1821
+      ]
+    },
+    {
+      "experiment": "L1 SAE \u00b7 error-preserving",
+      "sae": "L1 SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 19,
+      "ablate": [
+        1603,
+        6461,
+        11751,
+        11356,
+        5530,
+        12589,
+        10754,
+        1477,
+        3633,
+        968
+      ]
+    },
+    {
+      "experiment": "Pretrained SAE",
+      "sae": "Pretrained SAE",
+      "mode": "reconstruction",
+      "condition": "no_ablation",
+      "draw": null,
+      "ablate": []
+    },
+    {
+      "experiment": "Pretrained SAE",
+      "sae": "Pretrained SAE",
+      "mode": "reconstruction",
+      "condition": "targeted_ablation",
+      "draw": null,
+      "ablate": [
+        3412,
+        2768,
+        10118,
+        6530,
+        640,
+        2261,
+        4643,
+        11835,
+        7734,
+        2550
+      ]
+    },
+    {
+      "experiment": "Pretrained SAE",
+      "sae": "Pretrained SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 0,
+      "ablate": [
+        460,
+        1045,
+        2548,
+        2305,
+        8144,
+        2940,
+        4236,
+        3316,
+        4968,
+        2672
+      ]
+    },
+    {
+      "experiment": "Pretrained SAE",
+      "sae": "Pretrained SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 1,
+      "ablate": [
+        711,
+        1010,
+        14931,
+        12792,
+        5793,
+        13602,
+        4227,
+        5396,
+        7457,
+        5250
+      ]
+    },
+    {
+      "experiment": "Pretrained SAE",
+      "sae": "Pretrained SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 2,
+      "ablate": [
+        3672,
+        2561,
+        2422,
+        1484,
+        6525,
+        1766,
+        2133,
+        1860,
+        3378,
+        1172
+      ]
+    },
+    {
+      "experiment": "Pretrained SAE",
+      "sae": "Pretrained SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 3,
+      "ablate": [
+        2422,
+        542,
+        142,
+        3398,
+        7308,
+        4882,
+        8930,
+        1860,
+        3008,
+        11095
+      ]
+    },
+    {
+      "experiment": "Pretrained SAE",
+      "sae": "Pretrained SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 4,
+      "ablate": [
+        619,
+        1440,
+        14931,
+        2189,
+        1216,
+        13809,
+        1918,
+        10315,
+        291,
+        4867
+      ]
+    },
+    {
+      "experiment": "Pretrained SAE",
+      "sae": "Pretrained SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 5,
+      "ablate": [
+        1516,
+        1705,
+        1306,
+        2354,
+        3724,
+        7308,
+        2988,
+        11701,
+        2548,
+        6525
+      ]
+    },
+    {
+      "experiment": "Pretrained SAE",
+      "sae": "Pretrained SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 6,
+      "ablate": [
+        398,
+        1440,
+        619,
+        2220,
+        14498,
+        2186,
+        5223,
+        15017,
+        373,
+        9468
+      ]
+    },
+    {
+      "experiment": "Pretrained SAE",
+      "sae": "Pretrained SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 7,
+      "ablate": [
+        1045,
+        1705,
+        3706,
+        15582,
+        4767,
+        2945,
+        1516,
+        448,
+        3050,
+        5822
+      ]
+    },
+    {
+      "experiment": "Pretrained SAE",
+      "sae": "Pretrained SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 8,
+      "ablate": [
+        2403,
+        5269,
+        7065,
+        471,
+        1124,
+        11837,
+        398,
+        9335,
+        2548,
+        4867
+      ]
+    },
+    {
+      "experiment": "Pretrained SAE",
+      "sae": "Pretrained SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 9,
+      "ablate": [
+        5269,
+        4649,
+        1010,
+        11519,
+        7308,
+        1382,
+        10263,
+        919,
+        3706,
+        2117
+      ]
+    },
+    {
+      "experiment": "Pretrained SAE",
+      "sae": "Pretrained SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 10,
+      "ablate": [
+        4649,
+        1705,
+        2403,
+        6887,
+        2072,
+        13602,
+        4357,
+        4537,
+        1303,
+        6525
+      ]
+    },
+    {
+      "experiment": "Pretrained SAE",
+      "sae": "Pretrained SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 11,
+      "ablate": [
+        5672,
+        2548,
+        357,
+        5810,
+        3724,
+        13520,
+        131,
+        5396,
+        896,
+        2672
+      ]
+    },
+    {
+      "experiment": "Pretrained SAE",
+      "sae": "Pretrained SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 12,
+      "ablate": [
+        5269,
+        291,
+        4649,
+        2354,
+        4882,
+        13520,
+        2403,
+        3561,
+        3050,
+        3546
+      ]
+    },
+    {
+      "experiment": "Pretrained SAE",
+      "sae": "Pretrained SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 13,
+      "ablate": [
+        3074,
+        1306,
+        142,
+        3398,
+        2096,
+        2186,
+        9186,
+        8072,
+        2561,
+        5250
+      ]
+    },
+    {
+      "experiment": "Pretrained SAE",
+      "sae": "Pretrained SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 14,
+      "ablate": [
+        1010,
+        476,
+        1303,
+        3596,
+        515,
+        2669,
+        1068,
+        448,
+        7457,
+        9009
+      ]
+    },
+    {
+      "experiment": "Pretrained SAE",
+      "sae": "Pretrained SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 15,
+      "ablate": [
+        14931,
+        2756,
+        4236,
+        7094,
+        13171,
+        1766,
+        1327,
+        4784,
+        711,
+        4767
+      ]
+    },
+    {
+      "experiment": "Pretrained SAE",
+      "sae": "Pretrained SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 16,
+      "ablate": [
+        1010,
+        6113,
+        3074,
+        3596,
+        14498,
+        1860,
+        1516,
+        2396,
+        1684,
+        1227
+      ]
+    },
+    {
+      "experiment": "Pretrained SAE",
+      "sae": "Pretrained SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 17,
+      "ablate": [
+        3821,
+        460,
+        1327,
+        9030,
+        4353,
+        2945,
+        3074,
+        2396,
+        1010,
+        2688
+      ]
+    },
+    {
+      "experiment": "Pretrained SAE",
+      "sae": "Pretrained SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 18,
+      "ablate": [
+        398,
+        373,
+        3706,
+        4227,
+        2391,
+        9766,
+        1582,
+        382,
+        4968,
+        732
+      ]
+    },
+    {
+      "experiment": "Pretrained SAE",
+      "sae": "Pretrained SAE",
+      "mode": "reconstruction",
+      "condition": "random_ablation",
+      "draw": 19,
+      "ablate": [
+        291,
+        9186,
+        373,
+        3244,
+        187,
+        515,
+        1440,
+        2243,
+        142,
+        7408
+      ]
+    },
+    {
+      "experiment": "Pretrained SAE \u00b7 error-preserving",
+      "sae": "Pretrained SAE",
+      "mode": "error_preserving",
+      "condition": "targeted_ablation",
+      "draw": null,
+      "ablate": [
+        3412,
+        2768,
+        10118,
+        6530,
+        640,
+        2261,
+        4643,
+        11835,
+        7734,
+        2550
+      ]
+    },
+    {
+      "experiment": "Pretrained SAE \u00b7 error-preserving",
+      "sae": "Pretrained SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 0,
+      "ablate": [
+        460,
+        1045,
+        2548,
+        2305,
+        8144,
+        2940,
+        4236,
+        3316,
+        4968,
+        2672
+      ]
+    },
+    {
+      "experiment": "Pretrained SAE \u00b7 error-preserving",
+      "sae": "Pretrained SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 1,
+      "ablate": [
+        711,
+        1010,
+        14931,
+        12792,
+        5793,
+        13602,
+        4227,
+        5396,
+        7457,
+        5250
+      ]
+    },
+    {
+      "experiment": "Pretrained SAE \u00b7 error-preserving",
+      "sae": "Pretrained SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 2,
+      "ablate": [
+        3672,
+        2561,
+        2422,
+        1484,
+        6525,
+        1766,
+        2133,
+        1860,
+        3378,
+        1172
+      ]
+    },
+    {
+      "experiment": "Pretrained SAE \u00b7 error-preserving",
+      "sae": "Pretrained SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 3,
+      "ablate": [
+        2422,
+        542,
+        142,
+        3398,
+        7308,
+        4882,
+        8930,
+        1860,
+        3008,
+        11095
+      ]
+    },
+    {
+      "experiment": "Pretrained SAE \u00b7 error-preserving",
+      "sae": "Pretrained SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 4,
+      "ablate": [
+        619,
+        1440,
+        14931,
+        2189,
+        1216,
+        13809,
+        1918,
+        10315,
+        291,
+        4867
+      ]
+    },
+    {
+      "experiment": "Pretrained SAE \u00b7 error-preserving",
+      "sae": "Pretrained SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 5,
+      "ablate": [
+        1516,
+        1705,
+        1306,
+        2354,
+        3724,
+        7308,
+        2988,
+        11701,
+        2548,
+        6525
+      ]
+    },
+    {
+      "experiment": "Pretrained SAE \u00b7 error-preserving",
+      "sae": "Pretrained SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 6,
+      "ablate": [
+        398,
+        1440,
+        619,
+        2220,
+        14498,
+        2186,
+        5223,
+        15017,
+        373,
+        9468
+      ]
+    },
+    {
+      "experiment": "Pretrained SAE \u00b7 error-preserving",
+      "sae": "Pretrained SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 7,
+      "ablate": [
+        1045,
+        1705,
+        3706,
+        15582,
+        4767,
+        2945,
+        1516,
+        448,
+        3050,
+        5822
+      ]
+    },
+    {
+      "experiment": "Pretrained SAE \u00b7 error-preserving",
+      "sae": "Pretrained SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 8,
+      "ablate": [
+        2403,
+        5269,
+        7065,
+        471,
+        1124,
+        11837,
+        398,
+        9335,
+        2548,
+        4867
+      ]
+    },
+    {
+      "experiment": "Pretrained SAE \u00b7 error-preserving",
+      "sae": "Pretrained SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 9,
+      "ablate": [
+        5269,
+        4649,
+        1010,
+        11519,
+        7308,
+        1382,
+        10263,
+        919,
+        3706,
+        2117
+      ]
+    },
+    {
+      "experiment": "Pretrained SAE \u00b7 error-preserving",
+      "sae": "Pretrained SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 10,
+      "ablate": [
+        4649,
+        1705,
+        2403,
+        6887,
+        2072,
+        13602,
+        4357,
+        4537,
+        1303,
+        6525
+      ]
+    },
+    {
+      "experiment": "Pretrained SAE \u00b7 error-preserving",
+      "sae": "Pretrained SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 11,
+      "ablate": [
+        5672,
+        2548,
+        357,
+        5810,
+        3724,
+        13520,
+        131,
+        5396,
+        896,
+        2672
+      ]
+    },
+    {
+      "experiment": "Pretrained SAE \u00b7 error-preserving",
+      "sae": "Pretrained SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 12,
+      "ablate": [
+        5269,
+        291,
+        4649,
+        2354,
+        4882,
+        13520,
+        2403,
+        3561,
+        3050,
+        3546
+      ]
+    },
+    {
+      "experiment": "Pretrained SAE \u00b7 error-preserving",
+      "sae": "Pretrained SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 13,
+      "ablate": [
+        3074,
+        1306,
+        142,
+        3398,
+        2096,
+        2186,
+        9186,
+        8072,
+        2561,
+        5250
+      ]
+    },
+    {
+      "experiment": "Pretrained SAE \u00b7 error-preserving",
+      "sae": "Pretrained SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 14,
+      "ablate": [
+        1010,
+        476,
+        1303,
+        3596,
+        515,
+        2669,
+        1068,
+        448,
+        7457,
+        9009
+      ]
+    },
+    {
+      "experiment": "Pretrained SAE \u00b7 error-preserving",
+      "sae": "Pretrained SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 15,
+      "ablate": [
+        14931,
+        2756,
+        4236,
+        7094,
+        13171,
+        1766,
+        1327,
+        4784,
+        711,
+        4767
+      ]
+    },
+    {
+      "experiment": "Pretrained SAE \u00b7 error-preserving",
+      "sae": "Pretrained SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 16,
+      "ablate": [
+        1010,
+        6113,
+        3074,
+        3596,
+        14498,
+        1860,
+        1516,
+        2396,
+        1684,
+        1227
+      ]
+    },
+    {
+      "experiment": "Pretrained SAE \u00b7 error-preserving",
+      "sae": "Pretrained SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 17,
+      "ablate": [
+        3821,
+        460,
+        1327,
+        9030,
+        4353,
+        2945,
+        3074,
+        2396,
+        1010,
+        2688
+      ]
+    },
+    {
+      "experiment": "Pretrained SAE \u00b7 error-preserving",
+      "sae": "Pretrained SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 18,
+      "ablate": [
+        398,
+        373,
+        3706,
+        4227,
+        2391,
+        9766,
+        1582,
+        382,
+        4968,
+        732
+      ]
+    },
+    {
+      "experiment": "Pretrained SAE \u00b7 error-preserving",
+      "sae": "Pretrained SAE",
+      "mode": "error_preserving",
+      "condition": "random_ablation",
+      "draw": 19,
+      "ablate": [
+        291,
+        9186,
+        373,
+        3244,
+        187,
+        515,
+        1440,
+        2243,
+        142,
+        7408
+      ]
+    }
+  ],
+  "features": {
+    "TopK SAE": {
+      "targeted": [
+        4781,
+        3357,
+        10876,
+        10179,
+        4432,
+        2186,
+        8404,
+        10914,
+        10205,
+        12844
+      ],
+      "random": [
+        [
+          10699,
+          410,
+          2080,
+          3305,
+          776,
+          2365,
+          6640,
+          9881,
+          607,
+          2440
+        ],
+        [
+          8757,
+          6749,
+          7165,
+          5036,
+          5294,
+          674,
+          4998,
+          607,
+          4519,
+          10611
+        ],
+        [
+          321,
+          3305,
+          3383,
+          11017,
+          6277,
+          2719,
+          4575,
+          8813,
+          7067,
+          8652
+        ],
+        [
+          4715,
+          11780,
+          2264,
+          11649,
+          2780,
+          959,
+          8813,
+          11513,
+          1318,
+          7385
+        ],
+        [
+          6882,
+          11798,
+          250,
+          6854,
+          2481,
+          11303,
+          12866,
+          11513,
+          1204,
+          10220
+        ],
+        [
+          12226,
+          11132,
+          10068,
+          993,
+          857,
+          2907,
+          8652,
+          4715,
+          9881,
+          250
+        ],
+        [
+          9357,
+          410,
+          10068,
+          7165,
+          12541,
+          12237,
+          12629,
+          2213,
+          6854,
+          10611
+        ],
+        [
+          993,
+          9881,
+          4575,
+          8722,
+          7892,
+          5360,
+          1321,
+          5734,
+          7067,
+          2370
+        ],
+        [
+          7747,
+          10220,
+          6749,
+          2565,
+          9414,
+          1516,
+          6640,
+          6930,
+          12319,
+          8423
+        ],
+        [
+          607,
+          2213,
+          10220,
+          3305,
+          2780,
+          7871,
+          3383,
+          4519,
+          1204,
+          5984
+        ],
+        [
+          9419,
+          9881,
+          9126,
+          1961,
+          6277,
+          5294,
+          4233,
+          11780,
+          458,
+          2370
+        ],
+        [
+          12541,
+          4998,
+          8155,
+          12226,
+          3805,
+          5420,
+          7082,
+          607,
+          8722,
+          5984
+        ],
+        [
+          607,
+          7385,
+          2080,
+          993,
+          1204,
+          5420,
+          12793,
+          5036,
+          7067,
+          9217
+        ],
+        [
+          6930,
+          250,
+          2264,
+          11649,
+          6277,
+          1327,
+          7767,
+          125,
+          5734,
+          172
+        ],
+        [
+          11132,
+          11780,
+          1321,
+          458,
+          2719,
+          10699,
+          7082,
+          321,
+          2565,
+          12793
+        ],
+        [
+          192,
+          1910,
+          2565,
+          3776,
+          776,
+          11283,
+          9250,
+          9420,
+          2719,
+          9126
+        ],
+        [
+          11132,
+          7767,
+          4998,
+          458,
+          12541,
+          12445,
+          1321,
+          8722,
+          8757,
+          5722
+        ],
+        [
+          1204,
+          9357,
+          11017,
+          12629,
+          7892,
+          5360,
+          2370,
+          8722,
+          8813,
+          10068
+        ],
+        [
+          9357,
+          7067,
+          4575,
+          4519,
+          7049,
+          4438,
+          6749,
+          876,
+          4715,
+          2093
+        ],
+        [
+          458,
+          876,
+          8652,
+          11967,
+          5420,
+          7020,
+          309,
+          706,
+          5734,
+          11780
+        ]
+      ]
+    },
+    "L1 SAE": {
+      "targeted": [
+        8545,
+        3513,
+        1446,
+        8023,
+        1416,
+        694,
+        8037,
+        6848,
+        6254,
+        2912
+      ],
+      "random": [
+        [
+          1071,
+          2565,
+          968,
+          5314,
+          207,
+          2595,
+          8910,
+          4804,
+          6727,
+          1209
+        ],
+        [
+          11448,
+          4792,
+          12848,
+          9268,
+          3709,
+          10216,
+          7775,
+          1603,
+          4275,
+          330
+        ],
+        [
+          3435,
+          11777,
+          12028,
+          11965,
+          2552,
+          3709,
+          5314,
+          9216,
+          1773,
+          7248
+        ],
+        [
+          5314,
+          6270,
+          9035,
+          7996,
+          2595,
+          1942,
+          11777,
+          9216,
+          4129,
+          11771
+        ],
+        [
+          5365,
+          5635,
+          7248,
+          11356,
+          5579,
+          9268,
+          3435,
+          6461,
+          2788,
+          10216
+        ],
+        [
+          8966,
+          11965,
+          4999,
+          4804,
+          7248,
+          1942,
+          12267,
+          1603,
+          3057,
+          10185
+        ],
+        [
+          4999,
+          2565,
+          3780,
+          9073,
+          207,
+          9476,
+          11077,
+          7996,
+          11736,
+          2486
+        ],
+        [
+          968,
+          11965,
+          10185,
+          9610,
+          11777,
+          12208,
+          7417,
+          4999,
+          8850,
+          11771
+        ],
+        [
+          3780,
+          10185,
+          5367,
+          8841,
+          4999,
+          11103,
+          8910,
+          330,
+          583,
+          5530
+        ],
+        [
+          89,
+          207,
+          5817,
+          9190,
+          11001,
+          5443,
+          6787,
+          9035,
+          1258,
+          11664
+        ],
+        [
+          8841,
+          11965,
+          1603,
+          1038,
+          3349,
+          10216,
+          2552,
+          11664,
+          5296,
+          3709
+        ],
+        [
+          11462,
+          9476,
+          2552,
+          4804,
+          12208,
+          11965,
+          7762,
+          1477,
+          7244,
+          9216
+        ],
+        [
+          89,
+          8966,
+          11751,
+          8827,
+          2552,
+          9919,
+          10794,
+          6283,
+          8850,
+          4999
+        ],
+        [
+          7996,
+          9216,
+          6270,
+          11448,
+          10216,
+          5880,
+          5635,
+          968,
+          3633,
+          7248
+        ],
+        [
+          11077,
+          9035,
+          1942,
+          10754,
+          11751,
+          2552,
+          7762,
+          11777,
+          3057,
+          5579
+        ],
+        [
+          2552,
+          5367,
+          2565,
+          3650,
+          330,
+          12138,
+          5347,
+          12460,
+          1773,
+          8841
+        ],
+        [
+          11077,
+          1477,
+          11103,
+          10754,
+          9476,
+          11001,
+          9190,
+          5635,
+          3633,
+          6283
+        ],
+        [
+          5347,
+          12460,
+          12208,
+          12848,
+          11771,
+          1389,
+          968,
+          10185,
+          2042,
+          2486
+        ],
+        [
+          4999,
+          9528,
+          6461,
+          1603,
+          2486,
+          1389,
+          11462,
+          330,
+          10610,
+          1821
+        ],
+        [
+          1603,
+          6461,
+          11751,
+          11356,
+          5530,
+          12589,
+          10754,
+          1477,
+          3633,
+          968
+        ]
+      ]
+    },
+    "Pretrained SAE": {
+      "targeted": [
+        3412,
+        2768,
+        10118,
+        6530,
+        640,
+        2261,
+        4643,
+        11835,
+        7734,
+        2550
+      ],
+      "random": [
+        [
+          460,
+          1045,
+          2548,
+          2305,
+          8144,
+          2940,
+          4236,
+          3316,
+          4968,
+          2672
+        ],
+        [
+          711,
+          1010,
+          14931,
+          12792,
+          5793,
+          13602,
+          4227,
+          5396,
+          7457,
+          5250
+        ],
+        [
+          3672,
+          2561,
+          2422,
+          1484,
+          6525,
+          1766,
+          2133,
+          1860,
+          3378,
+          1172
+        ],
+        [
+          2422,
+          542,
+          142,
+          3398,
+          7308,
+          4882,
+          8930,
+          1860,
+          3008,
+          11095
+        ],
+        [
+          619,
+          1440,
+          14931,
+          2189,
+          1216,
+          13809,
+          1918,
+          10315,
+          291,
+          4867
+        ],
+        [
+          1516,
+          1705,
+          1306,
+          2354,
+          3724,
+          7308,
+          2988,
+          11701,
+          2548,
+          6525
+        ],
+        [
+          398,
+          1440,
+          619,
+          2220,
+          14498,
+          2186,
+          5223,
+          15017,
+          373,
+          9468
+        ],
+        [
+          1045,
+          1705,
+          3706,
+          15582,
+          4767,
+          2945,
+          1516,
+          448,
+          3050,
+          5822
+        ],
+        [
+          2403,
+          5269,
+          7065,
+          471,
+          1124,
+          11837,
+          398,
+          9335,
+          2548,
+          4867
+        ],
+        [
+          5269,
+          4649,
+          1010,
+          11519,
+          7308,
+          1382,
+          10263,
+          919,
+          3706,
+          2117
+        ],
+        [
+          4649,
+          1705,
+          2403,
+          6887,
+          2072,
+          13602,
+          4357,
+          4537,
+          1303,
+          6525
+        ],
+        [
+          5672,
+          2548,
+          357,
+          5810,
+          3724,
+          13520,
+          131,
+          5396,
+          896,
+          2672
+        ],
+        [
+          5269,
+          291,
+          4649,
+          2354,
+          4882,
+          13520,
+          2403,
+          3561,
+          3050,
+          3546
+        ],
+        [
+          3074,
+          1306,
+          142,
+          3398,
+          2096,
+          2186,
+          9186,
+          8072,
+          2561,
+          5250
+        ],
+        [
+          1010,
+          476,
+          1303,
+          3596,
+          515,
+          2669,
+          1068,
+          448,
+          7457,
+          9009
+        ],
+        [
+          14931,
+          2756,
+          4236,
+          7094,
+          13171,
+          1766,
+          1327,
+          4784,
+          711,
+          4767
+        ],
+        [
+          1010,
+          6113,
+          3074,
+          3596,
+          14498,
+          1860,
+          1516,
+          2396,
+          1684,
+          1227
+        ],
+        [
+          3821,
+          460,
+          1327,
+          9030,
+          4353,
+          2945,
+          3074,
+          2396,
+          1010,
+          2688
+        ],
+        [
+          398,
+          373,
+          3706,
+          4227,
+          2391,
+          9766,
+          1582,
+          382,
+          4968,
+          732
+        ],
+        [
+          291,
+          9186,
+          373,
+          3244,
+          187,
+          515,
+          1440,
+          2243,
+          142,
+          7408
+        ]
+      ]
+    }
+  },
+  "provenance": {
+    "git_commit": "2f9d760c1b70ef73889c22846f95a826b8ef8121",
+    "code_tree_sha": {
+      "src": "68b5ad4c35c4c98b073baee7e39e59de2ca935d2",
+      "scripts": "d2c47f984e378a6c0b3cafaa8ebc47c9b33e10b5",
+      "configs": "178be01ef215e77251fe0795ce7669633380177e"
+    },
+    "uncommitted_changes_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "uncommitted_code_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "untracked_code_files": [],
+    "untracked_code_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "command": "/home/ubuntu/miniconda3/envs/capstone/bin/python scripts/causal_replay.py --config configs/causal_replay_layer33.yaml",
+    "config_path": "configs/causal_replay_layer33.yaml",
+    "config_sha256": "e32b80abd7310c8daa5e65411bf19c5001d147e160c824c99e390a059f0dc1d3",
+    "input_sha256": {
+      "results/collection/natural_4b_full9_intervention_partitioned/intervention/interactions.jsonl": "90d00f4b54dd9e1f5fd8a4ed3f8cf5eb442da082437db348ab98cbaf667da28a",
+      "results/behavior/behavior_v012_official_20261011/labels.csv": "8d9d1a49a1ff562ec44ea531aea544b9844244cf785514d91409b0365fe2bf6b",
+      "results/feature_selection/20261016T003252665105Z/feature_selection_summary.json": "478efbf330aef7c1034f9e3e1f0560da57485c1d7dd61a19efaab5f1d6e5d895"
+    },
+    "label_policy": "behavior_v0.1.2_qc_candidate",
+    "label_policy_sha256": "e21f78cbc0800cb6fa78f526a63e777913498b5dd5bc7fe9bf406ca8b1c319b2",
+    "packages": {
+      "torch": "2.13.0",
+      "transformers": "5.20.1",
+      "datasets": "5.1.0",
+      "numpy": "2.4.6",
+      "pandas": "3.0.6"
+    },
+    "site": "model.language_model.layers.33",
+    "intervention": "final_prompt_token_prefill_only",
+    "solver_spec": {
+      "id": "google/gemma-3-4b-it",
+      "revision": "093f9f388b31de276ce2de164bdc2081324b9767",
+      "loader": "gemma3",
+      "dtype": "bfloat16",
+      "device": "cuda:0",
+      "generation": {
+        "do_sample": false,
+        "max_new_tokens": 64
+      }
+    },
+    "sae_sha256": {
+      "TopK SAE": {
+        "results/sae/musique/runs/layer_33/20261013T233444019723Z-e5943205b957/checkpoints/best_checkpoint.pt": "3b7ad0ee31879accc56cf6b9a45fcee2cff1e1a0299342d2940bde33019a98a2"
+      },
+      "L1 SAE": {
+        "results/sae/musique/runs/layer_33/20261014T161949048498Z-edfc89a42125/checkpoints/best_checkpoint.pt": "14f923707ad2e899de5725dba13bccd96ab4eac98d9d084ef8cc14a41cd6e8ea"
+      },
+      "Pretrained SAE": {
+        "results/sae/pretrained/gemma-scope-2-4b-it/resid_post_all/layer_33_width_16k_l0_big/config.json": "35d2b83867cf2798b5f95251f37f6d4bcc076abb7582380d543ceeec838c1b2b",
+        "results/sae/pretrained/gemma-scope-2-4b-it/resid_post_all/layer_33_width_16k_l0_big/params.safetensors": "003f624325bd50b7fa9031fbaf83d60ddce2f523e4f5abb42e98c475ec3be707"
+      }
+    },
+    "num_layers": 34,
+    "device": "cuda:0",
+    "device_name": "NVIDIA A10G"
+  }
+}
