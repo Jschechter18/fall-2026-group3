@@ -14,14 +14,21 @@ unimportant throughout answer generation. Each row records the first token gener
 produced and its log-probability, and the log-probability under the condition of the token its
 control produced, as a continuous measure beside answer-level acceptance.
 
-Two splices per SAE, with z = encode(x) at that position:
-  reconstruction     x' = decode(z with chosen features zeroed)    (estimand: inside the SAE-reconstructed model)
-  error-preserving   x' = x + decode(z_ablated) - decode(z)        (keeps the SAE error; no ablation gives x)
+Each intervention sets a set of features of z = encode(x) at that position to fixed values, giving z':
+  ablation           chosen features set to 0
+  steering (s)       chosen feature f set to s * ref_f, where ref_f is its mean activation where it fires on
+                     the feature-selection fit partition (``scripts/feature_reference_activations.py``):
+                     s > 0 pushes the features up, s < 0 pushes them below zero (ablation is s = 0)
+
+Two splices per SAE:
+  reconstruction     x' = decode(z')                   (estimand: inside the SAE-reconstructed model)
+  error-preserving   x' = x + decode(z') - decode(z)   (keeps the SAE error; no edit gives x)
 
 Conditions per episode:
   Baseline       no SAE: plain replay; checked against the stored A2 before any SAE run (replay check)
-  per SAE        no ablation (reconstruction only) / targeted ablation / random ablation (draws)
-  per SAE, EP    targeted / random ablation with the error-preserving splice (control: plain replay)
+  per SAE        no ablation (reconstruction only), then for ablation (if ``ablation``) and each steering
+                 strength (``steer_strengths``): the targeted set and the random sets (draws)
+  per SAE, EP    the same targeted / random edits with the error-preserving splice (control: plain replay)
 
 The regenerated A2 is labeled with the same Behavior v0.1.2 rules as the stored data, and
 acceptance means ``solver_response == "adopted_critic"``. Conclusions are about critic adoption on
@@ -75,6 +82,7 @@ MODES = ("reconstruction", "error_preserving")
 EP_SUFFIX = " · error-preserving"
 CODE_DIRS = ("src", "scripts", "configs")
 PATH_KEYS = ("capstone_data_root", "interactions_jsonl", "labels_csv", "feature_selection_summary")
+REFERENCE_KEYS = ("layer", "feature_selection_summary_sha256", "saes")
 REQUIRED_KEYS = (*PATH_KEYS, "layer")
 # provenance that must be unchanged for a resume to append to a run
 IDENTITY_KEYS = ("code_tree_sha", "uncommitted_code_sha256", "untracked_code_sha256", "input_sha256",
@@ -83,6 +91,7 @@ IDENTITY_KEYS = ("code_tree_sha", "uncommitted_code_sha256", "untracked_code_sha
 PACKAGES = ("torch", "transformers", "datasets", "numpy", "pandas")
 CONDITION_LABELS = {"no_sae": "No SAE (replayed A2)", "no_ablation": "No ablation",
                     "random_ablation": "Random ablation", "targeted_ablation": "Targeted ablation"}
+ABLATION = "ablation"
 TABLE_COLUMNS = ["Experiment", "Condition", "Outcome", "N", "Acceptance Rate (%)",
                  "Δ vs. SAE Control (pp)", "95% CI for Δ", "p-value"]
 
@@ -102,6 +111,11 @@ class ReplayConfig:
     saes: dict = field(default_factory=dict)
     n_random_draws: int = 5
     error_preserving: bool = True                    # also run the error-preserving splice
+    ablation: bool = True                            # targeted / random ablation conditions
+    # steering: clamp the targeted / random features to s * ref for each s here (empty: no steering)
+    steer_strengths: list = field(default_factory=list)
+    feature_reference: str | None = None             # reference activations (needed for steering)
+    max_hours: float | None = None                   # warn when the SAE conditions are projected to take longer
     # replay check: the plain replay must reproduce collection before any SAE condition runs
     min_replay_label_match: float = 0.98             # share of episodes whose regenerated A2 keeps its label
     on_replay_check_fail: str = "stop"               # stop | mark_unvalidated
@@ -135,6 +149,18 @@ class ReplayConfig:
             raise ValueError("n_random_draws must be a positive integer.")
         if type(cfg.error_preserving) is not bool:
             raise ValueError("error_preserving must be true or false.")
+        if type(cfg.ablation) is not bool:
+            raise ValueError("ablation must be true or false.")
+        s = cfg.steer_strengths
+        if (not isinstance(s, list) or any(type(v) not in (int, float) or not np.isfinite(v) or v == 0 for v in s)
+                or len(set(s)) != len(s)):
+            raise ValueError("steer_strengths must be a list of distinct nonzero numbers (0 is ablation).")
+        if not cfg.ablation and not s:
+            raise ValueError("Nothing to run: set ablation: true or some steer_strengths.")
+        if s and not cfg.feature_reference:
+            raise ValueError("steer_strengths needs feature_reference (scripts/feature_reference_activations.py).")
+        if cfg.max_hours is not None and (type(cfg.max_hours) not in (int, float) or cfg.max_hours <= 0):
+            raise ValueError("max_hours must be a positive number or null.")
         if not 0 < cfg.min_replay_label_match <= 1:
             raise ValueError("min_replay_label_match must be in (0, 1].")
         if cfg.on_replay_check_fail not in ("stop", "mark_unvalidated"):
@@ -151,18 +177,25 @@ class SAESplice:
 
     ``generate`` calls the module once for the prompt (prefill) and once per new token. Only the
     prefill's last position is changed, which is where the collected activations were taken.
-    ``mode`` is ``reconstruction`` (decode the possibly ablated features) or ``error_preserving``
-    (add the change the ablation makes to the reconstruction to the original activation).
+    ``features`` are set to ``values`` (zero when ``values`` is None: ablation) before decoding.
+    ``mode`` is ``reconstruction`` (decode the edited features) or ``error_preserving`` (add the
+    change the edit makes to the reconstruction to the original activation).
     Decoder layers return a tensor or a tuple whose first item is the hidden state; both work.
     """
 
-    def __init__(self, model: torch.nn.Module, module_name: str, sae, ablate=(), mode: str = "reconstruction"):
+    def __init__(self, model: torch.nn.Module, module_name: str, sae, features=(), mode: str = "reconstruction",
+                 values=None):
         modules = dict(model.named_modules())
         if module_name not in modules:
             raise ValueError(f"Module {module_name!r} was not found in the model.")
         if mode not in MODES:
             raise ValueError(f"mode must be one of {MODES}, got {mode!r}.")
-        self.module, self.sae, self.ablate = modules[module_name], sae, sorted(int(f) for f in ablate)
+        features = [int(f) for f in features]
+        values = [0.0] * len(features) if values is None else [float(v) for v in values]
+        if len(values) != len(features):
+            raise ValueError(f"{len(features)} features but {len(values)} values.")
+        self.module, self.sae = modules[module_name], sae
+        self.features, self.values = features, values
         self.mode = mode
         self.calls, self.stats, self._handle = 0, {}, None
 
@@ -181,13 +214,13 @@ class SAESplice:
             self.stats = {"n_active": int((z > 0).sum()),
                           "recon_rel_error": float((x - recon_full).norm() / x_norm)}
             recon = recon_full
-            if self.ablate:
-                # how many of the ablated features were actually firing here: 0 means a no-op ablation
-                self.stats["n_ablated_active"] = int((z[0, self.ablate] > 0).sum())
+            if self.features:
+                # how many of the edited features were firing before the edit: 0 makes an ablation a no-op
+                self.stats["n_ablated_active"] = int((z[0, self.features] > 0).sum())
                 z = z.clone()
-                z[:, self.ablate] = 0.0
+                z[:, self.features] = torch.tensor(self.values, dtype=z.dtype, device=z.device)
                 recon = self.sae.decoder(z)
-                # size of what the ablation removed from the reconstruction, relative to the activation
+                # size of the change the edit makes to the reconstruction, relative to the activation
                 self.stats["removed_rel_norm"] = float((recon_full - recon).norm() / x_norm)
             new = recon if self.mode == "reconstruction" else x + (recon - recon_full)
         hidden = hidden.clone()
@@ -324,6 +357,33 @@ def feature_sets(cfg: ReplayConfig, sae_hashes: dict) -> dict:
         # ids are kept exactly as stored: validate_features rejects anything that is not an integer
         out[name] = {"targeted": list(s["targeted_features"]),
                      "random": [list(d) for d in draws[:cfg.n_random_draws]]}
+    if cfg.steer_strengths:
+        refs = reference_activations(cfg, sae_hashes)
+        for name, f in out.items():
+            ids = {str(i) for i in [*f["targeted"], *(i for d in f["random"] for i in d)]}
+            f["ref"] = {i: r for i, r in refs[name].items() if i in ids}
+    return out
+
+
+def reference_activations(cfg: ReplayConfig, sae_hashes: dict) -> dict:
+    """``{sae: {feature id (str): ref}}`` from ``cfg.feature_reference``, after checking it was computed for
+    this layer, this feature-selection summary and these SAE files."""
+    root = Path(cfg.capstone_data_root)
+    ref = json.loads((root / cfg.feature_reference).read_text())
+    missing = [k for k in REFERENCE_KEYS if k not in ref]
+    if missing:
+        raise ValueError(f"{cfg.feature_reference} is missing {missing}.")
+    if ref["layer"] != cfg.layer:
+        raise ValueError(f"Reference activations are for layer {ref['layer']}, not {cfg.layer}.")
+    if ref["feature_selection_summary_sha256"] != sha256_file(root / cfg.feature_selection_summary):
+        raise ValueError(f"{cfg.feature_reference} was computed from a different feature-selection summary.")
+    out = {}
+    for name in cfg.saes:
+        if name not in ref["saes"]:
+            raise ValueError(f"SAE {name!r} is not in {cfg.feature_reference}.")
+        if ref["saes"][name]["sae_sha256"] != sae_hashes[name]:
+            raise ValueError(f"SAE {name!r} files differ from the ones the reference activations used.")
+        out[name] = {i: v["ref"] for i, v in ref["saes"][name]["features"].items()}
     return out
 
 
@@ -338,6 +398,7 @@ def validate_features(features: dict, saes: dict) -> None:
     for name, f in features.items():
         width = saes[name].latent_dim
         sets = {"targeted": f["targeted"], **{f"random draw {i}": d for i, d in enumerate(f["random"])}}
+        ref = f.get("ref")
         for label, ids in sets.items():
             if not ids or any(type(i) is not int for i in ids):
                 raise ValueError(f"{name} {label}: feature ids must be a non-empty list of integers.")
@@ -349,22 +410,50 @@ def validate_features(features: dict, saes: dict) -> None:
                 raise ValueError(f"{name} {label}: {len(ids)} features, targeted set has {len(f['targeted'])}.")
             if label != "targeted" and set(ids) & set(f["targeted"]):
                 raise ValueError(f"{name} {label}: includes targeted features.")
+            bad = [i for i in ids if ref is not None and not (np.isfinite(ref.get(str(i), np.nan)) and ref[str(i)] > 0)]
+            if bad:
+                raise ValueError(f"{name} {label}: no positive reference activation for features {bad}.")
 
 
-def conditions(features: dict, error_preserving: bool = False) -> list[dict]:
-    """Every (experiment, condition, draw) generated per episode, with its SAE, splice mode and ablated features.
+def steer_arm(strength: float) -> str:
+    return f"steer_{strength:+g}"
+
+
+def split_condition(condition: str) -> tuple[str, str] | None:
+    """``("targeted" | "random", arm)`` for an edit condition (arm: ``ablation`` or ``steer_<s>``), else None."""
+    kind, _, arm = condition.partition("_")
+    return (kind, arm) if kind in ("targeted", "random") else None
+
+
+def condition_label(condition: str) -> str:
+    if condition in CONDITION_LABELS:
+        return CONDITION_LABELS[condition]
+    kind, arm = split_condition(condition)
+    return f"{kind.capitalize()} steer ({arm.removeprefix('steer_')}× ref)"
+
+
+def conditions(features: dict, error_preserving: bool = False, ablation: bool = True,
+               steer_strengths=()) -> list[dict]:
+    """Every (experiment, condition, draw) generated per episode, with its SAE, splice mode, edited
+    features and the values they are set to (None: zero, i.e. ablation).
 
     Order matters: each condition comes after its control (see ``control_key``) for the same episode.
     """
-    out = [{"experiment": BASELINE, "condition": "no_sae", "draw": None, "ablate": None, "sae": None, "mode": None}]
+    out = [{"experiment": BASELINE, "condition": "no_sae", "draw": None, "features": None, "values": None,
+            "strength": None, "sae": None, "mode": None}]
     for name, f in features.items():
+        sets = [("targeted", None, f["targeted"]), *(("random", i, d) for i, d in enumerate(f["random"]))]
+        arms = ([(ABLATION, None)] if ablation else []) + [(steer_arm(s), s) for s in steer_strengths]
         for mode in MODES if error_preserving else MODES[:1]:
             exp = name if mode == "reconstruction" else name + EP_SUFFIX
             c = {"experiment": exp, "sae": name, "mode": mode}
-            if mode == "reconstruction":       # error-preserving without ablation is the plain replay
-                out.append({**c, "condition": "no_ablation", "draw": None, "ablate": []})
-            out.append({**c, "condition": "targeted_ablation", "draw": None, "ablate": f["targeted"]})
-            out += [{**c, "condition": "random_ablation", "draw": i, "ablate": d} for i, d in enumerate(f["random"])]
+            if mode == "reconstruction":       # error-preserving without an edit is the plain replay
+                out.append({**c, "condition": "no_ablation", "draw": None, "features": [], "values": None,
+                            "strength": None})
+            for arm, s in arms:
+                out += [{**c, "condition": f"{kind}_{arm}", "draw": draw, "features": ids, "strength": s,
+                         "values": None if s is None else [s * f["ref"][str(i)] for i in ids]}
+                        for kind, draw, ids in sets]
     return out
 
 
@@ -452,9 +541,9 @@ def generate(comp: Components, ep: dict, cond: dict, control_token: int | None =
 
     ``control_token`` is the first token its control generated; the row records its log-probability here.
     """
-    splice = (SAESplice(comp.model, comp.site, comp.saes[cond.get("sae", cond["experiment"])], cond["ablate"],
-                        cond.get("mode") or "reconstruction")
-              if cond["ablate"] is not None else contextlib.nullcontext())
+    splice = (SAESplice(comp.model, comp.site, comp.saes[cond.get("sae", cond["experiment"])], cond["features"],
+                        cond.get("mode") or "reconstruction", cond.get("values"))
+              if cond["features"] is not None else contextlib.nullcontext())
     t0 = time.perf_counter()
     with splice, FirstTokenLogits(comp.model) as first:
         a2 = comp.solver.revise(ep["question"], comp.paragraphs[ep["question_id"]],
@@ -473,6 +562,7 @@ def generate(comp: Components, ep: dict, cond: dict, control_token: int | None =
     stored_prompt = stored_prompt if isinstance(stored_prompt, str) else None
     return {"question_id": ep["question_id"], "experiment": cond["experiment"],
             "condition": cond["condition"], "draw": cond["draw"], "mode": cond.get("mode"),
+            "strength": cond.get("strength"),
             "solver_attempt_2": a2, "stored_solver_attempt_2": ep["stored_solver_attempt_2"],
             "a2_matches_stored": a2 == ep["stored_solver_attempt_2"],
             "solver_response": label["solver_response"], "adopted": int(label["solver_response"] == ACCEPT),
@@ -506,7 +596,8 @@ def provenance(cfg: ReplayConfig, config_path: Path | None, comp: Components) ->
         "config_path": str(config_path) if config_path else None,
         "config_sha256": sha256_file(config_path) if config_path else None,
         "input_sha256": {p: sha256_file(root / p) for p in
-                         (cfg.interactions_jsonl, cfg.labels_csv, cfg.feature_selection_summary)},
+                         (cfg.interactions_jsonl, cfg.labels_csv, cfg.feature_selection_summary, cfg.feature_reference)
+                         if p},
         "label_policy": POLICY.version, "label_policy_sha256": POLICY.definition_sha256(),
         "packages": {p: get_package_version(p) for p in PACKAGES},
         "site": comp.site, "intervention": INTERVENTION,
@@ -546,8 +637,10 @@ def replay(cfg: ReplayConfig, episodes: pd.DataFrame, comp: Components, run_dir:
     before any SAE condition is generated; ``preflight_only`` stops after that check.
     """
     validate_features(comp.features, comp.saes)
+    if cfg.steer_strengths and any("ref" not in f for f in comp.features.values()):
+        raise ValueError("Steering needs reference activations for every SAE's features.")
     run_dir.mkdir(parents=True, exist_ok=True)
-    conds = conditions(comp.features, cfg.error_preserving)
+    conds = conditions(comp.features, cfg.error_preserving, cfg.ablation, cfg.steer_strengths)
     meta_path = run_dir / "replay_config.json"
     meta = {"config": _config_dict(cfg), "conditions": conds, "features": comp.features}
     prov = provenance(cfg, config_path, comp)
@@ -572,7 +665,7 @@ def replay(cfg: ReplayConfig, episodes: pd.DataFrame, comp: Components, run_dir:
             if (ep["question_id"], c["experiment"], c["condition"], c["draw"]) not in first]
     logger.info("%d episodes x %d conditions; %d generations already done, %d to go",
                 len(episodes), len(conds), len(first), len(todo))
-    _generate_all([t for t in todo if t[1]["ablate"] is None], comp, out, first, "plain replay")
+    _generate_all([t for t in todo if t[1]["features"] is None], comp, out, first, "plain replay")
 
     generated = pd.DataFrame(_read_rows(out))
     check = replay_check(generated, manifest, cfg.min_replay_label_match)
@@ -587,12 +680,16 @@ def replay(cfg: ReplayConfig, episodes: pd.DataFrame, comp: Components, run_dir:
         if cfg.on_replay_check_fail == "stop":
             raise RuntimeError(msg + " Stopping before the SAE conditions.")
         logger.warning("%s Continuing; the run is marked unvalidated.", msg)
-    _generate_all([t for t in todo if t[1]["ablate"] is not None], comp, out, first, "SAE condition")
+    _generate_all([t for t in todo if t[1]["features"] is not None], comp, out, first, "SAE condition", cfg.max_hours)
     return run_dir
 
 
-def _generate_all(todo: list, comp: Components, out: Path, first: dict, what: str) -> None:
-    """Generate and append ``todo`` in order; ``first`` maps done keys to their first generated token."""
+def _generate_all(todo: list, comp: Components, out: Path, first: dict, what: str,
+                  max_hours: float | None = None) -> None:
+    """Generate and append ``todo`` in order; ``first`` maps done keys to their first generated token.
+
+    With ``max_hours``, warns once (after 200 generations) if ``todo`` is projected to take longer.
+    """
     t0 = time.perf_counter()
     with out.open("a") as f:
         for i, (ep, c) in enumerate(todo, 1):
@@ -602,6 +699,10 @@ def _generate_all(todo: list, comp: Components, out: Path, first: dict, what: st
             first[key(row)] = row["first_token_id"]
             f.write(json.dumps(row) + "\n")
             f.flush()
+            if max_hours and i == min(200, len(todo)) and (hours := (time.perf_counter() - t0) / i * len(todo) / 3600) > max_hours:
+                logger.warning("%d %s generations are projected to take %.1f h, more than max_hours=%g; "
+                               "the run can be stopped and analysed on the episodes it completed",
+                               len(todo), what, hours, max_hours)
             if i % 50 == 0 or i == len(todo):
                 rate = (time.perf_counter() - t0) / i
                 logger.info("%d/%d %s generations, %.2fs each, ~%.1f min left",
@@ -741,22 +842,42 @@ def _read_rows(path: Path) -> list[dict]:
 
 
 # per-row fields that older runs may not have
-ROW_FIELDS = ("mode", "first_token_id", "first_token_logprob", "control_first_token_logprob", "removed_rel_norm",
-              "n_ablated_active", "recon_rel_error", "prompt_matches_stored", "reached_token_budget")
-TVR_COLUMNS = ["Experiment", "Splice", "N", "Random draws", "Targeted − random (pp)", "95% CI (questions)",
+ROW_FIELDS = ("mode", "strength", "first_token_id", "first_token_logprob", "control_first_token_logprob",
+              "removed_rel_norm", "n_ablated_active", "recon_rel_error", "prompt_matches_stored",
+              "reached_token_budget")
+TVR_COLUMNS = ["Experiment", "Splice", "Arm", "N", "Random draws", "Targeted − random (pp)", "95% CI (questions)",
                "95% CI (questions + draws)", "p-value", "p-value (Holm)", "Draw tail fraction (exploratory)"]
+DOSE_COLUMNS = ["Experiment", "Splice", "Arm", "Strength (× ref)", "N", "Targeted acceptance (%)",
+                "Targeted Δ vs. control (pp)", "Random acceptance (%)", "Random Δ vs. control (pp)",
+                "Targeted − random (pp)"]
+BIDIRECTIONAL_COLUMNS = ["Experiment", "Splice", "Strength (× ref)", "N", "Targeted Δ(+s) − Δ(−s) (pp)",
+                         "Random Δ(+s) − Δ(−s) (pp)", "Targeted − random (pp)", "95% CI", "p-value"]
+
+
+def arms_of(conds: list[dict]) -> list[str]:
+    """Edit arms of a run in condition order: ``ablation`` and/or ``steer_<s>``."""
+    return list(dict.fromkeys(split_condition(c["condition"])[1] for c in conds if split_condition(c["condition"])))
+
+
+def arm_strength(arm: str) -> float:
+    """The arm's clamp in units of ref: ablation sets the features to 0."""
+    return 0.0 if arm == ABLATION else float(arm.removeprefix("steer_"))
 
 
 def analyse(run_dir: Path, n_bootstrap: int | None = None, n_permutations: int | None = None) -> pd.DataFrame:
     """Write the results of ``run_dir`` and return the causal table.
 
       causal_table.csv           acceptance per condition; Δ vs. the condition's control, paired by question
-      targeted_vs_random.csv     targeted minus mean random ablation per SAE and splice (Holm across SAEs)
+      targeted_vs_random.csv     targeted minus mean random edit per SAE, splice and arm (ablation, each
+                                 steering strength); Holm across SAEs within the ablation family and within
+                                 the steering family (reconstruction splice)
+      dose_response.csv          per SAE and splice: targeted and random acceptance at each strength (ablation = 0)
+      steering_bidirectional.csv targeted vs. random difference between pushing up (+s) and down (−s)
       random_draws.csv           each random draw's effect, and targeted minus that draw
       reconstruction_damage.csv  reconstruction only vs. plain replay: acceptance, answers, first token
       diagnostics.csv            per condition: answer, label and first-token changes vs. its control, the
-                                 control token's log-prob shift, empty and truncated answers, inactive
-                                 ablations and the size of what was removed
+                                 control token's log-prob shift, empty and truncated answers, edited features
+                                 inactive before the edit and the size of the edit
       transitions.csv            control response -> condition response counts (random draws pooled)
       changed_answers.csv        every generation whose answer differs from its control's
       per_row.csv, causal_replay_summary.json, causal_effects.svg
@@ -788,14 +909,15 @@ def analyse(run_dir: Path, n_bootstrap: int | None = None, n_permutations: int |
         r = rows[(rows.experiment == exp) & (rows.condition == cond)]
         return r.groupby("question_id")["adopted"].mean().reindex(complete).to_numpy(float)
 
-    def by_draw(exp) -> np.ndarray:                  # questions x draws
-        r = rows[(rows.experiment == exp) & (rows.condition == "random_ablation")]
+    def by_draw(exp, arm) -> np.ndarray:             # questions x draws
+        r = rows[(rows.experiment == exp) & (rows.condition == f"random_{arm}")]
         return r.pivot(index="question_id", columns="d", values="adopted").reindex(complete).to_numpy(float)
 
     experiments = [e for e in dict.fromkeys(c["experiment"] for c in conds) if e != BASELINE]
-    targeted = {c["experiment"]: c for c in conds if c["condition"] == "targeted_ablation"}
-    control = {e: control_key(targeted[e])[:2] for e in experiments}
-    splice = {e: targeted[e].get("mode") or "reconstruction" for e in experiments}
+    arms = arms_of(conds)
+    edited = {c["experiment"]: c for c in reversed(conds) if split_condition(c["condition"])}
+    control = {e: control_key(edited[e])[:2] for e in experiments}
+    splice = {e: edited[e].get("mode") or "reconstruction" for e in experiments}
     plain = outcome(BASELINE, "no_sae")
     stored = rows[rows.experiment == BASELINE].set_index("question_id")["stored_adopted"].reindex(complete)
 
@@ -810,38 +932,69 @@ def analyse(run_dir: Path, n_bootstrap: int | None = None, n_permutations: int |
         table.append({"Experiment": exp, "Outcome": "regenerated", "N": n, "Acceptance Rate (%)": 100 * float(ref.mean()),
                       "Condition": "No ablation" if control[exp][0] == exp else "No ablation (= plain replay)",
                       "Δ vs. SAE Control (pp)": "Reference"})
-        for cond in ("random_ablation", "targeted_ablation"):
-            y = outcome(exp, cond)
-            e = offline.paired_effect(y, ref, groups, n_bootstrap, n_permutations, seed)
-            effects[f"{exp}__{cond}"] = e
-            table.append({"Experiment": exp, "Condition": CONDITION_LABELS[cond], "Outcome": "regenerated",
-                          "N": n, "Acceptance Rate (%)": 100 * float(y.mean()),
-                          "Δ vs. SAE Control (pp)": e["delta_pp"], "95% CI for Δ": _ci(e["ci95_pp"]),
-                          "p-value": e["p_value"]})
+        for arm in arms:
+            for cond in (f"random_{arm}", f"targeted_{arm}"):
+                y = outcome(exp, cond)
+                e = offline.paired_effect(y, ref, groups, n_bootstrap, n_permutations, seed)
+                effects[f"{exp}__{cond}"] = e
+                table.append({"Experiment": exp, "Condition": condition_label(cond), "Outcome": "regenerated",
+                              "N": n, "Acceptance Rate (%)": 100 * float(y.mean()),
+                              "Δ vs. SAE Control (pp)": e["delta_pp"], "95% CI for Δ": _ci(e["ci95_pp"]),
+                              "p-value": e["p_value"]})
     table = pd.DataFrame(table).reindex(columns=TABLE_COLUMNS)
     table.to_csv(run_dir / "causal_table.csv", index=False)
 
-    # ---- targeted vs. random, directly; Holm across the SAEs for the reconstruction splice (confirmatory)
-    tvr, draws = [], []
+    # ---- targeted vs. random, directly; Holm across the reconstruction-splice tests of each family
+    tvr, draws, dose = [], [], []
     for exp in experiments:
-        t, r, ref = outcome(exp, "targeted_ablation"), by_draw(exp), outcome(*control[exp])
-        res = offline.targeted_vs_random(t, r, ref, groups, n_bootstrap, n_permutations, seed)
-        tvr.append({"experiment": exp, "splice": splice[exp], **res})
-        for d in range(r.shape[1]):
-            e = offline.paired_effect(r[:, d], ref, groups, n_bootstrap, n_permutations, seed)
-            draws.append({"Experiment": exp, "Draw": d, "Acceptance Rate (%)": 100 * float(np.mean(r[:, d])),
-                          "Δ vs. control (pp)": e["delta_pp"], "95% CI for Δ": _ci(e["ci95_pp"]),
-                          "p-value": e["p_value"], "Targeted − this draw (pp)": 100 * float(np.mean(t - r[:, d]))})
-    confirmatory = [x for x in tvr if x["splice"] == "reconstruction"]
-    for x, adj in zip(confirmatory, offline.holm([x["p_value"] for x in confirmatory])):
-        x["p_value_holm"] = adj
-    pd.DataFrame([{"Experiment": x["experiment"], "Splice": x["splice"], "N": n, "Random draws": x["n_random_draws"],
+        ref = outcome(*control[exp])
+        for arm in arms:
+            t, r = outcome(exp, f"targeted_{arm}"), by_draw(exp, arm)
+            res = offline.targeted_vs_random(t, r, ref, groups, n_bootstrap, n_permutations, seed)
+            tvr.append({"experiment": exp, "splice": splice[exp], "arm": arm, **res})
+            dose.append({"Experiment": exp, "Splice": splice[exp], "Arm": arm, "Strength (× ref)": arm_strength(arm),
+                         "N": n, "Targeted acceptance (%)": 100 * float(t.mean()),
+                         "Targeted Δ vs. control (pp)": 100 * float((t - ref).mean()),
+                         "Random acceptance (%)": 100 * float(r.mean()),
+                         "Random Δ vs. control (pp)": 100 * float((r.mean(1) - ref).mean()),
+                         "Targeted − random (pp)": res["delta_pp"]})
+            for d in range(r.shape[1]):
+                e = offline.paired_effect(r[:, d], ref, groups, n_bootstrap, n_permutations, seed)
+                draws.append({"Experiment": exp, "Arm": arm, "Draw": d,
+                              "Acceptance Rate (%)": 100 * float(np.mean(r[:, d])),
+                              "Δ vs. control (pp)": e["delta_pp"], "95% CI for Δ": _ci(e["ci95_pp"]),
+                              "p-value": e["p_value"], "Targeted − this draw (pp)": 100 * float(np.mean(t - r[:, d]))})
+    for family in (lambda a: a == ABLATION, lambda a: a != ABLATION):
+        confirmatory = [x for x in tvr if x["splice"] == "reconstruction" and family(x["arm"])]
+        for x, adj in zip(confirmatory, offline.holm([x["p_value"] for x in confirmatory])):
+            x["p_value_holm"] = adj
+    pd.DataFrame([{"Experiment": x["experiment"], "Splice": x["splice"], "Arm": x["arm"], "N": n,
+                   "Random draws": x["n_random_draws"],
                    "Targeted − random (pp)": x["delta_pp"], "95% CI (questions)": _ci(x["ci95_pp"]),
                    "95% CI (questions + draws)": _ci(x["ci95_pp_questions_and_draws"]), "p-value": x["p_value"],
                    "p-value (Holm)": x.get("p_value_holm"),
                    "Draw tail fraction (exploratory)": x["draw_tail_fraction"]} for x in tvr],
                  columns=TVR_COLUMNS).to_csv(run_dir / "targeted_vs_random.csv", index=False)
     pd.DataFrame(draws).to_csv(run_dir / "random_draws.csv", index=False)
+    dose.sort(key=lambda x: (experiments.index(x["Experiment"]), x["Strength (× ref)"]))
+    pd.DataFrame(dose, columns=DOSE_COLUMNS).to_csv(run_dir / "dose_response.csv", index=False)
+
+    # ---- pushing up vs. pushing down: does the targeted set move acceptance in opposite directions, more than random?
+    bidirectional = []
+    strengths = {arm_strength(a) for a in arms if a != ABLATION}
+    for exp in experiments:
+        for s in sorted(v for v in strengths if v > 0 and -v in strengths):
+            up, down = steer_arm(s), steer_arm(-s)
+            t = outcome(exp, f"targeted_{up}") - outcome(exp, f"targeted_{down}")
+            r = by_draw(exp, up).mean(1) - by_draw(exp, down).mean(1)
+            e = offline.paired_effect(t, r, groups, n_bootstrap, n_permutations, seed)
+            bidirectional.append({"Experiment": exp, "Splice": splice[exp], "Strength (× ref)": s, "N": n,
+                                  "Targeted Δ(+s) − Δ(−s) (pp)": 100 * float(t.mean()),
+                                  "Random Δ(+s) − Δ(−s) (pp)": 100 * float(r.mean()),
+                                  "Targeted − random (pp)": e["delta_pp"], "95% CI": _ci(e["ci95_pp"]),
+                                  "p-value": e["p_value"]})
+    pd.DataFrame(bidirectional, columns=BIDIRECTIONAL_COLUMNS).to_csv(run_dir / "steering_bidirectional.csv",
+                                                                      index=False)
 
     # ---- what changed, against each condition's control
     pairs = _pairs(rows, conds)
@@ -878,6 +1031,7 @@ def analyse(run_dir: Path, n_bootstrap: int | None = None, n_permutations: int |
                                                       ReplayConfig.min_replay_label_match))
     if not check["passed"]:
         logger.warning("replay check failed (%s): the results are unvalidated", check["failures"])
+    steering = [a for a in arms if a != ABLATION]
     summary = {
         "n_episodes_complete": n,
         "n_episodes_planned": int(len(manifest)),
@@ -885,20 +1039,27 @@ def analyse(run_dir: Path, n_bootstrap: int | None = None, n_permutations: int |
         "intervention": {
             "name": INTERVENTION,
             "description": intervention_description(cfg["layer"], (meta.get("provenance") or {}).get("num_layers")),
-            "splices": {"reconstruction": "decode(z_ablated)",
-                        "error_preserving": "x + decode(z_ablated) - decode(z)"}},
+            "edits": {"ablation": "chosen features set to 0",
+                      "steering": "chosen feature f set to s * ref_f (ref_f: mean activation where f fires on the "
+                                  "feature-selection fit partition)"},
+            "arms": arms,
+            "splices": {"reconstruction": "decode(z')",
+                        "error_preserving": "x + decode(z') - decode(z)"}},
         "validated": check["passed"],
         "replay_check": check,
         "effects": effects,
         "targeted_vs_random": tvr,
-        "multiple_comparisons": ("Confirmatory family: targeted minus mean random ablation with the reconstruction "
-                                 "splice, one test per SAE, Holm-adjusted (p_value_holm). These p-values are "
+        "dose_response": dose,
+        "steering_bidirectional": bidirectional,
+        "multiple_comparisons": ("Confirmatory families: targeted minus mean random edit with the reconstruction "
+                                 "splice, one test per SAE for ablation, and one per SAE and strength for steering, "
+                                 "each family Holm-adjusted separately (p_value_holm). These p-values are "
                                  "conditional on the random draws used; ci95_pp_questions_and_draws also resamples "
                                  "the draws, a broader source of uncertainty. draw_tail_fraction is a descriptive "
                                  "tail fraction, not a test: the probe-selected targeted set and the frequency-"
                                  "matched random sets are not shown to be exchangeable under a null. "
-                                 "Error-preserving, per-condition, per-draw and diagnostic results are sensitivity / "
-                                 "exploratory and not adjusted."),
+                                 "Error-preserving, per-condition, per-draw, dose-response, bidirectional and "
+                                 "diagnostic results are sensitivity / exploratory and not adjusted."),
         "reconstruction_damage": damage,
         "diagnostics": diagnostics,
         "solver_response_counts": {f"{e} · {c}": g.solver_response.value_counts().to_dict()
@@ -910,16 +1071,18 @@ def analyse(run_dir: Path, n_bootstrap: int | None = None, n_permutations: int |
                          "eligible disagreement episodes only; these results say nothing about correctness or "
                          "harmful compliance. The intervention is final-prompt-token, prefill-only. Δ is paired "
                          "by question against the condition's control: the same SAE's reconstruction-only run "
-                         "(reconstruction splice) or the plain replay (error-preserving splice). Random ablation "
-                         "is the per-question mean over the draws."),
+                         "(reconstruction splice) or the plain replay (error-preserving splice). Random edits "
+                         "are the per-question mean over the draws."),
     }
     (run_dir / "causal_replay_summary.json").write_text(json.dumps(summary, indent=2, default=str))
     from mas_sae.probe.feature_selection import _plot
+    what = " / ".join(w for w, on in (("ablation", ABLATION in arms), ("steering", bool(steering))) if on)
     _plot(table, run_dir / "causal_effects.svg",
           title=(("UNVALIDATED REPLAY: " if not check["passed"] else "")
-                 + f"SAE ablation at the final prompt token, prefill only\n"
+                 + f"SAE {what} at the final prompt token, prefill only\n"
                    f"(layer {cfg['layer']}, {cfg['partition']}, N={n})"),
-          xlabel="Δ acceptance vs. the condition's control (pp, 95% CI)")
+          xlabel="Δ acceptance vs. the condition's control (pp, 95% CI)",
+          conditions=[condition_label(f"{k}_{a}") for a in arms for k in ("random", "targeted")])
     return table
 
 
@@ -956,7 +1119,7 @@ def _diagnostics(g: pd.DataFrame, pairs: pd.DataFrame | None, exp: str, cond: st
     """One condition's diagnostics (random draws pooled; per-question means for the log-prob CI)."""
     pct = lambda s: 100 * float(s.mean()) if s.notna().any() else None
     mean = lambda s: float(s.mean()) if s.notna().any() else None
-    out = {"Experiment": exp, "Condition": CONDITION_LABELS[cond], "Generations": int(len(g)),
+    out = {"Experiment": exp, "Condition": condition_label(cond), "Generations": int(len(g)),
            "Empty answer (%)": pct(g.solver_attempt_2.fillna("").astype(str).str.strip() == ""),
            "Reached token budget (%)": pct(g.reached_token_budget.astype(float))}
     if pairs is None:
@@ -970,9 +1133,9 @@ def _diagnostics(g: pd.DataFrame, pairs: pd.DataFrame | None, exp: str, cond: st
             "First token changed vs. control (%)": pct(pairs.first_token_changed),
             "Δ log p(control's first token)": None if np.isnan(shift).all() else float(np.nanmean(shift)),
             "95% CI for Δ log p": None if lo_hi is None else f"[{lo_hi[0]:.3f}, {lo_hi[1]:.3f}]",
-            "Ablated features all inactive (%)": pct(ablated == 0) if ablated.notna().any() else None,
-            "Mean ablated features active": mean(ablated),
-            "Mean removed norm (rel. to |x|)": mean(g.removed_rel_norm.astype(float)),
+            "Edited features all inactive before the edit (%)": pct(ablated == 0) if ablated.notna().any() else None,
+            "Mean edited features active before the edit": mean(ablated),
+            "Mean edit norm (rel. to |x|)": mean(g.removed_rel_norm.astype(float)),
             "Mean reconstruction error (rel. to |x|)": mean(g.recon_rel_error.astype(float))}
 
 
