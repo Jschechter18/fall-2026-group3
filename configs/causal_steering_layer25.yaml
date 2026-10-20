@@ -1,0 +1,49 @@
+# Causal steering (issue #139): the causal replay of configs/causal_replay_layer25.yaml, but instead of
+# zeroing the #89 features, each targeted / random feature set is clamped to s * ref at the final prompt
+# token of the A2 prefill, with ref the feature's mean activation where it fires on the feature-selection
+# train partition (scripts/feature_reference_activations.py writes it next to the summary). s > 0 pushes
+# the features up, s < 0 below zero; ablation (s = 0) was the earlier run, so it is not repeated here.
+# Per episode: plain replay + 3 reconstruction-only controls + 3 strengths x (targeted + 7 random draws)
+# x 3 SAEs x 2 splices = 148 generations, about 17.9 h for 517 episodes at the
+# layer-25 ablation run's 0.841 s each.
+capstone_data_root: .
+# intervention episodes from the natural_4b_full9 run (separate intervention-only export)
+interactions_jsonl: results/collection/natural_4b_full9_intervention_partitioned/intervention/interactions.jsonl
+labels_csv: results/behavior/behavior_v012_official_20261011/labels.csv
+partition: intervention
+# targeted features and frequency-matched random draws per SAE, and the SAE hashes they belong to
+feature_selection_summary: results/feature_selection/20261018T025217187826Z/feature_selection_summary.json
+musique_revision: c8f4f8c9465fb69d31a8eae894c3fd509c4ca321
+layer: 25
+solver:
+  id: google/gemma-3-4b-it
+  revision: 093f9f388b31de276ce2de164bdc2081324b9767
+  loader: gemma3
+  dtype: bfloat16
+  device: cuda:0
+  generation: {max_new_tokens: 64, do_sample: false}
+saes:
+  TopK SAE:
+    kind: custom
+    path: results/sae/musique/runs/layer_25/20261017T155308837412Z-2f1f8393aedd
+  L1 SAE:
+    kind: custom
+    path: results/sae/musique/runs/layer_25/20261017T155339052216Z-2f1f8393aedd
+  Pretrained SAE:
+    kind: gemma_scope
+    path: results/sae/pretrained/gemma-scope-2-4b-it/resid_post_all/layer_25_width_16k_l0_big
+# the first 7 of the 50 frequency-matched draws (the ablation run used the first 20)
+n_random_draws: 7
+error_preserving: true
+ablation: false
+steer_strengths: [-2, 2, 5]
+feature_reference: results/feature_selection/20261018T025217187826Z/feature_reference_activations.json
+# warn if the SAE conditions are projected to take longer than this
+max_hours: 23
+# plain replay must reproduce collection before any SAE condition runs (see replay_check.json)
+min_replay_label_match: 0.98
+on_replay_check_fail: stop
+seed: 42
+n_bootstrap: 1000
+n_permutations: 10000
+output_dir: results/causal_steering
