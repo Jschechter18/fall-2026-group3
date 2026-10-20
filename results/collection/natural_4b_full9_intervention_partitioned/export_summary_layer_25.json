@@ -1,0 +1,53 @@
+{
+  "git_commit": "2f9d760c1b70ef73889c22846f95a826b8ef8121",
+  "uncommitted_changes_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "package": "results/behavior/behavior_v012_official_20261011",
+  "manifest_sha256": "aa576d11773091080b444cebcdbe633314cd7826f18f0f8baf182d8d6a81ec5b",
+  "labels_sha256": "8d9d1a49a1ff562ec44ea531aea544b9844244cf785514d91409b0365fe2bf6b",
+  "frozen_partitions": "/home/ubuntu/fall-2026-group3/results/behavior/behavior_v011_split80_10_10_20261006/partitions.csv",
+  "frozen_partitions_sha256": "b0c717d5c4f41129a5d2a838e132df057f6e4f5a72644aa889a41e55cc884389",
+  "partition_rule": {
+    "frozen_partitions": "/home/ubuntu/fall-2026-group3-v012/results/behavior/behavior_v011_split80_10_10_20261006/partitions.csv",
+    "frozen_partitions_sha256": "b0c717d5c4f41129a5d2a838e132df057f6e4f5a72644aa889a41e55cc884389",
+    "coverage": "complete",
+    "questions": {
+      "expected": 22332,
+      "collected": 22332,
+      "missing": 0
+    },
+    "rule": "membership taken from the frozen mapping; only activation indices were rebuilt for this run"
+  },
+  "source_run": "full",
+  "source_results": "results/collection/natural_4b_full9",
+  "source_activations": "data/activations/natural_4b_full9",
+  "export_run_name": "natural_4b_full9_intervention_partitioned",
+  "layers": [
+    25
+  ],
+  "partitions_written": [
+    "intervention"
+  ],
+  "partition_counts": {
+    "train": {
+      "questions": 15936,
+      "rows": 0
+    },
+    "validation": {
+      "questions": 2413,
+      "rows": 0
+    },
+    "test": {
+      "questions": 1992,
+      "rows": 0
+    },
+    "intervention": {
+      "questions": 1991,
+      "rows": 3982
+    }
+  },
+  "file_sha256": {
+    "data/activations/natural_4b_full9_intervention_partitioned/layer_25/intervention_attempt1.pt": "4c1264667befda5b2c52030d5abaec59fb3cbfdd9858f7dbb6a1b2abc63464f2",
+    "data/activations/natural_4b_full9_intervention_partitioned/layer_25/intervention_attempt2.pt": "f63335441079e303dfa10a79f28ff56f583986ab1901aa0b172909b0362fbcc7",
+    "data/activations/natural_4b_full9_intervention_partitioned/layer_25/intervention.pt": "fd0b63f275b379bbe89c051d08128f3f8a4eb753dbf304e31df380c8425feb88"
+  }
+}

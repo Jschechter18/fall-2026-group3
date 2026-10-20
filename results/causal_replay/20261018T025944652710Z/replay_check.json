@@ -1,0 +1,18 @@
+{
+  "n_episodes": 517,
+  "n_planned": 517,
+  "mismatch_counts": {
+    "exact_match": 517
+  },
+  "a2_exact_match_rate": 1.0,
+  "solver_response_match_rate": 1.0,
+  "n_prompt_hashes_compared": 0,
+  "stored_acceptance_pct": 88.58800773694391,
+  "replayed_acceptance_pct": 88.58800773694391,
+  "criterion": {
+    "min_label_match": 0.98,
+    "max_prompt_differences": 0
+  },
+  "passed": true,
+  "failures": []
+}

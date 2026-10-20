@@ -56,6 +56,12 @@ results/sae/musique/runs/*/*/checkpoints/
 # Collection results
 /results/collection/*/*/interactions.jsonl
 
+# Pretrained SAE downloads (s3://dats-capstone/shared/group3/results/sae/pretrained/)
+/results/sae/pretrained/
+
+# Causal replay per-row JSONL (s3://dats-capstone/shared/group3/results/causal_replay/)
+/results/causal_replay/*/per_row.jsonl
+
 /logs/
 
 # Tuning and continuation checkpoints
