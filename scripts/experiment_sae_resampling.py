@@ -49,7 +49,13 @@ def main():
     location = root / 'data/activations' / config['activation_run_name'] / f"layer_{config['layer']:02d}"
     train = ActivationDataset('train', location)
     validation = ActivationDataset('validation', location)
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = torch.device(
+        "cuda" if torch.cuda.is_available()
+        else "mps" if torch.backends.mps.is_available()
+        else "cpu"
+    )
+    print(f"Using device: {device}")
     output.mkdir(parents=True)
     write_json(output / 'experiment.json', {**settings, 'source_config': config,
                'schedule': 'Constant inherited learning rate; scheduler and early stopping disabled in both branches'})
