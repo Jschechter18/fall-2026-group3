@@ -1,0 +1,6 @@
+source_trial: results/sae/musique/tuning/layer_25/20261022T192642968946Z-635354750790/trials/trial_0001
+output_dir: results/sae/musique/resampling/layer_25/aux00625_pilot
+additional_epochs: 20
+resampling_budget: 512
+positive_fraction: 0.01
+seeds: [42]
