@@ -1,0 +1,57 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="Page-1" id="532fFJBYrl7PgWecSSfr">
+    <mxGraphModel grid="1" page="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="NJLa_51u-K-Dg7khArbr-1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="&lt;b&gt;&lt;font style=&quot;font-size: 15px;&quot;&gt;MuSiQue questions&lt;/font&gt;&lt;/b&gt;&lt;div&gt;&lt;b&gt;&lt;font style=&quot;font-size: 15px;&quot;&gt;22,332 questions.&lt;/font&gt;&lt;/b&gt;&lt;/div&gt;&lt;div&gt;&lt;b&gt;&lt;font style=&quot;font-size: 15px;&quot;&gt;&lt;br&gt;&lt;/font&gt;&lt;/b&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;font-size: 15px;&quot;&gt;The MuSiQue authors (Trivedi) made the source_split (train and validation) loaded as-is from huggingface&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;font-size: 15px;&quot;&gt;&lt;br&gt;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;font-size: 15px;&quot;&gt;train 19,919 - validation 2413&lt;/span&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="160" width="320" x="230" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="NJLa_51u-K-Dg7khArbr-11" parent="1" style="strokeWidth=2;html=1;shape=mxgraph.flowchart.annotation_2;align=left;labelPosition=right;pointerEvents=1;direction=south;container=1;" value="" vertex="1">
+          <mxGeometry height="220" width="615" x="110" y="217" as="geometry" />
+        </mxCell>
+        <mxCell id="NJLa_51u-K-Dg7khArbr-18" parent="1" style="rounded=1;whiteSpace=wrap;html=1;roundedPerimeter=1;" value="80/10/10 split of MuSiQue training questions" vertex="1">
+          <mxGeometry height="70" width="130" x="470" y="430" as="geometry" />
+        </mxCell>
+        <mxCell id="NJLa_51u-K-Dg7khArbr-19" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="&lt;font style=&quot;font-size: 15px;&quot;&gt;&lt;b&gt;MuSiQue Train&lt;/b&gt;&lt;/font&gt;&lt;div&gt;&lt;b&gt;19,919 questions&lt;/b&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;source_split = train&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;&lt;br&gt;&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;Used to create train, test and intervention.&lt;/span&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="90" width="270" x="20" y="379" as="geometry" />
+        </mxCell>
+        <mxCell id="NJLa_51u-K-Dg7khArbr-20" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="&lt;font style=&quot;font-size: 15px;&quot;&gt;&lt;b&gt;MuSiQue validation&lt;/b&gt;&lt;/font&gt;&lt;div&gt;&lt;b&gt;2,413 questions&lt;/b&gt;&lt;/div&gt;&lt;div&gt;source_split = validation&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Used as our validation/tuning set&lt;/div&gt;" vertex="1">
+          <mxGeometry height="90" width="170" x="640" y="380" as="geometry" />
+        </mxCell>
+        <mxCell id="NJLa_51u-K-Dg7khArbr-30" edge="1" parent="1" source="NJLa_51u-K-Dg7khArbr-25" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="540" y="990" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="NJLa_51u-K-Dg7khArbr-25" parent="1" style="strokeWidth=2;html=1;shape=mxgraph.flowchart.annotation_2;align=left;labelPosition=right;pointerEvents=1;direction=south;" value="" vertex="1">
+          <mxGeometry height="90" width="300" x="70" y="470" as="geometry" />
+        </mxCell>
+        <mxCell id="NJLa_51u-K-Dg7khArbr-26" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="&lt;b&gt;&lt;font style=&quot;font-size: 15px;&quot;&gt;Test&lt;/font&gt;&lt;/b&gt;&lt;div&gt;1,992&lt;/div&gt;&lt;div&gt;&lt;b&gt;test.pt&lt;/b&gt;&lt;/div&gt;&lt;div&gt;&lt;p&gt;Compare completed SAE versions and select the version to carry forward for causal intervention.&lt;/p&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="180" width="140" x="310" y="550" as="geometry" />
+        </mxCell>
+        <mxCell id="NJLa_51u-K-Dg7khArbr-29" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="&lt;b&gt;&lt;font style=&quot;font-size: 15px;&quot;&gt;Train&lt;/font&gt;&lt;/b&gt;&lt;div&gt;15,936&lt;/div&gt;&lt;div&gt;&lt;b&gt;train.pt&lt;/b&gt;&lt;/div&gt;&lt;div&gt;&lt;b&gt;&lt;br&gt;&lt;/b&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;Train SAE and probes, fit candidate models&lt;/font&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="140" width="120" x="10" y="540" as="geometry" />
+        </mxCell>
+        <mxCell id="NJLa_51u-K-Dg7khArbr-31" edge="1" parent="1" source="NJLa_51u-K-Dg7khArbr-20" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;strokeWidth=2;" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="490" y="620" as="sourcePoint" />
+            <mxPoint x="725" y="550" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="NJLa_51u-K-Dg7khArbr-32" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="&lt;div&gt;&lt;span style=&quot;font-size: 15px;&quot;&gt;&lt;b&gt;Validation&lt;/b&gt;&lt;/span&gt;&lt;/div&gt;&lt;div&gt;2413&lt;/div&gt;&lt;div&gt;&lt;b&gt;validation.pt&lt;/b&gt;&lt;/div&gt;&lt;div&gt;&lt;b&gt;&lt;br&gt;&lt;/b&gt;&lt;/div&gt;&lt;div&gt;&lt;b style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;Early stopping, hyperparameter tuning, Layer selection, feature selection.&amp;nbsp;&lt;br&gt;&lt;/b&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="140" width="120" x="660" y="550" as="geometry" />
+        </mxCell>
+        <mxCell id="NJLa_51u-K-Dg7khArbr-35" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="&lt;div&gt;&lt;span style=&quot;font-size: 15px;&quot;&gt;&lt;b&gt;Intervention&lt;/b&gt;&lt;/span&gt;&lt;/div&gt;&lt;div&gt;1,991&lt;/div&gt;&lt;div&gt;&lt;b&gt;ids only&lt;/b&gt;&lt;/div&gt;&lt;div&gt;&lt;b&gt;&lt;br&gt;&lt;/b&gt;&lt;/div&gt;&lt;div&gt;&lt;b&gt;Causal experiment, completely untouched until the causal intervention stage&lt;/b&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="140" width="120" x="480" y="990" as="geometry" />
+        </mxCell>
+        <mxCell id="NJLa_51u-K-Dg7khArbr-17" edge="1" parent="1" style="endArrow=none;dashed=1;html=1;rounded=0;" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="220.00148936170206" y="497.8738738738739" as="sourcePoint" />
+            <mxPoint x="470" y="490" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
