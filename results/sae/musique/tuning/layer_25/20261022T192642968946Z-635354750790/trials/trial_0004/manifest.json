@@ -5,7 +5,7 @@
   "created_at": "2026-10-22T20:50:19.020211+00:00",
   "git_commit": "9c3965d5ed66e895f2e2bc2491b904db803b2504",
   "command": "/home/ubuntu/miniconda3/envs/capstone/bin/python scripts/train_sae.py --hp-tune --config configs/sae_hp_tuning/layer_25_topk_stronger_auxk_coef.yaml",
-  "status": "running",
+  "status": "completed",
   "error_message": "",
   "tuning": {
     "study_directory": "results/sae/musique/tuning/layer_25/20261022T192642968946Z-635354750790",
@@ -26,5 +26,6 @@
       "path": "/home/ubuntu/capstone/fall-2026-group3/data/activations/natural_4b_full9_partitioned/layer_25/validation.pt",
       "sha256": "b5f099dce94db0f28f217bda5422f1f217cfc742d825982edde556d2ca2b21c0"
     }
-  }
+  },
+  "updated_at": "2026-10-22T21:29:37.298097+00:00"
 }

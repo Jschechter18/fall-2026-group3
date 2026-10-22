@@ -124,7 +124,7 @@
         "aux_dead_window_examples": 10000
       },
       "status": "completed",
-      "pareto": true,
+      "pareto": false,
       "eligible": false,
       "best_epoch": 146,
       "run_directory": "results/sae/musique/tuning/layer_25/20261022T192642968946Z-635354750790/trials/trial_0003",
@@ -171,9 +171,26 @@
         "aux_k": 512,
         "aux_dead_window_examples": 10000
       },
-      "status": "running",
-      "pareto": false,
-      "eligible": false
+      "status": "completed",
+      "pareto": true,
+      "eligible": false,
+      "best_epoch": 152,
+      "run_directory": "results/sae/musique/tuning/layer_25/20261022T192642968946Z-635354750790/trials/trial_0004",
+      "checkpoint_path": "results/sae/musique/tuning/layer_25/20261022T192642968946Z-635354750790/trials/trial_0004/checkpoints/best_checkpoint.pt",
+      "validation": {
+        "loss": 0.005129061059789308,
+        "rec_loss": 0.005129061059789308,
+        "weighted_sparsity_loss": 0.0,
+        "mean_active_features": 64.0,
+        "inactive_feature_fraction": 0.8930012583732605,
+        "firing_frequency_min": 0.0,
+        "firing_frequency_p50": 0.0,
+        "firing_frequency_p90": 0.00041442186920903623,
+        "firing_frequency_p99": 0.11606504023075104,
+        "firing_frequency_max": 1.0,
+        "mean_baseline_rec_loss": 0.036622731732200695,
+        "variance_explained": 0.8599487035184883
+      }
     }
   ]
 }
