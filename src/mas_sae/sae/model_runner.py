@@ -178,7 +178,8 @@ class ModelRunner:
                 'reconstructed': reconstructed,
                 'sparse_features': sparse_features}
     
-    def _run_epoch(self, dataloader: DataLoader, training_mode: bool = False):
+    def _run_epoch(self, dataloader: DataLoader, training_mode: bool = False,
+                   before_optimizer_step=None):
         """Run a single epoch for any evaluation mode.
 
         Parameters
@@ -187,6 +188,9 @@ class ModelRunner:
             The constructed DataLoader for the specified split.
         training_mode : bool, optional
             Whether to run the epoch in training mode or eval mode., by default False
+        before_optimizer_step : callable, optional
+            Called without arguments immediately before each optimizer update.
+            Used by continuation experiments for an optimizer-step LR warmup.
 
         Returns
         -------
@@ -224,6 +228,8 @@ class ModelRunner:
             if training_mode:
                 self.optimizer.zero_grad()
                 outputs['loss'].backward()
+                if before_optimizer_step is not None:
+                    before_optimizer_step()
                 self.optimizer.step()
                 self.model.normalize_decoder_weights()
                 
@@ -289,13 +295,16 @@ class ModelRunner:
             metrics["training_examples_seen"] = self.training_examples_seen
         return metrics
     
-    def train_epoch(self, dataloader: DataLoader):
+    def train_epoch(self, dataloader: DataLoader, before_optimizer_step=None):
         """Runs one epoch under full training conditions.
 
         Parameters
         ----------
         dataloader : DataLoader
             The constructed DataLoader for the specified split.
+
+        before_optimizer_step : callable, optional
+            Optional callback before each optimizer update, by default None.
 
         Returns
         -------
@@ -312,7 +321,8 @@ class ModelRunner:
             eligible_positive_activation_fraction counts positive encoder
             outputs before auxiliary selection across eligible feature/example pairs.
         """
-        return self._run_epoch(dataloader, training_mode=True)
+        return self._run_epoch(dataloader, training_mode=True,
+                               before_optimizer_step=before_optimizer_step)
     
     def val_epoch(self, dataloader: DataLoader):
         """Runs one epoch under full validation conditions.

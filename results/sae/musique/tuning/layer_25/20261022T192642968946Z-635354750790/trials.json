@@ -45,7 +45,7 @@
         "mean_baseline_rec_loss": 0.036622731732200695,
         "variance_explained": 0.8401801700783755
       },
-      "pareto": true,
+      "pareto": false,
       "eligible": false
     },
     {
@@ -75,9 +75,26 @@
         "aux_k": 512,
         "aux_dead_window_examples": 10000
       },
-      "status": "running",
+      "status": "completed",
       "pareto": false,
-      "eligible": false
+      "eligible": false,
+      "best_epoch": 97,
+      "run_directory": "results/sae/musique/tuning/layer_25/20261022T192642968946Z-635354750790/trials/trial_0002",
+      "checkpoint_path": "results/sae/musique/tuning/layer_25/20261022T192642968946Z-635354750790/trials/trial_0002/checkpoints/best_checkpoint.pt",
+      "validation": {
+        "loss": 0.005803216283294148,
+        "rec_loss": 0.005803216283294148,
+        "weighted_sparsity_loss": 0.0,
+        "mean_active_features": 64.0,
+        "inactive_feature_fraction": 0.7929081916809082,
+        "firing_frequency_min": 0.0,
+        "firing_frequency_p50": 0.0,
+        "firing_frequency_p90": 0.0026937422808259726,
+        "firing_frequency_p99": 0.07115409523248672,
+        "firing_frequency_max": 1.0,
+        "mean_baseline_rec_loss": 0.036622731732200695,
+        "variance_explained": 0.8415405949034751
+      }
     },
     {
       "trial_id": 3,
@@ -106,9 +123,26 @@
         "aux_k": 512,
         "aux_dead_window_examples": 10000
       },
-      "status": "pending",
-      "pareto": false,
-      "eligible": false
+      "status": "completed",
+      "pareto": true,
+      "eligible": false,
+      "best_epoch": 146,
+      "run_directory": "results/sae/musique/tuning/layer_25/20261022T192642968946Z-635354750790/trials/trial_0003",
+      "checkpoint_path": "results/sae/musique/tuning/layer_25/20261022T192642968946Z-635354750790/trials/trial_0003/checkpoints/best_checkpoint.pt",
+      "validation": {
+        "loss": 0.005144428152249801,
+        "rec_loss": 0.005144428152249801,
+        "weighted_sparsity_loss": 0.0,
+        "mean_active_features": 64.0,
+        "inactive_feature_fraction": 0.8510242700576782,
+        "firing_frequency_min": 0.0,
+        "firing_frequency_p50": 0.0,
+        "firing_frequency_p90": 0.0020721093751490116,
+        "firing_frequency_p99": 0.1070554107427597,
+        "firing_frequency_max": 1.0,
+        "mean_baseline_rec_loss": 0.036622731732200695,
+        "variance_explained": 0.8595290982150701
+      }
     },
     {
       "trial_id": 4,
@@ -137,7 +171,7 @@
         "aux_k": 512,
         "aux_dead_window_examples": 10000
       },
-      "status": "pending",
+      "status": "running",
       "pareto": false,
       "eligible": false
     }
