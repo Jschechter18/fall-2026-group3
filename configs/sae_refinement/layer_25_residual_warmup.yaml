@@ -1,0 +1,16 @@
+# One source SAE; seeds vary continuation order and replacement sampling.
+# Choose a new output directory for each experiment; --resume keeps this config fixed.
+source_run: results/sae/musique/tuning/layer_25/20261022T192642968946Z-635354750790/trials/trial_0001
+output_dir: results/sae/musique/refinement/layer_25/residual_warmup
+additional_epochs: 20
+resampling_budget: 512
+positive_fraction: 0.01
+warmup_start_factor: 0.1
+seeds: [42]
+branches:
+  - name: warmup_control
+    strategy: none
+    warmup_steps: 250
+  - name: residual_warmup
+    strategy: residual
+    warmup_steps: 250
