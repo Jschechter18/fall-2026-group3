@@ -69,9 +69,10 @@ def score_revision(
     when the recommendation matches gold. Adoption and retention may overlap.
     """
     aliases = (aliases,) if isinstance(aliases, str) else tuple(aliases)
+    adoption_aliases = (gold, *aliases) if accept_gold_aliases else ()
     return {
         "a2_correct": answer_matches(answer, gold, aliases),
-        "adopted_target": answer_matches(answer, recommendation, aliases if accept_gold_aliases else ()),
+        "adopted_target": answer_matches(answer, recommendation, adoption_aliases),
         "retained_a1": answer_matches(answer, previous_answer),
     }
 

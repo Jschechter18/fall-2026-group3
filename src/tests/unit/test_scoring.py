@@ -53,3 +53,8 @@ def test_revision_scoring_uses_explicit_alias_policy_and_preserves_overlap():
                           accept_gold_aliases=True) == {
         "a2_correct": True, "adopted_target": True, "retained_a1": True,
     }
+    # The canonical gold must also count when the recommendation is an alias.
+    assert score_revision("United Kingdom", "France", "UK", "United Kingdom", ["Britain"],
+                          accept_gold_aliases=True) == {
+        "a2_correct": True, "adopted_target": True, "retained_a1": False,
+    }

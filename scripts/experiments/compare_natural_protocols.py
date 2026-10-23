@@ -8,7 +8,8 @@ import yaml
 from mas_sae.experiments.adoption_experiment import digest, load_sample
 from mas_sae.experiments.artifacts import sha256_file
 from mas_sae.experiments.natural_protocol_comparison import (
-    needs_feedback, prepare_feedback, run_conditions, select_cohort, summarize_method,
+    methods_from_records, needs_feedback, prepare_feedback, run_conditions,
+    select_cohort, summarize_method,
 )
 from mas_sae.experiments.records import append_jsonl, read_jsonl, write_csv
 from summarize_adoption_results import read_methods, render_chart
@@ -28,8 +29,14 @@ def main():
     args = parser.parse_args()
     root, output = args.results_root, args.output
     if args.plot_only:
-        summary = json.loads((output / 'summary.json').read_text())['methods']
+        plan = json.loads((output / 'plan.json').read_text())
+        methods = methods_from_records(
+            read_jsonl(output / 'episodes.jsonl'), plan['question_ids'], plan['order_assignments'])
+        summary = [summarize_method(name, records) for name, records in methods]
+        write_csv(output / 'method_summary.csv', summary)
         render_chart(output, summary, natural=True)
+        (output / 'summary.json').write_text(json.dumps(
+            {'methods': summary, 'plan_sha256': plan['sha256']}, indent=2) + '\n')
         print(f"Saved {output / 'adoption_comparison.svg'} and .png")
         return
     import torch

@@ -121,11 +121,22 @@ def run_conditions(rows, examples, feedback, assignments, agents, path):
             append_jsonl(path, record)
             records.append(record)
             index[qid, method] = record
-    methods = [(m, [index[r['question_id'], m] for r in rows]) for m in METHODS[:6]]
+    return methods_from_records(records, [r['question_id'] for r in rows], assignments)
+
+
+def methods_from_records(records, question_ids, assignments):
+    """Reconstruct all eight report rows from the six generated conditions."""
+    index = {(r['question_id'], r['method']): r for r in records}
+    expected = {(qid, method) for qid in question_ids for method in METHODS[:6]}
+    if len(index) != len(records) or set(index) != expected:
+        raise ValueError('Completed response checkpoint does not contain the expected six conditions')
+    if set(assignments) != set(question_ids) or any(
+            order not in ('a1_first', 'critic_first') for order in assignments.values()):
+        raise ValueError('Invalid report order assignments')
+    methods = [(m, [index[qid, m] for qid in question_ids]) for m in METHODS[:6]]
     for label, prefix in ((METHODS[6], 'Labeled'), (METHODS[7], 'Anonymous')):
         selected = []
-        for row in rows:
-            qid = row['question_id']
+        for qid in question_ids:
             suffix = 'A1 first' if assignments[qid] == 'a1_first' else 'critic first'
             selected.append({**index[qid, f'{prefix} candidates: {suffix}'], 'method': label})
         methods.append((label, selected))
@@ -140,9 +151,41 @@ def summarize_method(name, rows):
     result = dict(method=name, completed_trials=len(rows), distinct_questions=len({r['question_id'] for r in rows}),
                   saved_feedback=sum(r['recommendation_source'] == 'saved_natural' for r in rows),
                   regenerated_feedback=sum(r['recommendation_source'] == 'regenerated_natural' for r in rows),
+                  a2_correct=sum(r['a2_correct'] for r in rows),
+                  a2_accuracy_pct=100 * sum(r['a2_correct'] for r in rows) / len(rows) if rows else float('nan'),
                   **{k: counts[k] for k in ('adopted', 'retained_a1', 'other', 'overlap')})
     for correct, prefix in ((False, 'incorrect'), (True, 'correct')):
         subset = [r for r in rows if r['recommendation_correct'] == correct]
         result['correct_recommendation_trials' if correct else 'wrong_recommendation_trials'] = len(subset)
         result[f'{prefix}_accept_pct'] = 100 * sum(r['adopted_target'] for r in subset) / len(subset) if subset else float('nan')
+    disagreements = [r for r in rows if r['recommendation_correct'] and not answer_matches(
+        r['solver_attempt_1'], r['critic_advocated_answer'])]
+    result['correct_disagreement_trials'] = len(disagreements)
+    result['correct_disagreement_adopted'] = sum(r['adopted_target'] for r in disagreements)
+    result['correct_disagreement_accept_pct'] = (
+        100 * result['correct_disagreement_adopted'] / len(disagreements)
+        if disagreements else float('nan'))
+    for source in ('saved_natural', 'regenerated_natural'):
+        subset = [r for r in rows if r['recommendation_source'] == source]
+        correct = [r for r in subset if r['recommendation_correct']]
+        wrong = [r for r in subset if not r['recommendation_correct']]
+        source_disagreements = [r for r in correct if not answer_matches(
+            r['solver_attempt_1'], r['critic_advocated_answer'])]
+        result[f'{source}_trials'] = len(subset)
+        result[f'{source}_a2_correct'] = sum(r['a2_correct'] for r in subset)
+        result[f'{source}_adopted_target'] = sum(r['adopted_target'] for r in subset)
+        result[f'{source}_correct_recommendation_trials'] = len(correct)
+        result[f'{source}_correct_accept_pct'] = (
+            100 * sum(r['adopted_target'] for r in correct) / len(correct)
+            if correct else float('nan'))
+        result[f'{source}_wrong_recommendation_trials'] = len(wrong)
+        result[f'{source}_wrong_accept_pct'] = (
+            100 * sum(r['adopted_target'] for r in wrong) / len(wrong)
+            if wrong else float('nan'))
+        result[f'{source}_correct_disagreement_trials'] = len(source_disagreements)
+        result[f'{source}_correct_disagreement_adopted'] = sum(
+            r['adopted_target'] for r in source_disagreements)
+        result[f'{source}_correct_disagreement_accept_pct'] = (
+            100 * result[f'{source}_correct_disagreement_adopted'] / len(source_disagreements)
+            if source_disagreements else float('nan'))
     return result

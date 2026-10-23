@@ -35,13 +35,33 @@ def test_all_eight_rows_share_questions_and_original_orders_and_resume(tmp_path)
 
 
 def test_overlap_is_not_double_counted_and_empty_rate_is_unavailable():
-    row = dict(question_id='1', adopted_target=True, retained_a1=True,
+    row = dict(question_id='1', solver_attempt_1='Rome', critic_advocated_answer='Rome',
+               adopted_target=True, retained_a1=True, a2_correct=True,
                recommendation_correct=True, recommendation_source='saved_natural')
     summary = summarize_method('example', [row])
     assert summary['overlap'] == 1
     assert summary['adopted'] == summary['retained_a1'] == summary['other'] == 0
     assert summary['correct_accept_pct'] == 100
     assert summary['incorrect_accept_pct'] != summary['incorrect_accept_pct']  # NaN, not a false 0%.
+
+
+def test_summary_separates_disagreements_and_feedback_generation_cohorts():
+    rows = [
+        dict(question_id='saved', solver_attempt_1='Paris', critic_advocated_answer='Rome',
+             adopted_target=True, retained_a1=False, a2_correct=True,
+             recommendation_correct=True, recommendation_source='saved_natural'),
+        dict(question_id='regenerated', solver_attempt_1='Paris', critic_advocated_answer='Paris',
+             adopted_target=True, retained_a1=True, a2_correct=False,
+             recommendation_correct=False, recommendation_source='regenerated_natural'),
+    ]
+    summary = summarize_method('example', rows)
+    assert summary['a2_correct'] == 1
+    assert summary['correct_disagreement_trials'] == 1
+    assert summary['correct_disagreement_adopted'] == 1
+    assert summary['saved_natural_trials'] == 1
+    assert summary['saved_natural_correct_disagreement_accept_pct'] == 100
+    assert summary['regenerated_natural_trials'] == 1
+    assert summary['regenerated_natural_wrong_accept_pct'] == 100
 
 
 def test_only_missing_feedback_is_regenerated_and_checkpointed(tmp_path):

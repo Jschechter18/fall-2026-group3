@@ -1,12 +1,10 @@
 # Feedback adoption experiment: initial 100-question study
 
-The active result is the eight-row controlled comparison in
-`results/adoption_experiment/presentation_summary`. See
-`results/adoption_experiment/README.md` for the active folders and regeneration
-command. Natural runs, their supporting artifacts, earlier `run_100q` ablations,
-and the superseded presentation export now live under the Git-ignored
-`results/adoption_experiment/archive/`. The Natural workflows below describe
-archived exploratory work, not the active controlled comparison.
+The active committed result is the eight-row Natural-feedback comparison in
+`results/adoption_experiment/adoption_results`. See
+`results/adoption_experiment/README.md` for the active folders, report-only
+regeneration command, and limitations. Earlier ablations and supporting artifacts
+live under the Git-ignored `results/adoption_experiment/archive/`.
 
 ## Archived comparison: original questions, no #115 screening
 
@@ -379,8 +377,24 @@ assess the source-label effect.
 
 ## Results
 
-- Anonymously passing into the solver seems to help make the solver less prone to adoption
-- Anonymous did not improve overall accuracy, it only changed adoption rates
+- Candidate presentation changes Solver behavior and increases A1 retention, but
+  this experiment does not demonstrate improved feedback discrimination. In the
+  80-question Natural comparison, original revision achieved 40/80 final-answer
+  accuracy and adopted 18/18 correct recommendations when A1 disagreed. The two
+  fixed-order labeled conditions achieved 32/80 and 33/80 accuracy and adopted
+  9/18 and 8/18 such corrections; labeled randomized order achieved 33/80 and 7/18.
+- Anonymous presentation did not improve overall accuracy and remained sensitive
+  to candidate position. It should not be treated as the preferred protocol. A
+  next pilot should prioritize labeled candidates with preassigned randomized
+  order and evaluate both retention of correct A1 answers and acceptance of useful
+  corrections.
+- Candidate choice is inferred from answer-text matches, not requested as a
+  structured output. Literal `Candidate A` or `Candidate B` responses are unresolved,
+  so candidate-selection counts can understate position effects.
+- The Natural aggregate mixes 51 saved production-v2 blind-then-compare Critic
+  responses with 29 one-step regenerated responses that used a larger token budget
+  and retry instructions. Source-separated metrics are reported; aggregate results
+  are descriptive and do not represent a single feedback-generation treatment.
 
 ## Randomized order with labeled candidates
 

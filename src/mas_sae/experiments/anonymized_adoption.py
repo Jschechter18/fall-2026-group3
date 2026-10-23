@@ -88,7 +88,7 @@ def summarize_anonymization(records):
             }
     return {"protocol": PROTOCOL, "by_condition_and_order": by_cell,
             "paired_label_effects": label_effects, "paired_order_effects": order_effects,
-            "note": "Same frozen A1 and recommendation in each cell. Conditions differ only in source labels; both orders are tested. Cells are repeated trials, not independent questions. All completed outputs remain in denominators; source skips are preserved. No historical baseline is treated as a matched layout control."}
+            "note": "Same frozen A1 and recommendation in each cell. Conditions differ only in source labels; both orders are tested. Cells are repeated trials, not independent questions. All completed outputs remain in denominators; source skips are preserved. Candidate selection is inferred from answer-text matches, not an explicit structured choice; literal Candidate A/B outputs remain unresolved. No historical baseline is treated as a matched layout control."}
 
 
 EXTRA_COLUMNS = ["candidate_order", "candidate_a", "candidate_b", "candidate_a_source", "candidate_b_source",
