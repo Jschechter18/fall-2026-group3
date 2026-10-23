@@ -1,0 +1,1401 @@
+INFO 450 eligible intervention episodes
+INFO HTTP Request: GET https://huggingface.co/api/agent-harnesses "HTTP/1.1 200 OK"
+INFO HTTP Request: HEAD https://huggingface.co/datasets/dgslibisey/MuSiQue/resolve/c8f4f8c9465fb69d31a8eae894c3fd509c4ca321/README.md "HTTP/1.1 404 Not Found"
+INFO HTTP Request: GET https://huggingface.co/api/datasets/dgslibisey/MuSiQue/revision/c8f4f8c9465fb69d31a8eae894c3fd509c4ca321 "HTTP/1.1 200 OK"
+INFO HTTP Request: HEAD https://huggingface.co/datasets/dgslibisey/MuSiQue/resolve/c8f4f8c9465fb69d31a8eae894c3fd509c4ca321/MuSiQue.py "HTTP/1.1 404 Not Found"
+INFO HTTP Request: HEAD https://s3.amazonaws.com/datasets.huggingface.co/datasets/datasets/dgslibisey/MuSiQue/dgslibisey/MuSiQue.py "HTTP/1.1 404 Not Found"
+INFO HTTP Request: HEAD https://huggingface.co/datasets/dgslibisey/MuSiQue/resolve/c8f4f8c9465fb69d31a8eae894c3fd509c4ca321/README.md "HTTP/1.1 404 Not Found"
+INFO HTTP Request: GET https://huggingface.co/api/datasets/dgslibisey/MuSiQue/revision/c8f4f8c9465fb69d31a8eae894c3fd509c4ca321 "HTTP/1.1 200 OK"
+INFO HTTP Request: HEAD https://huggingface.co/datasets/dgslibisey/MuSiQue/resolve/c8f4f8c9465fb69d31a8eae894c3fd509c4ca321/.huggingface.yaml "HTTP/1.1 404 Not Found"
+INFO HTTP Request: GET https://huggingface.co/api/datasets/dgslibisey/MuSiQue/tree/c8f4f8c9465fb69d31a8eae894c3fd509c4ca321/data?recursive=true&expand=false "HTTP/1.1 404 Not Found"
+INFO HTTP Request: GET https://huggingface.co/api/datasets/dgslibisey/MuSiQue/tree/c8f4f8c9465fb69d31a8eae894c3fd509c4ca321?recursive=false&expand=false "HTTP/1.1 200 OK"
+INFO HTTP Request: HEAD https://huggingface.co/datasets/dgslibisey/MuSiQue/resolve/c8f4f8c9465fb69d31a8eae894c3fd509c4ca321/dataset_infos.json "HTTP/1.1 404 Not Found"
+INFO HTTP Request: GET https://huggingface.co/api/models/google/gemma-3-4b-it/tree/093f9f388b31de276ce2de164bdc2081324b9767/additional_chat_templates?recursive=false&expand=false "HTTP/1.1 404 Not Found"
+INFO HTTP Request: GET https://huggingface.co/api/models/google/gemma-3-4b-it/tree/093f9f388b31de276ce2de164bdc2081324b9767/additional_chat_templates?recursive=false&expand=false "HTTP/1.1 404 Not Found"
+INFO HTTP Request: GET https://huggingface.co/api/models/google/gemma-3-4b-it/tree/093f9f388b31de276ce2de164bdc2081324b9767/additional_chat_templates?recursive=false&expand=false "HTTP/1.1 404 Not Found"
+INFO HTTP Request: GET https://huggingface.co/api/models/google/gemma-3-4b-it/tree/093f9f388b31de276ce2de164bdc2081324b9767?recursive=true&expand=false "HTTP/1.1 200 OK"
+INFO HTTP Request: GET https://huggingface.co/api/models/google/gemma-3-4b-it "HTTP/1.1 200 OK"
+Loading weights:   0%|          | 0/883 [00:00<?, ?it/s]Loading weights:   0%|          | 1/883 [00:09<2:14:42,  9.16s/it]Loading weights:   0%|          | 3/883 [00:09<36:58,  2.52s/it]  Loading weights:   0%|          | 4/883 [00:09<26:09,  1.79s/it]Loading weights:   1%|          | 5/883 [00:10<19:27,  1.33s/it]Loading weights:   1%|          | 9/883 [00:10<06:59,  2.08it/s]Loading weights:   2%|▏         | 14/883 [00:10<03:23,  4.28it/s]Loading weights:   2%|▏         | 17/883 [00:11<03:30,  4.11it/s]Loading weights:   2%|▏         | 19/883 [00:11<03:21,  4.28it/s]Loading weights:   3%|▎         | 23/883 [00:11<02:11,  6.55it/s]Loading weights:   3%|▎         | 27/883 [00:12<01:33,  9.16it/s]Loading weights:   3%|▎         | 30/883 [00:12<02:09,  6.57it/s]Loading weights:   4%|▎         | 32/883 [00:13<02:18,  6.15it/s]Loading weights:   4%|▍         | 37/883 [00:13<01:27,  9.68it/s]Loading weights:   5%|▍         | 40/883 [00:13<01:12, 11.60it/s]Loading weights:   5%|▍         | 43/883 [00:14<01:53,  7.37it/s]Loading weights:   5%|▌         | 45/883 [00:14<02:04,  6.72it/s]Loading weights:   6%|▌         | 50/883 [00:14<01:20, 10.41it/s]Loading weights:   6%|▌         | 53/883 [00:14<01:07, 12.26it/s]Loading weights:   6%|▋         | 56/883 [00:15<01:48,  7.60it/s]Loading weights:   7%|▋         | 58/883 [00:16<02:00,  6.85it/s]Loading weights:   7%|▋         | 63/883 [00:16<01:17, 10.65it/s]Loading weights:   7%|▋         | 66/883 [00:16<01:05, 12.51it/s]Loading weights:   8%|▊         | 69/883 [00:17<01:46,  7.64it/s]Loading weights:   8%|▊         | 71/883 [00:17<01:58,  6.88it/s]Loading weights:   9%|▊         | 76/883 [00:17<01:15, 10.69it/s]Loading weights:   9%|▉         | 79/883 [00:17<01:04, 12.49it/s]Loading weights:   9%|▉         | 82/883 [00:18<01:44,  7.66it/s]Loading weights:  10%|▉         | 84/883 [00:18<01:55,  6.89it/s]Loading weights:  10%|█         | 89/883 [00:19<01:14, 10.70it/s]Loading weights:  10%|█         | 92/883 [00:19<01:03, 12.48it/s]Loading weights:  11%|█         | 95/883 [00:20<01:42,  7.66it/s]Loading weights:  11%|█         | 97/883 [00:20<01:54,  6.89it/s]Loading weights:  12%|█▏        | 102/883 [00:20<01:13, 10.69it/s]Loading weights:  12%|█▏        | 105/883 [00:20<01:02, 12.53it/s]Loading weights:  12%|█▏        | 108/883 [00:21<01:41,  7.67it/s]Loading weights:  12%|█▏        | 110/883 [00:21<01:52,  6.89it/s]Loading weights:  13%|█▎        | 115/883 [00:21<01:11, 10.69it/s]Loading weights:  13%|█▎        | 118/883 [00:22<01:00, 12.63it/s]Loading weights:  14%|█▎        | 121/883 [00:22<01:39,  7.66it/s]Loading weights:  14%|█▍        | 123/883 [00:23<01:50,  6.88it/s]Loading weights:  14%|█▍        | 126/883 [00:23<01:25,  8.87it/s]Loading weights:  15%|█▍        | 131/883 [00:23<01:21,  9.18it/s]Loading weights:  15%|█▌        | 134/883 [00:24<01:52,  6.63it/s]Loading weights:  16%|█▌        | 141/883 [00:24<01:05, 11.37it/s]Loading weights:  16%|█▋        | 144/883 [00:24<00:57, 12.81it/s]Loading weights:  17%|█▋        | 147/883 [00:25<01:30,  8.16it/s]Loading weights:  17%|█▋        | 149/883 [00:26<01:40,  7.28it/s]Loading weights:  17%|█▋        | 154/883 [00:26<01:06, 10.90it/s]Loading weights:  18%|█▊        | 157/883 [00:26<00:57, 12.61it/s]Loading weights:  18%|█▊        | 160/883 [00:27<01:32,  7.79it/s]Loading weights:  18%|█▊        | 162/883 [00:27<01:43,  6.99it/s]Loading weights:  19%|█▉        | 166/883 [00:27<01:12,  9.85it/s]Loading weights:  19%|█▉        | 170/883 [00:27<00:55, 12.96it/s]Loading weights:  20%|█▉        | 173/883 [00:28<01:30,  7.84it/s]Loading weights:  20%|█▉        | 175/883 [00:29<01:40,  7.02it/s]Loading weights:  20%|██        | 178/883 [00:29<01:18,  8.97it/s]Loading weights:  21%|██        | 183/883 [00:29<00:52, 13.26it/s]Loading weights:  21%|██        | 186/883 [00:30<01:26,  8.02it/s]Loading weights:  21%|██▏       | 188/883 [00:30<01:37,  7.10it/s]Loading weights:  22%|██▏       | 192/883 [00:30<01:14,  9.29it/s]Loading weights:  22%|██▏       | 198/883 [00:31<01:03, 10.86it/s]Loading weights:  23%|██▎       | 200/883 [00:31<01:39,  6.89it/s]Loading weights:  23%|██▎       | 206/883 [00:32<01:02, 10.85it/s]Loading weights:  24%|██▎       | 209/883 [00:32<00:53, 12.50it/s]Loading weights:  24%|██▍       | 212/883 [00:32<01:26,  7.78it/s]Loading weights:  24%|██▍       | 214/883 [00:33<01:35,  7.01it/s]Loading weights:  25%|██▍       | 219/883 [00:33<01:02, 10.63it/s]Loading weights:  25%|██▌       | 222/883 [00:33<00:53, 12.36it/s]Loading weights:  25%|██▌       | 225/883 [00:34<01:25,  7.70it/s]Loading weights:  26%|██▌       | 227/883 [00:34<01:34,  6.92it/s]Loading weights:  26%|██▌       | 231/883 [00:34<01:06,  9.79it/s]Loading weights:  26%|██▋       | 233/883 [00:35<01:01, 10.58it/s]Loading weights:  27%|██▋       | 237/883 [00:35<01:01, 10.47it/s]Loading weights:  27%|██▋       | 239/883 [00:36<01:42,  6.27it/s]Loading weights:  28%|██▊       | 244/883 [00:36<01:09,  9.24it/s]Loading weights:  28%|██▊       | 250/883 [00:37<01:16,  8.22it/s]Loading weights:  29%|██▊       | 252/883 [00:37<01:25,  7.42it/s]Loading weights:  29%|██▉       | 258/883 [00:37<00:54, 11.52it/s]Loading weights:  30%|██▉       | 261/883 [00:37<00:47, 13.07it/s]Loading weights:  30%|██▉       | 264/883 [00:38<01:15,  8.16it/s]Loading weights:  30%|███       | 266/883 [00:39<01:24,  7.27it/s]Loading weights:  31%|███       | 271/883 [00:39<00:56, 10.88it/s]Loading weights:  31%|███       | 274/883 [00:39<00:47, 12.77it/s]Loading weights:  31%|███▏      | 277/883 [00:40<01:17,  7.78it/s]Loading weights:  32%|███▏      | 279/883 [00:40<01:26,  6.99it/s]Loading weights:  32%|███▏      | 284/883 [00:40<00:55, 10.72it/s]Loading weights:  33%|███▎      | 287/883 [00:40<00:47, 12.64it/s]Loading weights:  33%|███▎      | 290/883 [00:41<01:17,  7.69it/s]Loading weights:  33%|███▎      | 292/883 [00:42<01:25,  6.89it/s]Loading weights:  34%|███▎      | 297/883 [00:42<00:54, 10.73it/s]Loading weights:  34%|███▍      | 300/883 [00:42<00:46, 12.58it/s]Loading weights:  34%|███▍      | 303/883 [00:43<01:36,  5.98it/s]Loading weights:  35%|███▍      | 308/883 [00:43<01:03,  9.00it/s]Loading weights:  35%|███▌      | 313/883 [00:43<00:45, 12.59it/s]Loading weights:  36%|███▌      | 316/883 [00:44<01:27,  6.45it/s]Loading weights:  37%|███▋      | 323/883 [00:45<00:55, 10.03it/s]Loading weights:  37%|███▋      | 328/883 [00:45<00:52, 10.49it/s]Loading weights:  37%|███▋      | 331/883 [00:46<01:12,  7.62it/s]Loading weights:  38%|███▊      | 335/883 [00:46<00:56,  9.77it/s]Loading weights:  38%|███▊      | 338/883 [00:46<00:48, 11.33it/s]Loading weights:  39%|███▊      | 341/883 [00:46<00:53, 10.11it/s]Loading weights:  39%|███▉      | 343/883 [00:47<01:24,  6.37it/s]Loading weights:  40%|███▉      | 349/883 [00:48<00:55,  9.54it/s]Loading weights:  40%|████      | 354/883 [00:48<00:50, 10.50it/s]Loading weights:  40%|████      | 356/883 [00:49<01:16,  6.84it/s]Loading weights:  41%|████      | 361/883 [00:49<00:52,  9.92it/s]Loading weights:  41%|████▏     | 365/883 [00:49<00:41, 12.52it/s]Loading weights:  42%|████▏     | 368/883 [00:50<01:03,  8.05it/s]Loading weights:  42%|████▏     | 370/883 [00:50<01:11,  7.22it/s]Loading weights:  42%|████▏     | 374/883 [00:50<00:55,  9.21it/s]Loading weights:  43%|████▎     | 380/883 [00:51<00:46, 10.79it/s]Loading weights:  43%|████▎     | 382/883 [00:52<01:12,  6.92it/s]Loading weights:  44%|████▍     | 388/883 [00:52<00:45, 10.85it/s]Loading weights:  44%|████▍     | 391/883 [00:52<00:39, 12.34it/s]Loading weights:  45%|████▍     | 394/883 [00:53<01:01,  7.95it/s]Loading weights:  45%|████▍     | 396/883 [00:53<01:08,  7.14it/s]Loading weights:  45%|████▌     | 401/883 [00:53<00:44, 10.73it/s]Loading weights:  46%|████▌     | 404/883 [00:53<00:38, 12.47it/s]Loading weights:  46%|████▌     | 407/883 [00:54<01:01,  7.73it/s]Loading weights:  46%|████▋     | 409/883 [00:54<01:08,  6.95it/s]Loading weights:  47%|████▋     | 412/883 [00:55<00:53,  8.85it/s]Loading weights:  47%|████▋     | 417/883 [00:55<00:35, 13.28it/s]Loading weights:  48%|████▊     | 420/883 [00:55<00:58,  7.98it/s]Loading weights:  48%|████▊     | 422/883 [00:56<01:04,  7.12it/s]Loading weights:  48%|████▊     | 427/883 [00:56<00:42, 10.84it/s]Loading weights:  49%|████▊     | 430/883 [00:56<00:35, 12.79it/s]Loading weights:  49%|████▉     | 433/883 [00:57<00:58,  7.74it/s]Loading weights:  49%|████▉     | 435/883 [00:57<01:04,  6.94it/s]Loading weights:  50%|████▉     | 439/883 [00:58<00:48,  9.13it/s]Loading weights:  51%|█████     | 449/883 [00:58<00:24, 17.79it/s]Loading weights:  52%|█████▏    | 455/883 [00:58<00:19, 21.79it/s]Loading weights:  53%|█████▎    | 471/883 [00:58<00:10, 38.49it/s]Loading weights:  54%|█████▍    | 477/883 [00:58<00:09, 40.84it/s]Loading weights:  55%|█████▍    | 484/883 [00:58<00:08, 44.78it/s]Loading weights:  56%|█████▌    | 492/883 [00:58<00:07, 49.64it/s]Loading weights:  57%|█████▋    | 503/883 [00:58<00:06, 60.79it/s]Loading weights:  58%|█████▊    | 510/883 [00:59<00:06, 60.47it/s]Loading weights:  59%|█████▊    | 518/883 [00:59<00:05, 62.11it/s]Loading weights:  59%|█████▉    | 525/883 [00:59<00:05, 62.34it/s]Loading weights:  60%|██████    | 533/883 [00:59<00:05, 63.90it/s]Loading weights:  61%|██████▏   | 541/883 [00:59<00:05, 65.77it/s]Loading weights:  62%|██████▏   | 551/883 [00:59<00:04, 71.37it/s]Loading weights:  63%|██████▎   | 559/883 [00:59<00:04, 68.22it/s]Loading weights:  64%|██████▍   | 566/883 [00:59<00:05, 57.22it/s]Loading weights:  66%|██████▌   | 583/883 [01:00<00:04, 74.93it/s]Loading weights:  67%|██████▋   | 591/883 [01:00<00:04, 70.32it/s]Loading weights:  68%|██████▊   | 599/883 [01:00<00:03, 72.30it/s]Loading weights:  69%|██████▊   | 607/883 [01:00<00:04, 68.97it/s]Loading weights:  70%|██████▉   | 614/883 [01:00<00:03, 69.05it/s]Loading weights:  70%|███████   | 621/883 [01:00<00:03, 66.53it/s]Loading weights:  71%|███████▏  | 630/883 [01:00<00:04, 58.58it/s]Loading weights:  73%|███████▎  | 646/883 [01:01<00:03, 73.08it/s]Loading weights:  74%|███████▍  | 654/883 [01:01<00:03, 68.99it/s]Loading weights:  75%|███████▌  | 664/883 [01:01<00:03, 64.57it/s]Loading weights:  77%|███████▋  | 679/883 [01:01<00:02, 75.07it/s]Loading weights:  78%|███████▊  | 687/883 [01:01<00:02, 70.89it/s]Loading weights:  79%|███████▊  | 695/883 [01:01<00:02, 72.52it/s]Loading weights:  80%|███████▉  | 703/883 [01:01<00:02, 69.45it/s]Loading weights:  81%|████████  | 711/883 [01:02<00:02, 71.35it/s]Loading weights:  81%|████████▏ | 719/883 [01:02<00:02, 68.29it/s]Loading weights:  82%|████████▏ | 726/883 [01:02<00:02, 68.00it/s]Loading weights:  83%|████████▎ | 733/883 [01:02<00:02, 67.27it/s]Loading weights:  84%|████████▍ | 743/883 [01:02<00:01, 72.98it/s]Loading weights:  85%|████████▌ | 751/883 [01:02<00:01, 68.31it/s]Loading weights:  86%|████████▌ | 760/883 [01:02<00:01, 73.20it/s]Loading weights:  87%|████████▋ | 768/883 [01:02<00:01, 70.08it/s]Loading weights:  88%|████████▊ | 776/883 [01:03<00:01, 60.59it/s]Loading weights:  89%|████████▉ | 789/883 [01:03<00:01, 68.44it/s]Loading weights:  90%|█████████ | 797/883 [01:03<00:01, 68.02it/s]Loading weights:  91%|█████████ | 805/883 [01:03<00:01, 68.29it/s]Loading weights:  92%|█████████▏| 813/883 [01:03<00:01, 69.44it/s]Loading weights:  93%|█████████▎| 823/883 [01:03<00:00, 62.29it/s]Loading weights:  95%|█████████▍| 837/883 [01:03<00:00, 70.74it/s]Loading weights:  96%|█████████▌| 845/883 [01:03<00:00, 70.41it/s]Loading weights:  97%|█████████▋| 855/883 [01:04<00:00, 73.83it/s]Loading weights:  98%|█████████▊| 863/883 [01:04<00:00, 70.20it/s]Loading weights:  99%|█████████▊| 871/883 [01:04<00:00, 60.54it/s]Loading weights: 100%|██████████| 883/883 [01:04<00:00, 13.70it/s]
+INFO 450 episodes x 148 conditions; 0 generations already done, 66600 to go
+INFO 50/450 plain replay generations, 0.88s each, ~5.9 min left
+INFO 100/450 plain replay generations, 0.86s each, ~5.0 min left
+INFO 150/450 plain replay generations, 0.85s each, ~4.2 min left
+INFO 200/450 plain replay generations, 0.84s each, ~3.5 min left
+INFO 250/450 plain replay generations, 0.86s each, ~2.9 min left
+INFO 300/450 plain replay generations, 0.85s each, ~2.1 min left
+INFO 350/450 plain replay generations, 0.85s each, ~1.4 min left
+INFO 400/450 plain replay generations, 0.85s each, ~0.7 min left
+INFO 450/450 plain replay generations, 0.84s each, ~0.0 min left
+INFO 50/66150 SAE condition generations, 0.80s each, ~876.5 min left
+INFO 100/66150 SAE condition generations, 0.81s each, ~886.5 min left
+INFO 150/66150 SAE condition generations, 0.81s each, ~885.6 min left
+INFO 200/66150 SAE condition generations, 0.80s each, ~875.9 min left
+INFO 250/66150 SAE condition generations, 0.79s each, ~869.2 min left
+INFO 300/66150 SAE condition generations, 0.79s each, ~864.0 min left
+INFO 350/66150 SAE condition generations, 0.78s each, ~858.6 min left
+INFO 400/66150 SAE condition generations, 0.78s each, ~852.5 min left
+INFO 450/66150 SAE condition generations, 0.77s each, ~843.9 min left
+INFO 500/66150 SAE condition generations, 0.75s each, ~820.1 min left
+INFO 550/66150 SAE condition generations, 0.73s each, ~798.9 min left
+INFO 600/66150 SAE condition generations, 0.72s each, ~787.2 min left
+INFO 650/66150 SAE condition generations, 0.73s each, ~794.2 min left
+INFO 700/66150 SAE condition generations, 0.73s each, ~799.6 min left
+INFO 750/66150 SAE condition generations, 0.74s each, ~801.9 min left
+INFO 800/66150 SAE condition generations, 0.73s each, ~796.9 min left
+INFO 850/66150 SAE condition generations, 0.73s each, ~792.2 min left
+INFO 900/66150 SAE condition generations, 0.73s each, ~792.1 min left
+INFO 950/66150 SAE condition generations, 0.74s each, ~799.4 min left
+INFO 1000/66150 SAE condition generations, 0.74s each, ~806.0 min left
+INFO 1050/66150 SAE condition generations, 0.77s each, ~833.5 min left
+INFO 1100/66150 SAE condition generations, 0.82s each, ~888.1 min left
+INFO 1150/66150 SAE condition generations, 0.87s each, ~942.8 min left
+INFO 1200/66150 SAE condition generations, 0.89s each, ~964.5 min left
+INFO 1250/66150 SAE condition generations, 0.88s each, ~956.3 min left
+INFO 1300/66150 SAE condition generations, 0.88s each, ~948.6 min left
+INFO 1350/66150 SAE condition generations, 0.87s each, ~944.8 min left
+INFO 1400/66150 SAE condition generations, 0.87s each, ~943.7 min left
+INFO 1450/66150 SAE condition generations, 0.87s each, ~942.6 min left
+INFO 1500/66150 SAE condition generations, 0.87s each, ~936.0 min left
+INFO 1550/66150 SAE condition generations, 0.86s each, ~925.6 min left
+INFO 1600/66150 SAE condition generations, 0.85s each, ~916.0 min left
+INFO 1650/66150 SAE condition generations, 0.85s each, ~912.4 min left
+INFO 1700/66150 SAE condition generations, 0.85s each, ~911.6 min left
+INFO 1750/66150 SAE condition generations, 0.85s each, ~911.0 min left
+INFO 1800/66150 SAE condition generations, 0.86s each, ~923.8 min left
+INFO 1850/66150 SAE condition generations, 0.88s each, ~940.4 min left
+INFO 1900/66150 SAE condition generations, 0.89s each, ~955.8 min left
+INFO 1950/66150 SAE condition generations, 0.91s each, ~973.3 min left
+INFO 2000/66150 SAE condition generations, 0.93s each, ~994.1 min left
+INFO 2050/66150 SAE condition generations, 0.95s each, ~1013.9 min left
+INFO 2100/66150 SAE condition generations, 0.95s each, ~1010.1 min left
+INFO 2150/66150 SAE condition generations, 0.94s each, ~1002.4 min left
+INFO 2200/66150 SAE condition generations, 0.93s each, ~994.6 min left
+INFO 2250/66150 SAE condition generations, 0.93s each, ~988.2 min left
+INFO 2300/66150 SAE condition generations, 0.92s each, ~982.2 min left
+INFO 2350/66150 SAE condition generations, 0.92s each, ~976.4 min left
+INFO 2400/66150 SAE condition generations, 0.91s each, ~968.5 min left
+INFO 2450/66150 SAE condition generations, 0.91s each, ~960.8 min left
+INFO 2500/66150 SAE condition generations, 0.90s each, ~953.6 min left
+INFO 2550/66150 SAE condition generations, 0.90s each, ~952.1 min left
+INFO 2600/66150 SAE condition generations, 0.90s each, ~950.6 min left
+INFO 2650/66150 SAE condition generations, 0.90s each, ~948.9 min left
+INFO 2700/66150 SAE condition generations, 0.89s each, ~943.7 min left
+INFO 2750/66150 SAE condition generations, 0.89s each, ~938.5 min left
+INFO 2800/66150 SAE condition generations, 0.88s each, ~933.5 min left
+INFO 2850/66150 SAE condition generations, 0.88s each, ~930.3 min left
+INFO 2900/66150 SAE condition generations, 0.88s each, ~926.5 min left
+INFO 2950/66150 SAE condition generations, 0.88s each, ~923.1 min left
+INFO 3000/66150 SAE condition generations, 0.87s each, ~919.6 min left
+INFO 3050/66150 SAE condition generations, 0.87s each, ~915.7 min left
+INFO 3100/66150 SAE condition generations, 0.87s each, ~912.2 min left
+INFO 3150/66150 SAE condition generations, 0.87s each, ~909.7 min left
+INFO 3200/66150 SAE condition generations, 0.86s each, ~907.3 min left
+INFO 3250/66150 SAE condition generations, 0.86s each, ~905.1 min left
+INFO 3300/66150 SAE condition generations, 0.86s each, ~903.1 min left
+INFO 3350/66150 SAE condition generations, 0.86s each, ~900.9 min left
+INFO 3400/66150 SAE condition generations, 0.86s each, ~897.8 min left
+INFO 3450/66150 SAE condition generations, 0.85s each, ~893.0 min left
+INFO 3500/66150 SAE condition generations, 0.85s each, ~888.1 min left
+INFO 3550/66150 SAE condition generations, 0.85s each, ~887.8 min left
+INFO 3600/66150 SAE condition generations, 0.86s each, ~892.9 min left
+INFO 3650/66150 SAE condition generations, 0.86s each, ~897.9 min left
+INFO 3700/66150 SAE condition generations, 0.87s each, ~903.6 min left
+INFO 3750/66150 SAE condition generations, 0.87s each, ~909.6 min left
+INFO 3800/66150 SAE condition generations, 0.88s each, ~916.2 min left
+INFO 3850/66150 SAE condition generations, 0.88s each, ~915.1 min left
+INFO 3900/66150 SAE condition generations, 0.88s each, ~908.2 min left
+INFO 3950/66150 SAE condition generations, 0.87s each, ~901.5 min left
+INFO 4000/66150 SAE condition generations, 0.87s each, ~897.0 min left
+INFO 4050/66150 SAE condition generations, 0.86s each, ~893.9 min left
+INFO 4100/66150 SAE condition generations, 0.86s each, ~891.1 min left
+INFO 4150/66150 SAE condition generations, 0.86s each, ~888.4 min left
+INFO 4200/66150 SAE condition generations, 0.86s each, ~885.8 min left
+INFO 4250/66150 SAE condition generations, 0.86s each, ~883.1 min left
+INFO 4300/66150 SAE condition generations, 0.86s each, ~883.8 min left
+INFO 4350/66150 SAE condition generations, 0.86s each, ~885.4 min left
+INFO 4400/66150 SAE condition generations, 0.86s each, ~886.9 min left
+INFO 4450/66150 SAE condition generations, 0.87s each, ~893.9 min left
+INFO 4500/66150 SAE condition generations, 0.88s each, ~901.0 min left
+INFO 4550/66150 SAE condition generations, 0.89s each, ~909.0 min left
+INFO 4600/66150 SAE condition generations, 0.89s each, ~908.2 min left
+INFO 4650/66150 SAE condition generations, 0.88s each, ~906.1 min left
+INFO 4700/66150 SAE condition generations, 0.88s each, ~903.9 min left
+INFO 4750/66150 SAE condition generations, 0.88s each, ~902.7 min left
+INFO 4800/66150 SAE condition generations, 0.88s each, ~900.1 min left
+INFO 4850/66150 SAE condition generations, 0.88s each, ~897.0 min left
+INFO 4900/66150 SAE condition generations, 0.88s each, ~897.6 min left
+INFO 4950/66150 SAE condition generations, 0.88s each, ~898.0 min left
+INFO 5000/66150 SAE condition generations, 0.88s each, ~898.4 min left
+INFO 5050/66150 SAE condition generations, 0.88s each, ~900.7 min left
+INFO 5100/66150 SAE condition generations, 0.89s each, ~902.8 min left
+INFO 5150/66150 SAE condition generations, 0.89s each, ~904.2 min left
+INFO 5200/66150 SAE condition generations, 0.89s each, ~901.5 min left
+INFO 5250/66150 SAE condition generations, 0.89s each, ~898.8 min left
+INFO 5300/66150 SAE condition generations, 0.88s each, ~896.2 min left
+INFO 5350/66150 SAE condition generations, 0.88s each, ~894.4 min left
+INFO 5400/66150 SAE condition generations, 0.88s each, ~892.5 min left
+INFO 5450/66150 SAE condition generations, 0.88s each, ~890.0 min left
+INFO 5500/66150 SAE condition generations, 0.88s each, ~887.2 min left
+INFO 5550/66150 SAE condition generations, 0.88s each, ~884.3 min left
+INFO 5600/66150 SAE condition generations, 0.87s each, ~882.4 min left
+INFO 5650/66150 SAE condition generations, 0.88s each, ~883.0 min left
+INFO 5700/66150 SAE condition generations, 0.88s each, ~883.6 min left
+INFO 5750/66150 SAE condition generations, 0.88s each, ~882.5 min left
+INFO 5800/66150 SAE condition generations, 0.87s each, ~878.3 min left
+INFO 5850/66150 SAE condition generations, 0.87s each, ~874.3 min left
+INFO 5900/66150 SAE condition generations, 0.87s each, ~870.6 min left
+INFO 5950/66150 SAE condition generations, 0.86s each, ~867.4 min left
+INFO 6000/66150 SAE condition generations, 0.86s each, ~864.3 min left
+INFO 6050/66150 SAE condition generations, 0.86s each, ~861.2 min left
+INFO 6100/66150 SAE condition generations, 0.86s each, ~858.2 min left
+INFO 6150/66150 SAE condition generations, 0.86s each, ~855.4 min left
+INFO 6200/66150 SAE condition generations, 0.85s each, ~852.8 min left
+INFO 6250/66150 SAE condition generations, 0.85s each, ~850.9 min left
+INFO 6300/66150 SAE condition generations, 0.85s each, ~848.8 min left
+INFO 6350/66150 SAE condition generations, 0.85s each, ~847.7 min left
+INFO 6400/66150 SAE condition generations, 0.85s each, ~847.4 min left
+INFO 6450/66150 SAE condition generations, 0.85s each, ~847.2 min left
+INFO 6500/66150 SAE condition generations, 0.85s each, ~844.4 min left
+INFO 6550/66150 SAE condition generations, 0.85s each, ~840.3 min left
+INFO 6600/66150 SAE condition generations, 0.84s each, ~836.1 min left
+INFO 6650/66150 SAE condition generations, 0.85s each, ~841.5 min left
+INFO 6700/66150 SAE condition generations, 0.86s each, ~852.2 min left
+INFO 6750/66150 SAE condition generations, 0.87s each, ~862.8 min left
+INFO 6800/66150 SAE condition generations, 0.87s each, ~863.3 min left
+INFO 6850/66150 SAE condition generations, 0.87s each, ~860.7 min left
+INFO 6900/66150 SAE condition generations, 0.87s each, ~858.1 min left
+INFO 6950/66150 SAE condition generations, 0.87s each, ~855.4 min left
+INFO 7000/66150 SAE condition generations, 0.87s each, ~852.8 min left
+INFO 7050/66150 SAE condition generations, 0.86s each, ~850.2 min left
+INFO 7100/66150 SAE condition generations, 0.86s each, ~849.2 min left
+INFO 7150/66150 SAE condition generations, 0.86s each, ~848.4 min left
+INFO 7200/66150 SAE condition generations, 0.86s each, ~847.7 min left
+INFO 7250/66150 SAE condition generations, 0.86s each, ~845.3 min left
+INFO 7300/66150 SAE condition generations, 0.86s each, ~842.7 min left
+INFO 7350/66150 SAE condition generations, 0.86s each, ~840.1 min left
+INFO 7400/66150 SAE condition generations, 0.86s each, ~844.4 min left
+INFO 7450/66150 SAE condition generations, 0.86s each, ~846.3 min left
+INFO 7500/66150 SAE condition generations, 0.87s each, ~847.7 min left
+INFO 7550/66150 SAE condition generations, 0.87s each, ~847.2 min left
+INFO 7600/66150 SAE condition generations, 0.87s each, ~846.6 min left
+INFO 7650/66150 SAE condition generations, 0.87s each, ~846.1 min left
+INFO 7700/66150 SAE condition generations, 0.87s each, ~845.1 min left
+INFO 7750/66150 SAE condition generations, 0.87s each, ~843.8 min left
+INFO 7800/66150 SAE condition generations, 0.87s each, ~842.7 min left
+INFO 7850/66150 SAE condition generations, 0.87s each, ~841.4 min left
+INFO 7900/66150 SAE condition generations, 0.87s each, ~840.1 min left
+INFO 7950/66150 SAE condition generations, 0.86s each, ~838.6 min left
+INFO 8000/66150 SAE condition generations, 0.86s each, ~836.6 min left
+INFO 8050/66150 SAE condition generations, 0.86s each, ~834.6 min left
+INFO 8100/66150 SAE condition generations, 0.86s each, ~833.0 min left
+INFO 8150/66150 SAE condition generations, 0.86s each, ~832.3 min left
+INFO 8200/66150 SAE condition generations, 0.86s each, ~831.7 min left
+INFO 8250/66150 SAE condition generations, 0.86s each, ~830.5 min left
+INFO 8300/66150 SAE condition generations, 0.86s each, ~829.1 min left
+INFO 8350/66150 SAE condition generations, 0.86s each, ~827.5 min left
+INFO 8400/66150 SAE condition generations, 0.86s each, ~826.8 min left
+INFO 8450/66150 SAE condition generations, 0.86s each, ~827.6 min left
+INFO 8500/66150 SAE condition generations, 0.86s each, ~828.1 min left
+INFO 8550/66150 SAE condition generations, 0.86s each, ~827.7 min left
+INFO 8600/66150 SAE condition generations, 0.86s each, ~826.2 min left
+INFO 8650/66150 SAE condition generations, 0.86s each, ~824.8 min left
+INFO 8700/66150 SAE condition generations, 0.86s each, ~823.7 min left
+INFO 8750/66150 SAE condition generations, 0.86s each, ~823.2 min left
+INFO 8800/66150 SAE condition generations, 0.86s each, ~822.3 min left
+INFO 8850/66150 SAE condition generations, 0.86s each, ~821.4 min left
+INFO 8900/66150 SAE condition generations, 0.86s each, ~820.6 min left
+INFO 8950/66150 SAE condition generations, 0.86s each, ~819.8 min left
+INFO 9000/66150 SAE condition generations, 0.86s each, ~818.5 min left
+INFO 9050/66150 SAE condition generations, 0.86s each, ~816.9 min left
+INFO 9100/66150 SAE condition generations, 0.86s each, ~815.4 min left
+INFO 9150/66150 SAE condition generations, 0.86s each, ~814.0 min left
+INFO 9200/66150 SAE condition generations, 0.86s each, ~812.6 min left
+INFO 9250/66150 SAE condition generations, 0.86s each, ~811.4 min left
+INFO 9300/66150 SAE condition generations, 0.85s each, ~808.9 min left
+INFO 9350/66150 SAE condition generations, 0.85s each, ~806.0 min left
+INFO 9400/66150 SAE condition generations, 0.85s each, ~803.2 min left
+INFO 9450/66150 SAE condition generations, 0.85s each, ~802.3 min left
+INFO 9500/66150 SAE condition generations, 0.85s each, ~801.7 min left
+INFO 9550/66150 SAE condition generations, 0.85s each, ~801.1 min left
+INFO 9600/66150 SAE condition generations, 0.85s each, ~799.3 min left
+INFO 9650/66150 SAE condition generations, 0.85s each, ~797.4 min left
+INFO 9700/66150 SAE condition generations, 0.85s each, ~795.4 min left
+INFO 9750/66150 SAE condition generations, 0.85s each, ~794.8 min left
+INFO 9800/66150 SAE condition generations, 0.85s each, ~794.4 min left
+INFO 9850/66150 SAE condition generations, 0.85s each, ~794.0 min left
+INFO 9900/66150 SAE condition generations, 0.85s each, ~792.7 min left
+INFO 9950/66150 SAE condition generations, 0.84s each, ~791.2 min left
+INFO 10000/66150 SAE condition generations, 0.84s each, ~789.8 min left
+INFO 10050/66150 SAE condition generations, 0.84s each, ~788.0 min left
+INFO 10100/66150 SAE condition generations, 0.84s each, ~786.1 min left
+INFO 10150/66150 SAE condition generations, 0.84s each, ~784.5 min left
+INFO 10200/66150 SAE condition generations, 0.84s each, ~783.6 min left
+INFO 10250/66150 SAE condition generations, 0.84s each, ~782.6 min left
+INFO 10300/66150 SAE condition generations, 0.84s each, ~782.1 min left
+INFO 10350/66150 SAE condition generations, 0.84s each, ~783.2 min left
+INFO 10400/66150 SAE condition generations, 0.84s each, ~784.0 min left
+INFO 10450/66150 SAE condition generations, 0.85s each, ~784.5 min left
+INFO 10500/66150 SAE condition generations, 0.85s each, ~783.8 min left
+INFO 10550/66150 SAE condition generations, 0.84s each, ~782.9 min left
+INFO 10600/66150 SAE condition generations, 0.84s each, ~782.3 min left
+INFO 10650/66150 SAE condition generations, 0.85s each, ~781.8 min left
+INFO 10700/66150 SAE condition generations, 0.85s each, ~781.2 min left
+INFO 10750/66150 SAE condition generations, 0.85s each, ~780.4 min left
+INFO 10800/66150 SAE condition generations, 0.84s each, ~779.4 min left
+INFO 10850/66150 SAE condition generations, 0.84s each, ~778.3 min left
+INFO 10900/66150 SAE condition generations, 0.84s each, ~777.1 min left
+INFO 10950/66150 SAE condition generations, 0.84s each, ~775.8 min left
+INFO 11000/66150 SAE condition generations, 0.84s each, ~774.7 min left
+INFO 11050/66150 SAE condition generations, 0.84s each, ~775.0 min left
+INFO 11100/66150 SAE condition generations, 0.85s each, ~776.6 min left
+INFO 11150/66150 SAE condition generations, 0.85s each, ~778.3 min left
+INFO 11200/66150 SAE condition generations, 0.85s each, ~778.7 min left
+INFO 11250/66150 SAE condition generations, 0.85s each, ~778.0 min left
+INFO 11300/66150 SAE condition generations, 0.85s each, ~777.1 min left
+INFO 11350/66150 SAE condition generations, 0.85s each, ~775.5 min left
+INFO 11400/66150 SAE condition generations, 0.85s each, ~773.5 min left
+INFO 11450/66150 SAE condition generations, 0.85s each, ~771.5 min left
+INFO 11500/66150 SAE condition generations, 0.85s each, ~775.0 min left
+INFO 11550/66150 SAE condition generations, 0.86s each, ~780.8 min left
+INFO 11600/66150 SAE condition generations, 0.87s each, ~786.8 min left
+INFO 11650/66150 SAE condition generations, 0.87s each, ~787.1 min left
+INFO 11700/66150 SAE condition generations, 0.87s each, ~785.3 min left
+INFO 11750/66150 SAE condition generations, 0.86s each, ~783.5 min left
+INFO 11800/66150 SAE condition generations, 0.86s each, ~782.5 min left
+INFO 11850/66150 SAE condition generations, 0.86s each, ~781.8 min left
+INFO 11900/66150 SAE condition generations, 0.86s each, ~780.9 min left
+INFO 11950/66150 SAE condition generations, 0.86s each, ~779.2 min left
+INFO 12000/66150 SAE condition generations, 0.86s each, ~777.5 min left
+INFO 12050/66150 SAE condition generations, 0.86s each, ~775.8 min left
+INFO 12100/66150 SAE condition generations, 0.86s each, ~774.2 min left
+INFO 12150/66150 SAE condition generations, 0.86s each, ~772.5 min left
+INFO 12200/66150 SAE condition generations, 0.86s each, ~770.9 min left
+INFO 12250/66150 SAE condition generations, 0.86s each, ~769.8 min left
+INFO 12300/66150 SAE condition generations, 0.86s each, ~768.6 min left
+INFO 12350/66150 SAE condition generations, 0.86s each, ~767.4 min left
+INFO 12400/66150 SAE condition generations, 0.85s each, ~765.6 min left
+INFO 12450/66150 SAE condition generations, 0.85s each, ~763.7 min left
+INFO 12500/66150 SAE condition generations, 0.85s each, ~761.9 min left
+INFO 12550/66150 SAE condition generations, 0.85s each, ~760.4 min left
+INFO 12600/66150 SAE condition generations, 0.85s each, ~759.0 min left
+INFO 12650/66150 SAE condition generations, 0.85s each, ~757.7 min left
+INFO 12700/66150 SAE condition generations, 0.85s each, ~756.8 min left
+INFO 12750/66150 SAE condition generations, 0.85s each, ~755.8 min left
+INFO 12800/66150 SAE condition generations, 0.85s each, ~754.9 min left
+INFO 12850/66150 SAE condition generations, 0.85s each, ~753.7 min left
+INFO 12900/66150 SAE condition generations, 0.85s each, ~752.5 min left
+INFO 12950/66150 SAE condition generations, 0.85s each, ~751.4 min left
+INFO 13000/66150 SAE condition generations, 0.85s each, ~751.0 min left
+INFO 13050/66150 SAE condition generations, 0.85s each, ~750.4 min left
+INFO 13100/66150 SAE condition generations, 0.85s each, ~749.2 min left
+INFO 13150/66150 SAE condition generations, 0.85s each, ~747.5 min left
+INFO 13200/66150 SAE condition generations, 0.84s each, ~745.6 min left
+INFO 13250/66150 SAE condition generations, 0.84s each, ~744.0 min left
+INFO 13300/66150 SAE condition generations, 0.84s each, ~742.9 min left
+INFO 13350/66150 SAE condition generations, 0.84s each, ~741.8 min left
+INFO 13400/66150 SAE condition generations, 0.84s each, ~740.5 min left
+INFO 13450/66150 SAE condition generations, 0.84s each, ~739.1 min left
+INFO 13500/66150 SAE condition generations, 0.84s each, ~737.8 min left
+INFO 13550/66150 SAE condition generations, 0.84s each, ~736.5 min left
+INFO 13600/66150 SAE condition generations, 0.84s each, ~735.2 min left
+INFO 13650/66150 SAE condition generations, 0.84s each, ~733.6 min left
+INFO 13700/66150 SAE condition generations, 0.84s each, ~737.4 min left
+INFO 13750/66150 SAE condition generations, 0.85s each, ~744.4 min left
+INFO 13800/66150 SAE condition generations, 0.86s each, ~751.9 min left
+INFO 13850/66150 SAE condition generations, 0.87s each, ~754.2 min left
+INFO 13900/66150 SAE condition generations, 0.87s each, ~753.4 min left
+INFO 13950/66150 SAE condition generations, 0.87s each, ~752.6 min left
+INFO 14000/66150 SAE condition generations, 0.86s each, ~751.3 min left
+INFO 14050/66150 SAE condition generations, 0.86s each, ~749.8 min left
+INFO 14100/66150 SAE condition generations, 0.86s each, ~748.3 min left
+INFO 14150/66150 SAE condition generations, 0.86s each, ~747.1 min left
+INFO 14200/66150 SAE condition generations, 0.86s each, ~746.1 min left
+INFO 14250/66150 SAE condition generations, 0.86s each, ~745.0 min left
+INFO 14300/66150 SAE condition generations, 0.86s each, ~743.8 min left
+INFO 14350/66150 SAE condition generations, 0.86s each, ~742.6 min left
+INFO 14400/66150 SAE condition generations, 0.86s each, ~741.3 min left
+INFO 14450/66150 SAE condition generations, 0.86s each, ~740.2 min left
+INFO 14500/66150 SAE condition generations, 0.86s each, ~738.9 min left
+INFO 14550/66150 SAE condition generations, 0.86s each, ~737.5 min left
+INFO 14600/66150 SAE condition generations, 0.86s each, ~736.9 min left
+INFO 14650/66150 SAE condition generations, 0.86s each, ~736.2 min left
+INFO 14700/66150 SAE condition generations, 0.86s each, ~735.6 min left
+INFO 14750/66150 SAE condition generations, 0.86s each, ~734.5 min left
+INFO 14800/66150 SAE condition generations, 0.86s each, ~733.5 min left
+INFO 14850/66150 SAE condition generations, 0.86s each, ~732.4 min left
+INFO 14900/66150 SAE condition generations, 0.86s each, ~730.8 min left
+INFO 14950/66150 SAE condition generations, 0.85s each, ~729.2 min left
+INFO 15000/66150 SAE condition generations, 0.85s each, ~727.7 min left
+INFO 15050/66150 SAE condition generations, 0.85s each, ~726.6 min left
+INFO 15100/66150 SAE condition generations, 0.85s each, ~725.4 min left
+INFO 15150/66150 SAE condition generations, 0.85s each, ~724.2 min left
+INFO 15200/66150 SAE condition generations, 0.85s each, ~722.2 min left
+INFO 15250/66150 SAE condition generations, 0.85s each, ~720.2 min left
+INFO 15300/66150 SAE condition generations, 0.85s each, ~719.6 min left
+INFO 15350/66150 SAE condition generations, 0.85s each, ~723.0 min left
+INFO 15400/66150 SAE condition generations, 0.86s each, ~726.2 min left
+INFO 15450/66150 SAE condition generations, 0.86s each, ~728.2 min left
+INFO 15500/66150 SAE condition generations, 0.86s each, ~726.8 min left
+INFO 15550/66150 SAE condition generations, 0.86s each, ~725.4 min left
+INFO 15600/66150 SAE condition generations, 0.86s each, ~724.6 min left
+INFO 15650/66150 SAE condition generations, 0.86s each, ~724.6 min left
+INFO 15700/66150 SAE condition generations, 0.86s each, ~724.8 min left
+INFO 15750/66150 SAE condition generations, 0.86s each, ~724.6 min left
+INFO 15800/66150 SAE condition generations, 0.86s each, ~723.7 min left
+INFO 15850/66150 SAE condition generations, 0.86s each, ~722.8 min left
+INFO 15900/66150 SAE condition generations, 0.86s each, ~722.8 min left
+INFO 15950/66150 SAE condition generations, 0.86s each, ~723.5 min left
+INFO 16000/66150 SAE condition generations, 0.87s each, ~724.2 min left
+INFO 16050/66150 SAE condition generations, 0.87s each, ~724.3 min left
+INFO 16100/66150 SAE condition generations, 0.87s each, ~723.8 min left
+INFO 16150/66150 SAE condition generations, 0.87s each, ~723.2 min left
+INFO 16200/66150 SAE condition generations, 0.87s each, ~722.4 min left
+INFO 16250/66150 SAE condition generations, 0.87s each, ~721.5 min left
+INFO 16300/66150 SAE condition generations, 0.87s each, ~720.5 min left
+INFO 16350/66150 SAE condition generations, 0.87s each, ~719.4 min left
+INFO 16400/66150 SAE condition generations, 0.87s each, ~718.3 min left
+INFO 16450/66150 SAE condition generations, 0.87s each, ~717.0 min left
+INFO 16500/66150 SAE condition generations, 0.87s each, ~715.9 min left
+INFO 16550/66150 SAE condition generations, 0.86s each, ~714.7 min left
+INFO 16600/66150 SAE condition generations, 0.86s each, ~713.6 min left
+INFO 16650/66150 SAE condition generations, 0.86s each, ~712.1 min left
+INFO 16700/66150 SAE condition generations, 0.86s each, ~710.5 min left
+INFO 16750/66150 SAE condition generations, 0.86s each, ~708.8 min left
+INFO 16800/66150 SAE condition generations, 0.86s each, ~707.3 min left
+INFO 16850/66150 SAE condition generations, 0.86s each, ~705.7 min left
+INFO 16900/66150 SAE condition generations, 0.86s each, ~704.2 min left
+INFO 16950/66150 SAE condition generations, 0.86s each, ~703.5 min left
+INFO 17000/66150 SAE condition generations, 0.86s each, ~702.8 min left
+INFO 17050/66150 SAE condition generations, 0.86s each, ~701.9 min left
+INFO 17100/66150 SAE condition generations, 0.86s each, ~700.9 min left
+INFO 17150/66150 SAE condition generations, 0.86s each, ~700.0 min left
+INFO 17200/66150 SAE condition generations, 0.86s each, ~699.0 min left
+INFO 17250/66150 SAE condition generations, 0.86s each, ~698.4 min left
+INFO 17300/66150 SAE condition generations, 0.86s each, ~697.7 min left
+INFO 17350/66150 SAE condition generations, 0.86s each, ~697.1 min left
+INFO 17400/66150 SAE condition generations, 0.86s each, ~697.5 min left
+INFO 17450/66150 SAE condition generations, 0.86s each, ~697.7 min left
+INFO 17500/66150 SAE condition generations, 0.86s each, ~697.8 min left
+INFO 17550/66150 SAE condition generations, 0.86s each, ~696.5 min left
+INFO 17600/66150 SAE condition generations, 0.86s each, ~695.2 min left
+INFO 17650/66150 SAE condition generations, 0.86s each, ~694.1 min left
+INFO 17700/66150 SAE condition generations, 0.86s each, ~694.0 min left
+INFO 17750/66150 SAE condition generations, 0.86s each, ~693.9 min left
+INFO 17800/66150 SAE condition generations, 0.86s each, ~693.6 min left
+INFO 17850/66150 SAE condition generations, 0.86s each, ~693.0 min left
+INFO 17900/66150 SAE condition generations, 0.86s each, ~692.4 min left
+INFO 17950/66150 SAE condition generations, 0.86s each, ~691.7 min left
+INFO 18000/66150 SAE condition generations, 0.86s each, ~690.8 min left
+INFO 18050/66150 SAE condition generations, 0.86s each, ~689.8 min left
+INFO 18100/66150 SAE condition generations, 0.86s each, ~688.7 min left
+INFO 18150/66150 SAE condition generations, 0.86s each, ~687.8 min left
+INFO 18200/66150 SAE condition generations, 0.86s each, ~686.7 min left
+INFO 18250/66150 SAE condition generations, 0.86s each, ~685.4 min left
+INFO 18300/66150 SAE condition generations, 0.86s each, ~683.9 min left
+INFO 18350/66150 SAE condition generations, 0.86s each, ~682.4 min left
+INFO 18400/66150 SAE condition generations, 0.86s each, ~681.1 min left
+INFO 18450/66150 SAE condition generations, 0.86s each, ~679.9 min left
+INFO 18500/66150 SAE condition generations, 0.85s each, ~678.8 min left
+INFO 18550/66150 SAE condition generations, 0.85s each, ~678.0 min left
+INFO 18600/66150 SAE condition generations, 0.85s each, ~677.3 min left
+INFO 18650/66150 SAE condition generations, 0.85s each, ~676.6 min left
+INFO 18700/66150 SAE condition generations, 0.85s each, ~675.6 min left
+INFO 18750/66150 SAE condition generations, 0.85s each, ~674.4 min left
+INFO 18800/66150 SAE condition generations, 0.85s each, ~673.1 min left
+INFO 18850/66150 SAE condition generations, 0.85s each, ~672.2 min left
+INFO 18900/66150 SAE condition generations, 0.85s each, ~671.3 min left
+INFO 18950/66150 SAE condition generations, 0.85s each, ~670.4 min left
+INFO 19000/66150 SAE condition generations, 0.85s each, ~669.3 min left
+INFO 19050/66150 SAE condition generations, 0.85s each, ~668.0 min left
+INFO 19100/66150 SAE condition generations, 0.85s each, ~666.8 min left
+INFO 19150/66150 SAE condition generations, 0.85s each, ~665.6 min left
+INFO 19200/66150 SAE condition generations, 0.85s each, ~664.3 min left
+INFO 19250/66150 SAE condition generations, 0.85s each, ~662.9 min left
+INFO 19300/66150 SAE condition generations, 0.85s each, ~661.6 min left
+INFO 19350/66150 SAE condition generations, 0.85s each, ~660.2 min left
+INFO 19400/66150 SAE condition generations, 0.85s each, ~658.9 min left
+INFO 19450/66150 SAE condition generations, 0.85s each, ~658.7 min left
+INFO 19500/66150 SAE condition generations, 0.85s each, ~658.5 min left
+INFO 19550/66150 SAE condition generations, 0.85s each, ~658.4 min left
+INFO 19600/66150 SAE condition generations, 0.85s each, ~657.3 min left
+INFO 19650/66150 SAE condition generations, 0.85s each, ~656.2 min left
+INFO 19700/66150 SAE condition generations, 0.85s each, ~655.0 min left
+INFO 19750/66150 SAE condition generations, 0.85s each, ~654.2 min left
+INFO 19800/66150 SAE condition generations, 0.85s each, ~653.0 min left
+INFO 19850/66150 SAE condition generations, 0.84s each, ~651.9 min left
+INFO 19900/66150 SAE condition generations, 0.84s each, ~650.8 min left
+INFO 19950/66150 SAE condition generations, 0.84s each, ~649.7 min left
+INFO 20000/66150 SAE condition generations, 0.84s each, ~648.6 min left
+INFO 20050/66150 SAE condition generations, 0.84s each, ~647.9 min left
+INFO 20100/66150 SAE condition generations, 0.84s each, ~647.2 min left
+INFO 20150/66150 SAE condition generations, 0.84s each, ~646.4 min left
+INFO 20200/66150 SAE condition generations, 0.84s each, ~645.5 min left
+INFO 20250/66150 SAE condition generations, 0.84s each, ~644.6 min left
+INFO 20300/66150 SAE condition generations, 0.84s each, ~643.7 min left
+INFO 20350/66150 SAE condition generations, 0.84s each, ~642.7 min left
+INFO 20400/66150 SAE condition generations, 0.84s each, ~641.8 min left
+INFO 20450/66150 SAE condition generations, 0.84s each, ~640.7 min left
+INFO 20500/66150 SAE condition generations, 0.84s each, ~639.5 min left
+INFO 20550/66150 SAE condition generations, 0.84s each, ~638.2 min left
+INFO 20600/66150 SAE condition generations, 0.84s each, ~636.9 min left
+INFO 20650/66150 SAE condition generations, 0.84s each, ~635.7 min left
+INFO 20700/66150 SAE condition generations, 0.84s each, ~634.4 min left
+INFO 20750/66150 SAE condition generations, 0.84s each, ~634.0 min left
+INFO 20800/66150 SAE condition generations, 0.84s each, ~634.4 min left
+INFO 20850/66150 SAE condition generations, 0.84s each, ~634.9 min left
+INFO 20900/66150 SAE condition generations, 0.84s each, ~634.8 min left
+INFO 20950/66150 SAE condition generations, 0.84s each, ~634.1 min left
+INFO 21000/66150 SAE condition generations, 0.84s each, ~633.5 min left
+INFO 21050/66150 SAE condition generations, 0.84s each, ~632.4 min left
+INFO 21100/66150 SAE condition generations, 0.84s each, ~631.1 min left
+INFO 21150/66150 SAE condition generations, 0.84s each, ~629.7 min left
+INFO 21200/66150 SAE condition generations, 0.84s each, ~628.6 min left
+INFO 21250/66150 SAE condition generations, 0.84s each, ~627.5 min left
+INFO 21300/66150 SAE condition generations, 0.84s each, ~626.4 min left
+INFO 21350/66150 SAE condition generations, 0.84s each, ~625.3 min left
+INFO 21400/66150 SAE condition generations, 0.84s each, ~624.3 min left
+INFO 21450/66150 SAE condition generations, 0.84s each, ~623.3 min left
+INFO 21500/66150 SAE condition generations, 0.84s each, ~622.3 min left
+INFO 21550/66150 SAE condition generations, 0.84s each, ~621.3 min left
+INFO 21600/66150 SAE condition generations, 0.84s each, ~620.3 min left
+INFO 21650/66150 SAE condition generations, 0.84s each, ~619.3 min left
+INFO 21700/66150 SAE condition generations, 0.83s each, ~618.4 min left
+INFO 21750/66150 SAE condition generations, 0.83s each, ~617.5 min left
+INFO 21800/66150 SAE condition generations, 0.84s each, ~618.1 min left
+INFO 21850/66150 SAE condition generations, 0.84s each, ~618.7 min left
+INFO 21900/66150 SAE condition generations, 0.84s each, ~619.5 min left
+INFO 21950/66150 SAE condition generations, 0.84s each, ~619.3 min left
+INFO 22000/66150 SAE condition generations, 0.84s each, ~619.0 min left
+INFO 22050/66150 SAE condition generations, 0.84s each, ~618.7 min left
+INFO 22100/66150 SAE condition generations, 0.84s each, ~617.7 min left
+INFO 22150/66150 SAE condition generations, 0.84s each, ~616.5 min left
+INFO 22200/66150 SAE condition generations, 0.84s each, ~615.3 min left
+INFO 22250/66150 SAE condition generations, 0.84s each, ~614.7 min left
+INFO 22300/66150 SAE condition generations, 0.84s each, ~614.1 min left
+INFO 22350/66150 SAE condition generations, 0.84s each, ~613.5 min left
+INFO 22400/66150 SAE condition generations, 0.84s each, ~612.7 min left
+INFO 22450/66150 SAE condition generations, 0.84s each, ~611.8 min left
+INFO 22500/66150 SAE condition generations, 0.84s each, ~610.9 min left
+INFO 22550/66150 SAE condition generations, 0.84s each, ~610.0 min left
+INFO 22600/66150 SAE condition generations, 0.84s each, ~609.2 min left
+INFO 22650/66150 SAE condition generations, 0.84s each, ~609.1 min left
+INFO 22700/66150 SAE condition generations, 0.84s each, ~611.7 min left
+INFO 22750/66150 SAE condition generations, 0.85s each, ~614.3 min left
+INFO 22800/66150 SAE condition generations, 0.85s each, ~615.7 min left
+INFO 22850/66150 SAE condition generations, 0.85s each, ~614.6 min left
+INFO 22900/66150 SAE condition generations, 0.85s each, ~613.6 min left
+INFO 22950/66150 SAE condition generations, 0.85s each, ~612.5 min left
+INFO 23000/66150 SAE condition generations, 0.85s each, ~611.6 min left
+INFO 23050/66150 SAE condition generations, 0.85s each, ~610.6 min left
+INFO 23100/66150 SAE condition generations, 0.85s each, ~609.6 min left
+INFO 23150/66150 SAE condition generations, 0.85s each, ~608.6 min left
+INFO 23200/66150 SAE condition generations, 0.85s each, ~607.5 min left
+INFO 23250/66150 SAE condition generations, 0.85s each, ~608.0 min left
+INFO 23300/66150 SAE condition generations, 0.85s each, ~610.3 min left
+INFO 23350/66150 SAE condition generations, 0.86s each, ~612.5 min left
+INFO 23400/66150 SAE condition generations, 0.86s each, ~613.1 min left
+INFO 23450/66150 SAE condition generations, 0.86s each, ~612.3 min left
+INFO 23500/66150 SAE condition generations, 0.86s each, ~611.4 min left
+INFO 23550/66150 SAE condition generations, 0.86s each, ~610.3 min left
+INFO 23600/66150 SAE condition generations, 0.86s each, ~609.1 min left
+INFO 23650/66150 SAE condition generations, 0.86s each, ~607.9 min left
+INFO 23700/66150 SAE condition generations, 0.86s each, ~607.5 min left
+INFO 23750/66150 SAE condition generations, 0.86s each, ~607.5 min left
+INFO 23800/66150 SAE condition generations, 0.86s each, ~607.5 min left
+INFO 23850/66150 SAE condition generations, 0.86s each, ~607.0 min left
+INFO 23900/66150 SAE condition generations, 0.86s each, ~606.4 min left
+INFO 23950/66150 SAE condition generations, 0.86s each, ~605.9 min left
+INFO 24000/66150 SAE condition generations, 0.86s each, ~605.2 min left
+INFO 24050/66150 SAE condition generations, 0.86s each, ~604.3 min left
+INFO 24100/66150 SAE condition generations, 0.86s each, ~603.4 min left
+INFO 24150/66150 SAE condition generations, 0.86s each, ~602.3 min left
+INFO 24200/66150 SAE condition generations, 0.86s each, ~601.2 min left
+INFO 24250/66150 SAE condition generations, 0.86s each, ~600.0 min left
+INFO 24300/66150 SAE condition generations, 0.86s each, ~599.2 min left
+INFO 24350/66150 SAE condition generations, 0.86s each, ~598.4 min left
+INFO 24400/66150 SAE condition generations, 0.86s each, ~597.7 min left
+INFO 24450/66150 SAE condition generations, 0.86s each, ~596.6 min left
+INFO 24500/66150 SAE condition generations, 0.86s each, ~595.5 min left
+INFO 24550/66150 SAE condition generations, 0.86s each, ~594.4 min left
+INFO 24600/66150 SAE condition generations, 0.86s each, ~593.4 min left
+INFO 24650/66150 SAE condition generations, 0.86s each, ~592.4 min left
+INFO 24700/66150 SAE condition generations, 0.86s each, ~591.4 min left
+INFO 24750/66150 SAE condition generations, 0.86s each, ~590.3 min left
+INFO 24800/66150 SAE condition generations, 0.85s each, ~589.1 min left
+INFO 24850/66150 SAE condition generations, 0.85s each, ~588.0 min left
+INFO 24900/66150 SAE condition generations, 0.85s each, ~587.1 min left
+INFO 24950/66150 SAE condition generations, 0.85s each, ~586.2 min left
+INFO 25000/66150 SAE condition generations, 0.85s each, ~585.2 min left
+INFO 25050/66150 SAE condition generations, 0.85s each, ~584.1 min left
+INFO 25100/66150 SAE condition generations, 0.85s each, ~583.1 min left
+INFO 25150/66150 SAE condition generations, 0.85s each, ~582.0 min left
+INFO 25200/66150 SAE condition generations, 0.85s each, ~580.7 min left
+INFO 25250/66150 SAE condition generations, 0.85s each, ~579.5 min left
+INFO 25300/66150 SAE condition generations, 0.85s each, ~578.5 min left
+INFO 25350/66150 SAE condition generations, 0.85s each, ~577.8 min left
+INFO 25400/66150 SAE condition generations, 0.85s each, ~577.1 min left
+INFO 25450/66150 SAE condition generations, 0.85s each, ~576.5 min left
+INFO 25500/66150 SAE condition generations, 0.85s each, ~575.9 min left
+INFO 25550/66150 SAE condition generations, 0.85s each, ~575.2 min left
+INFO 25600/66150 SAE condition generations, 0.85s each, ~574.4 min left
+INFO 25650/66150 SAE condition generations, 0.85s each, ~573.5 min left
+INFO 25700/66150 SAE condition generations, 0.85s each, ~572.5 min left
+INFO 25750/66150 SAE condition generations, 0.85s each, ~571.9 min left
+INFO 25800/66150 SAE condition generations, 0.85s each, ~571.5 min left
+INFO 25850/66150 SAE condition generations, 0.85s each, ~571.0 min left
+INFO 25900/66150 SAE condition generations, 0.85s each, ~570.4 min left
+INFO 25950/66150 SAE condition generations, 0.85s each, ~569.5 min left
+INFO 26000/66150 SAE condition generations, 0.85s each, ~568.6 min left
+INFO 26050/66150 SAE condition generations, 0.85s each, ~567.6 min left
+INFO 26100/66150 SAE condition generations, 0.85s each, ~566.5 min left
+INFO 26150/66150 SAE condition generations, 0.85s each, ~565.3 min left
+INFO 26200/66150 SAE condition generations, 0.85s each, ~564.4 min left
+INFO 26250/66150 SAE condition generations, 0.85s each, ~563.4 min left
+INFO 26300/66150 SAE condition generations, 0.85s each, ~562.5 min left
+INFO 26350/66150 SAE condition generations, 0.85s each, ~561.9 min left
+INFO 26400/66150 SAE condition generations, 0.85s each, ~561.3 min left
+INFO 26450/66150 SAE condition generations, 0.85s each, ~560.7 min left
+INFO 26500/66150 SAE condition generations, 0.85s each, ~559.9 min left
+INFO 26550/66150 SAE condition generations, 0.85s each, ~558.9 min left
+INFO 26600/66150 SAE condition generations, 0.85s each, ~557.9 min left
+INFO 26650/66150 SAE condition generations, 0.85s each, ~557.0 min left
+INFO 26700/66150 SAE condition generations, 0.85s each, ~556.0 min left
+INFO 26750/66150 SAE condition generations, 0.85s each, ~555.0 min left
+INFO 26800/66150 SAE condition generations, 0.84s each, ~554.0 min left
+INFO 26850/66150 SAE condition generations, 0.84s each, ~552.9 min left
+INFO 26900/66150 SAE condition generations, 0.84s each, ~551.9 min left
+INFO 26950/66150 SAE condition generations, 0.84s each, ~551.1 min left
+INFO 27000/66150 SAE condition generations, 0.84s each, ~550.2 min left
+INFO 27050/66150 SAE condition generations, 0.84s each, ~549.4 min left
+INFO 27100/66150 SAE condition generations, 0.84s each, ~548.5 min left
+INFO 27150/66150 SAE condition generations, 0.84s each, ~547.5 min left
+INFO 27200/66150 SAE condition generations, 0.84s each, ~546.5 min left
+INFO 27250/66150 SAE condition generations, 0.84s each, ~546.0 min left
+INFO 27300/66150 SAE condition generations, 0.84s each, ~545.4 min left
+INFO 27350/66150 SAE condition generations, 0.84s each, ~544.7 min left
+INFO 27400/66150 SAE condition generations, 0.84s each, ~543.9 min left
+INFO 27450/66150 SAE condition generations, 0.84s each, ~543.0 min left
+INFO 27500/66150 SAE condition generations, 0.84s each, ~542.3 min left
+INFO 27550/66150 SAE condition generations, 0.84s each, ~541.7 min left
+INFO 27600/66150 SAE condition generations, 0.84s each, ~541.0 min left
+INFO 27650/66150 SAE condition generations, 0.84s each, ~540.2 min left
+INFO 27700/66150 SAE condition generations, 0.84s each, ~539.2 min left
+INFO 27750/66150 SAE condition generations, 0.84s each, ~538.3 min left
+INFO 27800/66150 SAE condition generations, 0.84s each, ~537.3 min left
+INFO 27850/66150 SAE condition generations, 0.84s each, ~536.3 min left
+INFO 27900/66150 SAE condition generations, 0.84s each, ~535.4 min left
+INFO 27950/66150 SAE condition generations, 0.84s each, ~534.6 min left
+INFO 28000/66150 SAE condition generations, 0.84s each, ~534.3 min left
+INFO 28050/66150 SAE condition generations, 0.84s each, ~534.0 min left
+INFO 28100/66150 SAE condition generations, 0.84s each, ~533.5 min left
+INFO 28150/66150 SAE condition generations, 0.84s each, ~532.6 min left
+INFO 28200/66150 SAE condition generations, 0.84s each, ~531.7 min left
+INFO 28250/66150 SAE condition generations, 0.84s each, ~531.0 min left
+INFO 28300/66150 SAE condition generations, 0.84s each, ~530.4 min left
+INFO 28350/66150 SAE condition generations, 0.84s each, ~529.8 min left
+INFO 28400/66150 SAE condition generations, 0.84s each, ~529.1 min left
+INFO 28450/66150 SAE condition generations, 0.84s each, ~528.4 min left
+INFO 28500/66150 SAE condition generations, 0.84s each, ~527.8 min left
+INFO 28550/66150 SAE condition generations, 0.84s each, ~526.8 min left
+INFO 28600/66150 SAE condition generations, 0.84s each, ~525.7 min left
+INFO 28650/66150 SAE condition generations, 0.84s each, ~524.7 min left
+INFO 28700/66150 SAE condition generations, 0.84s each, ~524.0 min left
+INFO 28750/66150 SAE condition generations, 0.84s each, ~523.5 min left
+INFO 28800/66150 SAE condition generations, 0.84s each, ~523.1 min left
+INFO 28850/66150 SAE condition generations, 0.84s each, ~522.2 min left
+INFO 28900/66150 SAE condition generations, 0.84s each, ~521.2 min left
+INFO 28950/66150 SAE condition generations, 0.84s each, ~520.1 min left
+INFO 29000/66150 SAE condition generations, 0.84s each, ~519.4 min left
+INFO 29050/66150 SAE condition generations, 0.84s each, ~518.7 min left
+INFO 29100/66150 SAE condition generations, 0.84s each, ~518.0 min left
+INFO 29150/66150 SAE condition generations, 0.84s each, ~517.3 min left
+INFO 29200/66150 SAE condition generations, 0.84s each, ~516.5 min left
+INFO 29250/66150 SAE condition generations, 0.84s each, ~515.7 min left
+INFO 29300/66150 SAE condition generations, 0.84s each, ~514.9 min left
+INFO 29350/66150 SAE condition generations, 0.84s each, ~514.0 min left
+INFO 29400/66150 SAE condition generations, 0.84s each, ~513.2 min left
+INFO 29450/66150 SAE condition generations, 0.84s each, ~512.5 min left
+INFO 29500/66150 SAE condition generations, 0.84s each, ~511.8 min left
+INFO 29550/66150 SAE condition generations, 0.84s each, ~511.1 min left
+INFO 29600/66150 SAE condition generations, 0.84s each, ~510.3 min left
+INFO 29650/66150 SAE condition generations, 0.84s each, ~509.4 min left
+INFO 29700/66150 SAE condition generations, 0.84s each, ~508.6 min left
+INFO 29750/66150 SAE condition generations, 0.84s each, ~508.3 min left
+INFO 29800/66150 SAE condition generations, 0.84s each, ~507.9 min left
+INFO 29850/66150 SAE condition generations, 0.84s each, ~507.5 min left
+INFO 29900/66150 SAE condition generations, 0.84s each, ~506.8 min left
+INFO 29950/66150 SAE condition generations, 0.84s each, ~506.1 min left
+INFO 30000/66150 SAE condition generations, 0.84s each, ~505.3 min left
+INFO 30050/66150 SAE condition generations, 0.84s each, ~504.3 min left
+INFO 30100/66150 SAE condition generations, 0.84s each, ~503.3 min left
+INFO 30150/66150 SAE condition generations, 0.84s each, ~502.2 min left
+INFO 30200/66150 SAE condition generations, 0.84s each, ~501.2 min left
+INFO 30250/66150 SAE condition generations, 0.84s each, ~500.2 min left
+INFO 30300/66150 SAE condition generations, 0.84s each, ~499.4 min left
+INFO 30350/66150 SAE condition generations, 0.84s each, ~498.8 min left
+INFO 30400/66150 SAE condition generations, 0.84s each, ~498.2 min left
+INFO 30450/66150 SAE condition generations, 0.84s each, ~497.6 min left
+INFO 30500/66150 SAE condition generations, 0.84s each, ~496.8 min left
+INFO 30550/66150 SAE condition generations, 0.84s each, ~496.0 min left
+INFO 30600/66150 SAE condition generations, 0.84s each, ~495.2 min left
+INFO 30650/66150 SAE condition generations, 0.84s each, ~494.4 min left
+INFO 30700/66150 SAE condition generations, 0.84s each, ~493.6 min left
+INFO 30750/66150 SAE condition generations, 0.84s each, ~492.8 min left
+INFO 30800/66150 SAE condition generations, 0.84s each, ~492.1 min left
+INFO 30850/66150 SAE condition generations, 0.84s each, ~491.3 min left
+INFO 30900/66150 SAE condition generations, 0.84s each, ~490.6 min left
+INFO 30950/66150 SAE condition generations, 0.84s each, ~489.9 min left
+INFO 31000/66150 SAE condition generations, 0.84s each, ~489.2 min left
+INFO 31050/66150 SAE condition generations, 0.84s each, ~488.7 min left
+INFO 31100/66150 SAE condition generations, 0.84s each, ~488.1 min left
+INFO 31150/66150 SAE condition generations, 0.84s each, ~487.6 min left
+INFO 31200/66150 SAE condition generations, 0.84s each, ~487.1 min left
+INFO 31250/66150 SAE condition generations, 0.84s each, ~486.7 min left
+INFO 31300/66150 SAE condition generations, 0.84s each, ~486.2 min left
+INFO 31350/66150 SAE condition generations, 0.84s each, ~485.6 min left
+INFO 31400/66150 SAE condition generations, 0.84s each, ~484.8 min left
+INFO 31450/66150 SAE condition generations, 0.84s each, ~484.1 min left
+INFO 31500/66150 SAE condition generations, 0.84s each, ~485.2 min left
+INFO 31550/66150 SAE condition generations, 0.84s each, ~486.7 min left
+INFO 31600/66150 SAE condition generations, 0.85s each, ~488.2 min left
+INFO 31650/66150 SAE condition generations, 0.85s each, ~487.8 min left
+INFO 31700/66150 SAE condition generations, 0.85s each, ~487.1 min left
+INFO 31750/66150 SAE condition generations, 0.85s each, ~486.4 min left
+INFO 31800/66150 SAE condition generations, 0.85s each, ~485.6 min left
+INFO 31850/66150 SAE condition generations, 0.85s each, ~484.7 min left
+INFO 31900/66150 SAE condition generations, 0.85s each, ~483.8 min left
+INFO 31950/66150 SAE condition generations, 0.85s each, ~483.1 min left
+INFO 32000/66150 SAE condition generations, 0.85s each, ~482.5 min left
+INFO 32050/66150 SAE condition generations, 0.85s each, ~481.8 min left
+INFO 32100/66150 SAE condition generations, 0.85s each, ~481.0 min left
+INFO 32150/66150 SAE condition generations, 0.85s each, ~480.2 min left
+INFO 32200/66150 SAE condition generations, 0.85s each, ~479.5 min left
+INFO 32250/66150 SAE condition generations, 0.85s each, ~479.4 min left
+INFO 32300/66150 SAE condition generations, 0.85s each, ~479.3 min left
+INFO 32350/66150 SAE condition generations, 0.85s each, ~479.1 min left
+INFO 32400/66150 SAE condition generations, 0.85s each, ~478.7 min left
+INFO 32450/66150 SAE condition generations, 0.85s each, ~478.1 min left
+INFO 32500/66150 SAE condition generations, 0.85s each, ~477.4 min left
+INFO 32550/66150 SAE condition generations, 0.85s each, ~476.6 min left
+INFO 32600/66150 SAE condition generations, 0.85s each, ~475.7 min left
+INFO 32650/66150 SAE condition generations, 0.85s each, ~474.9 min left
+INFO 32700/66150 SAE condition generations, 0.85s each, ~473.9 min left
+INFO 32750/66150 SAE condition generations, 0.85s each, ~473.0 min left
+INFO 32800/66150 SAE condition generations, 0.85s each, ~472.2 min left
+INFO 32850/66150 SAE condition generations, 0.85s each, ~471.5 min left
+INFO 32900/66150 SAE condition generations, 0.85s each, ~470.8 min left
+INFO 32950/66150 SAE condition generations, 0.85s each, ~470.1 min left
+INFO 33000/66150 SAE condition generations, 0.85s each, ~469.2 min left
+INFO 33050/66150 SAE condition generations, 0.85s each, ~468.3 min left
+INFO 33100/66150 SAE condition generations, 0.85s each, ~468.6 min left
+INFO 33150/66150 SAE condition generations, 0.85s each, ~469.9 min left
+INFO 33200/66150 SAE condition generations, 0.86s each, ~471.4 min left
+INFO 33250/66150 SAE condition generations, 0.86s each, ~471.7 min left
+INFO 33300/66150 SAE condition generations, 0.86s each, ~471.0 min left
+INFO 33350/66150 SAE condition generations, 0.86s each, ~470.3 min left
+INFO 33400/66150 SAE condition generations, 0.86s each, ~469.5 min left
+INFO 33450/66150 SAE condition generations, 0.86s each, ~468.6 min left
+INFO 33500/66150 SAE condition generations, 0.86s each, ~467.8 min left
+INFO 33550/66150 SAE condition generations, 0.86s each, ~466.9 min left
+INFO 33600/66150 SAE condition generations, 0.86s each, ~466.0 min left
+INFO 33650/66150 SAE condition generations, 0.86s each, ~465.1 min left
+INFO 33700/66150 SAE condition generations, 0.86s each, ~464.3 min left
+INFO 33750/66150 SAE condition generations, 0.86s each, ~463.6 min left
+INFO 33800/66150 SAE condition generations, 0.86s each, ~462.9 min left
+INFO 33850/66150 SAE condition generations, 0.86s each, ~462.1 min left
+INFO 33900/66150 SAE condition generations, 0.86s each, ~461.3 min left
+INFO 33950/66150 SAE condition generations, 0.86s each, ~460.4 min left
+INFO 34000/66150 SAE condition generations, 0.86s each, ~459.6 min left
+INFO 34050/66150 SAE condition generations, 0.86s each, ~458.7 min left
+INFO 34100/66150 SAE condition generations, 0.86s each, ~457.8 min left
+INFO 34150/66150 SAE condition generations, 0.86s each, ~457.1 min left
+INFO 34200/66150 SAE condition generations, 0.86s each, ~456.4 min left
+INFO 34250/66150 SAE condition generations, 0.86s each, ~455.7 min left
+INFO 34300/66150 SAE condition generations, 0.86s each, ~455.0 min left
+INFO 34350/66150 SAE condition generations, 0.86s each, ~454.1 min left
+INFO 34400/66150 SAE condition generations, 0.86s each, ~453.3 min left
+INFO 34450/66150 SAE condition generations, 0.86s each, ~452.7 min left
+INFO 34500/66150 SAE condition generations, 0.86s each, ~452.1 min left
+INFO 34550/66150 SAE condition generations, 0.86s each, ~451.5 min left
+INFO 34600/66150 SAE condition generations, 0.86s each, ~450.6 min left
+INFO 34650/66150 SAE condition generations, 0.86s each, ~449.7 min left
+INFO 34700/66150 SAE condition generations, 0.86s each, ~448.9 min left
+INFO 34750/66150 SAE condition generations, 0.86s each, ~448.3 min left
+INFO 34800/66150 SAE condition generations, 0.86s each, ~447.7 min left
+INFO 34850/66150 SAE condition generations, 0.86s each, ~447.1 min left
+INFO 34900/66150 SAE condition generations, 0.86s each, ~446.5 min left
+INFO 34950/66150 SAE condition generations, 0.86s each, ~445.8 min left
+INFO 35000/66150 SAE condition generations, 0.86s each, ~445.1 min left
+INFO 35050/66150 SAE condition generations, 0.86s each, ~444.4 min left
+INFO 35100/66150 SAE condition generations, 0.86s each, ~443.7 min left
+INFO 35150/66150 SAE condition generations, 0.86s each, ~443.0 min left
+INFO 35200/66150 SAE condition generations, 0.86s each, ~442.1 min left
+INFO 35250/66150 SAE condition generations, 0.86s each, ~441.3 min left
+INFO 35300/66150 SAE condition generations, 0.86s each, ~440.4 min left
+INFO 35350/66150 SAE condition generations, 0.86s each, ~439.7 min left
+INFO 35400/66150 SAE condition generations, 0.86s each, ~438.9 min left
+INFO 35450/66150 SAE condition generations, 0.86s each, ~438.1 min left
+INFO 35500/66150 SAE condition generations, 0.86s each, ~437.5 min left
+INFO 35550/66150 SAE condition generations, 0.86s each, ~436.8 min left
+INFO 35600/66150 SAE condition generations, 0.86s each, ~436.0 min left
+INFO 35650/66150 SAE condition generations, 0.86s each, ~435.1 min left
+INFO 35700/66150 SAE condition generations, 0.86s each, ~434.2 min left
+INFO 35750/66150 SAE condition generations, 0.86s each, ~433.4 min left
+INFO 35800/66150 SAE condition generations, 0.86s each, ~432.7 min left
+INFO 35850/66150 SAE condition generations, 0.86s each, ~432.0 min left
+INFO 35900/66150 SAE condition generations, 0.86s each, ~431.2 min left
+INFO 35950/66150 SAE condition generations, 0.86s each, ~430.4 min left
+INFO 36000/66150 SAE condition generations, 0.86s each, ~429.6 min left
+INFO 36050/66150 SAE condition generations, 0.85s each, ~428.8 min left
+INFO 36100/66150 SAE condition generations, 0.85s each, ~428.0 min left
+INFO 36150/66150 SAE condition generations, 0.85s each, ~427.2 min left
+INFO 36200/66150 SAE condition generations, 0.85s each, ~426.5 min left
+INFO 36250/66150 SAE condition generations, 0.85s each, ~425.8 min left
+INFO 36300/66150 SAE condition generations, 0.85s each, ~425.1 min left
+INFO 36350/66150 SAE condition generations, 0.85s each, ~424.5 min left
+INFO 36400/66150 SAE condition generations, 0.86s each, ~424.0 min left
+INFO 36450/66150 SAE condition generations, 0.86s each, ~423.4 min left
+INFO 36500/66150 SAE condition generations, 0.86s each, ~422.8 min left
+INFO 36550/66150 SAE condition generations, 0.86s each, ~422.2 min left
+INFO 36600/66150 SAE condition generations, 0.86s each, ~421.5 min left
+INFO 36650/66150 SAE condition generations, 0.86s each, ~420.9 min left
+INFO 36700/66150 SAE condition generations, 0.86s each, ~420.2 min left
+INFO 36750/66150 SAE condition generations, 0.86s each, ~419.5 min left
+INFO 36800/66150 SAE condition generations, 0.86s each, ~418.7 min left
+INFO 36850/66150 SAE condition generations, 0.86s each, ~418.0 min left
+INFO 36900/66150 SAE condition generations, 0.86s each, ~417.3 min left
+INFO 36950/66150 SAE condition generations, 0.86s each, ~416.7 min left
+INFO 37000/66150 SAE condition generations, 0.86s each, ~416.1 min left
+INFO 37050/66150 SAE condition generations, 0.86s each, ~415.4 min left
+INFO 37100/66150 SAE condition generations, 0.86s each, ~414.5 min left
+INFO 37150/66150 SAE condition generations, 0.86s each, ~413.5 min left
+INFO 37200/66150 SAE condition generations, 0.86s each, ~412.5 min left
+INFO 37250/66150 SAE condition generations, 0.85s each, ~411.6 min left
+INFO 37300/66150 SAE condition generations, 0.85s each, ~410.7 min left
+INFO 37350/66150 SAE condition generations, 0.85s each, ~409.8 min left
+INFO 37400/66150 SAE condition generations, 0.85s each, ~408.9 min left
+INFO 37450/66150 SAE condition generations, 0.85s each, ~408.1 min left
+INFO 37500/66150 SAE condition generations, 0.85s each, ~407.2 min left
+INFO 37550/66150 SAE condition generations, 0.85s each, ~406.3 min left
+INFO 37600/66150 SAE condition generations, 0.85s each, ~405.4 min left
+INFO 37650/66150 SAE condition generations, 0.85s each, ~404.5 min left
+INFO 37700/66150 SAE condition generations, 0.85s each, ~403.7 min left
+INFO 37750/66150 SAE condition generations, 0.85s each, ~402.9 min left
+INFO 37800/66150 SAE condition generations, 0.85s each, ~402.1 min left
+INFO 37850/66150 SAE condition generations, 0.85s each, ~401.5 min left
+INFO 37900/66150 SAE condition generations, 0.85s each, ~400.8 min left
+INFO 37950/66150 SAE condition generations, 0.85s each, ~400.1 min left
+INFO 38000/66150 SAE condition generations, 0.85s each, ~399.4 min left
+INFO 38050/66150 SAE condition generations, 0.85s each, ~398.6 min left
+INFO 38100/66150 SAE condition generations, 0.85s each, ~397.7 min left
+INFO 38150/66150 SAE condition generations, 0.85s each, ~396.8 min left
+INFO 38200/66150 SAE condition generations, 0.85s each, ~395.9 min left
+INFO 38250/66150 SAE condition generations, 0.85s each, ~395.1 min left
+INFO 38300/66150 SAE condition generations, 0.85s each, ~394.3 min left
+INFO 38350/66150 SAE condition generations, 0.85s each, ~393.5 min left
+INFO 38400/66150 SAE condition generations, 0.85s each, ~392.8 min left
+INFO 38450/66150 SAE condition generations, 0.85s each, ~392.2 min left
+INFO 38500/66150 SAE condition generations, 0.85s each, ~391.5 min left
+INFO 38550/66150 SAE condition generations, 0.85s each, ~390.8 min left
+INFO 38600/66150 SAE condition generations, 0.85s each, ~390.1 min left
+INFO 38650/66150 SAE condition generations, 0.85s each, ~389.4 min left
+INFO 38700/66150 SAE condition generations, 0.85s each, ~388.5 min left
+INFO 38750/66150 SAE condition generations, 0.85s each, ~387.6 min left
+INFO 38800/66150 SAE condition generations, 0.85s each, ~386.7 min left
+INFO 38850/66150 SAE condition generations, 0.85s each, ~386.1 min left
+INFO 38900/66150 SAE condition generations, 0.85s each, ~385.6 min left
+INFO 38950/66150 SAE condition generations, 0.85s each, ~385.0 min left
+INFO 39000/66150 SAE condition generations, 0.85s each, ~384.3 min left
+INFO 39050/66150 SAE condition generations, 0.85s each, ~383.7 min left
+INFO 39100/66150 SAE condition generations, 0.85s each, ~382.9 min left
+INFO 39150/66150 SAE condition generations, 0.85s each, ~382.1 min left
+INFO 39200/66150 SAE condition generations, 0.85s each, ~381.3 min left
+INFO 39250/66150 SAE condition generations, 0.85s each, ~380.5 min left
+INFO 39300/66150 SAE condition generations, 0.85s each, ~379.6 min left
+INFO 39350/66150 SAE condition generations, 0.85s each, ~378.8 min left
+INFO 39400/66150 SAE condition generations, 0.85s each, ~378.0 min left
+INFO 39450/66150 SAE condition generations, 0.85s each, ~377.2 min left
+INFO 39500/66150 SAE condition generations, 0.85s each, ~376.3 min left
+INFO 39550/66150 SAE condition generations, 0.85s each, ~375.5 min left
+INFO 39600/66150 SAE condition generations, 0.85s each, ~374.7 min left
+INFO 39650/66150 SAE condition generations, 0.85s each, ~374.0 min left
+INFO 39700/66150 SAE condition generations, 0.85s each, ~373.3 min left
+INFO 39750/66150 SAE condition generations, 0.85s each, ~372.7 min left
+INFO 39800/66150 SAE condition generations, 0.85s each, ~372.1 min left
+INFO 39850/66150 SAE condition generations, 0.85s each, ~371.5 min left
+INFO 39900/66150 SAE condition generations, 0.85s each, ~370.8 min left
+INFO 39950/66150 SAE condition generations, 0.85s each, ~370.2 min left
+INFO 40000/66150 SAE condition generations, 0.85s each, ~369.5 min left
+INFO 40050/66150 SAE condition generations, 0.85s each, ~368.7 min left
+INFO 40100/66150 SAE condition generations, 0.85s each, ~367.9 min left
+INFO 40150/66150 SAE condition generations, 0.85s each, ~367.2 min left
+INFO 40200/66150 SAE condition generations, 0.85s each, ~366.4 min left
+INFO 40250/66150 SAE condition generations, 0.85s each, ~365.6 min left
+INFO 40300/66150 SAE condition generations, 0.85s each, ~364.9 min left
+INFO 40350/66150 SAE condition generations, 0.85s each, ~364.1 min left
+INFO 40400/66150 SAE condition generations, 0.85s each, ~363.4 min left
+INFO 40450/66150 SAE condition generations, 0.85s each, ~362.6 min left
+INFO 40500/66150 SAE condition generations, 0.85s each, ~361.8 min left
+INFO 40550/66150 SAE condition generations, 0.85s each, ~360.9 min left
+INFO 40600/66150 SAE condition generations, 0.85s each, ~360.3 min left
+INFO 40650/66150 SAE condition generations, 0.85s each, ~359.7 min left
+INFO 40700/66150 SAE condition generations, 0.85s each, ~359.1 min left
+INFO 40750/66150 SAE condition generations, 0.85s each, ~358.5 min left
+INFO 40800/66150 SAE condition generations, 0.85s each, ~357.8 min left
+INFO 40850/66150 SAE condition generations, 0.85s each, ~357.0 min left
+INFO 40900/66150 SAE condition generations, 0.85s each, ~356.3 min left
+INFO 40950/66150 SAE condition generations, 0.85s each, ~355.4 min left
+INFO 41000/66150 SAE condition generations, 0.85s each, ~354.6 min left
+INFO 41050/66150 SAE condition generations, 0.85s each, ~353.9 min left
+INFO 41100/66150 SAE condition generations, 0.85s each, ~353.3 min left
+INFO 41150/66150 SAE condition generations, 0.85s each, ~352.7 min left
+INFO 41200/66150 SAE condition generations, 0.85s each, ~352.0 min left
+INFO 41250/66150 SAE condition generations, 0.85s each, ~351.2 min left
+INFO 41300/66150 SAE condition generations, 0.85s each, ~350.5 min left
+INFO 41350/66150 SAE condition generations, 0.85s each, ~349.7 min left
+INFO 41400/66150 SAE condition generations, 0.85s each, ~348.8 min left
+INFO 41450/66150 SAE condition generations, 0.85s each, ~348.0 min left
+INFO 41500/66150 SAE condition generations, 0.85s each, ~347.3 min left
+INFO 41550/66150 SAE condition generations, 0.85s each, ~346.5 min left
+INFO 41600/66150 SAE condition generations, 0.85s each, ~345.8 min left
+INFO 41650/66150 SAE condition generations, 0.84s each, ~345.0 min left
+INFO 41700/66150 SAE condition generations, 0.84s each, ~344.2 min left
+INFO 41750/66150 SAE condition generations, 0.84s each, ~343.5 min left
+INFO 41800/66150 SAE condition generations, 0.84s each, ~342.7 min left
+INFO 41850/66150 SAE condition generations, 0.84s each, ~342.0 min left
+INFO 41900/66150 SAE condition generations, 0.84s each, ~341.4 min left
+INFO 41950/66150 SAE condition generations, 0.85s each, ~341.6 min left
+INFO 42000/66150 SAE condition generations, 0.85s each, ~341.9 min left
+INFO 42050/66150 SAE condition generations, 0.85s each, ~342.0 min left
+INFO 42100/66150 SAE condition generations, 0.85s each, ~341.2 min left
+INFO 42150/66150 SAE condition generations, 0.85s each, ~340.3 min left
+INFO 42200/66150 SAE condition generations, 0.85s each, ~339.5 min left
+INFO 42250/66150 SAE condition generations, 0.85s each, ~338.7 min left
+INFO 42300/66150 SAE condition generations, 0.85s each, ~337.8 min left
+INFO 42350/66150 SAE condition generations, 0.85s each, ~337.1 min left
+INFO 42400/66150 SAE condition generations, 0.85s each, ~336.4 min left
+INFO 42450/66150 SAE condition generations, 0.85s each, ~335.8 min left
+INFO 42500/66150 SAE condition generations, 0.85s each, ~335.1 min left
+INFO 42550/66150 SAE condition generations, 0.85s each, ~334.3 min left
+INFO 42600/66150 SAE condition generations, 0.85s each, ~333.6 min left
+INFO 42650/66150 SAE condition generations, 0.85s each, ~332.9 min left
+INFO 42700/66150 SAE condition generations, 0.85s each, ~332.5 min left
+INFO 42750/66150 SAE condition generations, 0.85s each, ~332.0 min left
+INFO 42800/66150 SAE condition generations, 0.85s each, ~331.4 min left
+INFO 42850/66150 SAE condition generations, 0.85s each, ~330.7 min left
+INFO 42900/66150 SAE condition generations, 0.85s each, ~329.9 min left
+INFO 42950/66150 SAE condition generations, 0.85s each, ~329.2 min left
+INFO 43000/66150 SAE condition generations, 0.85s each, ~328.5 min left
+INFO 43050/66150 SAE condition generations, 0.85s each, ~327.7 min left
+INFO 43100/66150 SAE condition generations, 0.85s each, ~327.0 min left
+INFO 43150/66150 SAE condition generations, 0.85s each, ~326.1 min left
+INFO 43200/66150 SAE condition generations, 0.85s each, ~325.3 min left
+INFO 43250/66150 SAE condition generations, 0.85s each, ~324.6 min left
+INFO 43300/66150 SAE condition generations, 0.85s each, ~323.8 min left
+INFO 43350/66150 SAE condition generations, 0.85s each, ~323.0 min left
+INFO 43400/66150 SAE condition generations, 0.85s each, ~322.2 min left
+INFO 43450/66150 SAE condition generations, 0.85s each, ~321.4 min left
+INFO 43500/66150 SAE condition generations, 0.85s each, ~320.6 min left
+INFO 43550/66150 SAE condition generations, 0.85s each, ~319.8 min left
+INFO 43600/66150 SAE condition generations, 0.85s each, ~319.1 min left
+INFO 43650/66150 SAE condition generations, 0.85s each, ~318.3 min left
+INFO 43700/66150 SAE condition generations, 0.85s each, ~317.7 min left
+INFO 43750/66150 SAE condition generations, 0.85s each, ~317.0 min left
+INFO 43800/66150 SAE condition generations, 0.85s each, ~316.4 min left
+INFO 43850/66150 SAE condition generations, 0.85s each, ~315.5 min left
+INFO 43900/66150 SAE condition generations, 0.85s each, ~314.7 min left
+INFO 43950/66150 SAE condition generations, 0.85s each, ~313.8 min left
+INFO 44000/66150 SAE condition generations, 0.85s each, ~313.0 min left
+INFO 44050/66150 SAE condition generations, 0.85s each, ~312.2 min left
+INFO 44100/66150 SAE condition generations, 0.85s each, ~311.4 min left
+INFO 44150/66150 SAE condition generations, 0.85s each, ~310.6 min left
+INFO 44200/66150 SAE condition generations, 0.85s each, ~309.8 min left
+INFO 44250/66150 SAE condition generations, 0.85s each, ~309.0 min left
+INFO 44300/66150 SAE condition generations, 0.85s each, ~308.4 min left
+INFO 44350/66150 SAE condition generations, 0.85s each, ~307.8 min left
+INFO 44400/66150 SAE condition generations, 0.85s each, ~307.3 min left
+INFO 44450/66150 SAE condition generations, 0.85s each, ~306.6 min left
+INFO 44500/66150 SAE condition generations, 0.85s each, ~305.9 min left
+INFO 44550/66150 SAE condition generations, 0.85s each, ~305.2 min left
+INFO 44600/66150 SAE condition generations, 0.85s each, ~304.7 min left
+INFO 44650/66150 SAE condition generations, 0.85s each, ~304.1 min left
+INFO 44700/66150 SAE condition generations, 0.85s each, ~303.6 min left
+INFO 44750/66150 SAE condition generations, 0.85s each, ~302.9 min left
+INFO 44800/66150 SAE condition generations, 0.85s each, ~302.2 min left
+INFO 44850/66150 SAE condition generations, 0.85s each, ~301.5 min left
+INFO 44900/66150 SAE condition generations, 0.85s each, ~300.7 min left
+INFO 44950/66150 SAE condition generations, 0.85s each, ~299.9 min left
+INFO 45000/66150 SAE condition generations, 0.85s each, ~299.1 min left
+INFO 45050/66150 SAE condition generations, 0.85s each, ~298.3 min left
+INFO 45100/66150 SAE condition generations, 0.85s each, ~297.6 min left
+INFO 45150/66150 SAE condition generations, 0.85s each, ~296.8 min left
+INFO 45200/66150 SAE condition generations, 0.85s each, ~296.1 min left
+INFO 45250/66150 SAE condition generations, 0.85s each, ~295.3 min left
+INFO 45300/66150 SAE condition generations, 0.85s each, ~294.7 min left
+INFO 45350/66150 SAE condition generations, 0.85s each, ~294.3 min left
+INFO 45400/66150 SAE condition generations, 0.85s each, ~293.8 min left
+INFO 45450/66150 SAE condition generations, 0.85s each, ~293.2 min left
+INFO 45500/66150 SAE condition generations, 0.85s each, ~292.4 min left
+INFO 45550/66150 SAE condition generations, 0.85s each, ~291.6 min left
+INFO 45600/66150 SAE condition generations, 0.85s each, ~291.0 min left
+INFO 45650/66150 SAE condition generations, 0.85s each, ~290.5 min left
+INFO 45700/66150 SAE condition generations, 0.85s each, ~289.9 min left
+INFO 45750/66150 SAE condition generations, 0.85s each, ~289.4 min left
+INFO 45800/66150 SAE condition generations, 0.85s each, ~288.8 min left
+INFO 45850/66150 SAE condition generations, 0.85s each, ~288.2 min left
+INFO 45900/66150 SAE condition generations, 0.85s each, ~287.5 min left
+INFO 45950/66150 SAE condition generations, 0.85s each, ~286.8 min left
+INFO 46000/66150 SAE condition generations, 0.85s each, ~286.0 min left
+INFO 46050/66150 SAE condition generations, 0.85s each, ~285.3 min left
+INFO 46100/66150 SAE condition generations, 0.85s each, ~284.6 min left
+INFO 46150/66150 SAE condition generations, 0.85s each, ~283.9 min left
+INFO 46200/66150 SAE condition generations, 0.85s each, ~283.5 min left
+INFO 46250/66150 SAE condition generations, 0.85s each, ~283.3 min left
+INFO 46300/66150 SAE condition generations, 0.86s each, ~283.0 min left
+INFO 46350/66150 SAE condition generations, 0.86s each, ~282.3 min left
+INFO 46400/66150 SAE condition generations, 0.86s each, ~281.5 min left
+INFO 46450/66150 SAE condition generations, 0.85s each, ~280.6 min left
+INFO 46500/66150 SAE condition generations, 0.85s each, ~279.8 min left
+INFO 46550/66150 SAE condition generations, 0.85s each, ~279.0 min left
+INFO 46600/66150 SAE condition generations, 0.85s each, ~278.2 min left
+INFO 46650/66150 SAE condition generations, 0.85s each, ~277.5 min left
+INFO 46700/66150 SAE condition generations, 0.85s each, ~276.6 min left
+INFO 46750/66150 SAE condition generations, 0.85s each, ~275.8 min left
+INFO 46800/66150 SAE condition generations, 0.85s each, ~275.2 min left
+INFO 46850/66150 SAE condition generations, 0.85s each, ~274.4 min left
+INFO 46900/66150 SAE condition generations, 0.85s each, ~273.6 min left
+INFO 46950/66150 SAE condition generations, 0.85s each, ~272.9 min left
+INFO 47000/66150 SAE condition generations, 0.85s each, ~272.2 min left
+INFO 47050/66150 SAE condition generations, 0.85s each, ~271.4 min left
+INFO 47100/66150 SAE condition generations, 0.85s each, ~270.6 min left
+INFO 47150/66150 SAE condition generations, 0.85s each, ~269.8 min left
+INFO 47200/66150 SAE condition generations, 0.85s each, ~269.0 min left
+INFO 47250/66150 SAE condition generations, 0.85s each, ~268.3 min left
+INFO 47300/66150 SAE condition generations, 0.85s each, ~267.6 min left
+INFO 47350/66150 SAE condition generations, 0.85s each, ~266.8 min left
+INFO 47400/66150 SAE condition generations, 0.85s each, ~266.0 min left
+INFO 47450/66150 SAE condition generations, 0.85s each, ~265.2 min left
+INFO 47500/66150 SAE condition generations, 0.85s each, ~264.4 min left
+INFO 47550/66150 SAE condition generations, 0.85s each, ~263.7 min left
+INFO 47600/66150 SAE condition generations, 0.85s each, ~262.9 min left
+INFO 47650/66150 SAE condition generations, 0.85s each, ~262.1 min left
+INFO 47700/66150 SAE condition generations, 0.85s each, ~261.2 min left
+INFO 47750/66150 SAE condition generations, 0.85s each, ~260.4 min left
+INFO 47800/66150 SAE condition generations, 0.85s each, ~259.7 min left
+INFO 47850/66150 SAE condition generations, 0.85s each, ~259.1 min left
+INFO 47900/66150 SAE condition generations, 0.85s each, ~258.5 min left
+INFO 47950/66150 SAE condition generations, 0.85s each, ~257.9 min left
+INFO 48000/66150 SAE condition generations, 0.85s each, ~257.1 min left
+INFO 48050/66150 SAE condition generations, 0.85s each, ~256.4 min left
+INFO 48100/66150 SAE condition generations, 0.85s each, ~255.7 min left
+INFO 48150/66150 SAE condition generations, 0.85s each, ~254.9 min left
+INFO 48200/66150 SAE condition generations, 0.85s each, ~254.2 min left
+INFO 48250/66150 SAE condition generations, 0.85s each, ~253.4 min left
+INFO 48300/66150 SAE condition generations, 0.85s each, ~252.6 min left
+INFO 48350/66150 SAE condition generations, 0.85s each, ~251.8 min left
+INFO 48400/66150 SAE condition generations, 0.85s each, ~251.1 min left
+INFO 48450/66150 SAE condition generations, 0.85s each, ~250.3 min left
+INFO 48500/66150 SAE condition generations, 0.85s each, ~249.6 min left
+INFO 48550/66150 SAE condition generations, 0.85s each, ~248.8 min left
+INFO 48600/66150 SAE condition generations, 0.85s each, ~248.1 min left
+INFO 48650/66150 SAE condition generations, 0.85s each, ~247.3 min left
+INFO 48700/66150 SAE condition generations, 0.85s each, ~246.5 min left
+INFO 48750/66150 SAE condition generations, 0.85s each, ~245.7 min left
+INFO 48800/66150 SAE condition generations, 0.85s each, ~244.9 min left
+INFO 48850/66150 SAE condition generations, 0.85s each, ~244.2 min left
+INFO 48900/66150 SAE condition generations, 0.85s each, ~243.4 min left
+INFO 48950/66150 SAE condition generations, 0.85s each, ~242.7 min left
+INFO 49000/66150 SAE condition generations, 0.85s each, ~242.0 min left
+INFO 49050/66150 SAE condition generations, 0.85s each, ~241.3 min left
+INFO 49100/66150 SAE condition generations, 0.85s each, ~240.6 min left
+INFO 49150/66150 SAE condition generations, 0.85s each, ~240.0 min left
+INFO 49200/66150 SAE condition generations, 0.85s each, ~239.5 min left
+INFO 49250/66150 SAE condition generations, 0.85s each, ~238.9 min left
+INFO 49300/66150 SAE condition generations, 0.85s each, ~238.1 min left
+INFO 49350/66150 SAE condition generations, 0.85s each, ~237.4 min left
+INFO 49400/66150 SAE condition generations, 0.85s each, ~236.7 min left
+INFO 49450/66150 SAE condition generations, 0.85s each, ~235.9 min left
+INFO 49500/66150 SAE condition generations, 0.85s each, ~235.2 min left
+INFO 49550/66150 SAE condition generations, 0.85s each, ~234.5 min left
+INFO 49600/66150 SAE condition generations, 0.85s each, ~233.7 min left
+INFO 49650/66150 SAE condition generations, 0.85s each, ~232.9 min left
+INFO 49700/66150 SAE condition generations, 0.85s each, ~232.1 min left
+INFO 49750/66150 SAE condition generations, 0.85s each, ~231.4 min left
+INFO 49800/66150 SAE condition generations, 0.85s each, ~230.7 min left
+INFO 49850/66150 SAE condition generations, 0.85s each, ~229.9 min left
+INFO 49900/66150 SAE condition generations, 0.85s each, ~229.2 min left
+INFO 49950/66150 SAE condition generations, 0.85s each, ~228.4 min left
+INFO 50000/66150 SAE condition generations, 0.85s each, ~227.8 min left
+INFO 50050/66150 SAE condition generations, 0.85s each, ~227.2 min left
+INFO 50100/66150 SAE condition generations, 0.85s each, ~226.7 min left
+INFO 50150/66150 SAE condition generations, 0.85s each, ~226.0 min left
+INFO 50200/66150 SAE condition generations, 0.85s each, ~225.3 min left
+INFO 50250/66150 SAE condition generations, 0.85s each, ~224.6 min left
+INFO 50300/66150 SAE condition generations, 0.85s each, ~223.9 min left
+INFO 50350/66150 SAE condition generations, 0.85s each, ~223.2 min left
+INFO 50400/66150 SAE condition generations, 0.85s each, ~222.6 min left
+INFO 50450/66150 SAE condition generations, 0.85s each, ~221.8 min left
+INFO 50500/66150 SAE condition generations, 0.85s each, ~221.1 min left
+INFO 50550/66150 SAE condition generations, 0.85s each, ~220.3 min left
+INFO 50600/66150 SAE condition generations, 0.85s each, ~219.5 min left
+INFO 50650/66150 SAE condition generations, 0.85s each, ~218.7 min left
+INFO 50700/66150 SAE condition generations, 0.85s each, ~217.9 min left
+INFO 50750/66150 SAE condition generations, 0.85s each, ~217.2 min left
+INFO 50800/66150 SAE condition generations, 0.85s each, ~216.4 min left
+INFO 50850/66150 SAE condition generations, 0.85s each, ~215.7 min left
+INFO 50900/66150 SAE condition generations, 0.85s each, ~214.9 min left
+INFO 50950/66150 SAE condition generations, 0.85s each, ~214.2 min left
+INFO 51000/66150 SAE condition generations, 0.85s each, ~213.5 min left
+INFO 51050/66150 SAE condition generations, 0.85s each, ~212.8 min left
+INFO 51100/66150 SAE condition generations, 0.85s each, ~212.2 min left
+INFO 51150/66150 SAE condition generations, 0.85s each, ~211.5 min left
+INFO 51200/66150 SAE condition generations, 0.85s each, ~210.8 min left
+INFO 51250/66150 SAE condition generations, 0.85s each, ~210.1 min left
+INFO 51300/66150 SAE condition generations, 0.85s each, ~209.4 min left
+INFO 51350/66150 SAE condition generations, 0.85s each, ~208.6 min left
+INFO 51400/66150 SAE condition generations, 0.85s each, ~207.8 min left
+INFO 51450/66150 SAE condition generations, 0.85s each, ~207.1 min left
+INFO 51500/66150 SAE condition generations, 0.85s each, ~206.3 min left
+INFO 51550/66150 SAE condition generations, 0.84s each, ~205.6 min left
+INFO 51600/66150 SAE condition generations, 0.84s each, ~204.8 min left
+INFO 51650/66150 SAE condition generations, 0.84s each, ~204.2 min left
+INFO 51700/66150 SAE condition generations, 0.84s each, ~203.5 min left
+INFO 51750/66150 SAE condition generations, 0.85s each, ~202.8 min left
+INFO 51800/66150 SAE condition generations, 0.85s each, ~202.4 min left
+INFO 51850/66150 SAE condition generations, 0.85s each, ~201.9 min left
+INFO 51900/66150 SAE condition generations, 0.85s each, ~201.4 min left
+INFO 51950/66150 SAE condition generations, 0.85s each, ~200.6 min left
+INFO 52000/66150 SAE condition generations, 0.85s each, ~199.8 min left
+INFO 52050/66150 SAE condition generations, 0.85s each, ~199.1 min left
+INFO 52100/66150 SAE condition generations, 0.85s each, ~198.4 min left
+INFO 52150/66150 SAE condition generations, 0.85s each, ~197.7 min left
+INFO 52200/66150 SAE condition generations, 0.85s each, ~197.0 min left
+INFO 52250/66150 SAE condition generations, 0.85s each, ~196.3 min left
+INFO 52300/66150 SAE condition generations, 0.85s each, ~195.5 min left
+INFO 52350/66150 SAE condition generations, 0.85s each, ~194.8 min left
+INFO 52400/66150 SAE condition generations, 0.85s each, ~194.1 min left
+INFO 52450/66150 SAE condition generations, 0.85s each, ~193.3 min left
+INFO 52500/66150 SAE condition generations, 0.85s each, ~192.6 min left
+INFO 52550/66150 SAE condition generations, 0.85s each, ~191.8 min left
+INFO 52600/66150 SAE condition generations, 0.85s each, ~191.0 min left
+INFO 52650/66150 SAE condition generations, 0.85s each, ~190.3 min left
+INFO 52700/66150 SAE condition generations, 0.85s each, ~189.5 min left
+INFO 52750/66150 SAE condition generations, 0.85s each, ~188.8 min left
+INFO 52800/66150 SAE condition generations, 0.85s each, ~188.1 min left
+INFO 52850/66150 SAE condition generations, 0.85s each, ~187.4 min left
+INFO 52900/66150 SAE condition generations, 0.85s each, ~186.7 min left
+INFO 52950/66150 SAE condition generations, 0.85s each, ~186.0 min left
+INFO 53000/66150 SAE condition generations, 0.85s each, ~185.4 min left
+INFO 53050/66150 SAE condition generations, 0.85s each, ~184.8 min left
+INFO 53100/66150 SAE condition generations, 0.85s each, ~184.1 min left
+INFO 53150/66150 SAE condition generations, 0.85s each, ~183.4 min left
+INFO 53200/66150 SAE condition generations, 0.85s each, ~182.6 min left
+INFO 53250/66150 SAE condition generations, 0.85s each, ~182.0 min left
+INFO 53300/66150 SAE condition generations, 0.85s each, ~181.4 min left
+INFO 53350/66150 SAE condition generations, 0.85s each, ~180.8 min left
+INFO 53400/66150 SAE condition generations, 0.85s each, ~180.1 min left
+INFO 53450/66150 SAE condition generations, 0.85s each, ~179.4 min left
+INFO 53500/66150 SAE condition generations, 0.85s each, ~178.6 min left
+INFO 53550/66150 SAE condition generations, 0.85s each, ~177.9 min left
+INFO 53600/66150 SAE condition generations, 0.85s each, ~177.1 min left
+INFO 53650/66150 SAE condition generations, 0.85s each, ~176.4 min left
+INFO 53700/66150 SAE condition generations, 0.85s each, ~175.7 min left
+INFO 53750/66150 SAE condition generations, 0.85s each, ~174.9 min left
+INFO 53800/66150 SAE condition generations, 0.85s each, ~174.2 min left
+INFO 53850/66150 SAE condition generations, 0.85s each, ~173.5 min left
+INFO 53900/66150 SAE condition generations, 0.85s each, ~172.7 min left
+INFO 53950/66150 SAE condition generations, 0.85s each, ~172.0 min left
+INFO 54000/66150 SAE condition generations, 0.85s each, ~171.3 min left
+INFO 54050/66150 SAE condition generations, 0.85s each, ~170.5 min left
+INFO 54100/66150 SAE condition generations, 0.84s each, ~169.7 min left
+INFO 54150/66150 SAE condition generations, 0.84s each, ~169.0 min left
+INFO 54200/66150 SAE condition generations, 0.84s each, ~168.2 min left
+INFO 54250/66150 SAE condition generations, 0.84s each, ~167.5 min left
+INFO 54300/66150 SAE condition generations, 0.84s each, ~166.7 min left
+INFO 54350/66150 SAE condition generations, 0.84s each, ~166.0 min left
+INFO 54400/66150 SAE condition generations, 0.84s each, ~165.2 min left
+INFO 54450/66150 SAE condition generations, 0.84s each, ~164.5 min left
+INFO 54500/66150 SAE condition generations, 0.84s each, ~163.7 min left
+INFO 54550/66150 SAE condition generations, 0.84s each, ~162.9 min left
+INFO 54600/66150 SAE condition generations, 0.84s each, ~162.2 min left
+INFO 54650/66150 SAE condition generations, 0.84s each, ~161.4 min left
+INFO 54700/66150 SAE condition generations, 0.84s each, ~160.6 min left
+INFO 54750/66150 SAE condition generations, 0.84s each, ~159.9 min left
+INFO 54800/66150 SAE condition generations, 0.84s each, ~159.2 min left
+INFO 54850/66150 SAE condition generations, 0.84s each, ~158.4 min left
+INFO 54900/66150 SAE condition generations, 0.84s each, ~157.7 min left
+INFO 54950/66150 SAE condition generations, 0.84s each, ~157.0 min left
+INFO 55000/66150 SAE condition generations, 0.84s each, ~156.4 min left
+INFO 55050/66150 SAE condition generations, 0.84s each, ~155.9 min left
+INFO 55100/66150 SAE condition generations, 0.84s each, ~155.4 min left
+INFO 55150/66150 SAE condition generations, 0.84s each, ~154.8 min left
+INFO 55200/66150 SAE condition generations, 0.84s each, ~154.1 min left
+INFO 55250/66150 SAE condition generations, 0.84s each, ~153.3 min left
+INFO 55300/66150 SAE condition generations, 0.84s each, ~152.5 min left
+INFO 55350/66150 SAE condition generations, 0.84s each, ~151.8 min left
+INFO 55400/66150 SAE condition generations, 0.84s each, ~151.0 min left
+INFO 55450/66150 SAE condition generations, 0.84s each, ~150.3 min left
+INFO 55500/66150 SAE condition generations, 0.84s each, ~149.5 min left
+INFO 55550/66150 SAE condition generations, 0.84s each, ~148.8 min left
+INFO 55600/66150 SAE condition generations, 0.84s each, ~148.3 min left
+INFO 55650/66150 SAE condition generations, 0.85s each, ~148.0 min left
+INFO 55700/66150 SAE condition generations, 0.85s each, ~147.6 min left
+INFO 55750/66150 SAE condition generations, 0.85s each, ~147.0 min left
+INFO 55800/66150 SAE condition generations, 0.85s each, ~146.3 min left
+INFO 55850/66150 SAE condition generations, 0.85s each, ~145.6 min left
+INFO 55900/66150 SAE condition generations, 0.85s each, ~144.9 min left
+INFO 55950/66150 SAE condition generations, 0.85s each, ~144.1 min left
+INFO 56000/66150 SAE condition generations, 0.85s each, ~143.4 min left
+INFO 56050/66150 SAE condition generations, 0.85s each, ~142.8 min left
+INFO 56100/66150 SAE condition generations, 0.85s each, ~142.1 min left
+INFO 56150/66150 SAE condition generations, 0.85s each, ~141.5 min left
+INFO 56200/66150 SAE condition generations, 0.85s each, ~140.8 min left
+INFO 56250/66150 SAE condition generations, 0.85s each, ~140.0 min left
+INFO 56300/66150 SAE condition generations, 0.85s each, ~139.3 min left
+INFO 56350/66150 SAE condition generations, 0.85s each, ~138.6 min left
+INFO 56400/66150 SAE condition generations, 0.85s each, ~137.9 min left
+INFO 56450/66150 SAE condition generations, 0.85s each, ~137.1 min left
+INFO 56500/66150 SAE condition generations, 0.85s each, ~136.4 min left
+INFO 56550/66150 SAE condition generations, 0.85s each, ~135.6 min left
+INFO 56600/66150 SAE condition generations, 0.85s each, ~134.9 min left
+INFO 56650/66150 SAE condition generations, 0.85s each, ~134.3 min left
+INFO 56700/66150 SAE condition generations, 0.85s each, ~133.8 min left
+INFO 56750/66150 SAE condition generations, 0.85s each, ~133.2 min left
+INFO 56800/66150 SAE condition generations, 0.85s each, ~132.4 min left
+INFO 56850/66150 SAE condition generations, 0.85s each, ~131.7 min left
+INFO 56900/66150 SAE condition generations, 0.85s each, ~130.9 min left
+INFO 56950/66150 SAE condition generations, 0.85s each, ~130.3 min left
+INFO 57000/66150 SAE condition generations, 0.85s each, ~129.6 min left
+INFO 57050/66150 SAE condition generations, 0.85s each, ~128.9 min left
+INFO 57100/66150 SAE condition generations, 0.85s each, ~128.2 min left
+INFO 57150/66150 SAE condition generations, 0.85s each, ~127.5 min left
+INFO 57200/66150 SAE condition generations, 0.85s each, ~126.7 min left
+INFO 57250/66150 SAE condition generations, 0.85s each, ~126.0 min left
+INFO 57300/66150 SAE condition generations, 0.85s each, ~125.3 min left
+INFO 57350/66150 SAE condition generations, 0.85s each, ~124.6 min left
+INFO 57400/66150 SAE condition generations, 0.85s each, ~123.9 min left
+INFO 57450/66150 SAE condition generations, 0.85s each, ~123.1 min left
+INFO 57500/66150 SAE condition generations, 0.85s each, ~122.4 min left
+INFO 57550/66150 SAE condition generations, 0.85s each, ~121.7 min left
+INFO 57600/66150 SAE condition generations, 0.85s each, ~120.9 min left
+INFO 57650/66150 SAE condition generations, 0.85s each, ~120.2 min left
+INFO 57700/66150 SAE condition generations, 0.85s each, ~119.5 min left
+INFO 57750/66150 SAE condition generations, 0.85s each, ~118.8 min left
+INFO 57800/66150 SAE condition generations, 0.85s each, ~118.1 min left
+INFO 57850/66150 SAE condition generations, 0.85s each, ~117.4 min left
+INFO 57900/66150 SAE condition generations, 0.85s each, ~116.7 min left
+INFO 57950/66150 SAE condition generations, 0.85s each, ~116.1 min left
+INFO 58000/66150 SAE condition generations, 0.85s each, ~115.7 min left
+INFO 58050/66150 SAE condition generations, 0.85s each, ~115.3 min left
+INFO 58100/66150 SAE condition generations, 0.85s each, ~114.6 min left
+INFO 58150/66150 SAE condition generations, 0.85s each, ~113.9 min left
+INFO 58200/66150 SAE condition generations, 0.85s each, ~113.2 min left
+INFO 58250/66150 SAE condition generations, 0.85s each, ~112.5 min left
+INFO 58300/66150 SAE condition generations, 0.85s each, ~111.8 min left
+INFO 58350/66150 SAE condition generations, 0.85s each, ~111.0 min left
+INFO 58400/66150 SAE condition generations, 0.85s each, ~110.3 min left
+INFO 58450/66150 SAE condition generations, 0.85s each, ~109.6 min left
+INFO 58500/66150 SAE condition generations, 0.85s each, ~108.8 min left
+INFO 58550/66150 SAE condition generations, 0.85s each, ~108.1 min left
+INFO 58600/66150 SAE condition generations, 0.85s each, ~107.3 min left
+INFO 58650/66150 SAE condition generations, 0.85s each, ~106.6 min left
+INFO 58700/66150 SAE condition generations, 0.85s each, ~105.9 min left
+INFO 58750/66150 SAE condition generations, 0.85s each, ~105.1 min left
+INFO 58800/66150 SAE condition generations, 0.85s each, ~104.4 min left
+INFO 58850/66150 SAE condition generations, 0.85s each, ~103.7 min left
+INFO 58900/66150 SAE condition generations, 0.85s each, ~103.0 min left
+INFO 58950/66150 SAE condition generations, 0.85s each, ~102.2 min left
+INFO 59000/66150 SAE condition generations, 0.85s each, ~101.5 min left
+INFO 59050/66150 SAE condition generations, 0.85s each, ~100.8 min left
+INFO 59100/66150 SAE condition generations, 0.85s each, ~100.0 min left
+INFO 59150/66150 SAE condition generations, 0.85s each, ~99.3 min left
+INFO 59200/66150 SAE condition generations, 0.85s each, ~98.5 min left
+INFO 59250/66150 SAE condition generations, 0.85s each, ~97.8 min left
+INFO 59300/66150 SAE condition generations, 0.85s each, ~97.1 min left
+INFO 59350/66150 SAE condition generations, 0.85s each, ~96.3 min left
+INFO 59400/66150 SAE condition generations, 0.85s each, ~95.6 min left
+INFO 59450/66150 SAE condition generations, 0.85s each, ~94.9 min left
+INFO 59500/66150 SAE condition generations, 0.85s each, ~94.2 min left
+INFO 59550/66150 SAE condition generations, 0.85s each, ~93.4 min left
+INFO 59600/66150 SAE condition generations, 0.85s each, ~92.7 min left
+INFO 59650/66150 SAE condition generations, 0.85s each, ~92.0 min left
+INFO 59700/66150 SAE condition generations, 0.85s each, ~91.3 min left
+INFO 59750/66150 SAE condition generations, 0.85s each, ~90.5 min left
+INFO 59800/66150 SAE condition generations, 0.85s each, ~89.8 min left
+INFO 59850/66150 SAE condition generations, 0.85s each, ~89.1 min left
+INFO 59900/66150 SAE condition generations, 0.85s each, ~88.4 min left
+INFO 59950/66150 SAE condition generations, 0.85s each, ~87.6 min left
+INFO 60000/66150 SAE condition generations, 0.85s each, ~86.9 min left
+INFO 60050/66150 SAE condition generations, 0.85s each, ~86.2 min left
+INFO 60100/66150 SAE condition generations, 0.85s each, ~85.5 min left
+INFO 60150/66150 SAE condition generations, 0.85s each, ~84.7 min left
+INFO 60200/66150 SAE condition generations, 0.85s each, ~84.0 min left
+INFO 60250/66150 SAE condition generations, 0.85s each, ~83.3 min left
+INFO 60300/66150 SAE condition generations, 0.85s each, ~82.5 min left
+INFO 60350/66150 SAE condition generations, 0.85s each, ~81.8 min left
+INFO 60400/66150 SAE condition generations, 0.85s each, ~81.1 min left
+INFO 60450/66150 SAE condition generations, 0.85s each, ~80.4 min left
+INFO 60500/66150 SAE condition generations, 0.85s each, ~79.7 min left
+INFO 60550/66150 SAE condition generations, 0.85s each, ~78.9 min left
+INFO 60600/66150 SAE condition generations, 0.85s each, ~78.2 min left
+INFO 60650/66150 SAE condition generations, 0.85s each, ~77.5 min left
+INFO 60700/66150 SAE condition generations, 0.85s each, ~76.8 min left
+INFO 60750/66150 SAE condition generations, 0.85s each, ~76.1 min left
+INFO 60800/66150 SAE condition generations, 0.85s each, ~75.4 min left
+INFO 60850/66150 SAE condition generations, 0.85s each, ~74.7 min left
+INFO 60900/66150 SAE condition generations, 0.85s each, ~74.0 min left
+INFO 60950/66150 SAE condition generations, 0.85s each, ~73.3 min left
+INFO 61000/66150 SAE condition generations, 0.85s each, ~72.6 min left
+INFO 61050/66150 SAE condition generations, 0.85s each, ~71.9 min left
+INFO 61100/66150 SAE condition generations, 0.85s each, ~71.2 min left
+INFO 61150/66150 SAE condition generations, 0.85s each, ~70.4 min left
+INFO 61200/66150 SAE condition generations, 0.85s each, ~69.7 min left
+INFO 61250/66150 SAE condition generations, 0.85s each, ~69.0 min left
+INFO 61300/66150 SAE condition generations, 0.85s each, ~68.3 min left
+INFO 61350/66150 SAE condition generations, 0.85s each, ~67.7 min left
+INFO 61400/66150 SAE condition generations, 0.85s each, ~67.0 min left
+INFO 61450/66150 SAE condition generations, 0.85s each, ~66.3 min left
+INFO 61500/66150 SAE condition generations, 0.85s each, ~65.6 min left
+INFO 61550/66150 SAE condition generations, 0.85s each, ~64.9 min left
+INFO 61600/66150 SAE condition generations, 0.85s each, ~64.2 min left
+INFO 61650/66150 SAE condition generations, 0.85s each, ~63.4 min left
+INFO 61700/66150 SAE condition generations, 0.85s each, ~62.7 min left
+INFO 61750/66150 SAE condition generations, 0.85s each, ~62.0 min left
+INFO 61800/66150 SAE condition generations, 0.85s each, ~61.3 min left
+INFO 61850/66150 SAE condition generations, 0.85s each, ~60.6 min left
+INFO 61900/66150 SAE condition generations, 0.84s each, ~59.8 min left
+INFO 61950/66150 SAE condition generations, 0.84s each, ~59.1 min left
+INFO 62000/66150 SAE condition generations, 0.84s each, ~58.4 min left
+INFO 62050/66150 SAE condition generations, 0.84s each, ~57.7 min left
+INFO 62100/66150 SAE condition generations, 0.85s each, ~57.0 min left
+INFO 62150/66150 SAE condition generations, 0.85s each, ~56.4 min left
+INFO 62200/66150 SAE condition generations, 0.85s each, ~55.7 min left
+INFO 62250/66150 SAE condition generations, 0.85s each, ~55.0 min left
+INFO 62300/66150 SAE condition generations, 0.85s each, ~54.3 min left
+INFO 62350/66150 SAE condition generations, 0.85s each, ~53.6 min left
+INFO 62400/66150 SAE condition generations, 0.85s each, ~52.8 min left
+INFO 62450/66150 SAE condition generations, 0.85s each, ~52.1 min left
+INFO 62500/66150 SAE condition generations, 0.85s each, ~51.4 min left
+INFO 62550/66150 SAE condition generations, 0.85s each, ~50.7 min left
+INFO 62600/66150 SAE condition generations, 0.84s each, ~50.0 min left
+INFO 62650/66150 SAE condition generations, 0.84s each, ~49.3 min left
+INFO 62700/66150 SAE condition generations, 0.84s each, ~48.6 min left
+INFO 62750/66150 SAE condition generations, 0.84s each, ~47.9 min left
+INFO 62800/66150 SAE condition generations, 0.84s each, ~47.2 min left
+INFO 62850/66150 SAE condition generations, 0.84s each, ~46.5 min left
+INFO 62900/66150 SAE condition generations, 0.84s each, ~45.8 min left
+INFO 62950/66150 SAE condition generations, 0.84s each, ~45.1 min left
+INFO 63000/66150 SAE condition generations, 0.84s each, ~44.4 min left
+INFO 63050/66150 SAE condition generations, 0.84s each, ~43.6 min left
+INFO 63100/66150 SAE condition generations, 0.84s each, ~42.9 min left
+INFO 63150/66150 SAE condition generations, 0.84s each, ~42.2 min left
+INFO 63200/66150 SAE condition generations, 0.85s each, ~41.6 min left
+INFO 63250/66150 SAE condition generations, 0.85s each, ~40.8 min left
+INFO 63300/66150 SAE condition generations, 0.85s each, ~40.1 min left
+INFO 63350/66150 SAE condition generations, 0.85s each, ~39.4 min left
+INFO 63400/66150 SAE condition generations, 0.84s each, ~38.7 min left
+INFO 63450/66150 SAE condition generations, 0.84s each, ~38.0 min left
+INFO 63500/66150 SAE condition generations, 0.84s each, ~37.3 min left
+INFO 63550/66150 SAE condition generations, 0.84s each, ~36.6 min left
+INFO 63600/66150 SAE condition generations, 0.84s each, ~35.9 min left
+INFO 63650/66150 SAE condition generations, 0.84s each, ~35.2 min left
+INFO 63700/66150 SAE condition generations, 0.84s each, ~34.5 min left
+INFO 63750/66150 SAE condition generations, 0.84s each, ~33.8 min left
+INFO 63800/66150 SAE condition generations, 0.84s each, ~33.0 min left
+INFO 63850/66150 SAE condition generations, 0.84s each, ~32.3 min left
+INFO 63900/66150 SAE condition generations, 0.84s each, ~31.6 min left
+INFO 63950/66150 SAE condition generations, 0.84s each, ~30.9 min left
+INFO 64000/66150 SAE condition generations, 0.84s each, ~30.2 min left
+INFO 64050/66150 SAE condition generations, 0.84s each, ~29.5 min left
+INFO 64100/66150 SAE condition generations, 0.84s each, ~28.8 min left
+INFO 64150/66150 SAE condition generations, 0.84s each, ~28.1 min left
+INFO 64200/66150 SAE condition generations, 0.84s each, ~27.4 min left
+INFO 64250/66150 SAE condition generations, 0.84s each, ~26.7 min left
+INFO 64300/66150 SAE condition generations, 0.84s each, ~26.0 min left
+INFO 64350/66150 SAE condition generations, 0.84s each, ~25.3 min left
+INFO 64400/66150 SAE condition generations, 0.84s each, ~24.6 min left
+INFO 64450/66150 SAE condition generations, 0.84s each, ~23.9 min left
+INFO 64500/66150 SAE condition generations, 0.84s each, ~23.2 min left
+INFO 64550/66150 SAE condition generations, 0.84s each, ~22.5 min left
+INFO 64600/66150 SAE condition generations, 0.84s each, ~21.8 min left
+INFO 64650/66150 SAE condition generations, 0.84s each, ~21.1 min left
+INFO 64700/66150 SAE condition generations, 0.84s each, ~20.4 min left
+INFO 64750/66150 SAE condition generations, 0.84s each, ~19.7 min left
+INFO 64800/66150 SAE condition generations, 0.84s each, ~19.0 min left
+INFO 64850/66150 SAE condition generations, 0.84s each, ~18.3 min left
+INFO 64900/66150 SAE condition generations, 0.85s each, ~17.6 min left
+INFO 64950/66150 SAE condition generations, 0.85s each, ~16.9 min left
+INFO 65000/66150 SAE condition generations, 0.85s each, ~16.2 min left
+INFO 65050/66150 SAE condition generations, 0.85s each, ~15.5 min left
+INFO 65100/66150 SAE condition generations, 0.85s each, ~14.8 min left
+INFO 65150/66150 SAE condition generations, 0.85s each, ~14.1 min left
+INFO 65200/66150 SAE condition generations, 0.85s each, ~13.4 min left
+INFO 65250/66150 SAE condition generations, 0.85s each, ~12.7 min left
+INFO 65300/66150 SAE condition generations, 0.85s each, ~12.0 min left
+INFO 65350/66150 SAE condition generations, 0.85s each, ~11.3 min left
+INFO 65400/66150 SAE condition generations, 0.85s each, ~10.6 min left
+INFO 65450/66150 SAE condition generations, 0.85s each, ~9.9 min left
+INFO 65500/66150 SAE condition generations, 0.85s each, ~9.2 min left
+INFO 65550/66150 SAE condition generations, 0.84s each, ~8.4 min left
+INFO 65600/66150 SAE condition generations, 0.84s each, ~7.7 min left
+INFO 65650/66150 SAE condition generations, 0.84s each, ~7.0 min left
+INFO 65700/66150 SAE condition generations, 0.84s each, ~6.3 min left
+INFO 65750/66150 SAE condition generations, 0.85s each, ~5.6 min left
+INFO 65800/66150 SAE condition generations, 0.85s each, ~4.9 min left
+INFO 65850/66150 SAE condition generations, 0.85s each, ~4.2 min left
+INFO 65900/66150 SAE condition generations, 0.85s each, ~3.5 min left
+INFO 65950/66150 SAE condition generations, 0.85s each, ~2.8 min left
+INFO 66000/66150 SAE condition generations, 0.85s each, ~2.1 min left
+INFO 66050/66150 SAE condition generations, 0.84s each, ~1.4 min left
+INFO 66100/66150 SAE condition generations, 0.84s each, ~0.7 min left
+INFO 66150/66150 SAE condition generations, 0.84s each, ~0.0 min left
+INFO wrote results/causal_steering/20261020T031535823052Z
+
+                       Experiment                    Condition     Outcome   N  Acceptance Rate (%) Δ vs. SAE Control (pp)     95% CI for Δ  p-value
+                         Baseline           No SAE (stored A2)    observed 450               89.556                    NaN              NaN      NaN
+                         Baseline         No SAE (replayed A2) regenerated 450               89.556                    NaN              NaN      NaN
+                         TopK SAE                  No ablation regenerated 450               89.556              Reference              NaN      NaN
+                         TopK SAE       Random steer (-2× ref) regenerated 450               64.000    -25.555555555555546 [-26.38, -24.70]    0.000
+                         TopK SAE     Targeted steer (-2× ref) regenerated 450               89.333    -0.2222222222222222    [-0.67, 0.00]    1.000
+                         TopK SAE       Random steer (+2× ref) regenerated 450               89.556                    0.0     [0.00, 0.00]    1.000
+                         TopK SAE     Targeted steer (+2× ref) regenerated 450               89.556                    0.0     [0.00, 0.00]    1.000
+                         TopK SAE       Random steer (+5× ref) regenerated 450               80.508     -9.047619047619046  [-10.25, -7.84]    0.000
+                         TopK SAE     Targeted steer (+5× ref) regenerated 450               89.111    -0.4444444444444444    [-1.11, 0.00]    0.500
+      TopK SAE · error-preserving No ablation (= plain replay) regenerated 450               89.556              Reference              NaN      NaN
+      TopK SAE · error-preserving       Random steer (-2× ref) regenerated 450               64.063    -25.492063492063483 [-26.29, -24.63]    0.000
+      TopK SAE · error-preserving     Targeted steer (-2× ref) regenerated 450               89.333    -0.2222222222222222    [-0.67, 0.00]    1.000
+      TopK SAE · error-preserving       Random steer (+2× ref) regenerated 450               89.556                    0.0     [0.00, 0.00]    1.000
+      TopK SAE · error-preserving     Targeted steer (+2× ref) regenerated 450               89.556                    0.0     [0.00, 0.00]    1.000
+      TopK SAE · error-preserving       Random steer (+5× ref) regenerated 450               81.111     -8.444444444444445   [-9.59, -7.30]    0.000
+      TopK SAE · error-preserving     Targeted steer (+5× ref) regenerated 450               89.111    -0.4444444444444444    [-1.11, 0.00]    0.500
+                           L1 SAE                  No ablation regenerated 450               89.556              Reference              NaN      NaN
+                           L1 SAE       Random steer (-2× ref) regenerated 450               89.524  -0.031746031746031786    [-0.41, 0.45]    1.000
+                           L1 SAE     Targeted steer (-2× ref) regenerated 450                0.667     -88.88888888888889 [-91.78, -85.78]    0.000
+                           L1 SAE       Random steer (+2× ref) regenerated 450               89.460   -0.09523809523809526    [-0.29, 0.06]    0.500
+                           L1 SAE     Targeted steer (+2× ref) regenerated 450               73.556                  -16.0 [-19.33, -12.67]    0.000
+                           L1 SAE       Random steer (+5× ref) regenerated 450               81.778    -7.7777777777777795   [-8.79, -6.73]    0.000
+                           L1 SAE     Targeted steer (+5× ref) regenerated 450                4.667     -84.88888888888889 [-88.22, -81.56]    0.000
+        L1 SAE · error-preserving No ablation (= plain replay) regenerated 450               89.556              Reference              NaN      NaN
+        L1 SAE · error-preserving       Random steer (-2× ref) regenerated 450               89.524  -0.031746031746031765    [-0.25, 0.22]    1.000
+        L1 SAE · error-preserving     Targeted steer (-2× ref) regenerated 450                1.333     -88.22222222222223 [-91.11, -85.11]    0.000
+        L1 SAE · error-preserving       Random steer (+2× ref) regenerated 450               89.175   -0.38095238095238093   [-0.89, -0.03]    0.122
+        L1 SAE · error-preserving     Targeted steer (+2× ref) regenerated 450               84.667     -4.888888888888889   [-7.11, -2.89]    0.000
+        L1 SAE · error-preserving       Random steer (+5× ref) regenerated 450               84.698     -4.857142857142858   [-5.94, -3.97]    0.000
+        L1 SAE · error-preserving     Targeted steer (+5× ref) regenerated 450                4.889     -84.66666666666667 [-88.00, -81.56]    0.000
+                   Pretrained SAE                  No ablation regenerated 450               89.556              Reference              NaN      NaN
+                   Pretrained SAE       Random steer (-2× ref) regenerated 450               89.079    -0.4761904761904764   [-0.79, -0.22]    0.002
+                   Pretrained SAE     Targeted steer (-2× ref) regenerated 450               88.667    -0.8888888888888888   [-1.78, -0.22]    0.126
+                   Pretrained SAE       Random steer (+2× ref) regenerated 450               89.397   -0.15873015873015872    [-0.44, 0.00]    0.500
+                   Pretrained SAE     Targeted steer (+2× ref) regenerated 450               89.333    -0.2222222222222222    [-0.67, 0.00]    1.000
+                   Pretrained SAE       Random steer (+5× ref) regenerated 450               88.762    -0.7936507936507938   [-1.40, -0.25]    0.003
+                   Pretrained SAE     Targeted steer (+5× ref) regenerated 450               88.889    -0.6666666666666667    [-1.56, 0.00]    0.254
+Pretrained SAE · error-preserving No ablation (= plain replay) regenerated 450               89.556              Reference              NaN      NaN
+Pretrained SAE · error-preserving       Random steer (-2× ref) regenerated 450               89.460   -0.09523809523809529    [-0.25, 0.10]    0.536
+Pretrained SAE · error-preserving     Targeted steer (-2× ref) regenerated 450               88.889    -0.6666666666666667    [-1.56, 0.00]    0.254
+Pretrained SAE · error-preserving       Random steer (+2× ref) regenerated 450               89.460   -0.09523809523809527    [-0.22, 0.00]    0.252
+Pretrained SAE · error-preserving     Targeted steer (+2× ref) regenerated 450               89.556                    0.0     [0.00, 0.00]    1.000
+Pretrained SAE · error-preserving       Random steer (+5× ref) regenerated 450               89.175     -0.380952380952381   [-0.79, -0.06]    0.033
+Pretrained SAE · error-preserving     Targeted steer (+5× ref) regenerated 450               89.333    -0.2222222222222222    [-0.67, 0.00]    1.000
+
+Full results: results/causal_steering/20261020T031535823052Z
+EXIT=0
