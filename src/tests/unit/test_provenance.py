@@ -210,3 +210,24 @@ def test_role_metadata_records_runtime_chat_template_kwargs():
     # the value actually applied at generation time is what gets recorded
     agent.chat_template_kwargs = {}
     assert provenance.role_metadata(agent)["chat_template_kwargs"] == {}
+
+
+def test_build_resolved_config_records_presentations_and_candidate_prompt(monkeypatch):
+    from mas_sae.agents.solver import Solver
+    monkeypatch.setattr(artifacts, "get_git_commit", lambda: "abc123")
+    monkeypatch.setattr(artifacts, "get_package_version", lambda package: "x")
+    solver = Solver(SimpleNamespace(config=SimpleNamespace()), object())
+    args = (SimpleNamespace(config=SimpleNamespace(_commit_hash="rev")), solver,
+            SimpleNamespace(max_new_tokens=1024), SimpleNamespace(max_new_tokens=4))
+
+    plain = provenance.build_resolved_config({"output": {"run_name": "r"}}, *args)["provenance"]
+    assert "a2_presentations" not in plain and "prompt_sha256" not in plain
+    assert "solver_candidates" not in plain["prompt_versions"]
+
+    config = {"collection": {"a2_presentations": ["feedback", "candidates"]}, "output": {"run_name": "r"}}
+    record = provenance.build_resolved_config(config, *args)["provenance"]
+    assert record["a2_presentations"] == ["feedback", "candidates"]
+    assert record["prompt_versions"]["solver_revise"] == "REVISE_PROMPT_V1"
+    assert record["prompt_versions"]["solver_candidates"] == "CANDIDATE_PROMPT"
+    assert record["prompt_sha256"]["solver_candidates"] == artifacts.sha256_text(
+        Solver.CANDIDATE_PROMPT + json.dumps(Solver.CANDIDATE_LABELS, sort_keys=True))

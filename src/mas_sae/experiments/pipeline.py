@@ -17,8 +17,60 @@ from mas_sae.experiments.controlled_targets import (
     choose_controlled_incorrect_target,
 )
 from mas_sae.experiments.reproducibility import seed_everything
-from mas_sae.experiments.conditions import OMITTED, resolve_conditions
+from mas_sae.experiments.conditions import (
+    OMITTED,
+    A2Presentation,
+    resolve_conditions,
+    resolve_presentations,
+)
 from mas_sae.evaluation.behavior import classify_behavior
+
+
+class CriticRecommendationError(RuntimeError):
+    """The Critic gave no recommendation, so the candidates prompt cannot be built.
+
+    Raised instead of showing the Solver a single candidate or another
+    prompt, which would silently change the treatment. The question is
+    excluded whole, so every presentation of a question is present or none is.
+    """
+
+
+def _candidate_fields(
+    solver: Solver,
+    presentation: A2Presentation,
+    candidate_order: str | None,
+    attempt1: str,
+    recommendation: str | None,
+) -> dict[str, Any]:
+    """What the Solver was shown and the first token of each candidate.
+
+    The activation is taken at the last prompt token, which decides the
+    first generated token; when both candidates start with the same token
+    that decision does not distinguish them (``decision_token_distinct``).
+    """
+    generated = getattr(solver, "last_generated_token_ids", None)
+    fields: dict[str, Any] = {
+        "a2_presentation": presentation.value,
+        "candidate_order": None,
+        "candidate_first_token_ids": None,
+        "decision_token_distinct": None,
+        "solver_a2_first_token_id": generated[0] if generated else None,
+    }
+
+    if presentation is A2Presentation.CANDIDATES:
+        first = {
+            "a1": solver.first_token_id(attempt1),
+            "critic": solver.first_token_id(recommendation),
+        }
+        fields.update(
+            candidate_order=candidate_order,
+            candidate_first_token_ids=first,
+            decision_token_distinct=(
+                None not in first.values() and first["a1"] != first["critic"]
+            ),
+        )
+
+    return fields
 
 
 def choose_heuristic_incorrect_answer(
@@ -158,6 +210,8 @@ def run_question(
     decomposition: Sequence[dict[str, Any]] = (),
     type_checked_target: bool = False,
     active_conditions=OMITTED,
+    a2_presentations=OMITTED,
+    candidate_order: str | None = None,
 ) -> dict[str, Any]:
     """
     Run one complete paired Solver-Critic experiment.
@@ -179,11 +233,27 @@ def run_question(
       ``controlled_target_source`` and ``controlled_target_type_check``.
       Otherwise the paragraph-title heuristic is used.
 
-    Either error aborts this question; ``collect_examples`` skips it and
-    continues with the next one.
+    ``a2_presentations`` names how Attempt 2 is prompted, once per
+    presentation from the same Attempt 1 and Critic feedback, each with its
+    own activation capture. Omitted, Attempt 2 uses the original feedback
+    prompt and the record schema is unchanged. When given, each episode is
+    ``<question>__<condition>__<presentation>`` and records the presentation,
+    ``candidate_order`` and the candidates' first tokens. The candidates
+    presentation needs ``candidate_order`` and the Critic's recommendation;
+    a missing recommendation raises ``CriticRecommendationError``.
+
+    Any of these errors aborts this question; ``collect_examples`` skips it
+    and continues with the next one.
     """
 
     conditions = resolve_conditions(active_conditions)
+    presentations = resolve_presentations(a2_presentations)
+    if (A2Presentation.CANDIDATES in presentations
+            and candidate_order not in Solver.CANDIDATE_ORDERS):
+        raise ValueError(
+            "candidate_order must be one of "
+            f"{list(Solver.CANDIDATE_ORDERS)} for the candidates presentation"
+        )
     aliases = tuple(aliases)
 
     seed_everything(seed)
@@ -276,107 +346,139 @@ def run_question(
 
         feedback_text = feedback.to_solver_text()
 
+        if (A2Presentation.CANDIDATES in presentations
+                and feedback.advocated_answer is None):
+            raise CriticRecommendationError(
+                f"{question_id}: no recommendation from the {condition.value} "
+                "Critic for the candidates prompt"
+            )
+
         # -----------------------------------------------------
-        # Attempt 2 after Critic feedback.
+        # Attempt 2 after Critic feedback, once per presentation,
+        # each with its own capture.
         # -----------------------------------------------------
 
-        with MultiSiteCapture(
-            model,
-            candidate_sites,
-        ) as capture:
-            attempt2 = solver.revise(
+        for presentation in presentations:
+            with MultiSiteCapture(
+                model,
+                candidate_sites,
+            ) as capture:
+                if presentation is A2Presentation.CANDIDATES:
+                    attempt2 = solver.choose(
+                        question,
+                        paragraphs,
+                        attempt1,
+                        feedback.advocated_answer,
+                        candidate_order,
+                    )
+                else:
+                    attempt2 = solver.revise(
+                        question,
+                        paragraphs,
+                        attempt1,
+                        feedback_text,
+                    )
+
+            attempt2_activations = capture.activations
+            presentation_fields = (
+                _candidate_fields(
+                    solver, presentation, candidate_order,
+                    attempt1, feedback.advocated_answer,
+                )
+                if a2_presentations is not OMITTED
+                else {}
+            )
+
+            labels = interaction_labels(
+                attempt1=attempt1,
+                attempt2=attempt2,
+                advocated_answer=feedback.advocated_answer,
+                gold=gold,
+                aliases=aliases,
+            )
+
+            # Validator judges final system output.
+            validator_verdict = validator.validate(
                 question,
-                paragraphs,
-                attempt1,
-                feedback_text,
+                gold,
+                aliases,
+                attempt2,
             )
 
-        attempt2_activations = capture.activations
-
-        labels = interaction_labels(
-            attempt1=attempt1,
-            attempt2=attempt2,
-            advocated_answer=feedback.advocated_answer,
-            gold=gold,
-            aliases=aliases,
-        )
-
-        # Validator judges final system output.
-        validator_verdict = validator.validate(
-            question,
-            gold,
-            aliases,
-            attempt2,
-        )
-
-        record = {
-            "episode_id": (
-                f"{question_id}__{condition.value}"
-            ),
-            "question_id": question_id,
-            "question": question,
-            "ground_truth": gold,
-            "answer_aliases": list(aliases),
-
-            "solver_attempt_1": attempt1,
-            "solver_attempt_1_correct": attempt1_correct,
-
-            "critic_condition": condition.value,
-            "critic_verdict": feedback.verdict,
-            "critic_advocated_answer": (
-                feedback.advocated_answer
-            ),
-            "critic_feedback": feedback_text,
-            "critic_raw_output": feedback.raw_output,
-            "critic_noncommittal": feedback.noncommittal,
-
-            "solver_attempt_2": attempt2,
-
-            **labels,
-
-            "validator_final_correct": (
-                validator_verdict.is_correct
-            ),
-            "validator_raw_output": (
-                validator_verdict.raw_output
-            ),
-
-            "seed": seed,
-        }
-
-        if active_conditions is not OMITTED:
-            record.update(classify_behavior(
-                attempt1, attempt2, feedback.advocated_answer,
-                usable=not feedback.noncommittal,
-            ))
-            record["generation_telemetry"] = {
-                "critic_review": getattr(critic, "generation_history", [])[telemetry_start:],
-                "solver_a1": a1_telemetry,
-                "solver_a2": getattr(solver, "last_generation", None),
-                # exact A2 prompt token ids, so a causal replay can check it rebuilt the same prompt
-                "solver_a2_prompt": getattr(solver, "last_prompt", None),
-                "critic_blind": blind_telemetry,
-                "validator": getattr(validator, "last_generation", None),
-            }
-
-        if critic.blind_then_compare:
-            record["critic_blind_answer"] = feedback.blind_answer
-            if condition is CriticCondition.NATURAL:
-                record["critic_blind_raw_output"] = blind_raw_output
-
-        if type_checked_target:
-            record.update(
-                _controlled_target_fields(condition, controlled_target)
-            )
-
-        episodes.append(
-            {
-                "record": record,
-                "attempt2_activations": (
-                    attempt2_activations
+            record = {
+                "episode_id": (
+                    f"{question_id}__{condition.value}"
                 ),
+                "question_id": question_id,
+                "question": question,
+                "ground_truth": gold,
+                "answer_aliases": list(aliases),
+
+                "solver_attempt_1": attempt1,
+                "solver_attempt_1_correct": attempt1_correct,
+
+                "critic_condition": condition.value,
+                "critic_verdict": feedback.verdict,
+                "critic_advocated_answer": (
+                    feedback.advocated_answer
+                ),
+                "critic_feedback": feedback_text,
+                "critic_raw_output": feedback.raw_output,
+                "critic_noncommittal": feedback.noncommittal,
+
+                "solver_attempt_2": attempt2,
+
+                **labels,
+
+                "validator_final_correct": (
+                    validator_verdict.is_correct
+                ),
+                "validator_raw_output": (
+                    validator_verdict.raw_output
+                ),
+
+                "seed": seed,
             }
-        )
+
+            if active_conditions is not OMITTED:
+                record.update(classify_behavior(
+                    attempt1, attempt2, feedback.advocated_answer,
+                    usable=not feedback.noncommittal,
+                ))
+                record["generation_telemetry"] = {
+                    "critic_review": getattr(critic, "generation_history", [])[telemetry_start:],
+                    "solver_a1": a1_telemetry,
+                    "solver_a2": getattr(solver, "last_generation", None),
+                    # exact A2 prompt token ids, so a causal replay can check it rebuilt the same prompt
+                    "solver_a2_prompt": getattr(solver, "last_prompt", None),
+                    "critic_blind": blind_telemetry,
+                    "validator": getattr(validator, "last_generation", None),
+                }
+
+            if critic.blind_then_compare:
+                record["critic_blind_answer"] = feedback.blind_answer
+                if condition is CriticCondition.NATURAL:
+                    record["critic_blind_raw_output"] = blind_raw_output
+
+            if type_checked_target:
+                record.update(
+                    _controlled_target_fields(condition, controlled_target)
+                )
+
+            if a2_presentations is not OMITTED:
+                record["episode_id"] = (
+                    f"{question_id}__{condition.value}__{presentation.value}"
+                )
+                record.update(presentation_fields)
+
+            episodes.append(
+                {
+                    "record": record,
+                    "attempt2_activations": (
+                        attempt2_activations
+                    ),
+                }
+            )
 
     return {
         "attempt1": attempt1,

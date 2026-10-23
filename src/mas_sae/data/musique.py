@@ -456,8 +456,13 @@ def assign_experiment_splits(
 def describe_sampled_questions(
     examples: list[MuSiQueExample],
     experiment_splits: dict[str, str] | None = None,
+    candidate_orders: dict[str, str] | None = None,
 ) -> list[dict[str, Any]]:
-    """Build the reproducibility manifest of sampled questions in order."""
+    """Build the reproducibility manifest of sampled questions in order.
+
+    ``candidate_orders`` (question id to the order the two A2 candidates are
+    shown in) is recorded per question when given.
+    """
     manifest: list[dict[str, Any]] = []
 
     for position, example in enumerate(examples):
@@ -471,6 +476,9 @@ def describe_sampled_questions(
 
         if experiment_splits is not None:
             entry["experiment_split"] = experiment_splits[question_id]
+
+        if candidate_orders is not None:
+            entry["candidate_order"] = candidate_orders[question_id]
 
         manifest.append(entry)
 

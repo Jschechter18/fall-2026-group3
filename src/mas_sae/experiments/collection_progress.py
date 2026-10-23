@@ -60,12 +60,19 @@ def progress_dir(activation_root: str | Path, run_name: str, source_split: str) 
 
 
 def manifest_sha256(sampled_questions: list[dict[str, Any]]) -> str:
-    """Digest of the ordered question list, including split assignment."""
+    """Digest of the ordered question list, including split assignment.
+
+    A recorded candidate order is part of the digest, so a resume cannot
+    show a question's candidates in another order. Manifests without one
+    keep their original digest.
+    """
     return sha256_json([
         {
             "question_id": str(entry["question_id"]),
             "experiment_split": entry.get("experiment_split"),
             "hop_group": entry["hop_group"],
+            **({"candidate_order": entry["candidate_order"]}
+               if "candidate_order" in entry else {}),
         }
         for entry in sampled_questions
     ])

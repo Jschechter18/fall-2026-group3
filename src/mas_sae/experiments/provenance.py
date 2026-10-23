@@ -8,6 +8,7 @@ does not own generic run utilities such as git/package lookups
 """
 from __future__ import annotations
 
+import json
 import subprocess
 from typing import Any
 
@@ -15,7 +16,12 @@ import torch
 
 from mas_sae.data.musique import MUSIQUE_DATASET_ID
 from mas_sae.experiments import artifacts
-from mas_sae.experiments.conditions import OMITTED, resolve_conditions
+from mas_sae.experiments.conditions import (
+    OMITTED,
+    A2Presentation,
+    resolve_conditions,
+    resolve_presentations,
+)
 from mas_sae.experiments.reproducibility import config_sha256
 
 
@@ -91,7 +97,7 @@ def build_collection_progress_provenance(
         "gpus": resolved["environment"]["gpus"],
         "hash_basis": {
             "config_sha256": "canonical JSON of the collection config without its output section",
-            "manifest_sha256": "canonical JSON of ordered {question_id, experiment_split, hop_group}",
+            "manifest_sha256": "canonical JSON of ordered {question_id, experiment_split, hop_group[, candidate_order]}",
             "git_diff_sha256": "sha256 of `git diff --binary HEAD` (tracked files only)",
             "untracked_code_sha256": "sha256 of names and bytes of untracked, non-ignored files under src/ and scripts/",
         },
@@ -152,6 +158,20 @@ def build_resolved_config(
         {} if protocol_version is None
         else {"protocol_version": protocol_version}
     )
+    a2_presentations = config.get("collection", {}).get("a2_presentations", OMITTED)
+    presentations = resolve_presentations(a2_presentations)
+    presentation_record = {}
+    if a2_presentations is not OMITTED:
+        presentation_record["a2_presentations"] = [p.value for p in presentations]
+    candidate_prompt = {}
+    if A2Presentation.CANDIDATES in presentations:
+        candidate_prompt = {"solver_candidates": "CANDIDATE_PROMPT"}
+        # Template and labels together, so a rebuilt prompt can be checked against the run.
+        presentation_record["prompt_sha256"] = {
+            "solver_candidates": artifacts.sha256_text(
+                solver.CANDIDATE_PROMPT + json.dumps(solver.CANDIDATE_LABELS, sort_keys=True)
+            ),
+        }
 
     return {
         **config,
@@ -166,6 +186,7 @@ def build_resolved_config(
                       (("solver", solver), ("critic", critic), ("validator", validator))},
             "environment": environment_metadata(),
             "active_conditions": [c.value for c in resolve_conditions(config.get("collection", {}).get("active_conditions", OMITTED))],
+            **presentation_record,
             "package_versions": {
                 "torch": artifacts.get_package_version("torch"),
                 "transformers": artifacts.get_package_version("transformers"),
@@ -176,6 +197,7 @@ def build_resolved_config(
             "prompt_versions": {
                 "solver_solve": "SOLVE_PROMPT_V1",
                 "solver_revise": "REVISE_PROMPT_V1",
+                **candidate_prompt,
                 **_critic_prompt_names(critic, type_checked_target),
                 "validator": "VALIDATE_PROMPT",
             },

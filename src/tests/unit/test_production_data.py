@@ -604,3 +604,34 @@ def test_committed_manifest_is_reproduced_by_its_recorded_rule_from_the_same_que
         ids.setdefault(m["source_split"], []).append(m["question_id"])
     assignment = assign_partitions(ids, proportions=rule["proportions_of_source_train"], seed=rule["seed"])
     assert assignment == {q: m["partition"] for q, m in manifest.items()}
+
+
+# ------------------------------------------------------------------ pilot question lists
+
+def test_partition_sample_is_hop_proportional_and_never_draws_used_questions():
+    from mas_sae.data.production import sample_partition_questions
+    manifest = {}
+    for group, count in (("2hop", 60), ("3hop", 30), ("4hop", 10)):
+        for i in range(count):
+            q = f"{group}__{i}_{i}" if group == "2hop" else f"{group}1__{i}_{i}_{i}"
+            manifest[q] = {"partition": "train", "hop_group": group, "in_development_data": i == 0}
+    manifest["2hop__999_1"] = {"partition": "test", "hop_group": "2hop", "in_development_data": False}
+    exclude = {"2hop__1_1", "3hop1__1_1_1"}
+
+    picked = sample_partition_questions(manifest, partition="train", num_questions=20, seed=7, exclude=exclude)
+
+    assert len(picked) == len(set(picked)) == 20
+    assert all(manifest[q]["partition"] == "train" and not manifest[q]["in_development_data"] for q in picked)
+    assert not set(picked) & exclude
+    assert Counter(manifest[q]["hop_group"] for q in picked) == {"2hop": 12, "3hop": 6, "4hop": 2}
+    assert picked == sample_partition_questions(manifest, partition="train", num_questions=20, seed=7, exclude=exclude)
+    with pytest.raises(ValueError, match="eligible"):
+        sample_partition_questions(manifest, partition="train", num_questions=1000, seed=7)
+
+
+def test_question_ids_are_found_in_any_file_format(tmp_path):
+    from mas_sae.data.production import question_ids_in
+    (tmp_path / "packet.csv").write_text("review_id,question_id\nQ1,2hop__14164_60600\nQ2,3hop1__9285_5188_23307\n")
+    (tmp_path / "key.json").write_text('[{"question_id": "4hop3__1_2_3_4", "note": "2hop is not an id"}]')
+    assert question_ids_in(tmp_path / "packet.csv") == {"2hop__14164_60600", "3hop1__9285_5188_23307"}
+    assert question_ids_in(tmp_path / "key.json") == {"4hop3__1_2_3_4"}
