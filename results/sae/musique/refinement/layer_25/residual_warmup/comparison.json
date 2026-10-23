@@ -1,0 +1,37 @@
+{
+  "branches": [
+    {
+      "seed": 42,
+      "branch": "warmup_control",
+      "strategy": "none",
+      "warmup_steps": 250,
+      "validation_loss": 0.005768024844881279,
+      "checkpoint": "/home/ubuntu/capstone/fall-2026-group3/results/sae/musique/refinement/layer_25/residual_warmup/seed_42/warmup_control/final_checkpoint.pt",
+      "net_active_gain": 1,
+      "displaced_initially_active": 7,
+      "tracked_main_active": 0,
+      "tracked_validation_active": 1,
+      "tracked_repeated_10_examples": 0,
+      "tracked_validation_repeated_10_examples": 0,
+      "matched_control": "warmup_control",
+      "relative_validation_loss_change": 0.0
+    },
+    {
+      "seed": 42,
+      "branch": "residual_warmup",
+      "strategy": "residual",
+      "warmup_steps": 250,
+      "validation_loss": 0.005766300572730042,
+      "checkpoint": "/home/ubuntu/capstone/fall-2026-group3/results/sae/musique/refinement/layer_25/residual_warmup/seed_42/residual_warmup/final_checkpoint.pt",
+      "net_active_gain": 429,
+      "displaced_initially_active": 9,
+      "tracked_main_active": 432,
+      "tracked_validation_active": 299,
+      "tracked_repeated_10_examples": 297,
+      "tracked_validation_repeated_10_examples": 63,
+      "matched_control": "warmup_control",
+      "relative_validation_loss_change": -0.0002989363252773325
+    }
+  ],
+  "selected_checkpoint": null
+}

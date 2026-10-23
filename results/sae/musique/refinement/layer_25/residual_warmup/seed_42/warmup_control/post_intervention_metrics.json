@@ -1,0 +1,25 @@
+{
+  "validation": {
+    "loss": 0.005853038756705595,
+    "rec_loss": 0.005853038756705595,
+    "weighted_sparsity_loss": 0.0,
+    "mean_active_features": 64.0,
+    "inactive_feature_fraction": 0.7441030740737915,
+    "firing_frequency_min": 0.0,
+    "firing_frequency_p50": 0.0,
+    "firing_frequency_p90": 0.00331537495367229,
+    "firing_frequency_p99": 0.0677579790353775,
+    "firing_frequency_max": 1.0,
+    "mean_baseline_rec_loss": 0.036622731732200695,
+    "variance_explained": 0.8401801700783755
+  },
+  "frozen_train_coverage": 0.32386717200279236,
+  "net_active_gain": 0,
+  "displaced_initially_active": 0,
+  "newly_active": 0,
+  "tracked_positive": 0,
+  "tracked_main_active": 0,
+  "tracked_validation_active": 0,
+  "tracked_repeated_10_examples": 0,
+  "tracked_validation_repeated_10_examples": 0
+}
