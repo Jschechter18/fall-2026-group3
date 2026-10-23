@@ -8,6 +8,7 @@ import pytest
 import torch
 
 from mas_sae.data.production import (
+    EXPORT_PARTITIONS,
     INTERVENTION_IDS_FILE,
     MANIFEST_FIELDS,
     MISSING_IDS_FILE,
@@ -328,7 +329,7 @@ def write_run(root, full, dim=2):
                              name=f"{source}_attempt{attempt}.pt")
 
 
-def exported_run(tmp_path, partitions=("train", "validation"), name="partitioned"):
+def exported_run(tmp_path, partitions=EXPORT_PARTITIONS, name="partitioned"):
     full, manifest, _ = partition_examples()
     if not (tmp_path / "src").exists():
         write_run(tmp_path / "src", full)
@@ -342,7 +343,7 @@ def exported_run(tmp_path, partitions=("train", "validation"), name="partitioned
 def test_export_mirrors_collection_layout_and_keeps_a1_a2_together(tmp_path):
     full, manifest, summary = exported_run(tmp_path)
     layer_dir = tmp_path / "data" / "partitioned" / "layer_08"
-    for partition in ("train", "validation"):
+    for partition in ("train", "validation", "test"):
         a1 = torch.load(layer_dir / f"{partition}_attempt1.pt")
         a2 = torch.load(layer_dir / f"{partition}_attempt2.pt")
         both = torch.load(layer_dir / f"{partition}.pt")
@@ -360,39 +361,45 @@ def test_export_mirrors_collection_layout_and_keeps_a1_a2_together(tmp_path):
             assert record["source_activation_index"] == original and record["source_run"] == "full"
             assert a1[position].tolist() == [original + 100., float(record["source_split"] == "validation")]
             assert a2[position].tolist() == [original + 200., float(record["source_split"] == "validation")]
-    # Development export: no test or intervention files anywhere, so nothing can score them.
-    for sealed in ("test", "intervention"):
-        assert not (layer_dir / f"{sealed}.pt").exists()
-        assert not (tmp_path / "results" / "partitioned" / sealed).exists()
-        assert summary[sealed]["rows"] == 0
+    # Train, validation and test share one run; nothing from intervention is written there.
+    assert sorted(p.name for p in layer_dir.iterdir()) == sorted(
+        f"{p}{suffix}.pt" for p in ("train", "validation", "test") for suffix in ("", "_attempt1", "_attempt2"))
+    assert not (tmp_path / "results" / "partitioned" / "intervention").exists()
+    assert summary["intervention"]["rows"] == 0
     ids = json.loads((tmp_path / "results" / "partitioned" / INTERVENTION_IDS_FILE).read_text())
     assert ids == sorted(q for q, m in manifest.items() if m["partition"] == "intervention")
     assert summary["intervention"]["questions"] == len(ids)
 
 
 def test_no_question_appears_in_two_exported_partitions(tmp_path):
-    exported_run(tmp_path, partitions=PARTITIONS, name="everything")
+    exported_run(tmp_path)
+    exported_run(tmp_path, partitions=("intervention",), name="partitioned_intervention")
     seen = {}
-    for path in sorted((tmp_path / "results" / "everything").glob("*/interactions.jsonl")):
+    for path in sorted((tmp_path / "results").glob("*/*/interactions.jsonl")):
         for record in read_jsonl(path):
             assert record["question_id"] not in seen, (record["question_id"], seen.get(record["question_id"]), path)
             seen[record["question_id"]] = path.parent.name
     assert set(seen.values()) == set(PARTITIONS)
-    assert (tmp_path / "data" / "everything" / "layer_08" / "intervention.pt").exists()
 
 
-def test_test_and_intervention_are_exported_only_when_named_and_under_their_own_name(tmp_path):
-    exported_run(tmp_path)                                   # development pair
-    _, _, summary = exported_run(tmp_path, partitions=("test",), name="partitioned_test")
-    assert summary["test"]["rows"] > 0 and summary["train"]["rows"] == 0
-    assert (tmp_path / "data" / "partitioned_test" / "layer_08" / "test.pt").exists()
-    assert not (tmp_path / "data" / "partitioned" / "layer_08" / "test.pt").exists()
+def test_intervention_is_exported_only_on_its_own_under_its_own_name(tmp_path):
+    exported_run(tmp_path)
+    _, _, summary = exported_run(tmp_path, partitions=("intervention",), name="partitioned_intervention")
+    assert summary["intervention"]["rows"] > 0
+    assert all(summary[p]["rows"] == 0 for p in ("train", "validation", "test"))
+    assert (tmp_path / "data" / "partitioned_intervention" / "layer_08" / "intervention.pt").exists()
+    assert not (tmp_path / "data" / "partitioned" / "layer_08" / "intervention.pt").exists()
+    # Asked for together with another partition: refused before anything is written.
+    for partitions in (PARTITIONS, ("train", "intervention")):
+        with pytest.raises(ValueError, match="on its own"):
+            exported_run(tmp_path, partitions=partitions, name="mixed")
+    assert not (tmp_path / "data" / "mixed").exists() and not (tmp_path / "results" / "mixed").exists()
     with pytest.raises(ValueError, match="unknown partitions"):
         exported_run(tmp_path, partitions=("holdout",), name="bad")
 
 
 def test_export_refuses_an_existing_destination_so_nothing_goes_stale(tmp_path):
-    exported_run(tmp_path, partitions=PARTITIONS, name="first")
+    exported_run(tmp_path, name="first")
     before = sorted(str(p.relative_to(tmp_path)) for p in tmp_path.rglob("*") if p.is_file())
     # Same destination, fewer partitions: refused before anything is written.
     with pytest.raises(FileExistsError):
