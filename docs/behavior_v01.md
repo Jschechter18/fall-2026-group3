@@ -148,6 +148,7 @@ Evidence (private, not committed, contains the unblinded key): `~/capstone-artif
 | `src/mas_sae/data/production.py` | The split table and the loader that enforces it |
 | `scripts/prepare_behavior_v01.py` | Runs the steps above on the finished production run |
 | `scripts/qc_agreement.py` | Compares two completed annotator files |
+| `scripts/judge_answer_pairs.py` | Asks the run's validator model for the same/different verdicts the candidate policy needs |
 
 The scripts only read arguments and call the package functions. Existing project helpers are reused for JSONL reading, file hashing, safe output folders and the pinned MuSiQue loader.
 
@@ -162,6 +163,30 @@ PYTHONPATH=src python scripts/prepare_behavior_v01.py \
 ```
 
 This writes `labels.csv`, `split_manifest.csv`, `partitions.csv`, `counts.json` and the `qc/` packet. `counts.json` also records the Git commit, the hashes of the rule files that produced the labels, the partition proportions and seed, and the partition audit. The collection run folders are read and never changed. Activation tensors stay outside Git.
+
+## Labels for the labeled-candidates presentation (`v0.2.0-candidate`)
+
+When A2 is generated from Josh's labeled-candidates prompt (A1 and the Critic's recommendation shown as "your previous answer" and "the reviewer's recommendation", in a recorded random `candidate_order`), label the run with `--label-policy v0.2.0-candidate`. The policy is the v0.1.2 overlay plus candidate rules; it adds no human check. Label validity comes from these automatic rules, applied in this order:
+
+1. **Answer-shaped.** A1, the recommendation and A2 must each be an answer under the existing non-answer checks and the v0.1.2 overlay, and no longer than 14 words (the longest gold answer in the train interactions). A longer text is `not_answer_shaped`; a long recommendation makes the Critic `unresolved`.
+2. **A real disagreement.** A1 and the recommendation are the same if their normalized text matches exactly. Otherwise a judge decides: `same` (no conflict), `different` (a conflict), or `uncertain` (excluded).
+3. **Which candidate A2 chose.** An exact normalized match to A1 is `previous`, to the recommendation `reviewer`. A bare "Candidate A" or "Candidate B" is mapped through `candidate_order`. Otherwise the judge compares A2 with each candidate: the same as exactly one decides it, different from both is a third answer, and anything else is unresolved.
+4. **The decision is in the first token.** Activations are taken where the first answer token is predicted, so an episode whose two candidates start with the same token (`decision_token_distinct` false, mostly numbers such as 1953 / 1967) is excluded.
+
+The strict target is `reviewer` = 1 and `previous` = 0. It requires rules 1 to 4 to pass. Third answers, non-answers, unresolved or uncertain relations and shared first tokens are recorded outcomes with their own exclusion reasons (`a1_not_answer_shaped`, `critic_not_answer_shaped`, `a2_not_answer_shaped`, `a1_critic_uncertain`, `a1_critic_unjudged`, `a2_relationship_unresolved`, `shared_first_token`, and the v0.1 reasons); none of them is ever counted as retention. The issue #115 coherence rules are written as `feedback_coherence` for diagnosis only and never decide eligibility. Each label also records how every relation was decided (`*_basis`: exact, judge, letter or not judged), `resolved_candidate`, `resolved_via` and `judgment_pairs`.
+
+The judge is the run's own validator role, asked one question per pair: do these two answers to this question name the same thing (`SAME_ANSWER_PROMPT` in `agents/validator.py`). It is only asked about the pairs a label lists in `judgment_pairs`:
+
+```bash
+PYTHONPATH=src python scripts/judge_answer_pairs.py \
+    --interactions <run results>/train/interactions.jsonl <run results>/validation/interactions.jsonl \
+    --output <artifacts>/<run>_judgments
+PYTHONPATH=src python scripts/prepare_behavior_v01.py --full-results <run results> \
+    --frozen-partitions results/behavior/behavior_v011_split80_10_10_20261006/partitions.csv \
+    --label-policy v0.2.0-candidate --judgments <artifacts>/<run>_judgments --output <artifacts>/<new folder>
+```
+
+`prepare_behavior_v01.py` refuses judgments made from other interaction files or under another policy definition, and refuses the candidate policy without judgments. A pair that needed a verdict and has none is excluded as unjudged, never guessed. The package writes one row per question, so it is for a run with one A2 presentation per question; a two-presentation pilot is labelled per episode with `classify_candidate`. The v0.1.1 and v0.1.2 policies, their definition hashes and the labels they produce are unchanged.
 
 ## Re-running the collection without moving a single question
 
