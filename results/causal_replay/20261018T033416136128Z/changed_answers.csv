@@ -1,0 +1,932 @@
+question_id,experiment,condition,draw,solver_attempt_2_ctl,solver_attempt_2,solver_response_ctl,solver_response,first_token_changed,control_token_logprob_shift
+2hop__130436_66008,TopK SAE,no_ablation,,Yes,Minnesota,third_answer,retained_a1,1.0,-1.5013256639940664
+2hop__131072_68117,TopK SAE,no_ablation,,"Corbin, Kentucky","The reviewer feedback indicates that the correct answer is Corbin, Kentucky.",adopted_critic,unresolved,1.0,-5.478946685791016
+2hop__131572_432112,TopK SAE,no_ablation,,Lowndes County,Londes County,adopted_critic,third_answer,1.0,-3.607024908065796
+2hop__157634_42483,TopK SAE,no_ablation,,force,The laws discovered by the scientist based on spectral observations,adopted_critic,third_answer,1.0,-10.939563201740384
+2hop__158048_29454,TopK SAE,no_ablation,,"Taekwondo originated in Korea, and Japan did not invade Korea in the context of its origin.","The question is based on a false premise. Taekwondo originated in Korea, and Japan did not invade Korea in the context of its origin.",third_answer,non_answer,1.0,-21.601736590266228
+2hop__161576_88700,TopK SAE,no_ablation,,Van de Kamp's observations of Barnard's Star,The reviewer’s observations of Barnard’s Star,adopted_critic,third_answer,1.0,-1.2536969184875488
+2hop__187061_3994,TopK SAE,no_ablation,,Mobutu Sese Seko,The answer is Mobutu Sese Seko.,adopted_critic,unresolved,1.0,-1.9440357685089111
+2hop__30223_60847,TopK SAE,no_ablation,,1517,There is no allied landing in the region the Ottoman Navy conquered in the early 16th century.,retained_a1,third_answer,1.0,-0.8997396230697632
+2hop__361766_86794,TopK SAE,no_ablation,,Monterrey is a town in Colombia and does not have a president.,The text does not provide information about the president of Monterrey.,third_answer,non_answer,1.0,-2.9883079528999588
+2hop__426905_44637,TopK SAE,no_ablation,,Greater Western Sydney region,The Greater Western Sydney region,adopted_critic,adopted_critic,1.0,-1.3292189836502075
+2hop__467434_10369,TopK SAE,no_ablation,,Holhol is not a country and therefore does not have a president.,None.,adopted_critic,non_answer,1.0,-8.527623772634342
+2hop__481944_135703,TopK SAE,no_ablation,,the Niger River,The Niger River,adopted_critic,adopted_critic,1.0,-6.1752307415008545
+2hop__535920_673383,TopK SAE,no_ablation,,Sidney A. Franklin,The reviewer,adopted_critic,third_answer,1.0,-1.4296352863420907
+2hop__538056_171224,TopK SAE,no_ablation,,classical and experimental music,Classical and experimental music,adopted_critic,adopted_critic,1.0,-0.8391850292682648
+2hop__648794_61424,TopK SAE,no_ablation,,"Poipet, located in Cambodia, was embroiled in the Cambodian Civil War (1968–1975) during the Cold War, a conflict influenced by Cold War dynamics. The United States supported anti-communist forces, while the Soviet Union and China backed the Khmer Rouge, leading to the fall","During the Cold War, Cambodia was involved in the Cambodian Civil War (1968–1975), a conflict influenced by Cold War dynamics, with the United States supporting anti-communist forces and the Soviet Union and China backing the Khmer Rouge. The war resulted in the fall of the Kingdom of Cambodia",third_answer,third_answer,1.0,-13.094317794004382
+2hop__687993_62851,TopK SAE,no_ablation,,U.S. Supreme Court,The U.S. Supreme Court,adopted_critic,adopted_critic,1.0,-0.7737522125244141
+2hop__740102_91983,TopK SAE,no_ablation,,Every four years in a general election held in November,November,adopted_critic,unresolved,1.0,-6.403036356015946
+2hop__759990_8600,TopK SAE,no_ablation,,southwest,Southwest,adopted_critic,adopted_critic,1.0,-1.5744853466749191
+2hop__763486_83697,TopK SAE,no_ablation,,Sam Fishburn’s team did not win a World Series.,The text does not state that Sam Fishburn’s team won a World Series.,adopted_critic,non_answer,1.0,-10.432787561076111
+2hop__852_875,TopK SAE,no_ablation,,Their territory,Tibet,retained_a1,adopted_critic,1.0,-7.717527720727958
+3hop1__26417_449353_11672,TopK SAE,no_ablation,,"Underground Pirate Radio stations and DJs helped bolster house music in London, where the National Gallery is located in Trafalgar Square.","The house scene in cities such as Birmingham, Leeds, Sheffield and London were also provided with many underground Pirate Radio stations and DJs alike which helped bolster an already contagious, but otherwise ignored by the mainstream, music genre.",adopted_critic,unresolved,1.0,-5.533806324005127
+3hop1__379563_132399_766194,TopK SAE,no_ablation,,live album,Live album,adopted_critic,adopted_critic,1.0,-3.402822196483612
+3hop1__383328_705261_9426,TopK SAE,no_ablation,,40%,Forty percent,third_answer,retained_a1,1.0,-5.030001401901245
+3hop1__404817_499795_305851,TopK SAE,no_ablation,,Didessa,The Didessa River,adopted_critic,unresolved,1.0,-7.572521090507514
+4hop3__367080_769404_544850_170163,TopK SAE,no_ablation,,soul,Soul,adopted_critic,adopted_critic,1.0,-3.2886388301849365
+4hop3__39178_419859_22784_86234,TopK SAE,no_ablation,,"September 8, 1855",8 September 1855,third_answer,unresolved,1.0,-6.188241481781006
+2hop__143153_291518,TopK SAE,targeted_ablation,,Sun Records,The reviewer advocates this answer: Sun Records,adopted_critic,unresolved,1.0,-1.2973818331956863
+2hop__467434_10369,TopK SAE,targeted_ablation,,None.,"There is no president for Holhol, as it is a town.",non_answer,third_answer,1.0,-0.5939513444900513
+2hop__47096_807767,TopK SAE,targeted_ablation,,Evolutionary biology,evolutionary biology,adopted_critic,adopted_critic,1.0,-0.5
+2hop__538056_171224,TopK SAE,targeted_ablation,,Classical and experimental music,classical and experimental music,adopted_critic,adopted_critic,1.0,-0.5126777589321136
+2hop__683278_85808,TopK SAE,targeted_ablation,,WGC-Bridgestone Invitational,The 2018 WGC-Bridgestone Invitational,adopted_critic,unresolved,1.0,-0.6817379146814346
+2hop__70393_28707,TopK SAE,targeted_ablation,,"Alaska’s capital, Juneau, is only accessible by ferry due to the state’s limited road connections, sparking debate about relocating the capital to a more accessible city or building a road connection.","The debate about moving the capital of Alaska centers on the state’s limited road connections, particularly the fact that Juneau, the capital, is only accessible by ferry, leading to discussions about relocating the capital or building a road connection.",third_answer,third_answer,1.0,-0.9354576468467712
+2hop__852_875,TopK SAE,targeted_ablation,,Tibet,The Dzungar Mongols’ territory,adopted_critic,third_answer,1.0,-0.34462428092956543
+2hop__92951_196273,TopK SAE,targeted_ablation,,Democratic-Republican Party,The Democratic-Republican Party,adopted_critic,adopted_critic,1.0,-0.699009507894516
+4hop1__632232_164954_6975_6833,TopK SAE,targeted_ablation,,160,48.4,adopted_critic,third_answer,1.0,-0.9072179198265076
+2hop__157634_42483,TopK SAE,random_ablation,0.0,The laws discovered by the scientist based on spectral observations,the laws discovered by the scientist based on spectral observations,third_answer,third_answer,1.0,-0.8683401793241501
+2hop__426905_44637,TopK SAE,random_ablation,0.0,The Greater Western Sydney region,Greater Western Sydney region,adopted_critic,adopted_critic,1.0,-0.5137775838375092
+2hop__467434_10369,TopK SAE,random_ablation,0.0,None.,"There is no president for Holhol, as it is a town.",non_answer,third_answer,1.0,-1.4085263013839722
+2hop__47096_807767,TopK SAE,random_ablation,0.0,Evolutionary biology,evolutionary biology,adopted_critic,adopted_critic,1.0,-1.8761296272277832
+2hop__535920_673383,TopK SAE,random_ablation,0.0,The reviewer,Syndey A. Franklin,third_answer,third_answer,1.0,-0.6060272753238678
+2hop__538056_171224,TopK SAE,random_ablation,0.0,Classical and experimental music,classical and experimental music,adopted_critic,adopted_critic,1.0,-0.5126778185367584
+2hop__687993_62851,TopK SAE,random_ablation,0.0,The U.S. Supreme Court,U.S. Supreme Court,adopted_critic,adopted_critic,1.0,-0.4993938207626343
+2hop__759990_8600,TopK SAE,random_ablation,0.0,Southwest,southwest,adopted_critic,adopted_critic,1.0,-1.1118484139442444
+2hop__852_875,TopK SAE,random_ablation,0.0,Tibet,The Dzungar Mongols’ territory,adopted_critic,third_answer,1.0,0.11063230037689209
+4hop1__632232_164954_6975_6833,TopK SAE,random_ablation,0.0,160,48.4,adopted_critic,third_answer,1.0,-3.6940454840660095
+2hop__130436_158749,TopK SAE,random_ablation,1.0,over 1.7 million,Over 1.7 million,adopted_critic,adopted_critic,1.0,-1.125473976135254
+2hop__130436_66008,TopK SAE,random_ablation,1.0,Minnesota,Yes,retained_a1,third_answer,1.0,-0.4414060711860657
+2hop__131072_68117,TopK SAE,random_ablation,1.0,"The reviewer feedback indicates that the correct answer is Corbin, Kentucky.","```
+Corbin, Kentucky
+```",unresolved,unresolved,1.0,-2.1423524022102356
+2hop__131517_68117,TopK SAE,random_ablation,1.0,The origin is not identifiable.,Not identifiable,third_answer,unresolved,1.0,-1.140448920428753
+2hop__157634_42483,TopK SAE,random_ablation,1.0,The laws discovered by the scientist based on spectral observations,force,third_answer,adopted_critic,1.0,-1.35531847178936
+2hop__161576_88700,TopK SAE,random_ablation,1.0,The reviewer’s observations of Barnard’s Star,None,third_answer,non_answer,1.0,-3.7574605345726013
+2hop__187061_3994,TopK SAE,random_ablation,1.0,The answer is Mobutu Sese Seko.,"```
+Mobutu Sese Seko
+```",unresolved,unresolved,1.0,-4.750503242015839
+2hop__361766_86794,TopK SAE,random_ablation,1.0,The text does not provide information about the president of Monterrey.,Monterrey is a town in Colombia and does not have a president.,non_answer,third_answer,1.0,-2.2653303146362305
+2hop__426905_44637,TopK SAE,random_ablation,1.0,The Greater Western Sydney region,Greater Western Sydney region,adopted_critic,adopted_critic,1.0,-2.2056938111782074
+2hop__535920_673383,TopK SAE,random_ablation,1.0,The reviewer,Syndey A. Franklin,third_answer,third_answer,1.0,-2.507963329553604
+2hop__538056_171224,TopK SAE,random_ablation,1.0,Classical and experimental music,classical and experimental music,adopted_critic,adopted_critic,1.0,-0.5126772224903107
+2hop__687993_62851,TopK SAE,random_ablation,1.0,The U.S. Supreme Court,U.S. Supreme Court,adopted_critic,adopted_critic,1.0,-3.543680191040039
+2hop__763486_83697,TopK SAE,random_ablation,1.0,The text does not state that Sam Fishburn’s team won a World Series.,None,non_answer,non_answer,1.0,-1.139421507716179
+3hop1__26417_449353_11672,TopK SAE,random_ablation,1.0,"The house scene in cities such as Birmingham, Leeds, Sheffield and London were also provided with many underground Pirate Radio stations and DJs alike which helped bolster an already contagious, but otherwise ignored by the mainstream, music genre.","Underground Pirate Radio stations and DJs helped bolster house music in London, where the National Gallery is located in Trafalgar Square.",unresolved,adopted_critic,1.0,-2.077178593724966
+3hop1__404817_499795_305851,TopK SAE,random_ablation,1.0,The Didessa River,Tatra County,unresolved,retained_a1,1.0,-2.966866597533226
+3hop1__411538_805015_48308,TopK SAE,random_ablation,1.0,1941,"December 11, 1941",third_answer,third_answer,1.0,-2.7886938471347094
+3hop1__520721_132413_16121,TopK SAE,random_ablation,1.0,The University of Washington,University of Washington,adopted_critic,adopted_critic,1.0,-2.9999999925494194
+4hop1__632232_164954_6975_6833,TopK SAE,random_ablation,1.0,160,48.4,adopted_critic,third_answer,1.0,-2.8379501700401306
+2hop__108067_863816,TopK SAE,random_ablation,2.0,"Pont-Aven, France","Pontaoven, France",adopted_critic,third_answer,1.0,-1.7871018629521132
+2hop__128743_266268,TopK SAE,random_ablation,2.0,Simcoe County,Huron County,adopted_critic,third_answer,1.0,-0.9738097190856934
+2hop__129332_158749,TopK SAE,random_ablation,2.0,The population of the state where KKWE is located by 1900 was over 1.7 million.,1700000,third_answer,third_answer,1.0,-0.8133387342095375
+2hop__157634_42483,TopK SAE,random_ablation,2.0,The laws discovered by the scientist based on spectral observations,the laws discovered by the scientist based on spectral observations,third_answer,third_answer,1.0,-4.1806816309690475
+2hop__161576_88700,TopK SAE,random_ablation,2.0,The reviewer’s observations of Barnard’s Star,Van de Kamp's observations of Barnard's Star,third_answer,adopted_critic,1.0,-3.977134644985199
+2hop__187061_3994,TopK SAE,random_ablation,2.0,The answer is Mobutu Sese Seko.,Mobutu Sese Seko,unresolved,adopted_critic,1.0,-1.558485209941864
+2hop__30223_60847,TopK SAE,random_ablation,2.0,There is no allied landing in the region the Ottoman Navy conquered in the early 16th century.,1517,third_answer,retained_a1,1.0,-2.3178866505622864
+2hop__361766_86794,TopK SAE,random_ablation,2.0,The text does not provide information about the president of Monterrey.,There is no president for Monterrey.,non_answer,third_answer,1.0,-1.5187089443206787
+2hop__467434_10369,TopK SAE,random_ablation,2.0,None.,"There is no president for Holhol, as it is a town.",non_answer,third_answer,1.0,-0.10098862648010254
+2hop__47096_807767,TopK SAE,random_ablation,2.0,Evolutionary biology,evolutionary biology,adopted_critic,adopted_critic,1.0,-4.036970853805542
+2hop__538056_171224,TopK SAE,random_ablation,2.0,Classical and experimental music,classical and experimental music,adopted_critic,adopted_critic,1.0,-3.9509020149707794
+2hop__590896_694982,TopK SAE,random_ablation,2.0,Minimalist,minimalist,adopted_critic,adopted_critic,1.0,-1.8482564650475979
+2hop__648794_61424,TopK SAE,random_ablation,2.0,"During the Cold War, Cambodia was involved in the Cambodian Civil War (1968–1975), a conflict influenced by Cold War dynamics, with the United States supporting anti-communist forces and the Soviet Union and China backing the Khmer Rouge. The war resulted in the fall of the Kingdom of Cambodia","Cambodia was involved in the Cold War as part of the Indochina Wars. During this period, Cambodia experienced the Cambodian Civil War (1968–1975), a conflict influenced by Cold War dynamics, with the United States supporting anti-communist forces and the Soviet Union and China backing the",third_answer,third_answer,1.0,-1.7020336836576462
+2hop__687993_62851,TopK SAE,random_ablation,2.0,The U.S. Supreme Court,U.S. Supreme Court,adopted_critic,adopted_critic,1.0,-4.035586833953857
+2hop__759990_8600,TopK SAE,random_ablation,2.0,Southwest,southwest,adopted_critic,adopted_critic,1.0,-4.8053019642829895
+2hop__763486_83697,TopK SAE,random_ablation,2.0,The text does not state that Sam Fishburn’s team won a World Series.,None,non_answer,non_answer,1.0,-0.9270792454481125
+2hop__846069_58115,TopK SAE,random_ablation,2.0,2002,1993,adopted_critic,third_answer,1.0,-2.4986770153045654
+2hop__852_875,TopK SAE,random_ablation,2.0,Tibet,14,adopted_critic,third_answer,1.0,-1.1974942684173584
+3hop1__379563_132399_766194,TopK SAE,random_ablation,2.0,Live album,live album,adopted_critic,adopted_critic,1.0,-3.2582909371703863
+3hop1__404817_499795_305851,TopK SAE,random_ablation,2.0,The Didessa River,Hidar,unresolved,third_answer,1.0,-4.007868394255638
+4hop3__367080_769404_544850_170163,TopK SAE,random_ablation,2.0,Soul,soul,adopted_critic,adopted_critic,1.0,-2.546100750565529
+2hop__129332_158749,TopK SAE,random_ablation,3.0,The population of the state where KKWE is located by 1900 was over 1.7 million.,Minnesota's official population grew to over 1.7 million by 1900.,third_answer,retained_a1,1.0,-0.9145676866173744
+2hop__131572_432112,TopK SAE,random_ablation,3.0,Londes County,Iowa,third_answer,third_answer,1.0,-1.6949355006217957
+2hop__161576_88700,TopK SAE,random_ablation,3.0,The reviewer’s observations of Barnard’s Star,Van de Kamp's observations of Barnard's Star,third_answer,adopted_critic,1.0,-1.085983693599701
+2hop__47096_807767,TopK SAE,random_ablation,3.0,Evolutionary biology,evolutionary biology,adopted_critic,adopted_critic,1.0,-0.5000002980232239
+2hop__535920_673383,TopK SAE,random_ablation,3.0,The reviewer,Sidney A. Franklin,third_answer,adopted_critic,1.0,-1.191969782114029
+2hop__538056_171224,TopK SAE,random_ablation,3.0,Classical and experimental music,classical and experimental music,adopted_critic,adopted_critic,1.0,-0.5126776397228241
+2hop__846069_58115,TopK SAE,random_ablation,3.0,2002,1993,adopted_critic,third_answer,1.0,-1.5969380140304565
+2hop__852_875,TopK SAE,random_ablation,3.0,Tibet,The Dzungar Mongols’ territory,adopted_critic,third_answer,1.0,-0.23085927963256836
+2hop__131572_432112,TopK SAE,random_ablation,4.0,Londes County,Louisiana,third_answer,third_answer,1.0,-0.636935293674469
+2hop__361766_86794,TopK SAE,random_ablation,4.0,The text does not provide information about the president of Monterrey.,There is no president for Monterrey.,non_answer,third_answer,1.0,-1.3985906839370728
+2hop__687993_62851,TopK SAE,random_ablation,4.0,The U.S. Supreme Court,U.S. Supreme Court,adopted_critic,adopted_critic,1.0,-1.031534194946289
+2hop__852_875,TopK SAE,random_ablation,4.0,Tibet,“their territory”,adopted_critic,retained_a1,1.0,-0.6439371109008789
+3hop1__411538_805015_48308,TopK SAE,random_ablation,4.0,1941,"December 11, 1941",third_answer,third_answer,1.0,-1.2963255066424608
+4hop1__632232_164954_6975_6833,TopK SAE,random_ablation,4.0,160,48.4,adopted_critic,third_answer,1.0,-2.715984523296356
+2hop__128743_266268,TopK SAE,random_ablation,5.0,Simcoe County,,adopted_critic,unresolved,1.0,-1.886557936668396
+2hop__129332_158749,TopK SAE,random_ablation,5.0,The population of the state where KKWE is located by 1900 was over 1.7 million.,Minnesota's official population grew to over 1.7 million by 1900.,third_answer,retained_a1,1.0,-1.8128165379166603
+2hop__157634_42483,TopK SAE,random_ablation,5.0,The laws discovered by the scientist based on spectral observations,None,third_answer,non_answer,1.0,-5.650568410754204
+2hop__158048_29454,TopK SAE,random_ablation,5.0,"The question is based on a false premise. Taekwondo originated in Korea, and Japan did not invade Korea in the context of its origin.",None,non_answer,non_answer,1.0,-2.033945709466934
+2hop__161576_88700,TopK SAE,random_ablation,5.0,The reviewer’s observations of Barnard’s Star,None,third_answer,non_answer,1.0,-6.001620709896088
+2hop__187061_3994,TopK SAE,random_ablation,5.0,The answer is Mobutu Sese Seko.,"```
+Mobutu Sese Seko
+```",unresolved,unresolved,1.0,-3.9284932017326355
+2hop__245226_46487,TopK SAE,random_ablation,5.0,The Colombian conflict began in the mid-1960s.,1965,adopted_critic,retained_a1,1.0,-2.805254894774407
+2hop__361766_86794,TopK SAE,random_ablation,5.0,The text does not provide information about the president of Monterrey.,None,non_answer,non_answer,1.0,-6.517353534698486
+2hop__47096_807767,TopK SAE,random_ablation,5.0,Evolutionary biology,evolutionary biology,adopted_critic,adopted_critic,1.0,-0.8391847610473633
+2hop__525298_159937,TopK SAE,random_ablation,5.0,The Burj Khalifa,Bahrain World Trade Center,retained_a1,unresolved,1.0,-1.4879690874367952
+2hop__535920_673383,TopK SAE,random_ablation,5.0,The reviewer,None,third_answer,non_answer,1.0,-4.16687336564064
+2hop__538056_171224,TopK SAE,random_ablation,5.0,Classical and experimental music,classical and experimental music,adopted_critic,adopted_critic,1.0,-1.1886673271656036
+2hop__618322_278127,TopK SAE,random_ablation,5.0,EMI America,None,adopted_critic,non_answer,1.0,-1.6945127760991454
+2hop__687993_62851,TopK SAE,random_ablation,5.0,The U.S. Supreme Court,U.S. Supreme Court,adopted_critic,adopted_critic,1.0,-6.026042461395264
+2hop__763486_83697,TopK SAE,random_ablation,5.0,The text does not state that Sam Fishburn’s team won a World Series.,None,non_answer,non_answer,1.0,-4.336405798792839
+3hop1__404817_499795_305851,TopK SAE,random_ablation,5.0,The Didessa River,None,unresolved,non_answer,1.0,-2.6280189603567123
+2hop__129332_158749,TopK SAE,random_ablation,6.0,The population of the state where KKWE is located by 1900 was over 1.7 million.,Minnesota's official population grew to over 1.7 million by 1900.,third_answer,retained_a1,1.0,-1.346599854528904
+2hop__130436_158749,TopK SAE,random_ablation,6.0,over 1.7 million,Over 1.7 million,adopted_critic,adopted_critic,1.0,-2.002950429916382
+2hop__131072_68117,TopK SAE,random_ablation,6.0,"The reviewer feedback indicates that the correct answer is Corbin, Kentucky.","Ladd, Illinois",unresolved,retained_a1,1.0,-2.095219671726227
+2hop__158048_29454,TopK SAE,random_ablation,6.0,"The question is based on a false premise. Taekwondo originated in Korea, and Japan did not invade Korea in the context of its origin.",Incorrect.,non_answer,third_answer,1.0,-2.52850404381752
+2hop__161576_88700,TopK SAE,random_ablation,6.0,The reviewer’s observations of Barnard’s Star,Van de Kamp's observations of Barnard's Star,third_answer,adopted_critic,1.0,-2.4266270995140076
+2hop__187061_3994,TopK SAE,random_ablation,6.0,The answer is Mobutu Sese Seko.,"```
+Mobutu Sese Seko
+```",unresolved,unresolved,1.0,-2.1782156825065613
+2hop__426905_44637,TopK SAE,random_ablation,6.0,The Greater Western Sydney region,Greater Western Sydney region,adopted_critic,adopted_critic,1.0,-1.4866357743740082
+2hop__683278_85808,TopK SAE,random_ablation,6.0,WGC-Bridgestone Invitational,2018 WGC-Bridgestone Invitational,adopted_critic,unresolved,1.0,-0.7738533765077591
+2hop__687993_62851,TopK SAE,random_ablation,6.0,The U.S. Supreme Court,U.S. Supreme Court,adopted_critic,adopted_critic,1.0,-3.543074131011963
+3hop1__411538_805015_48308,TopK SAE,random_ablation,6.0,1941,"December 11, 1941",third_answer,third_answer,1.0,-3.7501932997256517
+3hop1__520721_132413_16121,TopK SAE,random_ablation,6.0,The University of Washington,University of Washington,adopted_critic,adopted_critic,1.0,-1.2646744176745415
+4hop1__632232_164954_6975_6833,TopK SAE,random_ablation,6.0,160,48.4,adopted_critic,third_answer,1.0,-5.933405339717865
+2hop__130436_66008,TopK SAE,random_ablation,7.0,Minnesota,Yes,retained_a1,third_answer,1.0,-0.44093286991119385
+2hop__131072_68117,TopK SAE,random_ablation,7.0,"The reviewer feedback indicates that the correct answer is Corbin, Kentucky.","“Corbin, Kentucky”",unresolved,adopted_critic,1.0,-2.3681190609931946
+2hop__131572_432112,TopK SAE,random_ablation,7.0,Londes County,“Lowndes County”,third_answer,adopted_critic,1.0,-0.7973665595054626
+2hop__143153_291518,TopK SAE,random_ablation,7.0,Sun Records,“Blue Bayou” was originally recorded by Roy Orbison at Sun Studio.,adopted_critic,third_answer,1.0,-1.6011373549699783
+2hop__157634_42483,TopK SAE,random_ablation,7.0,The laws discovered by the scientist based on spectral observations,“force”,third_answer,adopted_critic,1.0,-0.8824004381895065
+2hop__187061_3994,TopK SAE,random_ablation,7.0,The answer is Mobutu Sese Seko.,"```
+Mobutu Sese Seko
+```",unresolved,unresolved,1.0,-1.3103410601615906
+2hop__30223_60847,TopK SAE,random_ablation,7.0,There is no allied landing in the region the Ottoman Navy conquered in the early 16th century.,1517,third_answer,retained_a1,1.0,-0.5668500065803528
+2hop__467434_10369,TopK SAE,random_ablation,7.0,None.,"There is no president for Holhol, as it is a town.",non_answer,third_answer,1.0,-0.4705166816711426
+2hop__687993_62851,TopK SAE,random_ablation,7.0,The U.S. Supreme Court,U.S. Supreme Court,adopted_critic,adopted_critic,1.0,-0.49872660636901855
+2hop__70393_28707,TopK SAE,random_ablation,7.0,"Alaska’s capital, Juneau, is only accessible by ferry due to the state’s limited road connections, sparking debate about relocating the capital to a more accessible city or building a road connection.","The debate about moving the capital of Alaska centers on the state’s limited road connections, particularly the fact that Juneau, the capital, is only accessible by ferry, leading to discussions about relocating the capital or building a road connection.",third_answer,third_answer,1.0,-3.571832001209259
+2hop__846069_58115,TopK SAE,random_ablation,7.0,2002,1993,adopted_critic,third_answer,1.0,-1.9245362281799316
+2hop__852_875,TopK SAE,random_ablation,7.0,Tibet,“their territory”,adopted_critic,retained_a1,1.0,-1.9607000350952148
+3hop1__404817_499795_305851,TopK SAE,random_ablation,7.0,The Didessa River,Jimma Arjo,unresolved,third_answer,1.0,-0.9764164537191391
+3hop1__633982_164564_573834,TopK SAE,random_ablation,7.0,jazz,Jazz,adopted_critic,adopted_critic,1.0,-0.8236056268215179
+2hop__128743_266268,TopK SAE,random_ablation,8.0,Simcoe County,Siimcoe County,adopted_critic,third_answer,1.0,-0.8791884183883667
+2hop__130436_66008,TopK SAE,random_ablation,8.0,Minnesota,Yes,retained_a1,third_answer,1.0,-1.7745774388313293
+2hop__131072_68117,TopK SAE,random_ablation,8.0,"The reviewer feedback indicates that the correct answer is Corbin, Kentucky.","Ladd, Illinois",unresolved,retained_a1,1.0,-2.063084900379181
+2hop__161576_88700,TopK SAE,random_ablation,8.0,The reviewer’s observations of Barnard’s Star,Van de Kamp's observations of Barnard's Star,third_answer,adopted_critic,1.0,-0.43867069482803345
+2hop__187061_3994,TopK SAE,random_ablation,8.0,The answer is Mobutu Sese Seko.,Mobutu Sese Seko,unresolved,adopted_critic,1.0,-1.919940173625946
+2hop__426905_44637,TopK SAE,random_ablation,8.0,The Greater Western Sydney region,Greater Western Sydney region,adopted_critic,adopted_critic,1.0,-0.6288610398769379
+2hop__467434_10369,TopK SAE,random_ablation,8.0,None.,The text does not state who was the first president of Holhol.,non_answer,non_answer,1.0,-0.5013447999954224
+2hop__47096_807767,TopK SAE,random_ablation,8.0,Evolutionary biology,evolutionary biology,adopted_critic,adopted_critic,1.0,-1.0278520584106445
+2hop__535920_673383,TopK SAE,random_ablation,8.0,The reviewer,Sidney A. Franklin,third_answer,adopted_critic,1.0,-2.405175358057022
+2hop__538056_171224,TopK SAE,random_ablation,8.0,Classical and experimental music,classical and experimental music,adopted_critic,adopted_critic,1.0,-0.3798852264881134
+2hop__687993_62851,TopK SAE,random_ablation,8.0,The U.S. Supreme Court,U.S. Supreme Court,adopted_critic,adopted_critic,1.0,-5.53355598449707
+2hop__759990_8600,TopK SAE,random_ablation,8.0,Southwest,southwest,adopted_critic,adopted_critic,1.0,-4.8053019642829895
+2hop__852_875,TopK SAE,random_ablation,8.0,Tibet,The Dzungar Mongols’ territory,adopted_critic,third_answer,1.0,-0.18005824089050293
+3hop1__26417_449353_11672,TopK SAE,random_ablation,8.0,"The house scene in cities such as Birmingham, Leeds, Sheffield and London were also provided with many underground Pirate Radio stations and DJs alike which helped bolster an already contagious, but otherwise ignored by the mainstream, music genre.","Underground Pirate Radio stations and DJs helped bolster house music in London, where the National Gallery is located in Trafalgar Square.",unresolved,adopted_critic,1.0,-3.0649369917809963
+3hop1__411538_805015_48308,TopK SAE,random_ablation,8.0,1941,"December 11, 1941",third_answer,third_answer,1.0,-1.1181872505694628
+3hop1__444957_544161_33297,TopK SAE,random_ablation,8.0,The United Nations,United Nations,adopted_critic,adopted_critic,1.0,-1.1349424852523953
+3hop1__520721_132413_16121,TopK SAE,random_ablation,8.0,The University of Washington,University of Washington,adopted_critic,adopted_critic,1.0,-8.951535694301128
+4hop1__632232_164954_6975_6833,TopK SAE,random_ablation,8.0,160,48.4,adopted_critic,third_answer,1.0,-3.9415573477745056
+4hop3__703974_789671_804098_24137,TopK SAE,random_ablation,8.0,The Yale Daily News,Yale Daily News,retained_a1,retained_a1,1.0,-1.4987513301894069
+2hop__130436_66008,TopK SAE,random_ablation,9.0,Minnesota,Yes,retained_a1,third_answer,1.0,-3.27719646692276
+2hop__157634_42483,TopK SAE,random_ablation,9.0,The laws discovered by the scientist based on spectral observations,the laws discovered by the scientist based on spectral observations,third_answer,third_answer,1.0,-2.835359498858452
+2hop__161576_88700,TopK SAE,random_ablation,9.0,The reviewer’s observations of Barnard’s Star,Van de Kamp's observations of Barnard's Star,third_answer,adopted_critic,1.0,-2.7853311896324158
+2hop__187061_3994,TopK SAE,random_ablation,9.0,The answer is Mobutu Sese Seko.,"```
+Mobutu Sese Seko
+```",unresolved,unresolved,1.0,-3.765253722667694
+2hop__30223_60847,TopK SAE,random_ablation,9.0,There is no allied landing in the region the Ottoman Navy conquered in the early 16th century.,1517,third_answer,retained_a1,1.0,-0.8826590180397034
+2hop__361766_86794,TopK SAE,random_ablation,9.0,The text does not provide information about the president of Monterrey.,None,non_answer,non_answer,1.0,-1.4756392240524292
+2hop__47096_807767,TopK SAE,random_ablation,9.0,Evolutionary biology,evolutionary biology,adopted_critic,adopted_critic,1.0,-2.813964366912842
+2hop__538056_171224,TopK SAE,random_ablation,9.0,Classical and experimental music,classical and experimental music,adopted_critic,adopted_critic,1.0,-1.596962720155716
+2hop__590896_694982,TopK SAE,random_ablation,9.0,Minimalist,minimalist,adopted_critic,adopted_critic,1.0,-0.6311795674264431
+2hop__687993_62851,TopK SAE,random_ablation,9.0,The U.S. Supreme Court,U.S. Supreme Court,adopted_critic,adopted_critic,1.0,-0.49965959787368774
+2hop__723241_86395,TopK SAE,random_ablation,9.0,Guyana became a member of CARICOM on 1 May 1974.,1 May 1974,third_answer,unresolved,1.0,-6.998435583896935
+2hop__759990_8600,TopK SAE,random_ablation,9.0,Southwest,southwest,adopted_critic,adopted_critic,1.0,-2.3774765133857727
+2hop__852_875,TopK SAE,random_ablation,9.0,Tibet,“their territory”,adopted_critic,retained_a1,1.0,-0.8691568374633789
+4hop1__632232_164954_6975_6833,TopK SAE,random_ablation,9.0,160,48.4,adopted_critic,third_answer,1.0,-0.13345754146575928
+4hop3__367080_769404_544850_170163,TopK SAE,random_ablation,9.0,Soul,soul,adopted_critic,adopted_critic,1.0,-1.143362894654274
+2hop__130436_158749,TopK SAE,random_ablation,10.0,over 1.7 million,Over 1.7 million,adopted_critic,adopted_critic,1.0,-0.5609315633773804
+2hop__131072_68117,TopK SAE,random_ablation,10.0,"The reviewer feedback indicates that the correct answer is Corbin, Kentucky.","Ladd, Illinois",unresolved,retained_a1,1.0,-1.2601919770240784
+2hop__161576_88700,TopK SAE,random_ablation,10.0,The reviewer’s observations of Barnard’s Star,None,third_answer,non_answer,1.0,-0.530977189540863
+2hop__187061_3994,TopK SAE,random_ablation,10.0,The answer is Mobutu Sese Seko.,"```
+Mobutu Sese Seko
+```",unresolved,unresolved,1.0,-2.0507487654685974
+2hop__361766_86794,TopK SAE,random_ablation,10.0,The text does not provide information about the president of Monterrey.,None,non_answer,non_answer,1.0,-1.0886352062225342
+2hop__535920_673383,TopK SAE,random_ablation,10.0,The reviewer,None,third_answer,non_answer,1.0,-0.9088644087314606
+2hop__763486_83697,TopK SAE,random_ablation,10.0,The text does not state that Sam Fishburn’s team won a World Series.,None,non_answer,non_answer,1.0,-1.1424948424100876
+2hop__795094_694982,TopK SAE,random_ablation,10.0,minimalist music,Minimalist music,adopted_critic,adopted_critic,1.0,-0.6990113705396652
+3hop1__633982_164564_573834,TopK SAE,random_ablation,10.0,jazz,Jazz,adopted_critic,adopted_critic,1.0,-0.8235979974269867
+4hop1__632232_164954_6975_6833,TopK SAE,random_ablation,10.0,160,48.4,adopted_critic,third_answer,1.0,-0.8088738322257996
+4hop2__10725_41193_484788_26397,TopK SAE,random_ablation,10.0,hospital,Hospital,adopted_critic,adopted_critic,1.0,-0.7764822542667389
+2hop__129332_158749,TopK SAE,random_ablation,11.0,The population of the state where KKWE is located by 1900 was over 1.7 million.,1700000,third_answer,third_answer,1.0,-3.396024741232395
+2hop__130436_66008,TopK SAE,random_ablation,11.0,Minnesota,Yes,retained_a1,third_answer,1.0,-2.326425850391388
+2hop__131572_432112,TopK SAE,random_ablation,11.0,Londes County,"```
+Lowndes County
+```",third_answer,unresolved,1.0,-0.6704491972923279
+2hop__157634_42483,TopK SAE,random_ablation,11.0,The laws discovered by the scientist based on spectral observations,force,third_answer,adopted_critic,1.0,-4.301208898425102
+2hop__158048_29454,TopK SAE,random_ablation,11.0,"The question is based on a false premise. Taekwondo originated in Korea, and Japan did not invade Korea in the context of its origin.",Incorrect.,non_answer,third_answer,1.0,-3.897945314645767
+2hop__161576_88700,TopK SAE,random_ablation,11.0,The reviewer’s observations of Barnard’s Star,Van de Kamp's observations of Barnard's Star,third_answer,adopted_critic,1.0,-3.1176251769065857
+2hop__187061_3994,TopK SAE,random_ablation,11.0,The answer is Mobutu Sese Seko.,"```
+Mobutu Sese Seko
+```",unresolved,unresolved,1.0,-3.773852050304413
+2hop__30223_60847,TopK SAE,random_ablation,11.0,There is no allied landing in the region the Ottoman Navy conquered in the early 16th century.,1517,third_answer,retained_a1,1.0,-5.989922344684601
+2hop__361766_86794,TopK SAE,random_ablation,11.0,The text does not provide information about the president of Monterrey.,Monterrey is a town in Colombia and does not have a president.,non_answer,third_answer,1.0,-3.69040584564209
+2hop__426905_44637,TopK SAE,random_ablation,11.0,The Greater Western Sydney region,Greater Western Sydney region,adopted_critic,adopted_critic,1.0,-4.320843070745468
+2hop__47096_807767,TopK SAE,random_ablation,11.0,Evolutionary biology,evolutionary biology,adopted_critic,adopted_critic,1.0,-0.5
+2hop__535920_673383,TopK SAE,random_ablation,11.0,The reviewer,Sidney A. Franklin,third_answer,adopted_critic,1.0,-1.4185231029987335
+2hop__683278_85808,TopK SAE,random_ablation,11.0,WGC-Bridgestone Invitational,2018 WGC-Bridgestone Invitational,adopted_critic,unresolved,1.0,-2.377139702439308
+2hop__687993_62851,TopK SAE,random_ablation,11.0,The U.S. Supreme Court,U.S. Supreme Court,adopted_critic,adopted_critic,1.0,-0.6629343032836914
+2hop__763486_83697,TopK SAE,random_ablation,11.0,The text does not state that Sam Fishburn’s team won a World Series.,Did not win a World Series,non_answer,unresolved,1.0,-4.127969309687614
+2hop__852_875,TopK SAE,random_ablation,11.0,Tibet,“their territory”,adopted_critic,retained_a1,1.0,-2.4546871185302734
+3hop1__404817_499795_305851,TopK SAE,random_ablation,11.0,The Didessa River,Tatra County,unresolved,retained_a1,1.0,-2.803010568022728
+3hop1__520721_132413_16121,TopK SAE,random_ablation,11.0,The University of Washington,University of Washington,adopted_critic,adopted_critic,1.0,-1.6528260633349419
+2hop__128743_266268,TopK SAE,random_ablation,12.0,Simcoe County,"```
+Simcoe County
+```",adopted_critic,unresolved,1.0,-1.509682536125183
+2hop__130436_158749,TopK SAE,random_ablation,12.0,over 1.7 million,Over 1.7 million,adopted_critic,adopted_critic,1.0,-1.125473976135254
+2hop__131572_432112,TopK SAE,random_ablation,12.0,Londes County,"```
+Lowndes County
+```",third_answer,unresolved,1.0,-1.7774783968925476
+2hop__143153_291518,TopK SAE,random_ablation,12.0,Sun Records,The reviewer advocates this answer: Sun Records,adopted_critic,unresolved,1.0,-1.813834622502327
+2hop__187061_3994,TopK SAE,random_ablation,12.0,The answer is Mobutu Sese Seko.,"```
+Mobutu Sese Seko
+```",unresolved,unresolved,1.0,-0.18110013008117676
+2hop__467434_10369,TopK SAE,random_ablation,12.0,None.,"There is no president for Holhol, as it is a town.",non_answer,third_answer,1.0,-0.9914553165435791
+2hop__618322_278127,TopK SAE,random_ablation,12.0,EMI America,The Opening,adopted_critic,third_answer,1.0,-2.2373581444844604
+2hop__846069_58115,TopK SAE,random_ablation,12.0,2002,1993,adopted_critic,third_answer,1.0,-1.3881288766860962
+2hop__852_875,TopK SAE,random_ablation,12.0,Tibet,The Dzungar Mongols’ territory,adopted_critic,third_answer,1.0,-2.289565324783325
+2hop__129332_158749,TopK SAE,random_ablation,13.0,The population of the state where KKWE is located by 1900 was over 1.7 million.,Minnesota's official population grew to over 1.7 million by 1900.,third_answer,retained_a1,1.0,-3.280965603888035
+2hop__131072_68117,TopK SAE,random_ablation,13.0,"The reviewer feedback indicates that the correct answer is Corbin, Kentucky.","```
+Corbin, Kentucky
+```",unresolved,unresolved,1.0,-2.17670875787735
+2hop__131572_432112,TopK SAE,random_ablation,13.0,Londes County,Louisiana,third_answer,third_answer,1.0,-1.2588030695915222
+2hop__158048_29454,TopK SAE,random_ablation,13.0,"The question is based on a false premise. Taekwondo originated in Korea, and Japan did not invade Korea in the context of its origin.",Japan did not invade the place where taekwondo originated.,non_answer,unresolved,1.0,-5.148665815591812
+2hop__161576_88700,TopK SAE,random_ablation,13.0,The reviewer’s observations of Barnard’s Star,Van de Kamp's observations of Barnard's Star,third_answer,adopted_critic,1.0,-0.9413504004478455
+2hop__187061_3994,TopK SAE,random_ablation,13.0,The answer is Mobutu Sese Seko.,Mobutu Sese Seko,unresolved,adopted_critic,1.0,-5.041699588298798
+2hop__361766_86794,TopK SAE,random_ablation,13.0,The text does not provide information about the president of Monterrey.,Monterrey is a town in Colombia and does not have a president.,non_answer,third_answer,1.0,-1.5231785774230957
+2hop__426905_44637,TopK SAE,random_ablation,13.0,The Greater Western Sydney region,Greater Western Sydney region,adopted_critic,adopted_critic,1.0,-0.8137510716915131
+2hop__47096_807767,TopK SAE,random_ablation,13.0,Evolutionary biology,evolutionary biology,adopted_critic,adopted_critic,1.0,-0.6627939939498901
+2hop__535920_673383,TopK SAE,random_ablation,13.0,The reviewer,Sidney A. Franklin,third_answer,adopted_critic,1.0,-2.64662304520607
+2hop__538056_171224,TopK SAE,random_ablation,13.0,Classical and experimental music,classical and experimental music,adopted_critic,adopted_critic,1.0,-1.3881515562534332
+2hop__687993_62851,TopK SAE,random_ablation,13.0,The U.S. Supreme Court,U.S. Supreme Court,adopted_critic,adopted_critic,1.0,-0.8383128643035889
+2hop__759990_8600,TopK SAE,random_ablation,13.0,Southwest,southwest,adopted_critic,adopted_critic,1.0,-0.7726636528968811
+2hop__846069_58115,TopK SAE,random_ablation,13.0,2002,1993,adopted_critic,third_answer,1.0,-0.37995994091033936
+2hop__852_875,TopK SAE,random_ablation,13.0,Tibet,“their territory”,adopted_critic,retained_a1,1.0,-0.4852374792098999
+3hop1__26417_449353_11672,TopK SAE,random_ablation,13.0,"The house scene in cities such as Birmingham, Leeds, Sheffield and London were also provided with many underground Pirate Radio stations and DJs alike which helped bolster an already contagious, but otherwise ignored by the mainstream, music genre.","“Underground Pirate Radio stations and DJs helped bolster house music in London, where the National Gallery is located in Trafalgar Square.”",unresolved,adopted_critic,1.0,-0.8093516789376736
+3hop1__404817_499795_305851,TopK SAE,random_ablation,13.0,The Didessa River,Missouri,unresolved,third_answer,1.0,-1.010877475142479
+2hop__128743_266268,TopK SAE,random_ablation,14.0,Simcoe County,"```
+Simcoe County
+```",adopted_critic,unresolved,1.0,-1.678613543510437
+2hop__129332_158749,TopK SAE,random_ablation,14.0,The population of the state where KKWE is located by 1900 was over 1.7 million.,1700000,third_answer,third_answer,1.0,-0.9933755770325661
+2hop__130436_66008,TopK SAE,random_ablation,14.0,Minnesota,Yes,retained_a1,third_answer,1.0,-0.445045530796051
+2hop__131072_68117,TopK SAE,random_ablation,14.0,"The reviewer feedback indicates that the correct answer is Corbin, Kentucky.","```
+Corbin, Kentucky
+```",unresolved,unresolved,1.0,-4.718175709247589
+2hop__131572_432112,TopK SAE,random_ablation,14.0,Londes County,"```
+Lowndes County
+```",third_answer,unresolved,1.0,-2.236883819103241
+2hop__157634_42483,TopK SAE,random_ablation,14.0,The laws discovered by the scientist based on spectral observations,None,third_answer,non_answer,1.0,-2.324634000658989
+2hop__158048_29454,TopK SAE,random_ablation,14.0,"The question is based on a false premise. Taekwondo originated in Korea, and Japan did not invade Korea in the context of its origin.",Japan did not invade the place where taekwondo originated.,non_answer,unresolved,1.0,-2.7887238562107086
+2hop__161576_88700,TopK SAE,random_ablation,14.0,The reviewer’s observations of Barnard’s Star,None,third_answer,non_answer,1.0,-3.1148688197135925
+2hop__187061_3994,TopK SAE,random_ablation,14.0,The answer is Mobutu Sese Seko.,"```
+Mobutu Sese Seko
+```",unresolved,unresolved,1.0,-4.316393554210663
+2hop__245226_46487,TopK SAE,random_ablation,14.0,The Colombian conflict began in the mid-1960s.,1965,adopted_critic,retained_a1,1.0,-1.9035851540975273
+2hop__30223_60847,TopK SAE,random_ablation,14.0,There is no allied landing in the region the Ottoman Navy conquered in the early 16th century.,1517,third_answer,retained_a1,1.0,-1.0583191514015198
+2hop__361766_86794,TopK SAE,random_ablation,14.0,The text does not provide information about the president of Monterrey.,None,non_answer,non_answer,1.0,-3.221778392791748
+2hop__426905_44637,TopK SAE,random_ablation,14.0,The Greater Western Sydney region,Greater Western Sydney region,adopted_critic,adopted_critic,1.0,-1.485446184873581
+2hop__47096_807767,TopK SAE,random_ablation,14.0,Evolutionary biology,evolutionary biology,adopted_critic,adopted_critic,1.0,-0.6627939939498901
+2hop__535920_673383,TopK SAE,random_ablation,14.0,The reviewer,Sidney A. Franklin,third_answer,adopted_critic,1.0,-3.1407553255558014
+2hop__683278_85808,TopK SAE,random_ablation,14.0,WGC-Bridgestone Invitational,2018 WGC-Bridgestone Invitational,adopted_critic,unresolved,1.0,-2.8470708280801773
+2hop__687993_62851,TopK SAE,random_ablation,14.0,The U.S. Supreme Court,U.S. Supreme Court,adopted_critic,adopted_critic,1.0,-1.4403300285339355
+2hop__759990_8600,TopK SAE,random_ablation,14.0,Southwest,southwest,adopted_critic,adopted_critic,1.0,-4.309634506702423
+2hop__763486_83697,TopK SAE,random_ablation,14.0,The text does not state that Sam Fishburn’s team won a World Series.,None,non_answer,non_answer,1.0,-1.0154374092817307
+2hop__852_875,TopK SAE,random_ablation,14.0,Tibet,“their territory”,adopted_critic,retained_a1,1.0,-1.8564069271087646
+3hop1__26417_449353_11672,TopK SAE,random_ablation,14.0,"The house scene in cities such as Birmingham, Leeds, Sheffield and London were also provided with many underground Pirate Radio stations and DJs alike which helped bolster an already contagious, but otherwise ignored by the mainstream, music genre.","Underground Pirate Radio stations and DJs helped bolster house music in London, where the National Gallery is located in Trafalgar Square.",unresolved,adopted_critic,1.0,-3.1727563105523586
+3hop1__520721_132413_16121,TopK SAE,random_ablation,14.0,The University of Washington,University of Washington,adopted_critic,adopted_critic,1.0,-6.7025828287005424
+2hop__131072_68117,TopK SAE,random_ablation,15.0,"The reviewer feedback indicates that the correct answer is Corbin, Kentucky.","Ladd, Illinois",unresolved,retained_a1,1.0,-2.515754997730255
+2hop__161576_88700,TopK SAE,random_ablation,15.0,The reviewer’s observations of Barnard’s Star,Van de Kamp's observations of Barnard's Star,third_answer,adopted_critic,1.0,-1.3214382529258728
+2hop__187061_3994,TopK SAE,random_ablation,15.0,The answer is Mobutu Sese Seko.,Mobutu Sese Seko,unresolved,adopted_critic,1.0,-2.119219481945038
+2hop__47096_807767,TopK SAE,random_ablation,15.0,Evolutionary biology,evolutionary biology,adopted_critic,adopted_critic,1.0,-1.0278520584106445
+2hop__535920_673383,TopK SAE,random_ablation,15.0,The reviewer,Sidney A. Franklin,third_answer,adopted_critic,1.0,-1.9053973257541656
+2hop__618322_278127,TopK SAE,random_ablation,15.0,EMI America,The Opening,adopted_critic,third_answer,1.0,-0.7801665579900146
+2hop__759990_8600,TopK SAE,random_ablation,15.0,Southwest,southwest,adopted_critic,adopted_critic,1.0,-3.8167365193367004
+2hop__852_875,TopK SAE,random_ablation,15.0,Tibet,The Dzungar Mongols’ territory,adopted_critic,third_answer,1.0,-0.4662590026855469
+3hop1__26417_449353_11672,TopK SAE,random_ablation,15.0,"The house scene in cities such as Birmingham, Leeds, Sheffield and London were also provided with many underground Pirate Radio stations and DJs alike which helped bolster an already contagious, but otherwise ignored by the mainstream, music genre.","Underground Pirate Radio stations and DJs helped bolster house music in London, where the National Gallery is located in Trafalgar Square.",unresolved,adopted_critic,1.0,-1.9001017771661282
+3hop1__520721_132413_16121,TopK SAE,random_ablation,15.0,The University of Washington,University of Washington,adopted_critic,adopted_critic,1.0,-3.23945402354002
+4hop1__632232_164954_6975_6833,TopK SAE,random_ablation,15.0,160,48.4,adopted_critic,third_answer,1.0,-2.002196490764618
+2hop__131072_68117,TopK SAE,random_ablation,16.0,"The reviewer feedback indicates that the correct answer is Corbin, Kentucky.","```
+Corbin, Kentucky
+```",unresolved,unresolved,1.0,-1.0485448241233826
+2hop__131572_432112,TopK SAE,random_ablation,16.0,Londes County,Iowa,third_answer,third_answer,1.0,-0.8935356736183167
+2hop__158048_29454,TopK SAE,random_ablation,16.0,"The question is based on a false premise. Taekwondo originated in Korea, and Japan did not invade Korea in the context of its origin.",Japan did not invade the place where taekwondo originated.,non_answer,unresolved,1.0,-1.2009187042713165
+2hop__161576_88700,TopK SAE,random_ablation,16.0,The reviewer’s observations of Barnard’s Star,None,third_answer,non_answer,1.0,-1.2971321940422058
+2hop__187061_3994,TopK SAE,random_ablation,16.0,The answer is Mobutu Sese Seko.,"```
+Mobutu Sese Seko
+```",unresolved,unresolved,1.0,-3.2880160212516785
+2hop__361766_86794,TopK SAE,random_ablation,16.0,The text does not provide information about the president of Monterrey.,None,non_answer,non_answer,1.0,-1.6172685623168945
+2hop__648794_61424,TopK SAE,random_ablation,16.0,"During the Cold War, Cambodia was involved in the Cambodian Civil War (1968–1975), a conflict influenced by Cold War dynamics, with the United States supporting anti-communist forces and the Soviet Union and China backing the Khmer Rouge. The war resulted in the fall of the Kingdom of Cambodia","Cambodia was involved in the Cold War as part of the Indochina Wars. During this period, Cambodia experienced the Cambodian Civil War (1968–1975), a conflict influenced by Cold War dynamics, with the United States supporting anti-communist forces and the Soviet Union and China backing the",third_answer,third_answer,1.0,-0.7147466391324997
+2hop__852_875,TopK SAE,random_ablation,16.0,Tibet,The Dzungar Mongols’ territory,adopted_critic,third_answer,1.0,-0.7185144424438477
+4hop1__632232_164954_6975_6833,TopK SAE,random_ablation,16.0,160,48.4,adopted_critic,third_answer,1.0,-0.3606950640678406
+2hop__130436_158749,TopK SAE,random_ablation,17.0,over 1.7 million,Over 1.7 million,adopted_critic,adopted_critic,1.0,-2.4726479053497314
+2hop__467434_10369,TopK SAE,random_ablation,17.0,None.,"There is no president for Holhol, as it is a town.",non_answer,third_answer,1.0,-1.4445122480392456
+2hop__852_875,TopK SAE,random_ablation,17.0,Tibet,The Dzungar Mongols’ territory,adopted_critic,third_answer,1.0,-0.36505627632141113
+4hop1__632232_164954_6975_6833,TopK SAE,random_ablation,17.0,160,48.4,adopted_critic,third_answer,1.0,-0.36042922735214233
+2hop__130436_66008,TopK SAE,random_ablation,18.0,Minnesota,Yes,retained_a1,third_answer,1.0,-1.0620564818382263
+2hop__157634_42483,TopK SAE,random_ablation,18.0,The laws discovered by the scientist based on spectral observations,the laws discovered by the scientist based on spectral observations,third_answer,third_answer,1.0,-1.4626398533582687
+2hop__161576_88700,TopK SAE,random_ablation,18.0,The reviewer’s observations of Barnard’s Star,Van de Kamp's observations of Barnard's Star,third_answer,adopted_critic,1.0,-1.809365689754486
+2hop__187061_3994,TopK SAE,random_ablation,18.0,The answer is Mobutu Sese Seko.,"```
+Mobutu Sese Seko
+```",unresolved,unresolved,1.0,-2.9397544264793396
+2hop__361766_86794,TopK SAE,random_ablation,18.0,The text does not provide information about the president of Monterrey.,There is no president for Monterrey.,non_answer,third_answer,1.0,-0.9552167654037476
+2hop__426905_44637,TopK SAE,random_ablation,18.0,The Greater Western Sydney region,Greater Western Sydney region,adopted_critic,adopted_critic,1.0,-1.4218812882900238
+2hop__467434_10369,TopK SAE,random_ablation,18.0,None.,"There is no president for Holhol, as it is a town.",non_answer,third_answer,1.0,-0.7580198049545288
+2hop__47096_807767,TopK SAE,random_ablation,18.0,Evolutionary biology,evolutionary biology,adopted_critic,adopted_critic,1.0,-0.35186243057250977
+2hop__538056_171224,TopK SAE,random_ablation,18.0,Classical and experimental music,classical and experimental music,adopted_critic,adopted_critic,1.0,-1.188668042421341
+2hop__687993_62851,TopK SAE,random_ablation,18.0,The U.S. Supreme Court,U.S. Supreme Court,adopted_critic,adopted_critic,1.0,-1.6523404121398926
+3hop1__404817_499795_305851,TopK SAE,random_ablation,18.0,The Didessa River,Tatra County,unresolved,retained_a1,1.0,-2.498145207762718
+2hop__128743_266268,TopK SAE,random_ablation,19.0,Simcoe County,104.1 The Dock is licensed in Simcoe County.,adopted_critic,unresolved,1.0,-0.6172208786010742
+2hop__129332_158749,TopK SAE,random_ablation,19.0,The population of the state where KKWE is located by 1900 was over 1.7 million.,1700000,third_answer,third_answer,1.0,-1.3276368752121925
+2hop__131072_68117,TopK SAE,random_ablation,19.0,"The reviewer feedback indicates that the correct answer is Corbin, Kentucky.",16,unresolved,third_answer,1.0,-3.19660621881485
+2hop__131572_432112,TopK SAE,random_ablation,19.0,Londes County,Louisiana,third_answer,third_answer,1.0,-2.1282450556755066
+2hop__157634_42483,TopK SAE,random_ablation,19.0,The laws discovered by the scientist based on spectral observations,the laws discovered by the scientist based on spectral observations,third_answer,third_answer,1.0,-4.026210710406303
+2hop__158048_29454,TopK SAE,random_ablation,19.0,"The question is based on a false premise. Taekwondo originated in Korea, and Japan did not invade Korea in the context of its origin.",Japan did not invade the place where taekwondo originated.,non_answer,unresolved,1.0,-1.1916126310825348
+2hop__161576_88700,TopK SAE,random_ablation,19.0,The reviewer’s observations of Barnard’s Star,None,third_answer,non_answer,1.0,-4.615199506282806
+2hop__187061_3994,TopK SAE,random_ablation,19.0,The answer is Mobutu Sese Seko.,"```
+Mobutu Sese Seko
+```",unresolved,unresolved,1.0,-3.4312350153923035
+2hop__245226_46487,TopK SAE,random_ablation,19.0,The Colombian conflict began in the mid-1960s.,1965,adopted_critic,retained_a1,1.0,-2.8052584710530937
+2hop__30223_60847,TopK SAE,random_ablation,19.0,There is no allied landing in the region the Ottoman Navy conquered in the early 16th century.,1517,third_answer,retained_a1,1.0,-3.2680254578590393
+2hop__361766_86794,TopK SAE,random_ablation,19.0,The text does not provide information about the president of Monterrey.,None,non_answer,non_answer,1.0,-4.355375289916992
+2hop__426905_44637,TopK SAE,random_ablation,19.0,The Greater Western Sydney region,Greater Western Sydney region,adopted_critic,adopted_critic,1.0,-1.1966433227062225
+2hop__47096_807767,TopK SAE,random_ablation,19.0,Evolutionary biology,evolutionary biology,adopted_critic,adopted_critic,1.0,-1.6528511047363281
+2hop__535920_673383,TopK SAE,random_ablation,19.0,The reviewer,Sidney A. Franklin,third_answer,adopted_critic,1.0,-3.6995696127414703
+2hop__538056_171224,TopK SAE,random_ablation,19.0,Classical and experimental music,classical and experimental music,adopted_critic,adopted_critic,1.0,-2.9747805893421173
+2hop__590896_694982,TopK SAE,random_ablation,19.0,Minimalist,minimalist,adopted_critic,adopted_critic,1.0,-1.4399614296853542
+2hop__648794_61424,TopK SAE,random_ablation,19.0,"During the Cold War, Cambodia was involved in the Cambodian Civil War (1968–1975), a conflict influenced by Cold War dynamics, with the United States supporting anti-communist forces and the Soviet Union and China backing the Khmer Rouge. The war resulted in the fall of the Kingdom of Cambodia","Cambodia was involved in the Cold War as part of the Indochina Wars. During this period, Cambodia experienced the Cambodian Civil War (1968–1975), a conflict influenced by Cold War dynamics, with the United States supporting anti-communist forces and the Soviet Union and China backing the",third_answer,third_answer,1.0,-2.834404870867729
+2hop__687993_62851,TopK SAE,random_ablation,19.0,The U.S. Supreme Court,U.S. Supreme Court,adopted_critic,adopted_critic,1.0,-2.814281463623047
+2hop__740102_91983,TopK SAE,random_ablation,19.0,November,Wisconsin every four years in a general election held in November,unresolved,unresolved,1.0,-2.1358767934143543
+2hop__759990_8600,TopK SAE,random_ablation,19.0,Southwest,southwest,adopted_critic,adopted_critic,1.0,-0.7726636528968811
+2hop__763486_83697,TopK SAE,random_ablation,19.0,The text does not state that Sam Fishburn’s team won a World Series.,None,non_answer,non_answer,1.0,-0.9743694514036179
+2hop__846069_58115,TopK SAE,random_ablation,19.0,2002,1993,adopted_critic,third_answer,1.0,-2.616591453552246
+2hop__852_875,TopK SAE,random_ablation,19.0,Tibet,14,adopted_critic,third_answer,1.0,-1.6889173984527588
+3hop1__379563_132399_766194,TopK SAE,random_ablation,19.0,Live album,live album,adopted_critic,adopted_critic,1.0,-1.2835114505141973
+3hop1__404817_499795_305851,TopK SAE,random_ablation,19.0,The Didessa River,Ethiopia,unresolved,third_answer,1.0,-3.424731358885765
+4hop3__367080_769404_544850_170163,TopK SAE,random_ablation,19.0,Soul,soul,adopted_critic,adopted_critic,1.0,-0.8095086961984634
+2hop__129332_158749,TopK SAE · error-preserving,targeted_ablation,,The population of the state where KKWE is located by 1900 was over 1.7 million.,Over 1.7 million,third_answer,unresolved,1.0,0.013969182968139648
+2hop__30223_60847,TopK SAE · error-preserving,targeted_ablation,,1517,There is no allied landing in the region the Ottoman Navy conquered in the early 16th century.,retained_a1,third_answer,1.0,-0.8028624057769775
+2hop__481944_135703,TopK SAE · error-preserving,targeted_ablation,,the Niger River,The Niger River,adopted_critic,adopted_critic,1.0,-0.25
+2hop__687993_62851,TopK SAE · error-preserving,targeted_ablation,,U.S. Supreme Court,The U.S. Supreme Court,adopted_critic,adopted_critic,1.0,-1.3000792264938354
+2hop__70393_28707,TopK SAE · error-preserving,targeted_ablation,,"Alaska’s capital, Juneau, is only accessible by ferry due to the state’s limited road connections, sparking debate about relocating the capital to a more accessible city or building a road connection.","The debate about moving the capital of Alaska centers on the state’s limited road connections, particularly the fact that Juneau, the capital, is only accessible by ferry, leading to discussions about relocating the capital or building a road connection.",third_answer,third_answer,1.0,-1.2273364067077637
+2hop__92951_196273,TopK SAE · error-preserving,targeted_ablation,,Democratic-Republican Party,The Democratic-Republican Party,adopted_critic,adopted_critic,1.0,-0.5929402858018875
+3hop1__325154_786384_80004,TopK SAE · error-preserving,targeted_ablation,,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-0.13279223442077637
+3hop1__383328_705261_9426,TopK SAE · error-preserving,targeted_ablation,,40%,Forty percent,third_answer,retained_a1,1.0,-3.055673360824585
+4hop1__632232_164954_6975_6833,TopK SAE · error-preserving,targeted_ablation,,160,48.4,adopted_critic,third_answer,1.0,-0.7901818156242371
+2hop__129332_158749,TopK SAE · error-preserving,random_ablation,0.0,The population of the state where KKWE is located by 1900 was over 1.7 million.,Minnesota's official population grew to over 1.7 million by 1900.,third_answer,retained_a1,1.0,-1.2778277397155762
+2hop__158048_848748,TopK SAE · error-preserving,random_ablation,0.0,Propaganda,propaganda,retained_a1,retained_a1,1.0,-0.6311795674264431
+2hop__195347_159937,TopK SAE · error-preserving,random_ablation,0.0,The twin towers of the Bahrain Financial Harbour,Twin towers of the Bahrain Financial Harbour,adopted_critic,adopted_critic,1.0,-0.7517976462841034
+2hop__30223_60847,TopK SAE · error-preserving,random_ablation,0.0,1517,There is no allied landing in the region the Ottoman Navy conquered in the early 16th century.,retained_a1,third_answer,1.0,-2.7243834733963013
+2hop__47096_807767,TopK SAE · error-preserving,random_ablation,0.0,Evolutionary biology,evolutionary biology,adopted_critic,adopted_critic,1.0,-1.061333417892456
+3hop1__383328_705261_9426,TopK SAE · error-preserving,random_ablation,0.0,40%,Forty percent,third_answer,retained_a1,1.0,-0.8391847610473633
+3hop1__411538_805015_48308,TopK SAE · error-preserving,random_ablation,0.0,1941,America did not declare war on any country in which Bernhard Fischer was born during WWII.,third_answer,adopted_critic,1.0,-0.7008676435798407
+4hop1__632232_164954_6975_6833,TopK SAE · error-preserving,random_ablation,0.0,160,48.4,adopted_critic,third_answer,1.0,-3.6178202033042908
+2hop__129332_158749,TopK SAE · error-preserving,random_ablation,1.0,The population of the state where KKWE is located by 1900 was over 1.7 million.,Over 1.7 million,third_answer,unresolved,1.0,-4.2404139041900635
+2hop__131517_68117,TopK SAE · error-preserving,random_ablation,1.0,The origin is not identifiable.,Not identifiable,third_answer,unresolved,1.0,-2.223388746380806
+2hop__195347_159937,TopK SAE · error-preserving,random_ablation,1.0,The twin towers of the Bahrain Financial Harbour,Twin towers of the Bahrain Financial Harbour,adopted_critic,adopted_critic,1.0,-3.878158301115036
+2hop__30223_60847,TopK SAE · error-preserving,random_ablation,1.0,1517,No allied landings occurred in the region the Ottoman Navy conquered in the early 16th century.,retained_a1,third_answer,1.0,-1.069448471069336
+3hop1__325154_786384_80004,TopK SAE · error-preserving,random_ablation,1.0,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-2.1188204288482666
+3hop1__383328_705261_9426,TopK SAE · error-preserving,random_ablation,1.0,40%,Forty percent,third_answer,retained_a1,1.0,-0.2190701961517334
+3hop1__411538_805015_48308,TopK SAE · error-preserving,random_ablation,1.0,1941,"December 11, 1941",third_answer,third_answer,1.0,-1.025865426287055
+4hop1__632232_164954_6975_6833,TopK SAE · error-preserving,random_ablation,1.0,160,48.4,adopted_critic,third_answer,1.0,-2.525862395763397
+2hop__129332_158749,TopK SAE · error-preserving,random_ablation,2.0,The population of the state where KKWE is located by 1900 was over 1.7 million.,1700000,third_answer,third_answer,1.0,-2.9250643253326416
+2hop__131517_68117,TopK SAE · error-preserving,random_ablation,2.0,The origin is not identifiable.,Not identifiable,third_answer,unresolved,1.0,-1.3802428990602493
+2hop__158048_848748,TopK SAE · error-preserving,random_ablation,2.0,Propaganda,propaganda,retained_a1,retained_a1,1.0,-0.7639718018472195
+2hop__195347_159937,TopK SAE · error-preserving,random_ablation,2.0,The twin towers of the Bahrain Financial Harbour,Twin towers of the Bahrain Financial Harbour,adopted_critic,adopted_critic,1.0,-1.9185952842235565
+2hop__47096_807767,TopK SAE · error-preserving,random_ablation,2.0,Evolutionary biology,evolutionary biology,adopted_critic,adopted_critic,1.0,-2.796657919883728
+2hop__51827_3004,TopK SAE · error-preserving,random_ablation,2.0,Season 9,season 9,adopted_critic,adopted_critic,1.0,-0.6820994392037392
+2hop__525298_159937,TopK SAE · error-preserving,random_ablation,2.0,The Burj Khalifa,Bahrain World Trade Center,retained_a1,unresolved,1.0,-0.5953142642974854
+2hop__590896_694982,TopK SAE · error-preserving,random_ablation,2.0,Minimalist,minimalist,adopted_critic,adopted_critic,1.0,-1.1071205642074347
+2hop__846069_58115,TopK SAE · error-preserving,random_ablation,2.0,2002,1993,adopted_critic,third_answer,1.0,-2.2976933419704437
+3hop1__325154_786384_80004,TopK SAE · error-preserving,random_ablation,2.0,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-4.562086582183838
+3hop1__383328_705261_9426,TopK SAE · error-preserving,random_ablation,2.0,40%,Forty percent,third_answer,retained_a1,1.0,-0.5
+3hop1__3957_720466_80004,TopK SAE · error-preserving,random_ablation,2.0,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-1.6528260633349419
+4hop3__39178_419859_22784_86234,TopK SAE · error-preserving,random_ablation,2.0,"September 8, 1855",8 September 1855,third_answer,unresolved,1.0,-1.8136661052703857
+2hop__129332_158749,TopK SAE · error-preserving,random_ablation,3.0,The population of the state where KKWE is located by 1900 was over 1.7 million.,Minnesota's official population grew to over 1.7 million by 1900.,third_answer,retained_a1,1.0,-3.6939380168914795
+2hop__195347_159937,TopK SAE · error-preserving,random_ablation,3.0,The twin towers of the Bahrain Financial Harbour,Twin towers of the Bahrain Financial Harbour,adopted_critic,adopted_critic,1.0,-0.9276910722255707
+2hop__70393_28707,TopK SAE · error-preserving,random_ablation,3.0,"Alaska’s capital, Juneau, is only accessible by ferry due to the state’s limited road connections, sparking debate about relocating the capital to a more accessible city or building a road connection.","The debate about moving the capital of Alaska centers on the state’s limited road connections, particularly the fact that Juneau, the capital, is only accessible by ferry, leading to discussions about relocating the capital or building a road connection.",third_answer,third_answer,1.0,-0.35186243057250977
+2hop__846069_58115,TopK SAE · error-preserving,random_ablation,3.0,2002,1993,adopted_critic,third_answer,1.0,-1.4202251136302948
+3hop1__325154_786384_80004,TopK SAE · error-preserving,random_ablation,3.0,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-0.2809298038482666
+4hop3__39178_419859_22784_86234,TopK SAE · error-preserving,random_ablation,3.0,"September 8, 1855",8 September 1855,third_answer,unresolved,1.0,-1.3881514072418213
+2hop__129332_158749,TopK SAE · error-preserving,random_ablation,4.0,The population of the state where KKWE is located by 1900 was over 1.7 million.,Over 1.7 million,third_answer,unresolved,1.0,-0.6665587425231934
+2hop__30223_60847,TopK SAE · error-preserving,random_ablation,4.0,1517,There is no allied landing in the region the Ottoman Navy conquered in the early 16th century.,retained_a1,third_answer,1.0,-2.6625019311904907
+3hop1__383328_705261_9426,TopK SAE · error-preserving,random_ablation,4.0,40%,Forty percent,third_answer,retained_a1,1.0,-2.574510335922241
+3hop1__411538_805015_48308,TopK SAE · error-preserving,random_ablation,4.0,1941,America did not declare war on any country in which Bernhard Fischer was born during WWII.,third_answer,adopted_critic,1.0,-1.0650259163230658
+4hop1__632232_164954_6975_6833,TopK SAE · error-preserving,random_ablation,4.0,160,48.4,adopted_critic,third_answer,1.0,-2.5256168246269226
+2hop__129332_158749,TopK SAE · error-preserving,random_ablation,5.0,The population of the state where KKWE is located by 1900 was over 1.7 million.,Minnesota's official population grew to over 1.7 million by 1900.,third_answer,retained_a1,1.0,-5.071584463119507
+2hop__130756_62851,TopK SAE · error-preserving,random_ablation,5.0,The U.S. Supreme Court,U.S. Supreme Court,adopted_critic,adopted_critic,1.0,-1.3107938449829817
+2hop__131517_68117,TopK SAE · error-preserving,random_ablation,5.0,The origin is not identifiable.,Not identifiable,third_answer,unresolved,1.0,-0.8472946435213089
+2hop__195347_159937,TopK SAE · error-preserving,random_ablation,5.0,The twin towers of the Bahrain Financial Harbour,Twin towers of the Bahrain Financial Harbour,adopted_critic,adopted_critic,1.0,-4.875893801450729
+2hop__245226_46487,TopK SAE · error-preserving,random_ablation,5.0,The Colombian conflict began in the mid-1960s.,1965,adopted_critic,retained_a1,1.0,-1.1357025802135468
+2hop__47096_807767,TopK SAE · error-preserving,random_ablation,5.0,Evolutionary biology,evolutionary biology,adopted_critic,adopted_critic,1.0,-0.44122612476348877
+2hop__525298_159937,TopK SAE · error-preserving,random_ablation,5.0,The Burj Khalifa,Bahrain World Trade Center,retained_a1,unresolved,1.0,-4.259123206138611
+3hop1__325154_786384_80004,TopK SAE · error-preserving,random_ablation,5.0,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-5.558781623840332
+3hop1__3957_720466_80004,TopK SAE · error-preserving,random_ablation,5.0,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-2.0783407613635063
+4hop1__446791_100761_1955_64754,TopK SAE · error-preserving,random_ablation,5.0,Presidential democracy,presidential democracy,third_answer,third_answer,1.0,-1.1237907651811838
+4hop3__39178_419859_22784_86234,TopK SAE · error-preserving,random_ablation,5.0,"September 8, 1855",8 September 1855,third_answer,unresolved,1.0,-2.735325336456299
+2hop__129332_158749,TopK SAE · error-preserving,random_ablation,6.0,The population of the state where KKWE is located by 1900 was over 1.7 million.,Minnesota's official population grew to over 1.7 million by 1900.,third_answer,retained_a1,1.0,-4.938035726547241
+2hop__131517_68117,TopK SAE · error-preserving,random_ablation,6.0,The origin is not identifiable.,Not identifiable,third_answer,unresolved,1.0,-1.1864054948091507
+2hop__195347_159937,TopK SAE · error-preserving,random_ablation,6.0,The twin towers of the Bahrain Financial Harbour,Twin towers of the Bahrain Financial Harbour,adopted_critic,adopted_critic,1.0,-3.1429817378520966
+2hop__30223_60847,TopK SAE · error-preserving,random_ablation,6.0,1517,There is no allied landing in the region the Ottoman Navy conquered in the early 16th century.,retained_a1,third_answer,1.0,-5.467011570930481
+2hop__538056_171224,TopK SAE · error-preserving,random_ablation,6.0,classical and experimental music,Classical and experimental music,adopted_critic,adopted_critic,1.0,-0.5000002682209015
+3hop1__325154_786384_80004,TopK SAE · error-preserving,random_ablation,6.0,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-3.571016311645508
+3hop1__383328_705261_9426,TopK SAE · error-preserving,random_ablation,6.0,40%,Forty percent,third_answer,retained_a1,1.0,-0.8391847610473633
+3hop1__3957_720466_80004,TopK SAE · error-preserving,random_ablation,6.0,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-1.6528260633349419
+3hop1__411538_805015_48308,TopK SAE · error-preserving,random_ablation,6.0,1941,"December 11, 1941",third_answer,third_answer,1.0,-1.8225113060325384
+4hop1__632232_164954_6975_6833,TopK SAE · error-preserving,random_ablation,6.0,160,48.4,adopted_critic,third_answer,1.0,-5.7289175391197205
+2hop__129332_158749,TopK SAE · error-preserving,random_ablation,7.0,The population of the state where KKWE is located by 1900 was over 1.7 million.,1700000,third_answer,third_answer,1.0,-2.064255475997925
+2hop__70393_28707,TopK SAE · error-preserving,random_ablation,7.0,"Alaska’s capital, Juneau, is only accessible by ferry due to the state’s limited road connections, sparking debate about relocating the capital to a more accessible city or building a road connection.","The debate about moving the capital of Alaska centers on the state’s limited road connections, particularly the fact that Juneau, the capital, is only accessible by ferry, leading to discussions about relocating the capital or building a road connection.",third_answer,third_answer,1.0,-3.790086507797241
+2hop__846069_58115,TopK SAE · error-preserving,random_ablation,7.0,2002,1993,adopted_critic,third_answer,1.0,-1.8457420766353607
+3hop1__325154_786384_80004,TopK SAE · error-preserving,random_ablation,7.0,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-2.1188204288482666
+3hop1__383328_705261_9426,TopK SAE · error-preserving,random_ablation,7.0,40%,Forty percent,third_answer,retained_a1,1.0,-0.8391847610473633
+4hop3__39178_419859_22784_86234,TopK SAE · error-preserving,random_ablation,7.0,"September 8, 1855",8 September 1855,third_answer,unresolved,1.0,-0.9999997615814209
+2hop__195347_159937,TopK SAE · error-preserving,random_ablation,8.0,The twin towers of the Bahrain Financial Harbour,Twin towers of the Bahrain Financial Harbour,adopted_critic,adopted_critic,1.0,-1.3227101266384125
+2hop__30223_60847,TopK SAE · error-preserving,random_ablation,8.0,1517,There is no allied landing in the region the Ottoman Navy conquered in the early 16th century.,retained_a1,third_answer,1.0,-1.5270377397537231
+2hop__47096_807767,TopK SAE · error-preserving,random_ablation,8.0,Evolutionary biology,evolutionary biology,adopted_critic,adopted_critic,1.0,-0.5740107893943787
+2hop__525298_159937,TopK SAE · error-preserving,random_ablation,8.0,The Burj Khalifa,Bahrain World Trade Center,retained_a1,unresolved,1.0,-1.6601691246032715
+3hop1__325154_786384_80004,TopK SAE · error-preserving,random_ablation,8.0,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-6.307764053344727
+3hop1__383328_705261_9426,TopK SAE · error-preserving,random_ablation,8.0,40%,Forty percent,third_answer,retained_a1,1.0,-0.8391847610473633
+3hop1__3957_720466_80004,TopK SAE · error-preserving,random_ablation,8.0,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-2.763380281627178
+3hop1__520721_132413_16121,TopK SAE · error-preserving,random_ablation,8.0,The University of Washington,University of Washington,adopted_critic,adopted_critic,1.0,-4.510337962419726
+4hop1__632232_164954_6975_6833,TopK SAE · error-preserving,random_ablation,8.0,160,48.4,adopted_critic,third_answer,1.0,-3.7410396933555603
+4hop3__703974_789671_804098_24137,TopK SAE · error-preserving,random_ablation,8.0,The Yale Daily News,Yale Daily News,retained_a1,retained_a1,1.0,-3.030437361449003
+2hop__129332_158749,TopK SAE · error-preserving,random_ablation,9.0,The population of the state where KKWE is located by 1900 was over 1.7 million.,Over 1.7 million,third_answer,unresolved,1.0,-3.3929507732391357
+2hop__131517_68117,TopK SAE · error-preserving,random_ablation,9.0,The origin is not identifiable.,Not identifiable,third_answer,unresolved,1.0,-1.1876912862062454
+2hop__158048_848748,TopK SAE · error-preserving,random_ablation,9.0,Propaganda,propaganda,retained_a1,retained_a1,1.0,-0.7639720402657986
+2hop__47096_807767,TopK SAE · error-preserving,random_ablation,9.0,Evolutionary biology,evolutionary biology,adopted_critic,adopted_critic,1.0,-2.3269604444503784
+2hop__525298_159937,TopK SAE · error-preserving,random_ablation,9.0,The Burj Khalifa,Bahrain World Trade Center,retained_a1,unresolved,1.0,-1.876437783241272
+3hop1__325154_786384_80004,TopK SAE · error-preserving,random_ablation,9.0,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-1.6570594310760498
+2hop__30223_60847,TopK SAE · error-preserving,random_ablation,10.0,1517,There is no allied landing in the region the Ottoman Navy conquered in the early 16th century.,retained_a1,third_answer,1.0,-0.8831887245178223
+2hop__481944_135703,TopK SAE · error-preserving,random_ablation,10.0,the Niger River,The Niger River,adopted_critic,adopted_critic,1.0,-0.9259897470474243
+2hop__538056_171224,TopK SAE · error-preserving,random_ablation,10.0,classical and experimental music,Classical and experimental music,adopted_critic,adopted_critic,1.0,-0.35186222195625305
+2hop__795094_694982,TopK SAE · error-preserving,random_ablation,10.0,minimalist music,Minimalist music,adopted_critic,adopted_critic,1.0,-0.6245260834693909
+3hop1__325154_786384_80004,TopK SAE · error-preserving,random_ablation,10.0,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-0.6201145648956299
+3hop1__383328_705261_9426,TopK SAE · error-preserving,random_ablation,10.0,40%,Forty percent,third_answer,retained_a1,1.0,-0.5
+4hop1__632232_164954_6975_6833,TopK SAE · error-preserving,random_ablation,10.0,160,48.4,adopted_critic,third_answer,1.0,-0.7003794312477112
+4hop3__39178_419859_22784_86234,TopK SAE · error-preserving,random_ablation,10.0,"September 8, 1855",8 September 1855,third_answer,unresolved,1.0,-0.9999998807907104
+2hop__129332_158749,TopK SAE · error-preserving,random_ablation,11.0,The population of the state where KKWE is located by 1900 was over 1.7 million.,1700000,third_answer,third_answer,1.0,-6.272783517837524
+2hop__131517_68117,TopK SAE · error-preserving,random_ablation,11.0,The origin is not identifiable.,Not identifiable,third_answer,unresolved,1.0,-1.3764012604951859
+2hop__195347_159937,TopK SAE · error-preserving,random_ablation,11.0,The twin towers of the Bahrain Financial Harbour,Twin towers of the Bahrain Financial Harbour,adopted_critic,adopted_critic,1.0,-2.6621117293834686
+2hop__525298_159937,TopK SAE · error-preserving,random_ablation,11.0,The Burj Khalifa,Bahrain World Trade Center,retained_a1,unresolved,1.0,-1.5141897201538086
+2hop__667249_22384,TopK SAE · error-preserving,random_ablation,11.0,"The World Economic Forum’s Global Competitiveness Report ranks Switzerland’s economy as the most competitive in the world, while the European Union ranks it as Europe’s most innovative country.","Switzerland’s economy is the most competitive in the world and Europe’s most innovative country, according to the World Economic Forum’s Global Competitiveness Report and the European Union.",third_answer,third_answer,1.0,-0.8255739628220908
+2hop__683278_85808,TopK SAE · error-preserving,random_ablation,11.0,WGC-Bridgestone Invitational,2018 WGC-Bridgestone Invitational,adopted_critic,unresolved,1.0,-0.6748763043433428
+3hop1__325154_786384_80004,TopK SAE · error-preserving,random_ablation,11.0,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-2.8366031646728516
+3hop1__3957_720466_80004,TopK SAE · error-preserving,random_ablation,11.0,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-1.2646744176745415
+4hop3__39178_419859_22784_86234,TopK SAE · error-preserving,random_ablation,11.0,"September 8, 1855",8 September 1855,third_answer,unresolved,1.0,-0.9999998807907104
+4hop3__703974_789671_804098_24137,TopK SAE · error-preserving,random_ablation,11.0,The Yale Daily News,Yale Daily News,retained_a1,retained_a1,1.0,-1.6832634322345257
+2hop__129332_158749,TopK SAE · error-preserving,random_ablation,12.0,The population of the state where KKWE is located by 1900 was over 1.7 million.,1700000,third_answer,third_answer,1.0,-0.6957783699035645
+2hop__481944_135703,TopK SAE · error-preserving,random_ablation,12.0,the Niger River,The Niger River,adopted_critic,adopted_critic,1.0,-0.11720776557922363
+2hop__538056_171224,TopK SAE · error-preserving,random_ablation,12.0,classical and experimental music,Classical and experimental music,adopted_critic,adopted_critic,1.0,-0.35186222195625305
+2hop__79397_664909,TopK SAE · error-preserving,random_ablation,12.0,no conflict is associated with the invention,No conflict is associated with the invention,adopted_critic,adopted_critic,1.0,-1.1150610744953156
+2hop__795094_694982,TopK SAE · error-preserving,random_ablation,12.0,minimalist music,Minimalist music,adopted_critic,adopted_critic,1.0,-0.6245260834693909
+2hop__846069_58115,TopK SAE · error-preserving,random_ablation,12.0,2002,1993,adopted_critic,third_answer,1.0,-1.22074756026268
+3hop1__383328_705261_9426,TopK SAE · error-preserving,random_ablation,12.0,40%,Forty percent,third_answer,retained_a1,1.0,-0.8391847610473633
+2hop__129332_158749,TopK SAE · error-preserving,random_ablation,13.0,The population of the state where KKWE is located by 1900 was over 1.7 million.,Minnesota's official population grew to over 1.7 million by 1900.,third_answer,retained_a1,1.0,-6.526305437088013
+2hop__195347_159937,TopK SAE · error-preserving,random_ablation,13.0,The twin towers of the Bahrain Financial Harbour,Twin towers of the Bahrain Financial Harbour,adopted_critic,adopted_critic,1.0,-2.905175656080246
+2hop__525298_159937,TopK SAE · error-preserving,random_ablation,13.0,The Burj Khalifa,Bahrain World Trade Center,retained_a1,unresolved,1.0,-1.6582597494125366
+3hop1__325154_786384_80004,TopK SAE · error-preserving,random_ablation,13.0,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-1.6570594310760498
+3hop1__411538_805015_48308,TopK SAE · error-preserving,random_ablation,13.0,1941,America did not declare war on any country in which Bernhard Fischer was born during WWII.,third_answer,adopted_critic,1.0,-1.8990737106651068
+4hop3__39178_419859_22784_86234,TopK SAE · error-preserving,random_ablation,13.0,"September 8, 1855",8 September 1855,third_answer,unresolved,1.0,-5.190816402435303
+2hop__129332_158749,TopK SAE · error-preserving,random_ablation,14.0,The population of the state where KKWE is located by 1900 was over 1.7 million.,1700000,third_answer,third_answer,1.0,-3.2269489765167236
+2hop__195347_159937,TopK SAE · error-preserving,random_ablation,14.0,The twin towers of the Bahrain Financial Harbour,Twin towers of the Bahrain Financial Harbour,adopted_critic,adopted_critic,1.0,-0.9277090728282928
+2hop__47096_807767,TopK SAE · error-preserving,random_ablation,14.0,Evolutionary biology,evolutionary biology,adopted_critic,adopted_critic,1.0,-0.4412184953689575
+2hop__538056_171224,TopK SAE · error-preserving,random_ablation,14.0,classical and experimental music,Classical and experimental music,adopted_critic,adopted_critic,1.0,-0.49999967217445374
+2hop__683278_85808,TopK SAE · error-preserving,random_ablation,14.0,WGC-Bridgestone Invitational,2018 WGC-Bridgestone Invitational,adopted_critic,unresolved,1.0,-1.1186067778617144
+3hop1__325154_786384_80004,TopK SAE · error-preserving,random_ablation,14.0,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-4.313568115234375
+3hop1__383328_705261_9426,TopK SAE · error-preserving,random_ablation,14.0,40%,Forty percent,third_answer,retained_a1,1.0,-2.1048128604888916
+3hop1__3957_720466_80004,TopK SAE · error-preserving,random_ablation,14.0,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-2.3016192838549614
+3hop1__520721_132413_16121,TopK SAE · error-preserving,random_ablation,14.0,The University of Washington,University of Washington,adopted_critic,adopted_critic,1.0,-2.126218451769091
+4hop3__703974_789671_804098_24137,TopK SAE · error-preserving,random_ablation,14.0,The Yale Daily News,Yale Daily News,retained_a1,retained_a1,1.0,-1.8920742385089397
+2hop__195347_159937,TopK SAE · error-preserving,random_ablation,15.0,The twin towers of the Bahrain Financial Harbour,Twin towers of the Bahrain Financial Harbour,adopted_critic,adopted_critic,1.0,-1.5267798602581024
+2hop__30223_60847,TopK SAE · error-preserving,random_ablation,15.0,1517,There is no allied landing in the region the Ottoman Navy conquered in the early 16th century.,retained_a1,third_answer,1.0,-0.35788029432296753
+2hop__47096_807767,TopK SAE · error-preserving,random_ablation,15.0,Evolutionary biology,evolutionary biology,adopted_critic,adopted_critic,1.0,-0.5740113258361816
+2hop__481944_135703,TopK SAE · error-preserving,random_ablation,15.0,the Niger River,The Niger River,adopted_critic,adopted_critic,1.0,-0.5609315633773804
+2hop__538056_171224,TopK SAE · error-preserving,random_ablation,15.0,classical and experimental music,Classical and experimental music,adopted_critic,adopted_critic,1.0,-0.5000001490116119
+2hop__79397_664909,TopK SAE · error-preserving,random_ablation,15.0,no conflict is associated with the invention,No conflict is associated with the invention,adopted_critic,adopted_critic,1.0,-0.7500013411045074
+3hop1__325154_786384_80004,TopK SAE · error-preserving,random_ablation,15.0,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-0.44372379779815674
+3hop1__383328_705261_9426,TopK SAE · error-preserving,random_ablation,15.0,40%,Forty percent,third_answer,retained_a1,1.0,-0.8391847610473633
+4hop1__632232_164954_6975_6833,TopK SAE · error-preserving,random_ablation,15.0,160,48.4,adopted_critic,third_answer,1.0,-1.8272263407707214
+2hop__129332_158749,TopK SAE · error-preserving,random_ablation,16.0,The population of the state where KKWE is located by 1900 was over 1.7 million.,Minnesota's official population grew to over 1.7 million by 1900.,third_answer,retained_a1,1.0,-0.8255476951599121
+2hop__481944_135703,TopK SAE · error-preserving,random_ablation,16.0,the Niger River,The Niger River,adopted_critic,adopted_critic,1.0,-0.11720776557922363
+4hop1__632232_164954_6975_6833,TopK SAE · error-preserving,random_ablation,16.0,160,48.4,adopted_critic,third_answer,1.0,-0.3750118613243103
+4hop3__39178_419859_22784_86234,TopK SAE · error-preserving,random_ablation,16.0,"September 8, 1855",8 September 1855,third_answer,unresolved,1.0,-1.8136661052703857
+2hop__129332_158749,TopK SAE · error-preserving,random_ablation,17.0,The population of the state where KKWE is located by 1900 was over 1.7 million.,Minnesota's official population grew to over 1.7 million by 1900.,third_answer,retained_a1,1.0,-1.4736742973327637
+2hop__30223_60847,TopK SAE · error-preserving,random_ablation,17.0,1517,There is no allied landing in the region the Ottoman Navy conquered in the early 16th century.,retained_a1,third_answer,1.0,-0.3743703365325928
+2hop__481944_135703,TopK SAE · error-preserving,random_ablation,17.0,the Niger River,The Niger River,adopted_critic,adopted_critic,1.0,-1.125473976135254
+3hop1__325154_786384_80004,TopK SAE · error-preserving,random_ablation,17.0,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-0.8087818622589111
+3hop1__383328_705261_9426,TopK SAE · error-preserving,random_ablation,17.0,40%,Forty percent,third_answer,retained_a1,1.0,-2.1048128604888916
+4hop1__632232_164954_6975_6833,TopK SAE · error-preserving,random_ablation,17.0,160,48.4,adopted_critic,third_answer,1.0,-0.3028184771537781
+2hop__129332_158749,TopK SAE · error-preserving,random_ablation,18.0,The population of the state where KKWE is located by 1900 was over 1.7 million.,Over 1.7 million,third_answer,unresolved,1.0,-1.8075296878814697
+2hop__131517_68117,TopK SAE · error-preserving,random_ablation,18.0,The origin is not identifiable.,Not identifiable,third_answer,unresolved,1.0,-0.8477165848016739
+2hop__195347_159937,TopK SAE · error-preserving,random_ablation,18.0,The twin towers of the Bahrain Financial Harbour,Twin towers of the Bahrain Financial Harbour,adopted_critic,adopted_critic,1.0,-2.4321617782115936
+3hop1__325154_786384_80004,TopK SAE · error-preserving,random_ablation,18.0,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-2.1188204288482666
+3hop1__383328_705261_9426,TopK SAE · error-preserving,random_ablation,18.0,40%,Forty percent,third_answer,retained_a1,1.0,-2.1048128604888916
+4hop3__39178_419859_22784_86234,TopK SAE · error-preserving,random_ablation,18.0,"September 8, 1855",8 September 1855,third_answer,unresolved,1.0,-0.6608150005340576
+2hop__129332_158749,TopK SAE · error-preserving,random_ablation,19.0,The population of the state where KKWE is located by 1900 was over 1.7 million.,1700000,third_answer,third_answer,1.0,-3.458667516708374
+2hop__195347_159937,TopK SAE · error-preserving,random_ablation,19.0,The twin towers of the Bahrain Financial Harbour,Twin towers of the Bahrain Financial Harbour,adopted_critic,adopted_critic,1.0,-4.201208800077438
+2hop__245226_46487,TopK SAE · error-preserving,random_ablation,19.0,The Colombian conflict began in the mid-1960s.,1965,adopted_critic,retained_a1,1.0,-1.1357018649578094
+2hop__47096_807767,TopK SAE · error-preserving,random_ablation,19.0,Evolutionary biology,evolutionary biology,adopted_critic,adopted_critic,1.0,-0.7221478223800659
+2hop__525298_159937,TopK SAE · error-preserving,random_ablation,19.0,The Burj Khalifa,Bahrain World Trade Center,retained_a1,unresolved,1.0,-3.036392092704773
+2hop__590896_694982,TopK SAE · error-preserving,random_ablation,19.0,Minimalist,minimalist,adopted_critic,adopted_critic,1.0,-0.6633967664092779
+2hop__846069_58115,TopK SAE · error-preserving,random_ablation,19.0,2002,1993,adopted_critic,third_answer,1.0,-2.413738340139389
+3hop1__325154_786384_80004,TopK SAE · error-preserving,random_ablation,19.0,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-3.0800981521606445
+3hop1__3957_720466_80004,TopK SAE · error-preserving,random_ablation,19.0,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-0.9254899546504021
+4hop1__446791_100761_1955_64754,TopK SAE · error-preserving,random_ablation,19.0,Presidential democracy,presidential democracy,third_answer,third_answer,1.0,-0.8122441414743662
+4hop3__39178_419859_22784_86234,TopK SAE · error-preserving,random_ablation,19.0,"September 8, 1855",8 September 1855,third_answer,unresolved,1.0,-1.8136661052703857
+2hop__108067_863816,L1 SAE,no_ablation,,"Pont-Aven, France","Pontaoven, France",adopted_critic,third_answer,1.0,-2.4498209953308105
+2hop__131072_68117,L1 SAE,no_ablation,,"Corbin, Kentucky","The reviewer feedback indicates that the correct answer is Corbin, Kentucky.",adopted_critic,unresolved,1.0,-21.75152015686035
+2hop__131572_432112,L1 SAE,no_ablation,,Lowndes County,New answer: Lowndes,adopted_critic,third_answer,1.0,-7.871624946594238
+2hop__157634_42483,L1 SAE,no_ablation,,force,The laws discovered by the scientist based on spectral observations,adopted_critic,third_answer,1.0,-15.77122156508267
+2hop__158048_29454,L1 SAE,no_ablation,,"Taekwondo originated in Korea, and Japan did not invade Korea in the context of its origin.",There is no record of Japan invading the place where taekwondo originated.,third_answer,non_answer,1.0,-25.656250521540642
+2hop__161576_88700,L1 SAE,no_ablation,,Van de Kamp's observations of Barnard's Star,The reviewer’s observations of Barnard’s Star,adopted_critic,third_answer,1.0,-9.020395278930664
+2hop__187061_3994,L1 SAE,no_ablation,,Mobutu Sese Seko,The answer is Mobutu Sese Seko.,adopted_critic,unresolved,1.0,-17.303281784057617
+2hop__30223_60847,L1 SAE,no_ablation,,1517,There is no allied landing in the region the Ottoman Navy conquered in the early 16th century.,retained_a1,third_answer,1.0,-2.4211100339889526
+2hop__361766_86794,L1 SAE,no_ablation,,Monterrey is a town in Colombia and does not have a president.,The text does not provide information about the president of Monterrey.,third_answer,non_answer,1.0,-14.447412967700984
+2hop__4499_37771,L1 SAE,no_ablation,,Montesquieu,The reviewer,adopted_critic,third_answer,1.0,-2.58334243297611
+2hop__467434_10369,L1 SAE,no_ablation,,Holhol is not a country and therefore does not have a president.,The text does not state who was the first president of Holhol.,adopted_critic,non_answer,1.0,-12.16616880895026
+2hop__481944_135703,L1 SAE,no_ablation,,the Niger River,The Niger River,adopted_critic,adopted_critic,1.0,-5.17723822593689
+2hop__535920_673383,L1 SAE,no_ablation,,Sidney A. Franklin,The reviewer,adopted_critic,third_answer,1.0,-17.00442230702538
+2hop__538056_171224,L1 SAE,no_ablation,,classical and experimental music,Classical and experimental music,adopted_critic,adopted_critic,1.0,-3.0556733906269073
+2hop__618322_278127,L1 SAE,no_ablation,,EMI America,The Opening,adopted_critic,third_answer,1.0,-8.730486869812012
+2hop__648794_61424,L1 SAE,no_ablation,,"Poipet, located in Cambodia, was embroiled in the Cambodian Civil War (1968–1975) during the Cold War, a conflict influenced by Cold War dynamics. The United States supported anti-communist forces, while the Soviet Union and China backed the Khmer Rouge, leading to the fall","The Cambodian Civil War (1968–1975), a conflict influenced by Cold War dynamics, occurred in Cambodia during that period. The United States supported anti-communist forces, while the Soviet Union and China backed the Khmer Rouge. This war resulted in the fall of the Kingdom of Cambodia, the",third_answer,third_answer,1.0,-16.467639327207507
+2hop__70393_28707,L1 SAE,no_ablation,,"Alaska’s capital, Juneau, is only accessible by ferry due to the state’s limited road connections, sparking debate about relocating the capital to a more accessible city or building a road connection.","The debate about moving the capital of Alaska centers on the state’s limited road connections, particularly the fact that Juneau, the capital, is only accessible by ferry, leading to discussions about relocating the capital or building a road connection.",third_answer,third_answer,1.0,-3.5440728664398193
+2hop__740102_91983,L1 SAE,no_ablation,,Every four years in a general election held in November,November,adopted_critic,unresolved,1.0,-7.518793344541336
+2hop__759990_8600,L1 SAE,no_ablation,,southwest,Southwest,adopted_critic,adopted_critic,1.0,-4.3841197937726974
+2hop__763486_83697,L1 SAE,no_ablation,,Sam Fishburn’s team did not win a World Series.,The text does not state that Sam Fishburn’s team won a World Series.,adopted_critic,non_answer,1.0,-22.1809965607099
+2hop__852_875,L1 SAE,no_ablation,,Their territory,The Dzungar Mongols’ territory,retained_a1,third_answer,1.0,-12.881358477869071
+3hop1__26417_449353_11672,L1 SAE,no_ablation,,"Underground Pirate Radio stations and DJs helped bolster house music in London, where the National Gallery is located in Trafalgar Square.","The house scene in cities such as Birmingham, Leeds, Sheffield and London were also provided with many underground Pirate Radio stations and DJs alike which helped bolster an already contagious, but otherwise ignored by the mainstream, music genre.",adopted_critic,unresolved,1.0,-7.507367134094238
+3hop1__379563_132399_766194,L1 SAE,no_ablation,,live album,Live album,adopted_critic,adopted_critic,1.0,-6.62424248456955
+3hop1__383328_705261_9426,L1 SAE,no_ablation,,40%,Forty percent,third_answer,retained_a1,1.0,-9.525968790054321
+3hop1__404817_499795_305851,L1 SAE,no_ablation,,Didessa,The Didessa River,adopted_critic,unresolved,1.0,-11.019733309745796
+3hop1__520721_132413_16121,L1 SAE,no_ablation,,The University of Washington,University of Washington,adopted_critic,adopted_critic,1.0,-1.3125518696615472
+3hop1__633982_164564_573834,L1 SAE,no_ablation,,jazz,Jazz,adopted_critic,adopted_critic,1.0,-2.5483312774449587
+4hop2__10725_41193_484788_26397,L1 SAE,no_ablation,,hospital,Hospitals,adopted_critic,unresolved,1.0,-10.444113865494728
+4hop3__367080_769404_544850_170163,L1 SAE,no_ablation,,soul,Soul,adopted_critic,adopted_critic,1.0,-0.5740110278129578
+4hop3__39178_419859_22784_86234,L1 SAE,no_ablation,,"September 8, 1855",8 September 1855,third_answer,unresolved,1.0,-14.936738014221191
+2hop__128743_266268,L1 SAE,targeted_ablation,,Simcoe County,Southie County,adopted_critic,third_answer,1.0,-1.0209758281707764
+2hop__129332_158749,L1 SAE,targeted_ablation,,The population of the state where KKWE is located by 1900 was over 1.7 million.,Minnesota's official population grew to over 1.7 million by 1900.,third_answer,retained_a1,1.0,-16.414724737405777
+2hop__129770_92585,L1 SAE,targeted_ablation,,The English,English,adopted_critic,adopted_critic,1.0,-3.5296542690630304
+2hop__130756_62851,L1 SAE,targeted_ablation,,The U.S. Supreme Court,U.S. Supreme Court,adopted_critic,adopted_critic,1.0,-19.476738130673766
+2hop__131517_68117,L1 SAE,targeted_ablation,,The origin is not identifiable.,Not identifiable,third_answer,unresolved,1.0,-5.4035826325416565
+2hop__131572_432112,L1 SAE,targeted_ablation,,New answer: Lowndes,Longdes County,third_answer,third_answer,1.0,-9.62841147184372
+2hop__157634_42483,L1 SAE,targeted_ablation,,The laws discovered by the scientist based on spectral observations,the laws discovered by the scientist based on spectral observations,third_answer,third_answer,1.0,-16.408645816147327
+2hop__158048_848748,L1 SAE,targeted_ablation,,Propaganda,propaganda,retained_a1,retained_a1,1.0,-4.462458696216345
+2hop__161576_88700,L1 SAE,targeted_ablation,,The reviewer’s observations of Barnard’s Star,Van de Kamp's observations of Barnard's Star,third_answer,adopted_critic,1.0,-11.47963603027165
+2hop__187061_3994,L1 SAE,targeted_ablation,,The answer is Mobutu Sese Seko.,Pascal Lissouba,unresolved,retained_a1,1.0,-23.071718111634254
+2hop__195347_159937,L1 SAE,targeted_ablation,,The twin towers of the Bahrain Financial Harbour,Bahrain Financial Harbour,adopted_critic,unresolved,1.0,-16.498786711250432
+2hop__361766_86794,L1 SAE,targeted_ablation,,The text does not provide information about the president of Monterrey.,There is no president for Monterrey.,non_answer,third_answer,1.0,-6.275394767522812
+2hop__4499_37771,L1 SAE,targeted_ablation,,The reviewer,Montesquieu,third_answer,adopted_critic,1.0,-15.16665668785572
+2hop__467434_10369,L1 SAE,targeted_ablation,,The text does not state who was the first president of Holhol.,"There is no president for Holhol, as it is a town.",non_answer,third_answer,1.0,-17.45885469391942
+2hop__47096_807767,L1 SAE,targeted_ablation,,Evolutionary biology,evolutionary biology,adopted_critic,adopted_critic,1.0,-3.6312782764434814
+2hop__481944_135703,L1 SAE,targeted_ablation,,The Niger River,the Niger River,adopted_critic,adopted_critic,1.0,-14.996822285465896
+2hop__525298_159937,L1 SAE,targeted_ablation,,The Burj Khalifa,Bahrain World Trade Center,retained_a1,unresolved,1.0,-34.61560100317001
+2hop__538056_171224,L1 SAE,targeted_ablation,,Classical and experimental music,classical and experimental music,adopted_critic,adopted_critic,1.0,-2.549138966947794
+2hop__538530_56335,L1 SAE,targeted_ablation,,The First Battle of the Marne,First Battle of the Marne,adopted_critic,adopted_critic,1.0,-2.1264972423086874
+2hop__590896_694982,L1 SAE,targeted_ablation,,Minimalist,minimalist,adopted_critic,adopted_critic,1.0,-1.6012068092823029
+2hop__618322_278127,L1 SAE,targeted_ablation,,The Opening,EMI America,third_answer,adopted_critic,1.0,-25.64698912203312
+2hop__648794_61424,L1 SAE,targeted_ablation,,"The Cambodian Civil War (1968–1975), a conflict influenced by Cold War dynamics, occurred in Cambodia during that period. The United States supported anti-communist forces, while the Soviet Union and China backed the Khmer Rouge. This war resulted in the fall of the Kingdom of Cambodia, the","Cambodia was involved in the Cold War as part of the Indochina Wars. During this period, Cambodia experienced the Cambodian Civil War (1968–1975), a conflict influenced by Cold War dynamics, with the United States supporting anti-communist forces and the Soviet Union and China backing the",third_answer,third_answer,1.0,-36.844842582941055
+2hop__667249_22384,L1 SAE,targeted_ablation,,"The World Economic Forum’s Global Competitiveness Report ranks Switzerland’s economy as the most competitive in the world, while the European Union ranks it as Europe’s most innovative country.","Switzerland’s economy is the most competitive in the world and Europe’s most innovative country, according to the World Economic Forum’s Global Competitiveness Report and the European Union.",third_answer,third_answer,1.0,-7.972935231169686
+2hop__70393_28707,L1 SAE,targeted_ablation,,"The debate about moving the capital of Alaska centers on the state’s limited road connections, particularly the fact that Juneau, the capital, is only accessible by ferry, leading to discussions about relocating the capital or building a road connection.","Alaska’s capital, Juneau, is only accessible by ferry due to the state’s limited road connections, sparking debate about relocating the capital to a more accessible city or building a road connection.",third_answer,third_answer,1.0,-13.481850992888212
+2hop__763486_83697,L1 SAE,targeted_ablation,,The text does not state that Sam Fishburn’s team won a World Series.,Not applicable,non_answer,non_answer,1.0,-4.257288251072168
+2hop__852_875,L1 SAE,targeted_ablation,,The Dzungar Mongols’ territory,Tibet,third_answer,adopted_critic,1.0,-8.775103896856308
+3hop1__161098_51602_90300,L1 SAE,targeted_ablation,,"It typically starts to snow in Moscow around the beginning of November, but in recent years, it has sometimes started as late as the end of January.","Snow typically begins in November and can last for up to 3–5 months, though in recent years, the snow cover has melted earlier, such as in the winter of 2006–2007 when it didn't form until the end of January and melted in March.",third_answer,third_answer,1.0,-4.428516864776611
+3hop1__29335_30907_24534,L1 SAE,targeted_ablation,,15,Tennessee,adopted_critic,third_answer,1.0,-7.0009682180098025
+3hop1__325154_786384_80004,L1 SAE,targeted_ablation,,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-5.5038749186642235
+3hop1__3957_720466_80004,L1 SAE,targeted_ablation,,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-7.5001225206651725
+3hop1__404817_499795_305851,L1 SAE,targeted_ablation,,The Didessa River,Tatra County,unresolved,retained_a1,1.0,-8.244118351489305
+3hop1__444957_544161_33297,L1 SAE,targeted_ablation,,The United Nations,United Nations,adopted_critic,adopted_critic,1.0,-18.961958587169647
+3hop1__633982_164564_573834,L1 SAE,targeted_ablation,,Jazz,jazz,adopted_critic,adopted_critic,1.0,-3.4508598297834396
+4hop1__632232_164954_6975_6833,L1 SAE,targeted_ablation,,160,48.4,adopted_critic,third_answer,1.0,-17.970170320942998
+4hop3__367080_769404_544850_170163,L1 SAE,targeted_ablation,,Soul,soul,adopted_critic,adopted_critic,1.0,-5.426535665988922
+4hop3__703974_789671_804098_24137,L1 SAE,targeted_ablation,,The Yale Daily News,Yale Daily News,retained_a1,retained_a1,1.0,-30.498829811345786
+2hop__128743_266268,L1 SAE,random_ablation,0.0,Simcoe County,The reviewer advocates this answer: Simcoe County,adopted_critic,unresolved,1.0,-0.24924421310424805
+2hop__130756_62851,L1 SAE,random_ablation,0.0,The U.S. Supreme Court,U.S. Supreme Court,adopted_critic,adopted_critic,1.0,-0.8029892798513174
+2hop__131572_432112,L1 SAE,random_ablation,0.0,New answer: Lowndes,Longdes County,third_answer,third_answer,1.0,-1.0534910559654236
+2hop__128743_266268,L1 SAE,random_ablation,1.0,Simcoe County,Southie County,adopted_critic,third_answer,1.0,-0.7005894184112549
+2hop__648794_61424,L1 SAE,random_ablation,1.0,"The Cambodian Civil War (1968–1975), a conflict influenced by Cold War dynamics, occurred in Cambodia during that period. The United States supported anti-communist forces, while the Soviet Union and China backed the Khmer Rouge. This war resulted in the fall of the Kingdom of Cambodia, the","Cambodia was involved in the Cold War as part of the Indochina Wars. During this period, Cambodia experienced the Cambodian Civil War (1968–1975), a conflict influenced by Cold War dynamics, with the United States supporting anti-communist forces and the Soviet Union and China backing the",third_answer,third_answer,1.0,-0.49523285031318665
+2hop__131572_432112,L1 SAE,random_ablation,2.0,New answer: Lowndes,Longdes County,third_answer,third_answer,1.0,-0.6362429261207581
+2hop__131572_432112,L1 SAE,random_ablation,3.0,New answer: Lowndes,Longdes County,third_answer,third_answer,1.0,-0.538809597492218
+2hop__47096_807767,L1 SAE,random_ablation,3.0,Evolutionary biology,evolutionary biology,adopted_critic,adopted_critic,1.0,-0.30627596378326416
+2hop__97238_28376,L1 SAE,random_ablation,3.0,Gulf War,The Gulf War,adopted_critic,adopted_critic,1.0,-0.6657194495201111
+2hop__426905_44637,L1 SAE,random_ablation,4.0,Greater Western Sydney region,The Greater Western Sydney region,adopted_critic,adopted_critic,1.0,-0.1810280680656433
+2hop__525298_159937,L1 SAE,random_ablation,4.0,The Burj Khalifa,Bahrain World Trade Center,retained_a1,unresolved,1.0,-1.7400650382041931
+2hop__846069_58115,L1 SAE,random_ablation,4.0,2002,1993,adopted_critic,third_answer,1.0,-0.2500092387199402
+2hop__128743_266268,L1 SAE,random_ablation,5.0,Simcoe County,The reviewer advocates this answer: Simcoe County,adopted_critic,unresolved,1.0,-1.2354164123535156
+2hop__131572_432112,L1 SAE,random_ablation,5.0,New answer: Lowndes,Longdes County,third_answer,third_answer,1.0,-0.5972649455070496
+2hop__131572_432112,L1 SAE,random_ablation,6.0,New answer: Lowndes,Longdes County,third_answer,third_answer,1.0,-0.6313652396202087
+2hop__426905_44637,L1 SAE,random_ablation,6.0,Greater Western Sydney region,The Greater Western Sydney region,adopted_critic,adopted_critic,1.0,-0.17974793910980225
+2hop__130756_62851,L1 SAE,random_ablation,7.0,The U.S. Supreme Court,U.S. Supreme Court,adopted_critic,adopted_critic,1.0,-3.506713068112731
+2hop__131572_432112,L1 SAE,random_ablation,7.0,New answer: Lowndes,Longdes County,third_answer,third_answer,1.0,-0.33267635107040405
+3hop1__444957_544161_33297,L1 SAE,random_ablation,7.0,The United Nations,United Nations,adopted_critic,adopted_critic,1.0,-1.463887631893158
+2hop__131572_432112,L1 SAE,random_ablation,8.0,New answer: Lowndes,Longdes County,third_answer,third_answer,1.0,-0.33267635107040405
+2hop__134558_77478,L1 SAE,random_ablation,8.0,2011,The Giants' last Super Bowl victory was in 2011.,adopted_critic,unresolved,1.0,-3.320676326751709
+2hop__21647_21587,L1 SAE,random_ablation,8.0,2009,1919,adopted_critic,third_answer,1.0,-2.4982603788376423
+2hop__243301_80884,L1 SAE,random_ablation,8.0,2006,1995,adopted_critic,third_answer,1.0,-1.2610104084014893
+2hop__259848_10984,L1 SAE,random_ablation,8.0,2006,1933,adopted_critic,retained_a1,1.0,-3.9289000034332275
+2hop__372261_69931,L1 SAE,random_ablation,8.0,2008,The concert was performed in 2008.,adopted_critic,unresolved,1.0,-5.654097080230713
+2hop__846069_58115,L1 SAE,random_ablation,8.0,2002,1993,adopted_critic,third_answer,1.0,-4.55498731136322
+3hop1__22527_146265_24630,L1 SAE,random_ablation,8.0,2008,1992,adopted_critic,third_answer,1.0,-4.493448734283447
+3hop1__535585_712468_91983,L1 SAE,random_ablation,8.0,2022,"The reviewer feedback is correct.
+2022",adopted_critic,unresolved,1.0,-1.6056044101715088
+2hop__426905_44637,L1 SAE,random_ablation,9.0,Greater Western Sydney region,The Greater Western Sydney region,adopted_critic,adopted_critic,1.0,-0.8269575238227844
+2hop__525298_159937,L1 SAE,random_ablation,9.0,The Burj Khalifa,Bahrain World Trade Center,retained_a1,unresolved,1.0,-0.587210476398468
+2hop__648794_61424,L1 SAE,random_ablation,9.0,"The Cambodian Civil War (1968–1975), a conflict influenced by Cold War dynamics, occurred in Cambodia during that period. The United States supported anti-communist forces, while the Soviet Union and China backed the Khmer Rouge. This war resulted in the fall of the Kingdom of Cambodia, the","Cambodia was involved in the Cold War as part of the Indochina Wars. During this period, Cambodia experienced the Cambodian Civil War (1968–1975), a conflict influenced by Cold War dynamics, with the United States supporting anti-communist forces and the Soviet Union and China backing the",third_answer,third_answer,1.0,-0.7557657063007355
+3hop1__161098_51602_90300,L1 SAE,random_ablation,9.0,"It typically starts to snow in Moscow around the beginning of November, but in recent years, it has sometimes started as late as the end of January.","Snow typically begins in November and can last for up to 3–5 months, though in recent years, the snow cover has melted earlier, such as in the winter of 2006–2007 when it didn't form until the end of January and melted in March.",third_answer,third_answer,1.0,-0.24831277132034302
+4hop3__367080_769404_544850_170163,L1 SAE,random_ablation,9.0,Soul,soul,adopted_critic,adopted_critic,1.0,-0.2500004768371582
+2hop__128743_266268,L1 SAE,random_ablation,10.0,Simcoe County,Southie County,adopted_critic,third_answer,1.0,-0.7005894184112549
+2hop__426905_44637,L1 SAE,random_ablation,10.0,Greater Western Sydney region,The Greater Western Sydney region,adopted_critic,adopted_critic,1.0,-0.8269575238227844
+2hop__426905_44637,L1 SAE,random_ablation,11.0,Greater Western Sydney region,The Greater Western Sydney region,adopted_critic,adopted_critic,1.0,-0.11617082357406616
+2hop__131572_432112,L1 SAE,random_ablation,12.0,New answer: Lowndes,Longdes County,third_answer,third_answer,1.0,-0.36081212759017944
+2hop__648794_61424,L1 SAE,random_ablation,12.0,"The Cambodian Civil War (1968–1975), a conflict influenced by Cold War dynamics, occurred in Cambodia during that period. The United States supported anti-communist forces, while the Soviet Union and China backed the Khmer Rouge. This war resulted in the fall of the Kingdom of Cambodia, the","Cambodia was involved in the Cold War as part of the Indochina Wars. During this period, Cambodia experienced the Cambodian Civil War (1968–1975), a conflict influenced by Cold War dynamics, with the United States supporting anti-communist forces and the Soviet Union and China backing the",third_answer,third_answer,1.0,-0.9299069941043854
+2hop__130756_62851,L1 SAE,random_ablation,13.0,The U.S. Supreme Court,U.S. Supreme Court,adopted_critic,adopted_critic,1.0,-2.555979883298278
+2hop__47096_807767,L1 SAE,random_ablation,13.0,Evolutionary biology,evolutionary biology,adopted_critic,adopted_critic,1.0,-0.30627596378326416
+2hop__525298_159937,L1 SAE,random_ablation,13.0,The Burj Khalifa,Bahrain World Trade Center,retained_a1,unresolved,1.0,-1.7400650382041931
+2hop__648794_61424,L1 SAE,random_ablation,13.0,"The Cambodian Civil War (1968–1975), a conflict influenced by Cold War dynamics, occurred in Cambodia during that period. The United States supported anti-communist forces, while the Soviet Union and China backed the Khmer Rouge. This war resulted in the fall of the Kingdom of Cambodia, the","Cambodia was involved in the Cold War as part of the Indochina Wars. During this period, Cambodia experienced the Cambodian Civil War (1968–1975), a conflict influenced by Cold War dynamics, with the United States supporting anti-communist forces and the Soviet Union and China backing the",third_answer,third_answer,1.0,-0.4236429035663605
+2hop__753880_159115,L1 SAE,random_ablation,13.0,United States dollar,The United States dollar,adopted_critic,adopted_critic,1.0,-2.4641242027282715
+3hop1__161098_51602_90300,L1 SAE,random_ablation,13.0,"It typically starts to snow in Moscow around the beginning of November, but in recent years, it has sometimes started as late as the end of January.","Snow typically begins in November and can last for up to 3–5 months, though in recent years, the snow cover has melted earlier, such as in the winter of 2006–2007 when it didn't form until the end of January and melted in March.",third_answer,third_answer,1.0,-0.24947845935821533
+3hop1__325154_786384_80004,L1 SAE,random_ablation,13.0,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-2.5786880461819237
+3hop1__3957_720466_80004,L1 SAE,random_ablation,13.0,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-0.9736486408510245
+3hop1__444957_544161_33297,L1 SAE,random_ablation,13.0,The United Nations,United Nations,adopted_critic,adopted_critic,1.0,-2.540848433971405
+4hop3__703974_789671_804098_24137,L1 SAE,random_ablation,13.0,The Yale Daily News,Yale Daily News,retained_a1,retained_a1,1.0,-3.528580158483237
+2hop__426905_44637,L1 SAE,random_ablation,14.0,Greater Western Sydney region,The Greater Western Sydney region,adopted_critic,adopted_critic,1.0,-0.18126100301742554
+2hop__131572_432112,L1 SAE,random_ablation,15.0,New answer: Lowndes,Longdes County,third_answer,third_answer,1.0,-0.2865331768989563
+2hop__134558_77478,L1 SAE,random_ablation,15.0,2011,The Giants' last Super Bowl victory was in 2011.,adopted_critic,unresolved,1.0,-3.0672240257263184
+2hop__21647_21587,L1 SAE,random_ablation,15.0,2009,1919,adopted_critic,third_answer,1.0,-1.3988040685654255
+2hop__259848_10984,L1 SAE,random_ablation,15.0,2006,The Times,adopted_critic,third_answer,1.0,-3.875351905822754
+2hop__372261_69931,L1 SAE,random_ablation,15.0,2008,The concert was performed in 2008.,adopted_critic,unresolved,1.0,-5.616992950439453
+2hop__846069_58115,L1 SAE,random_ablation,15.0,2002,1993,adopted_critic,third_answer,1.0,-3.442306399345398
+3hop1__22527_146265_24630,L1 SAE,random_ablation,15.0,2008,1992,adopted_critic,third_answer,1.0,-4.795094966888428
+3hop1__535585_712468_91983,L1 SAE,random_ablation,15.0,2022,1922,adopted_critic,third_answer,1.0,-1.3966652154922485
+2hop__525298_159937,L1 SAE,random_ablation,16.0,The Burj Khalifa,Bahrain World Trade Center,retained_a1,unresolved,1.0,-1.7400650382041931
+2hop__753880_159115,L1 SAE,random_ablation,16.0,United States dollar,The United States dollar,adopted_critic,adopted_critic,1.0,-2.464172124862671
+2hop__130756_62851,L1 SAE,random_ablation,17.0,The U.S. Supreme Court,U.S. Supreme Court,adopted_critic,adopted_critic,1.0,-0.8029526825994253
+2hop__426905_44637,L1 SAE,random_ablation,17.0,Greater Western Sydney region,The Greater Western Sydney region,adopted_critic,adopted_critic,1.0,-0.17974793910980225
+2hop__128743_266268,L1 SAE,random_ablation,18.0,Simcoe County,Southie County,adopted_critic,third_answer,1.0,-0.7671582698822021
+2hop__131572_432112,L1 SAE,random_ablation,18.0,New answer: Lowndes,Longdes County,third_answer,third_answer,1.0,-0.348785936832428
+2hop__426905_44637,L1 SAE,random_ablation,18.0,Greater Western Sydney region,The Greater Western Sydney region,adopted_critic,adopted_critic,1.0,-0.17974793910980225
+4hop1__632232_164954_6975_6833,L1 SAE,random_ablation,18.0,160,48.4,adopted_critic,third_answer,1.0,-1.025726379826665
+2hop__128743_266268,L1 SAE,random_ablation,19.0,Simcoe County,Southie County,adopted_critic,third_answer,1.0,-0.7005894184112549
+2hop__130756_62851,L1 SAE,random_ablation,19.0,The U.S. Supreme Court,U.S. Supreme Court,adopted_critic,adopted_critic,1.0,-0.8029892798513174
+2hop__426905_44637,L1 SAE,random_ablation,19.0,Greater Western Sydney region,The Greater Western Sydney region,adopted_critic,adopted_critic,1.0,-0.1800268292427063
+2hop__753880_159115,L1 SAE,random_ablation,19.0,United States dollar,The United States dollar,adopted_critic,adopted_critic,1.0,-2.464172124862671
+2hop__846069_58115,L1 SAE,random_ablation,19.0,2002,1993,adopted_critic,third_answer,1.0,-0.2500089406967163
+2hop__108534_161698,L1 SAE · error-preserving,targeted_ablation,,The Rondanini Pietà is a marble sculpture created by Michelangelo.,Michelangelo created the Rondanini Pietà as a marble sculpture.,third_answer,third_answer,1.0,-8.99996556105907
+2hop__129332_158749,L1 SAE · error-preserving,targeted_ablation,,The population of the state where KKWE is located by 1900 was over 1.7 million.,Minnesota's official population grew to over 1.7 million by 1900.,third_answer,retained_a1,1.0,-18.464069604873657
+2hop__130756_62851,L1 SAE · error-preserving,targeted_ablation,,The U.S. Supreme Court,U.S. Supreme Court,adopted_critic,adopted_critic,1.0,-6.998435227200389
+2hop__131517_68117,L1 SAE · error-preserving,targeted_ablation,,The origin is not identifiable.,Not identifiable,third_answer,unresolved,1.0,-4.879728391766548
+2hop__158048_848748,L1 SAE · error-preserving,targeted_ablation,,Propaganda,propaganda,retained_a1,retained_a1,1.0,-3.956182237714529
+2hop__195347_159937,L1 SAE · error-preserving,targeted_ablation,,The twin towers of the Bahrain Financial Harbour,Twin towers of the Bahrain Financial Harbour,adopted_critic,adopted_critic,1.0,-34.11456510424614
+2hop__30223_60847,L1 SAE · error-preserving,targeted_ablation,,1517,There is no allied landing in the region the Ottoman Navy conquered in the early 16th century.,retained_a1,third_answer,1.0,-6.418244481086731
+2hop__45467_159613,L1 SAE · error-preserving,targeted_ablation,,The information is not present in the text.,Information is not present in the text.,third_answer,third_answer,1.0,-3.2791227139532566
+2hop__47096_807767,L1 SAE · error-preserving,targeted_ablation,,Evolutionary biology,evolutionary biology,adopted_critic,adopted_critic,1.0,-1.874998688697815
+2hop__525298_159937,L1 SAE · error-preserving,targeted_ablation,,The Burj Khalifa,Bahrain World Trade Center,retained_a1,unresolved,1.0,-25.247809767723083
+2hop__538530_56335,L1 SAE · error-preserving,targeted_ablation,,The First Battle of the Marne,First Battle of the Marne,adopted_critic,adopted_critic,1.0,-6.000973162008449
+2hop__64650_32505,L1 SAE · error-preserving,targeted_ablation,,"The strategy that could have worked against the empire that did not fall after WWI is the Northern Seven Years' War strategy, where William Pitt committed Britain to seizing the entire French Empire, especially its possessions in North America and India, utilizing the Royal Navy and colonial forces.","Strategic Command WWII Pacific Theater is a grand strategy computer game developed by Canadian studio Fury Software, and published by Battlefront.com in 2008. The third game in the ""Strategic Command"" series, ""Pacific Theater"" is a turn-based strategy set in World War II, focusing – for the first",third_answer,third_answer,1.0,-1.9164382250164635
+2hop__667249_22384,L1 SAE · error-preserving,targeted_ablation,,"The World Economic Forum’s Global Competitiveness Report ranks Switzerland’s economy as the most competitive in the world, while the European Union ranks it as Europe’s most innovative country.","Switzerland’s economy is the most competitive in the world and Europe’s most innovative country, according to the World Economic Forum’s Global Competitiveness Report and the European Union.",third_answer,third_answer,1.0,-4.017746668949258
+2hop__92441_84859,L1 SAE · error-preserving,targeted_ablation,,1,Texas,adopted_critic,retained_a1,1.0,-3.5362538103545376
+3hop1__125161_146982_79860,L1 SAE · error-preserving,targeted_ablation,,"The Circus Maximus was built in the Old Kingdom era in Rome, the city where Pope Alexander VI died.","Circus Maximus was built in the Old Kingdom era, in Rome, the city where Pope Alexander VI died.",third_answer,third_answer,1.0,-0.9740639925848882
+3hop1__14045_93667_80004,L1 SAE · error-preserving,targeted_ablation,,The Prime Minister of Canada,Prime Minister of Canada,adopted_critic,adopted_critic,1.0,-1.3132343296019826
+3hop1__29335_30907_24534,L1 SAE · error-preserving,targeted_ablation,,15,Tennessee,adopted_critic,third_answer,1.0,-8.000326994610077
+3hop1__325154_786384_80004,L1 SAE · error-preserving,targeted_ablation,,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-26.3068528175354
+3hop1__334253_74047_268755,L1 SAE · error-preserving,targeted_ablation,,The Netherlands,Netherlands,adopted_critic,adopted_critic,1.0,-7.000814084960439
+3hop1__383328_705261_9426,L1 SAE · error-preserving,targeted_ablation,,40%,Forty percent,third_answer,retained_a1,1.0,-3.055673360824585
+3hop1__386632_291186_4303,L1 SAE · error-preserving,targeted_ablation,,The Canadian military is known for the Battle of Vimy Ridge.,Battle of Vimy Ridge,adopted_critic,unresolved,1.0,-1.701414942746851
+3hop1__3957_720466_80004,L1 SAE · error-preserving,targeted_ablation,,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-19.451412670314312
+3hop1__411538_805015_48308,L1 SAE · error-preserving,targeted_ablation,,1941,America did not declare war on any country in which Bernhard Fischer was born during WWII.,third_answer,adopted_critic,1.0,-18.238257041200995
+3hop1__444957_544161_33297,L1 SAE · error-preserving,targeted_ablation,,The United Nations,United Nations,adopted_critic,adopted_critic,1.0,-3.5291973689454608
+3hop1__520721_132413_16121,L1 SAE · error-preserving,targeted_ablation,,The University of Washington,University of Washington,adopted_critic,adopted_critic,1.0,-4.017439975054003
+3hop1__54868_89345_618532,L1 SAE · error-preserving,targeted_ablation,,The establishment of basketball as a sport,establishment of basketball as a sport,adopted_critic,adopted_critic,1.0,-8.836067678988911
+3hop1__74698_99741_42157,L1 SAE · error-preserving,targeted_ablation,,The British and Italians,British and Italians,adopted_critic,adopted_critic,1.0,-1.9642640469537582
+4hop1__632232_164954_6975_6833,L1 SAE · error-preserving,targeted_ablation,,160,48.4,adopted_critic,third_answer,1.0,-28.72669166326523
+4hop3__703974_789671_804098_24137,L1 SAE · error-preserving,targeted_ablation,,The Yale Daily News,Yale Daily News,retained_a1,retained_a1,1.0,-33.481850039213896
+3hop1__325154_786384_80004,L1 SAE · error-preserving,random_ablation,0.0,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-3.571016311645508
+3hop1__383328_705261_9426,L1 SAE · error-preserving,random_ablation,0.0,40%,Forty percent,third_answer,retained_a1,1.0,-0.5
+4hop1__632232_164954_6975_6833,L1 SAE · error-preserving,random_ablation,0.0,160,48.4,adopted_critic,third_answer,1.0,-0.45103973150253296
+4hop3__703974_789671_804098_24137,L1 SAE · error-preserving,random_ablation,0.0,The Yale Daily News,Yale Daily News,retained_a1,retained_a1,1.0,-1.8920741192996502
+3hop1__383328_705261_9426,L1 SAE · error-preserving,random_ablation,1.0,40%,Forty percent,third_answer,retained_a1,1.0,-0.2190701961517334
+2hop__195347_159937,L1 SAE · error-preserving,random_ablation,2.0,The twin towers of the Bahrain Financial Harbour,Twin towers of the Bahrain Financial Harbour,adopted_critic,adopted_critic,1.0,-1.115519255399704
+2hop__481944_135703,L1 SAE · error-preserving,random_ablation,2.0,the Niger River,The Niger River,adopted_critic,adopted_critic,1.0,-4.679295301437378
+3hop1__325154_786384_80004,L1 SAE · error-preserving,random_ablation,2.0,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-0.6201145648956299
+2hop__92951_196273,L1 SAE · error-preserving,random_ablation,3.0,Democratic-Republican Party,The Democratic-Republican Party,adopted_critic,adopted_critic,1.0,-0.7257338315248489
+2hop__525298_159937,L1 SAE · error-preserving,random_ablation,4.0,The Burj Khalifa,Bahrain World Trade Center,retained_a1,unresolved,1.0,-1.450453519821167
+3hop1__325154_786384_80004,L1 SAE · error-preserving,random_ablation,4.0,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-5.808355331420898
+3hop1__383328_705261_9426,L1 SAE · error-preserving,random_ablation,4.0,40%,Forty percent,third_answer,retained_a1,1.0,-0.2190701961517334
+3hop1__3957_720466_80004,L1 SAE · error-preserving,random_ablation,4.0,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-2.9999999925494194
+4hop3__703974_789671_804098_24137,L1 SAE · error-preserving,random_ablation,4.0,The Yale Daily News,Yale Daily News,retained_a1,retained_a1,1.0,-0.8077894560992718
+2hop__195347_159937,L1 SAE · error-preserving,random_ablation,5.0,The twin towers of the Bahrain Financial Harbour,Twin towers of the Bahrain Financial Harbour,adopted_critic,adopted_critic,1.0,-1.3150812089443207
+2hop__481944_135703,L1 SAE · error-preserving,random_ablation,5.0,the Niger River,The Niger River,adopted_critic,adopted_critic,1.0,-4.679295301437378
+3hop1__325154_786384_80004,L1 SAE · error-preserving,random_ablation,5.0,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-0.6201145648956299
+3hop1__383328_705261_9426,L1 SAE · error-preserving,random_ablation,5.0,40%,Forty percent,third_answer,retained_a1,1.0,-1.2273364067077637
+3hop1__383328_705261_9426,L1 SAE · error-preserving,random_ablation,6.0,40%,Forty percent,third_answer,retained_a1,1.0,-0.2190701961517334
+2hop__130756_62851,L1 SAE · error-preserving,random_ablation,7.0,The U.S. Supreme Court,U.S. Supreme Court,adopted_critic,adopted_critic,1.0,-1.3108098190277815
+2hop__195347_159937,L1 SAE · error-preserving,random_ablation,7.0,The twin towers of the Bahrain Financial Harbour,Twin towers of the Bahrain Financial Harbour,adopted_critic,adopted_critic,1.0,-1.3150812089443207
+2hop__481944_135703,L1 SAE · error-preserving,random_ablation,7.0,the Niger River,The Niger River,adopted_critic,adopted_critic,1.0,-1.8882086277008057
+3hop1__325154_786384_80004,L1 SAE · error-preserving,random_ablation,7.0,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-4.562086582183838
+3hop1__383328_705261_9426,L1 SAE · error-preserving,random_ablation,7.0,40%,Forty percent,third_answer,retained_a1,1.0,-0.2190701961517334
+3hop1__3957_720466_80004,L1 SAE · error-preserving,random_ablation,7.0,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-0.9254896566271782
+4hop3__703974_789671_804098_24137,L1 SAE · error-preserving,random_ablation,7.0,The Yale Daily News,Yale Daily News,retained_a1,retained_a1,1.0,-1.8920741192996502
+2hop__134558_77478,L1 SAE · error-preserving,random_ablation,8.0,2011,1990,adopted_critic,retained_a1,1.0,-2.950651526451118
+2hop__243301_80884,L1 SAE · error-preserving,random_ablation,8.0,2006,1995,adopted_critic,third_answer,1.0,-1.0318814516067576
+2hop__259848_10984,L1 SAE · error-preserving,random_ablation,8.0,2006,1933,adopted_critic,retained_a1,1.0,-1.751755714416504
+2hop__372261_69931,L1 SAE · error-preserving,random_ablation,8.0,2008,1965,adopted_critic,retained_a1,1.0,-4.359763145446777
+2hop__846069_58115,L1 SAE · error-preserving,random_ablation,8.0,2002,1993,adopted_critic,third_answer,1.0,-3.8599155843257904
+3hop1__22527_146265_24630,L1 SAE · error-preserving,random_ablation,8.0,2008,1992,adopted_critic,third_answer,1.0,-3.6256463527679443
+3hop1__383328_705261_9426,L1 SAE · error-preserving,random_ablation,8.0,40%,Forty percent,third_answer,retained_a1,1.0,-0.2190701961517334
+4hop1__632232_164954_6975_6833,L1 SAE · error-preserving,random_ablation,8.0,160,48.4,adopted_critic,third_answer,1.0,-0.3028380274772644
+3hop1__325154_786384_80004,L1 SAE · error-preserving,random_ablation,9.0,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-0.2809298038482666
+4hop1__632232_164954_6975_6833,L1 SAE · error-preserving,random_ablation,9.0,160,48.4,adopted_critic,third_answer,1.0,-0.2345067262649536
+2hop__195347_159937,L1 SAE · error-preserving,random_ablation,10.0,The twin towers of the Bahrain Financial Harbour,Twin towers of the Bahrain Financial Harbour,adopted_critic,adopted_critic,1.0,-1.3150812089443207
+2hop__481944_135703,L1 SAE · error-preserving,random_ablation,10.0,the Niger River,The Niger River,adopted_critic,adopted_critic,1.0,-4.679295301437378
+3hop1__325154_786384_80004,L1 SAE · error-preserving,random_ablation,10.0,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-0.6201145648956299
+2hop__195347_159937,L1 SAE · error-preserving,random_ablation,11.0,The twin towers of the Bahrain Financial Harbour,Twin towers of the Bahrain Financial Harbour,adopted_critic,adopted_critic,1.0,-1.3150812089443207
+2hop__481944_135703,L1 SAE · error-preserving,random_ablation,11.0,the Niger River,The Niger River,adopted_critic,adopted_critic,1.0,-4.679295301437378
+3hop1__325154_786384_80004,L1 SAE · error-preserving,random_ablation,11.0,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-0.6201145648956299
+3hop1__383328_705261_9426,L1 SAE · error-preserving,random_ablation,11.0,40%,Forty percent,third_answer,retained_a1,1.0,-1.2273364067077637
+2hop__481944_135703,L1 SAE · error-preserving,random_ablation,12.0,the Niger River,The Niger River,adopted_critic,adopted_critic,1.0,-0.5609315633773804
+3hop1__383328_705261_9426,L1 SAE · error-preserving,random_ablation,12.0,40%,Forty percent,third_answer,retained_a1,1.0,-0.2190701961517334
+2hop__130756_62851,L1 SAE · error-preserving,random_ablation,13.0,The U.S. Supreme Court,U.S. Supreme Court,adopted_critic,adopted_critic,1.0,-0.8234974425286055
+2hop__525298_159937,L1 SAE · error-preserving,random_ablation,13.0,The Burj Khalifa,Bahrain World Trade Center,retained_a1,unresolved,1.0,-1.450453519821167
+3hop1__325154_786384_80004,L1 SAE · error-preserving,random_ablation,13.0,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-10.056873798370361
+3hop1__3957_720466_80004,L1 SAE · error-preserving,random_ablation,13.0,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-5.2066464349627495
+3hop1__520721_132413_16121,L1 SAE · error-preserving,random_ablation,13.0,The University of Washington,University of Washington,adopted_critic,adopted_critic,1.0,-2.1262186901876703
+4hop3__703974_789671_804098_24137,L1 SAE · error-preserving,random_ablation,13.0,The Yale Daily News,Yale Daily News,retained_a1,retained_a1,1.0,-6.233778845518827
+2hop__481944_135703,L1 SAE · error-preserving,random_ablation,14.0,the Niger River,The Niger River,adopted_critic,adopted_critic,1.0,-0.5609315633773804
+2hop__134558_77478,L1 SAE · error-preserving,random_ablation,15.0,2011,1990,adopted_critic,retained_a1,1.0,-3.1816171407699656
+2hop__243301_80884,L1 SAE · error-preserving,random_ablation,15.0,2006,The reviewer feedback indicates that the correct answer is 2006.,adopted_critic,unresolved,1.0,-0.8997206687927317
+2hop__259848_10984,L1 SAE · error-preserving,random_ablation,15.0,2006,1933,adopted_critic,retained_a1,1.0,-0.9432499408721924
+2hop__372261_69931,L1 SAE · error-preserving,random_ablation,15.0,2008,1965,adopted_critic,retained_a1,1.0,-4.34991979598999
+2hop__846069_58115,L1 SAE · error-preserving,random_ablation,15.0,2002,1993,adopted_critic,third_answer,1.0,-2.8871768414974213
+3hop1__22527_146265_24630,L1 SAE · error-preserving,random_ablation,15.0,2008,1992,adopted_critic,third_answer,1.0,-3.929887056350708
+4hop1__632232_164954_6975_6833,L1 SAE · error-preserving,random_ablation,15.0,160,48.4,adopted_critic,third_answer,1.0,-0.7003808617591858
+2hop__481944_135703,L1 SAE · error-preserving,random_ablation,16.0,the Niger River,The Niger River,adopted_critic,adopted_critic,1.0,-0.11720776557922363
+2hop__525298_159937,L1 SAE · error-preserving,random_ablation,16.0,The Burj Khalifa,Bahrain World Trade Center,retained_a1,unresolved,1.0,-1.4504534006118774
+3hop1__325154_786384_80004,L1 SAE · error-preserving,random_ablation,16.0,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-5.808355331420898
+3hop1__3957_720466_80004,L1 SAE · error-preserving,random_ablation,16.0,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-2.763380281627178
+4hop3__703974_789671_804098_24137,L1 SAE · error-preserving,random_ablation,16.0,The Yale Daily News,Yale Daily News,retained_a1,retained_a1,1.0,-0.955927025526762
+3hop1__325154_786384_80004,L1 SAE · error-preserving,random_ablation,17.0,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-3.571016311645508
+4hop1__632232_164954_6975_6833,L1 SAE · error-preserving,random_ablation,17.0,160,48.4,adopted_critic,third_answer,1.0,-0.7902060151100159
+4hop3__703974_789671_804098_24137,L1 SAE · error-preserving,random_ablation,17.0,The Yale Daily News,Yale Daily News,retained_a1,retained_a1,1.0,-1.8920741192996502
+2hop__30223_60847,L1 SAE · error-preserving,random_ablation,18.0,1517,There is no allied landing in the region the Ottoman Navy conquered in the early 16th century.,retained_a1,third_answer,1.0,-0.46304190158843994
+3hop1__383328_705261_9426,L1 SAE · error-preserving,random_ablation,18.0,40%,Forty percent,third_answer,retained_a1,1.0,-1.2273364067077637
+4hop1__632232_164954_6975_6833,L1 SAE · error-preserving,random_ablation,18.0,160,48.4,adopted_critic,third_answer,1.0,-3.250342309474945
+3hop1__325154_786384_80004,L1 SAE · error-preserving,random_ablation,19.0,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-3.571016311645508
+4hop3__703974_789671_804098_24137,L1 SAE · error-preserving,random_ablation,19.0,The Yale Daily News,Yale Daily News,retained_a1,retained_a1,1.0,-1.8920741192996502
+2hop__129332_158749,Pretrained SAE,no_ablation,,The population of the state where KKWE is located by 1900 was over 1.7 million.,Over 1.7 million,third_answer,unresolved,1.0,-2.973633050918579
+2hop__131517_68117,Pretrained SAE,no_ablation,,The origin is not identifiable.,Not identifiable,third_answer,unresolved,1.0,-1.3777871876955032
+2hop__158048_29454,Pretrained SAE,no_ablation,,"Taekwondo originated in Korea, and Japan did not invade Korea in the context of its origin.",No information provided.,third_answer,non_answer,1.0,-6.900832697749138
+2hop__30223_60847,Pretrained SAE,no_ablation,,1517,None.,retained_a1,non_answer,1.0,-4.377815365791321
+2hop__687993_62851,Pretrained SAE,no_ablation,,U.S. Supreme Court,The U.S. Supreme Court,adopted_critic,adopted_critic,1.0,-2.0568056106567383
+2hop__759990_8600,Pretrained SAE,no_ablation,,southwest,Southwest,adopted_critic,adopted_critic,1.0,-0.8471669405698776
+2hop__763486_83697,Pretrained SAE,no_ablation,,Sam Fishburn’s team did not win a World Series.,Neither,adopted_critic,third_answer,1.0,-5.744578981059021
+2hop__79397_664909,Pretrained SAE,no_ablation,,no conflict is associated with the invention,No conflict is associated with the invention,adopted_critic,adopted_critic,1.0,-0.5873675048351288
+3hop1__16275_71250_135051,Pretrained SAE,no_ablation,,Marcia,Mcaria,adopted_critic,third_answer,1.0,-3.11260724067688
+3hop1__325154_786384_80004,Pretrained SAE,no_ablation,,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-3.571016788482666
+3hop1__383328_705261_9426,Pretrained SAE,no_ablation,,40%,Forty percent,third_answer,retained_a1,1.0,-15.525923013687134
+3hop1__3957_720466_80004,Pretrained SAE,no_ablation,,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-2.763389103114605
+3hop1__47123_517267_451901,Pretrained SAE,no_ablation,,Redwood Falls,Baton Rouge,third_answer,adopted_critic,1.0,-1.1373109552660026
+4hop1__446791_100761_1955_64754,Pretrained SAE,no_ablation,,Presidential democracy,presidential democracy,third_answer,third_answer,1.0,-0.6942160371690989
+4hop1__632232_164954_6975_6833,Pretrained SAE,no_ablation,,160,48.4,adopted_critic,third_answer,1.0,-0.6143208146095276
+4hop3__39178_419859_22784_86234,Pretrained SAE,no_ablation,,"September 8, 1855",8 September 1855,third_answer,unresolved,1.0,-7.31415319442749
+2hop__158048_29454,Pretrained SAE,random_ablation,0.0,No information provided.,Japan did not invade the place where taekwondo originated.,non_answer,unresolved,1.0,-0.9632749557495117
+2hop__47096_807767,Pretrained SAE,random_ablation,0.0,Evolutionary biology,evolutionary biology,adopted_critic,adopted_critic,1.0,-1.4404016993939877
+2hop__759990_8600,Pretrained SAE,random_ablation,0.0,Southwest,southwest,adopted_critic,adopted_critic,1.0,-3.056079715490341
+2hop__763486_83697,Pretrained SAE,random_ablation,0.0,Neither,,third_answer,unresolved,1.0,-0.26813650131225586
+2hop__830945_751489,Pretrained SAE,random_ablation,0.0,"Andy Warhol was born in Pittsburgh, Pennsylvania, USA.","Pittsburgh, Pennsylvania, USA",third_answer,unresolved,1.0,-0.21515393257141113
+2hop__131072_68117,Pretrained SAE,random_ablation,1.0,"Corbin, Kentucky","Rubin, Kentucky",adopted_critic,third_answer,1.0,-1.4761222042143345
+2hop__467434_10369,Pretrained SAE,random_ablation,1.0,Holhol is not a country and therefore does not have a president.,Hohol is not a country and therefore does not have a president.,adopted_critic,third_answer,1.0,-3.3406053073704243
+2hop__535920_673383,Pretrained SAE,random_ablation,1.0,Sidney A. Franklin,Sydney A. Franklin,adopted_critic,third_answer,1.0,-1.6714473068714142
+2hop__648794_61424,Pretrained SAE,random_ablation,1.0,"Poipet, located in Cambodia, was embroiled in the Cambodian Civil War (1968–1975) during the Cold War, a conflict influenced by Cold War dynamics. The United States supported anti-communist forces, while the Soviet Union and China backed the Khmer Rouge, leading to the fall","During the Cold War, Cambodia was involved in the Cambodian Civil War (1968–1975), a conflict influenced by Cold War dynamics, with the United States supporting anti-communist forces and the Soviet Union and China backing the Khmer Rouge. The war resulted in the fall of the Kingdom of Cambodia",third_answer,third_answer,1.0,-1.1242402791976929
+3hop1__16275_71250_135051,Pretrained SAE,random_ablation,1.0,Mcaria,Maria,third_answer,third_answer,1.0,-1.9940876960754395
+2hop__45467_159613,Pretrained SAE,random_ablation,2.0,The information is not present in the text.,No valid answer can be derived from the given paragraphs.,third_answer,non_answer,1.0,-1.5205374956130981
+2hop__525298_159937,Pretrained SAE,random_ablation,2.0,The Burj Khalifa,Bahrain World Trade Center,retained_a1,unresolved,1.0,-2.397459387779236
+2hop__535920_673383,Pretrained SAE,random_ablation,2.0,Sidney A. Franklin,Syndey A. Franklin,adopted_critic,third_answer,1.0,-3.6086945831775665
+2hop__687993_62851,Pretrained SAE,random_ablation,2.0,The U.S. Supreme Court,U.S. Supreme Court,adopted_critic,adopted_critic,1.0,-2.1926233768463135
+2hop__763486_83697,Pretrained SAE,random_ablation,2.0,Neither,Not applicable,third_answer,non_answer,1.0,-0.6169688701629639
+2hop__830945_751489,Pretrained SAE,random_ablation,2.0,"Andy Warhol was born in Pittsburgh, Pennsylvania, USA.","Pittsburgh, Pennsylvania, USA",third_answer,unresolved,1.0,-0.8246421217918396
+2hop__846069_58115,Pretrained SAE,random_ablation,2.0,2002,1993,adopted_critic,third_answer,1.0,-0.2835625112056732
+2hop__92951_196273,Pretrained SAE,random_ablation,2.0,Democratic-Republican Party,The Democratic-Republican Party,adopted_critic,adopted_critic,1.0,-0.5143062472343445
+2hop__158048_29454,Pretrained SAE,random_ablation,3.0,No information provided.,Japan did not invade the place where taekwondo originated.,non_answer,unresolved,1.0,-0.04118168354034424
+2hop__92951_196273,Pretrained SAE,random_ablation,3.0,Democratic-Republican Party,The Democratic-Republican Party,adopted_critic,adopted_critic,1.0,-2.7817933559417725
+3hop1__325154_786384_80004,Pretrained SAE,random_ablation,3.0,Prime Minister of the United Kingdom,The Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-1.4878508374094963
+3hop1__3957_720466_80004,Pretrained SAE,random_ablation,3.0,Prime Minister of the United Kingdom,The Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-2.288516726344824
+2hop__648794_61424,Pretrained SAE,random_ablation,4.0,"Poipet, located in Cambodia, was embroiled in the Cambodian Civil War (1968–1975) during the Cold War, a conflict influenced by Cold War dynamics. The United States supported anti-communist forces, while the Soviet Union and China backed the Khmer Rouge, leading to the fall","Panmung Pak, a region of Cambodia, experienced the Cambodian Civil War (1968–1975) during the Cold War, a conflict influenced by Cold War dynamics, with the United States supporting anti-communist forces and the Soviet Union and China backing the Khmer Rouge. The war resulted in",third_answer,third_answer,1.0,-0.7134631872177124
+2hop__763486_83697,Pretrained SAE,random_ablation,4.0,Neither,Not applicable,third_answer,non_answer,1.0,-0.42757439613342285
+4hop1__446791_100761_1955_64754,Pretrained SAE,random_ablation,4.0,presidential democracy,Presidential democracy,third_answer,third_answer,1.0,-0.13710016012191772
+2hop__158048_29454,Pretrained SAE,random_ablation,5.0,No information provided.,Japan did not invade the place where taekwondo originated.,non_answer,unresolved,1.0,-0.27359700202941895
+2hop__648794_61424,Pretrained SAE,random_ablation,5.0,"Poipet, located in Cambodia, was embroiled in the Cambodian Civil War (1968–1975) during the Cold War, a conflict influenced by Cold War dynamics. The United States supported anti-communist forces, while the Soviet Union and China backed the Khmer Rouge, leading to the fall","Panmung Pak, a region of Cambodia, experienced the Cambodian Civil War (1968–1975) during the Cold War, a conflict influenced by Cold War dynamics, with the United States supporting anti-communist forces and the Soviet Union and China backing the Khmer Rouge. The war resulted in",third_answer,third_answer,1.0,-0.24457156658172607
+2hop__763486_83697,Pretrained SAE,random_ablation,5.0,Neither,,third_answer,unresolved,1.0,-0.1132354736328125
+2hop__79397_664909,Pretrained SAE,random_ablation,5.0,No conflict is associated with the invention,no conflict is associated with the invention,adopted_critic,adopted_critic,1.0,-1.1263787150382996
+3hop1__325154_786384_80004,Pretrained SAE,random_ablation,5.0,Prime Minister of the United Kingdom,The Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-1.687254123389721
+3hop1__3957_720466_80004,Pretrained SAE,random_ablation,5.0,Prime Minister of the United Kingdom,The Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-2.5169453285634518
+4hop1__446791_100761_1955_64754,Pretrained SAE,random_ablation,5.0,presidential democracy,Presidential democracy,third_answer,third_answer,1.0,-0.13810855150222778
+2hop__648794_61424,Pretrained SAE,random_ablation,6.0,"Poipet, located in Cambodia, was embroiled in the Cambodian Civil War (1968–1975) during the Cold War, a conflict influenced by Cold War dynamics. The United States supported anti-communist forces, while the Soviet Union and China backed the Khmer Rouge, leading to the fall","Panmung Pak, a region of Cambodia, experienced the Cambodian Civil War (1968–1975) during the Cold War, a conflict influenced by Cold War dynamics, with the United States supporting anti-communist forces and the Soviet Union and China backing the Khmer Rouge. The war resulted in",third_answer,third_answer,1.0,-0.6879574060440063
+2hop__759990_8600,Pretrained SAE,random_ablation,6.0,Southwest,southwest,adopted_critic,adopted_critic,1.0,-0.3518800437450409
+2hop__763486_83697,Pretrained SAE,random_ablation,6.0,Neither,Not applicable,third_answer,non_answer,1.0,-0.6307209730148315
+2hop__763486_83697,Pretrained SAE,random_ablation,7.0,Neither,,third_answer,unresolved,1.0,-0.08816945552825928
+2hop__79397_664909,Pretrained SAE,random_ablation,7.0,No conflict is associated with the invention,no conflict is associated with the invention,adopted_critic,adopted_critic,1.0,-1.2273877263069153
+4hop1__446791_100761_1955_64754,Pretrained SAE,random_ablation,7.0,presidential democracy,Presidential democracy,third_answer,third_answer,1.0,-0.13869327306747437
+2hop__830945_751489,Pretrained SAE,random_ablation,8.0,"Andy Warhol was born in Pittsburgh, Pennsylvania, USA.","Pittsburgh, Pennsylvania, USA",third_answer,unresolved,1.0,-1.2271549105644226
+4hop1__446791_100761_1955_64754,Pretrained SAE,random_ablation,9.0,presidential democracy,Presidential democracy,third_answer,third_answer,1.0,-0.6405384540557861
+2hop__158048_29454,Pretrained SAE,random_ablation,10.0,No information provided.,Japan did not invade the place where taekwondo originated.,non_answer,unresolved,1.0,-0.7796449661254883
+2hop__763486_83697,Pretrained SAE,random_ablation,10.0,Neither,,third_answer,unresolved,1.0,-0.8751488924026489
+2hop__79397_664909,Pretrained SAE,random_ablation,10.0,No conflict is associated with the invention,no conflict is associated with the invention,adopted_critic,adopted_critic,1.0,-1.2273760437965393
+2hop__830945_751489,Pretrained SAE,random_ablation,10.0,"Andy Warhol was born in Pittsburgh, Pennsylvania, USA.","Pittsburgh, Pennsylvania, USA",third_answer,unresolved,1.0,-0.13249975442886353
+2hop__92951_196273,Pretrained SAE,random_ablation,10.0,Democratic-Republican Party,The Democratic-Republican Party,adopted_critic,adopted_critic,1.0,-0.4392874836921692
+2hop__131517_68117,Pretrained SAE,random_ablation,11.0,Not identifiable,The origin is not identifiable.,unresolved,third_answer,1.0,-0.5738623440265656
+2hop__158048_29454,Pretrained SAE,random_ablation,11.0,No information provided.,Japan did not invade the place where taekwondo originated.,non_answer,unresolved,1.0,-0.23027801513671875
+2hop__30223_60847,Pretrained SAE,random_ablation,11.0,None.,No allied landings occurred in the region the Ottoman Navy conquered in the early 16th century.,non_answer,third_answer,1.0,-0.8128343820571899
+2hop__759990_8600,Pretrained SAE,random_ablation,11.0,Southwest,southwest,adopted_critic,adopted_critic,1.0,-0.6628460586071014
+2hop__763486_83697,Pretrained SAE,random_ablation,11.0,Neither,,third_answer,unresolved,1.0,-0.37057995796203613
+2hop__370938_131944,Pretrained SAE,random_ablation,12.0,Perm,Per,adopted_critic,unresolved,1.0,-2.0046430230140686
+2hop__763486_83697,Pretrained SAE,random_ablation,12.0,Neither,Not applicable,third_answer,non_answer,1.0,-0.33633577823638916
+2hop__92951_196273,Pretrained SAE,random_ablation,12.0,Democratic-Republican Party,The Democratic-Republican Party,adopted_critic,adopted_critic,1.0,-0.5873522162437439
+4hop1__446791_100761_1955_64754,Pretrained SAE,random_ablation,12.0,presidential democracy,Presidential democracy,third_answer,third_answer,1.0,-0.2806010842323303
+2hop__158048_29454,Pretrained SAE,random_ablation,13.0,No information provided.,Japan did not invade the place where taekwondo originated.,non_answer,unresolved,1.0,-0.2255706787109375
+2hop__481944_135703,Pretrained SAE,random_ablation,13.0,the Niger River,The Niger River,adopted_critic,adopted_critic,1.0,-1.1263537406921387
+2hop__648794_61424,Pretrained SAE,random_ablation,13.0,"Poipet, located in Cambodia, was embroiled in the Cambodian Civil War (1968–1975) during the Cold War, a conflict influenced by Cold War dynamics. The United States supported anti-communist forces, while the Soviet Union and China backed the Khmer Rouge, leading to the fall","Panmung Pak, a region of Cambodia, experienced the Cambodian Civil War (1968–1975) during the Cold War, a conflict influenced by Cold War dynamics, with the United States supporting anti-communist forces and the Soviet Union and China backing the Khmer Rouge. The war resulted in",third_answer,third_answer,1.0,-0.3788950443267822
+2hop__763486_83697,Pretrained SAE,random_ablation,13.0,Neither,,third_answer,unresolved,1.0,-0.5554772615432739
+3hop1__325154_786384_80004,Pretrained SAE,random_ablation,13.0,Prime Minister of the United Kingdom,The Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-1.2991122528910637
+3hop1__3957_720466_80004,Pretrained SAE,random_ablation,13.0,Prime Minister of the United Kingdom,The Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-2.2883095405995846
+4hop1__446791_100761_1955_64754,Pretrained SAE,random_ablation,13.0,presidential democracy,Presidential democracy,third_answer,third_answer,1.0,-1.8824365139007568
+4hop3__367080_769404_544850_170163,Pretrained SAE,random_ablation,13.0,soul,Soul,adopted_critic,adopted_critic,1.0,-0.21906998753547668
+2hop__92951_196273,Pretrained SAE,random_ablation,14.0,Democratic-Republican Party,The Democratic-Republican Party,adopted_critic,adopted_critic,1.0,-0.3708574175834656
+2hop__45467_159613,Pretrained SAE,random_ablation,15.0,The information is not present in the text.,No valid answer can be derived from the given paragraphs.,third_answer,non_answer,1.0,-1.3253204822540283
+2hop__525298_159937,Pretrained SAE,random_ablation,15.0,The Burj Khalifa,Bahrain World Trade Center,retained_a1,unresolved,1.0,-2.312493681907654
+2hop__535920_673383,Pretrained SAE,random_ablation,15.0,Sidney A. Franklin,Syndey A. Franklin,adopted_critic,third_answer,1.0,-0.6563215553760529
+2hop__687993_62851,Pretrained SAE,random_ablation,15.0,The U.S. Supreme Court,U.S. Supreme Court,adopted_critic,adopted_critic,1.0,-1.6730947494506836
+2hop__763486_83697,Pretrained SAE,random_ablation,15.0,Neither,Not applicable,third_answer,non_answer,1.0,-0.573045015335083
+2hop__830945_751489,Pretrained SAE,random_ablation,15.0,"Andy Warhol was born in Pittsburgh, Pennsylvania, USA.","Pittsburgh, Pennsylvania, USA",third_answer,unresolved,1.0,-0.1331324577331543
+3hop1__16275_71250_135051,Pretrained SAE,random_ablation,15.0,Mcaria,Maria,third_answer,third_answer,1.0,-7.718210935592651
+2hop__763486_83697,Pretrained SAE,random_ablation,16.0,Neither,,third_answer,unresolved,1.0,-0.7155969142913818
+3hop1__325154_786384_80004,Pretrained SAE,random_ablation,16.0,Prime Minister of the United Kingdom,The Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-0.6790056750178337
+3hop1__3957_720466_80004,Pretrained SAE,random_ablation,16.0,Prime Minister of the United Kingdom,The Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-1.2514502666890621
+4hop1__446791_100761_1955_64754,Pretrained SAE,random_ablation,16.0,presidential democracy,Presidential democracy,third_answer,third_answer,1.0,-0.29434967041015625
+2hop__158048_29454,Pretrained SAE,random_ablation,17.0,No information provided.,Japan did not invade the place where taekwondo originated.,non_answer,unresolved,1.0,-0.883141279220581
+2hop__47096_807767,Pretrained SAE,random_ablation,17.0,Evolutionary biology,evolutionary biology,adopted_critic,adopted_critic,1.0,-1.2514498494565487
+2hop__759990_8600,Pretrained SAE,random_ablation,17.0,Southwest,southwest,adopted_critic,adopted_critic,1.0,-3.0563546121120453
+2hop__763486_83697,Pretrained SAE,random_ablation,17.0,Neither,,third_answer,unresolved,1.0,-0.738584041595459
+2hop__830945_751489,Pretrained SAE,random_ablation,17.0,"Andy Warhol was born in Pittsburgh, Pennsylvania, USA.","Pittsburgh, Pennsylvania, USA",third_answer,unresolved,1.0,-2.010941445827484
+2hop__158048_29454,Pretrained SAE,random_ablation,18.0,No information provided.,Japan did not invade the place where taekwondo originated.,non_answer,unresolved,1.0,-0.3636932373046875
+2hop__467434_10369,Pretrained SAE,random_ablation,18.0,Holhol is not a country and therefore does not have a president.,Hohol is not a country and therefore does not have a president.,adopted_critic,third_answer,1.0,-4.071284104138613
+2hop__535920_673383,Pretrained SAE,random_ablation,18.0,Sidney A. Franklin,Sydney A. Franklin,adopted_critic,third_answer,1.0,-1.0436501801013947
+2hop__648794_61424,Pretrained SAE,random_ablation,18.0,"Poipet, located in Cambodia, was embroiled in the Cambodian Civil War (1968–1975) during the Cold War, a conflict influenced by Cold War dynamics. The United States supported anti-communist forces, while the Soviet Union and China backed the Khmer Rouge, leading to the fall","During the Cold War, Cambodia was involved in the Cambodian Civil War (1968–1975), a conflict influenced by Cold War dynamics, with the United States supporting anti-communist forces and the Soviet Union and China backing the Khmer Rouge. The war resulted in the fall of the Kingdom of Cambodia",third_answer,third_answer,1.0,-1.0169780254364014
+2hop__763486_83697,Pretrained SAE,random_ablation,18.0,Neither,Not applicable,third_answer,non_answer,1.0,-0.29465293884277344
+2hop__830945_751489,Pretrained SAE,random_ablation,18.0,"Andy Warhol was born in Pittsburgh, Pennsylvania, USA.","Pittsburgh, Pennsylvania, USA",third_answer,unresolved,1.0,-0.07310903072357178
+3hop1__16275_71250_135051,Pretrained SAE,random_ablation,18.0,Mcaria,Maria,third_answer,third_answer,1.0,-1.7804412841796875
+2hop__158048_29454,Pretrained SAE,random_ablation,19.0,No information provided.,Japan did not invade the place where taekwondo originated.,non_answer,unresolved,1.0,-0.405820369720459
+2hop__481944_135703,Pretrained SAE,random_ablation,19.0,the Niger River,The Niger River,adopted_critic,adopted_critic,1.0,-0.5000512003898621
+2hop__648794_61424,Pretrained SAE,random_ablation,19.0,"Poipet, located in Cambodia, was embroiled in the Cambodian Civil War (1968–1975) during the Cold War, a conflict influenced by Cold War dynamics. The United States supported anti-communist forces, while the Soviet Union and China backed the Khmer Rouge, leading to the fall","Panmung Pak, a region of Cambodia, experienced the Cambodian Civil War (1968–1975) during the Cold War, a conflict influenced by Cold War dynamics, with the United States supporting anti-communist forces and the Soviet Union and China backing the Khmer Rouge. The war resulted in",third_answer,third_answer,1.0,-0.6566145420074463
+2hop__763486_83697,Pretrained SAE,random_ablation,19.0,Neither,,third_answer,unresolved,1.0,-0.8255325555801392
+2hop__92951_196273,Pretrained SAE,random_ablation,19.0,Democratic-Republican Party,The Democratic-Republican Party,adopted_critic,adopted_critic,1.0,-1.0193184614181519
+4hop1__446791_100761_1955_64754,Pretrained SAE,random_ablation,19.0,presidential democracy,Presidential democracy,third_answer,third_answer,1.0,-2.233769178390503
+4hop3__367080_769404_544850_170163,Pretrained SAE,random_ablation,19.0,soul,Soul,adopted_critic,adopted_critic,1.0,-0.21907034516334534
+3hop1__325154_786384_80004,Pretrained SAE · error-preserving,targeted_ablation,,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-0.2809298038482666
+2hop__129332_158749,Pretrained SAE · error-preserving,random_ablation,0.0,The population of the state where KKWE is located by 1900 was over 1.7 million.,Minnesota's official population grew to over 1.7 million by 1900.,third_answer,retained_a1,1.0,-0.561233401298523
+2hop__47096_807767,Pretrained SAE · error-preserving,random_ablation,0.0,Evolutionary biology,evolutionary biology,adopted_critic,adopted_critic,1.0,-2.0983299016952515
+4hop3__39178_419859_22784_86234,Pretrained SAE · error-preserving,random_ablation,0.0,"September 8, 1855",8 September 1855,third_answer,unresolved,1.0,-2.036945104598999
+2hop__70393_28707,Pretrained SAE · error-preserving,random_ablation,1.0,"Alaska’s capital, Juneau, is only accessible by ferry due to the state’s limited road connections, sparking debate about relocating the capital to a more accessible city or building a road connection.","The debate about moving the capital of Alaska centers on the state’s limited road connections, particularly the fact that Juneau, the capital, is only accessible by ferry, leading to discussions about relocating the capital or building a road connection.",third_answer,third_answer,1.0,-3.790086507797241
+2hop__129332_158749,Pretrained SAE · error-preserving,random_ablation,2.0,The population of the state where KKWE is located by 1900 was over 1.7 million.,Minnesota's official population grew to over 1.7 million by 1900.,third_answer,retained_a1,1.0,-1.0691068172454834
+2hop__131517_68117,Pretrained SAE · error-preserving,random_ablation,2.0,The origin is not identifiable.,Not identifiable,third_answer,unresolved,1.0,-0.8475230485200882
+2hop__195347_159937,Pretrained SAE · error-preserving,random_ablation,2.0,The twin towers of the Bahrain Financial Harbour,Twin towers of the Bahrain Financial Harbour,adopted_critic,adopted_critic,1.0,-1.7418577373027802
+2hop__525298_159937,Pretrained SAE · error-preserving,random_ablation,2.0,The Burj Khalifa,Bahrain World Trade Center,retained_a1,unresolved,1.0,-1.8753639459609985
+4hop3__703974_789671_804098_24137,Pretrained SAE · error-preserving,random_ablation,2.0,The Yale Daily News,Yale Daily News,retained_a1,retained_a1,1.0,-1.2951117865741253
+2hop__129332_158749,Pretrained SAE · error-preserving,random_ablation,3.0,The population of the state where KKWE is located by 1900 was over 1.7 million.,Over 1.7 million,third_answer,unresolved,1.0,-0.2630901336669922
+2hop__92951_196273,Pretrained SAE · error-preserving,random_ablation,3.0,Democratic-Republican Party,The Democratic-Republican Party,adopted_critic,adopted_critic,1.0,-1.6012092381715775
+3hop1__383328_705261_9426,Pretrained SAE · error-preserving,random_ablation,3.0,40%,Forty percent,third_answer,retained_a1,1.0,-0.5
+4hop3__39178_419859_22784_86234,Pretrained SAE · error-preserving,random_ablation,3.0,"September 8, 1855",8 September 1855,third_answer,unresolved,1.0,-0.6608152985572815
+2hop__129332_158749,Pretrained SAE · error-preserving,random_ablation,4.0,The population of the state where KKWE is located by 1900 was over 1.7 million.,Minnesota's official population grew to over 1.7 million by 1900.,third_answer,retained_a1,1.0,-0.6207431554794312
+2hop__70393_28707,Pretrained SAE · error-preserving,random_ablation,4.0,"Alaska’s capital, Juneau, is only accessible by ferry due to the state’s limited road connections, sparking debate about relocating the capital to a more accessible city or building a road connection.","The debate about moving the capital of Alaska centers on the state’s limited road connections, particularly the fact that Juneau, the capital, is only accessible by ferry, leading to discussions about relocating the capital or building a road connection.",third_answer,third_answer,1.0,-1.6528515815734863
+3hop1__325154_786384_80004,Pretrained SAE · error-preserving,random_ablation,4.0,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-0.2809298038482666
+4hop3__39178_419859_22784_86234,Pretrained SAE · error-preserving,random_ablation,4.0,"September 8, 1855",8 September 1855,third_answer,unresolved,1.0,-0.6608164310455322
+3hop1__383328_705261_9426,Pretrained SAE · error-preserving,random_ablation,5.0,40%,Forty percent,third_answer,retained_a1,1.0,-0.2190701961517334
+2hop__129332_158749,Pretrained SAE · error-preserving,random_ablation,6.0,The population of the state where KKWE is located by 1900 was over 1.7 million.,Minnesota's official population grew to over 1.7 million by 1900.,third_answer,retained_a1,1.0,-0.09140551090240479
+2hop__70393_28707,Pretrained SAE · error-preserving,random_ablation,6.0,"Alaska’s capital, Juneau, is only accessible by ferry due to the state’s limited road connections, sparking debate about relocating the capital to a more accessible city or building a road connection.","The debate about moving the capital of Alaska centers on the state’s limited road connections, particularly the fact that Juneau, the capital, is only accessible by ferry, leading to discussions about relocating the capital or building a road connection.",third_answer,third_answer,1.0,-0.2190701961517334
+3hop1__325154_786384_80004,Pretrained SAE · error-preserving,random_ablation,6.0,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-0.2809298038482666
+3hop1__325154_786384_80004,Pretrained SAE · error-preserving,random_ablation,7.0,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-1.0082662105560303
+3hop1__383328_705261_9426,Pretrained SAE · error-preserving,random_ablation,7.0,40%,Forty percent,third_answer,retained_a1,1.0,-1.6528511047363281
+2hop__30223_60847,Pretrained SAE · error-preserving,random_ablation,9.0,1517,There is no allied landing in the region the Ottoman Navy conquered in the early 16th century.,retained_a1,third_answer,1.0,-0.30272120237350464
+3hop1__383328_705261_9426,Pretrained SAE · error-preserving,random_ablation,9.0,40%,Forty percent,third_answer,retained_a1,1.0,-0.2190701961517334
+4hop3__39178_419859_22784_86234,Pretrained SAE · error-preserving,random_ablation,9.0,"September 8, 1855",8 September 1855,third_answer,unresolved,1.0,-0.9999998807907104
+4hop3__39178_419859_22784_86234,Pretrained SAE · error-preserving,random_ablation,10.0,"September 8, 1855",8 September 1855,third_answer,unresolved,1.0,-0.6608152985572815
+2hop__70393_28707,Pretrained SAE · error-preserving,random_ablation,11.0,"Alaska’s capital, Juneau, is only accessible by ferry due to the state’s limited road connections, sparking debate about relocating the capital to a more accessible city or building a road connection.","The debate about moving the capital of Alaska centers on the state’s limited road connections, particularly the fact that Juneau, the capital, is only accessible by ferry, leading to discussions about relocating the capital or building a road connection.",third_answer,third_answer,1.0,-0.6627939939498901
+4hop3__39178_419859_22784_86234,Pretrained SAE · error-preserving,random_ablation,11.0,"September 8, 1855",8 September 1855,third_answer,unresolved,1.0,-0.6608152985572815
+2hop__129332_158749,Pretrained SAE · error-preserving,random_ablation,12.0,The population of the state where KKWE is located by 1900 was over 1.7 million.,Over 1.7 million,third_answer,unresolved,1.0,-0.47477734088897705
+4hop3__39178_419859_22784_86234,Pretrained SAE · error-preserving,random_ablation,12.0,"September 8, 1855",8 September 1855,third_answer,unresolved,1.0,-0.6608167886734009
+2hop__129332_158749,Pretrained SAE · error-preserving,random_ablation,13.0,The population of the state where KKWE is located by 1900 was over 1.7 million.,Minnesota's official population grew to over 1.7 million by 1900.,third_answer,retained_a1,1.0,-0.13695359230041504
+2hop__481944_135703,Pretrained SAE · error-preserving,random_ablation,13.0,the Niger River,The Niger River,adopted_critic,adopted_critic,1.0,-1.1254746913909912
+2hop__538056_171224,Pretrained SAE · error-preserving,random_ablation,13.0,classical and experimental music,Classical and experimental music,adopted_critic,adopted_critic,1.0,-0.8391863405704498
+2hop__79397_664909,Pretrained SAE · error-preserving,random_ablation,13.0,no conflict is associated with the invention,No conflict is associated with the invention,adopted_critic,adopted_critic,1.0,-0.5112616121768951
+3hop1__383328_705261_9426,Pretrained SAE · error-preserving,random_ablation,13.0,40%,Forty percent,third_answer,retained_a1,1.0,-0.2190701961517334
+2hop__129332_158749,Pretrained SAE · error-preserving,random_ablation,14.0,The population of the state where KKWE is located by 1900 was over 1.7 million.,Over 1.7 million,third_answer,unresolved,1.0,0.04549431800842285
+2hop__481944_135703,Pretrained SAE · error-preserving,random_ablation,14.0,the Niger River,The Niger River,adopted_critic,adopted_critic,1.0,-0.11720776557922363
+2hop__70393_28707,Pretrained SAE · error-preserving,random_ablation,14.0,"Alaska’s capital, Juneau, is only accessible by ferry due to the state’s limited road connections, sparking debate about relocating the capital to a more accessible city or building a road connection.","The debate about moving the capital of Alaska centers on the state’s limited road connections, particularly the fact that Juneau, the capital, is only accessible by ferry, leading to discussions about relocating the capital or building a road connection.",third_answer,third_answer,1.0,-0.5000002980232239
+2hop__129332_158749,Pretrained SAE · error-preserving,random_ablation,15.0,The population of the state where KKWE is located by 1900 was over 1.7 million.,Minnesota's official population grew to over 1.7 million by 1900.,third_answer,retained_a1,1.0,-0.8857436180114746
+2hop__131517_68117,Pretrained SAE · error-preserving,random_ablation,15.0,The origin is not identifiable.,Not identifiable,third_answer,unresolved,1.0,-0.6993556171655655
+2hop__195347_159937,Pretrained SAE · error-preserving,random_ablation,15.0,The twin towers of the Bahrain Financial Harbour,Twin towers of the Bahrain Financial Harbour,adopted_critic,adopted_critic,1.0,-1.9640662372112274
+2hop__525298_159937,Pretrained SAE · error-preserving,random_ablation,15.0,The Burj Khalifa,Bahrain World Trade Center,retained_a1,unresolved,1.0,-1.6588115692138672
+3hop1__325154_786384_80004,Pretrained SAE · error-preserving,random_ablation,15.0,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-3.325002670288086
+3hop1__3957_720466_80004,Pretrained SAE · error-preserving,random_ablation,15.0,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-0.9254896566271782
+4hop3__703974_789671_804098_24137,Pretrained SAE · error-preserving,random_ablation,15.0,The Yale Daily News,Yale Daily News,retained_a1,retained_a1,1.0,-1.4837790839374065
+4hop3__39178_419859_22784_86234,Pretrained SAE · error-preserving,random_ablation,16.0,"September 8, 1855",8 September 1855,third_answer,unresolved,1.0,-0.9999998807907104
+2hop__129332_158749,Pretrained SAE · error-preserving,random_ablation,17.0,The population of the state where KKWE is located by 1900 was over 1.7 million.,Minnesota's official population grew to over 1.7 million by 1900.,third_answer,retained_a1,1.0,-0.6286474466323853
+2hop__47096_807767,Pretrained SAE · error-preserving,random_ablation,17.0,Evolutionary biology,evolutionary biology,adopted_critic,adopted_critic,1.0,-2.098364233970642
+3hop1__325154_786384_80004,Pretrained SAE · error-preserving,random_ablation,17.0,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-0.6201150417327881
+4hop3__39178_419859_22784_86234,Pretrained SAE · error-preserving,random_ablation,17.0,"September 8, 1855",8 September 1855,third_answer,unresolved,1.0,-2.9747796058654785
+2hop__129332_158749,Pretrained SAE · error-preserving,random_ablation,18.0,The population of the state where KKWE is located by 1900 was over 1.7 million.,Over 1.7 million,third_answer,unresolved,1.0,-0.18195688724517822
+2hop__70393_28707,Pretrained SAE · error-preserving,random_ablation,18.0,"Alaska’s capital, Juneau, is only accessible by ferry due to the state’s limited road connections, sparking debate about relocating the capital to a more accessible city or building a road connection.","The debate about moving the capital of Alaska centers on the state’s limited road connections, particularly the fact that Juneau, the capital, is only accessible by ferry, leading to discussions about relocating the capital or building a road connection.",third_answer,third_answer,1.0,-0.2190701961517334
+3hop1__325154_786384_80004,Pretrained SAE · error-preserving,random_ablation,18.0,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-0.2809298038482666
+4hop3__39178_419859_22784_86234,Pretrained SAE · error-preserving,random_ablation,18.0,"September 8, 1855",8 September 1855,third_answer,unresolved,1.0,-0.8236095905303955
+2hop__129332_158749,Pretrained SAE · error-preserving,random_ablation,19.0,The population of the state where KKWE is located by 1900 was over 1.7 million.,Minnesota's official population grew to over 1.7 million by 1900.,third_answer,retained_a1,1.0,-1.1873340606689453
+2hop__481944_135703,Pretrained SAE · error-preserving,random_ablation,19.0,the Niger River,The Niger River,adopted_critic,adopted_critic,1.0,-0.5609339475631714
+2hop__538056_171224,Pretrained SAE · error-preserving,random_ablation,19.0,classical and experimental music,Classical and experimental music,adopted_critic,adopted_critic,1.0,-0.8391882479190826
+2hop__79397_664909,Pretrained SAE · error-preserving,random_ablation,19.0,no conflict is associated with the invention,No conflict is associated with the invention,adopted_critic,adopted_critic,1.0,-0.3707432448863983
+3hop1__325154_786384_80004,Pretrained SAE · error-preserving,random_ablation,19.0,The Prime Minister of the United Kingdom,Prime Minister of the United Kingdom,adopted_critic,adopted_critic,1.0,-0.8087818622589111

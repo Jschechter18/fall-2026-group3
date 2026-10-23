@@ -27,6 +27,10 @@ saes:
     path: results/sae/pretrained/gemma-scope-2-4b-it/resid_post_all/layer_33_width_16k_l0_big
 n_random_draws: 2
 error_preserving: true
+# ablation and steering together (the tiny SAEs bring their own reference activations; the path is
+# the real run's, for a config that matches it)
+steer_strengths: [-2, 2]
+feature_reference: results/feature_selection/20261016T003252665105Z/feature_reference_activations.json
 min_replay_label_match: 0.98
 # a random tiny model cannot reproduce collection, so the smoke run continues, marked unvalidated
 on_replay_check_fail: mark_unvalidated

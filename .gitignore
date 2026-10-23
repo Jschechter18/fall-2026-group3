@@ -56,6 +56,12 @@ results/sae/musique/runs/*/*/checkpoints/
 # Collection results
 /results/collection/*/*/interactions.jsonl
 
+# Pretrained SAE downloads (s3://dats-capstone/shared/group3/results/sae/pretrained/)
+/results/sae/pretrained/
+
+# Causal replay per-row JSONL (s3://dats-capstone/shared/group3/results/causal_replay/)
+/results/causal_replay/*/per_row.jsonl
+
 /logs/
 
 # Tuning and continuation checkpoints
@@ -63,3 +69,11 @@ results/sae/musique/runs/*/*/checkpoints/
 
 # Archived adoption experiment artifacts
 /results/adoption_experiment/archive/
+# Large artifacts mirrored to s3://dats-capstone/shared/group3/
+results/sae/pretrained/
+results/causal_replay/*/per_row.jsonl
+
+# Per-row adoption experiment files mirrored to S3 (results/adoption_experiment/s3_artifacts.json)
+/results/adoption_experiment/*/episodes.jsonl
+/results/adoption_experiment/*/results.csv
+/results/adoption_experiment/verification_100q/comparisons.csv

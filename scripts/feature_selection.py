@@ -1,4 +1,4 @@
-"""SAE feature selection (issue #89) and the offline causal-proxy table on real layer-33 data.
+"""SAE feature selection (issue #89) and the offline causal-proxy table on real activations of the config's layer.
 
     python scripts/feature_selection.py --config configs/feature_selection_layer33.yaml
 """

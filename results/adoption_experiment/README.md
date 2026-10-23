@@ -24,6 +24,22 @@ Recompute the report and redraw the chart from saved responses, without inferenc
 PYTHONPATH=src python scripts/experiments/compare_natural_protocols.py --plot-only
 ```
 
+### Per-row files in S3
+
+The per-row files (`*/episodes.jsonl`, `*/results.csv` and
+`verification_100q/comparisons.csv`, about 71 MB) are not tracked in Git. They
+are in `s3://dats-capstone/shared/group3/results/adoption_experiment/` at the
+same relative paths, and [s3_artifacts.json](s3_artifacts.json) lists each
+file's size and SHA-256. The hashes are unchanged, so the input hashes in
+`adoption_results/plan.json` still apply. Download and check them before
+recomputing anything in this folder:
+
+```bash
+aws s3 sync s3://dats-capstone/shared/group3/results/adoption_experiment/ results/adoption_experiment/ \
+  --exclude "*" --include "*/episodes.jsonl" --include "*/results.csv" --include "verification_100q/comparisons.csv"
+python -c "import hashlib, json; m = json.load(open('results/adoption_experiment/s3_artifacts.json')); bad = [f['path'] for f in m['files'] if hashlib.sha256(open(f['path'], 'rb').read()).hexdigest() != f['sha256']]; print('all files verified' if not bad else f'MISMATCH: {bad}')"
+```
+
 `archive/` contains earlier ablations and supporting artifacts. It is ignored by
 Git. Historical artifact contents and provenance were preserved; shared active
 inputs remain at their original paths.

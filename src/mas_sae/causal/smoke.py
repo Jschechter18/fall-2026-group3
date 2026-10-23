@@ -70,8 +70,10 @@ def tiny_features(saes: dict, n_targeted: int = 3, n_random_draws: int = 2, seed
         perm = rng.permutation(sae.latent_dim)
         targeted = perm[:n_targeted].tolist()
         rest = perm[n_targeted:]
-        out[name] = {"targeted": targeted,
-                     "random": [rng.choice(rest, n_targeted, replace=False).tolist() for _ in range(n_random_draws)]}
+        random = [rng.choice(rest, n_targeted, replace=False).tolist() for _ in range(n_random_draws)]
+        # reference activations for steering: any positive scale will do for a pipeline check (and leaves rng alone)
+        ref = {str(i): 0.5 + (i % 7) / 4 for i in sorted({*targeted, *(i for d in random for i in d)})}
+        out[name] = {"targeted": targeted, "random": random, "ref": ref}
     return out
 
 
