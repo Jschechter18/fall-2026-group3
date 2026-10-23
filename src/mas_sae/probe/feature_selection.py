@@ -140,6 +140,43 @@ def provenance(cfg: FeatureSelectionConfig, config_path: Path | None) -> dict:
     }
 
 
+def reference_activations(cfg: FeatureSelectionConfig, summary: dict, batch_size: int = 512) -> dict:
+    """Typical activation of every targeted and random-control feature of a feature-selection run.
+
+    For each SAE of ``summary`` (which must be the run made with ``cfg``'s layer and SAE files), the
+    fit-partition rows are encoded and each feature in the targeted set or any random draw gets
+    ``ref`` = its mean activation where it fires, plus its firing frequency and the 95th percentile
+    of its nonzero values. Causal-replay steering clamps a feature to ``strength * ref``, so ``ref``
+    is the unit strengths are expressed in. A feature that never fires has no ``ref`` and is refused.
+    """
+    if summary["config"]["layer"] != cfg.layer:
+        raise ValueError(f"Feature selection was run on layer {summary['config']['layer']}, not {cfg.layer}.")
+    root = Path(cfg.capstone_data_root)
+    selected, _, cols = ls.load_inputs(cfg.layer_selection_config())
+    X = bd.load_layer_matrix(selected, root / cfg.activations_dir / f"layer_{cfg.layer:02d}", cfg.activation_file)
+    X = X[selected[cols.partition].astype(str).to_numpy() == cfg.fit_partition]
+    out = {}
+    for name, s in summary["saes"].items():
+        if name not in cfg.saes:
+            raise ValueError(f"SAE {name!r} of the summary is not in the feature-selection config.")
+        hashes = {str(p.relative_to(root)): sha256_file(p) for p in sae_files(cfg.saes[name], root)}
+        if hashes != summary["provenance"]["sae_sha256"].get(name):
+            raise ValueError(f"SAE {name!r} files differ from the ones feature selection used.")
+        ids = sorted({int(f) for f in s["targeted_features"]} | {int(f) for d in s["random_control_draws"] for f in d})
+        sae = load_sae(cfg.saes[name], root, cfg.layer)[0].eval()
+        Z = np.concatenate([offline.encode(sae, X[i:i + batch_size])[:, ids] for i in range(0, len(X), batch_size)])
+        feats = {}
+        for j, f in enumerate(ids):
+            on = Z[:, j][Z[:, j] > 0]
+            if not len(on):
+                raise ValueError(f"{name} feature {f} never fires on {cfg.fit_partition}: it has no reference activation.")
+            feats[str(f)] = {"ref": float(on.mean()), "firing_frequency": float(len(on) / len(Z)),
+                             "p95": float(np.quantile(on, 0.95))}
+        out[name] = {"sae_sha256": hashes, "features": feats}
+        logger.info("%s: reference activations for %d features on %d %s rows", name, len(ids), len(Z), cfg.fit_partition)
+    return out
+
+
 def rank_features(probe, Z_fit: np.ndarray) -> pd.DataFrame:
     """Per-feature coefficient (toward ACCEPT, standardized units) and mean |SHAP| on ``Z_fit``."""
     scaler, clf = probe.named_steps["scale"], probe.named_steps["clf"]
@@ -294,16 +331,18 @@ def run(cfg: FeatureSelectionConfig, config_path: Path | None = None) -> Path:
     return run_dir
 
 
-def _plot(table: pd.DataFrame, path: Path, title: str, xlabel: str) -> None:
+def _plot(table: pd.DataFrame, path: Path, title: str, xlabel: str,
+          conditions=("Random ablation", "Targeted ablation")) -> None:
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    rows = table[table["Condition"].isin(["Random ablation", "Targeted ablation"])].reset_index(drop=True)
+    rows = table[table["Condition"].isin(list(conditions))].reset_index(drop=True)
     lo = [float(s.strip("[]").split(",")[0]) for s in rows["95% CI for Δ"]]
     hi = [float(s.strip("[]").split(",")[1]) for s in rows["95% CI for Δ"]]
     d = rows["Δ vs. SAE Control (pp)"].astype(float).to_numpy()
-    labels = [f"{e} · {c.split()[0].lower()}" for e, c in zip(rows["Experiment"], rows["Condition"])]
+    labels = [f"{e} · {c.split()[0].lower() if c.endswith(' ablation') else c.lower()}"
+              for e, c in zip(rows["Experiment"], rows["Condition"])]
     fig, ax = plt.subplots(figsize=(7, 0.5 * len(rows) + 1.2))
     ypos = np.arange(len(rows))[::-1]
     ax.errorbar(d, ypos, xerr=[d - np.array(lo), np.array(hi) - d], fmt="o", capsize=3, color="#3266ad")
