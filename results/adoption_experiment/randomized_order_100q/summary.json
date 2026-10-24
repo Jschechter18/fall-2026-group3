@@ -1,0 +1,417 @@
+{
+  "protocol": "adoption_randomized_labeled_order_v1",
+  "order_seed": 42,
+  "assignment_unit": "question",
+  "assigned_question_counts": {
+    "critic_first": 50,
+    "a1_first": 50
+  },
+  "completed_trial_order_counts": {
+    "a1_first": 47,
+    "critic_first": 51
+  },
+  "completed": 98,
+  "skipped": 202,
+  "distinct_completed_questions": 80,
+  "adopted_target": 32,
+  "retained_a1": 65,
+  "other_outputs": 1,
+  "arms": {
+    "plausible_incorrect": {
+      "completed": 34,
+      "skipped": 66,
+      "skip_reasons": {
+        "skipped_requires_correct_a1": 45,
+        "skipped_target_generation_failed": 14,
+        "skipped_a1_not_answer": 7
+      },
+      "responses": {
+        "retained_a1": 26,
+        "adopted_critic": 8
+      },
+      "adopted_target": 8,
+      "adoption_rate": 0.23529411764705882,
+      "retained_a1": 26,
+      "a2_correct": 26,
+      "corrected": 0,
+      "harmed": 8,
+      "reached_token_budget": 0,
+      "by_hop": {
+        "2hop": {
+          "completed": 8,
+          "adopted_target": 4,
+          "retained_a1": 4,
+          "a2_correct": 4
+        },
+        "3hop": {
+          "completed": 11,
+          "adopted_target": 1,
+          "retained_a1": 10,
+          "a2_correct": 10
+        },
+        "4hop": {
+          "completed": 15,
+          "adopted_target": 3,
+          "retained_a1": 12,
+          "a2_correct": 12
+        }
+      }
+    },
+    "obvious_incorrect": {
+      "completed": 19,
+      "skipped": 81,
+      "skip_reasons": {
+        "skipped_target_generation_failed": 29,
+        "skipped_requires_correct_a1": 45,
+        "skipped_a1_not_answer": 7
+      },
+      "responses": {
+        "adopted_critic": 8,
+        "retained_a1": 11
+      },
+      "adopted_target": 8,
+      "adoption_rate": 0.42105263157894735,
+      "retained_a1": 11,
+      "a2_correct": 11,
+      "corrected": 0,
+      "harmed": 8,
+      "reached_token_budget": 0,
+      "by_hop": {
+        "2hop": {
+          "completed": 3,
+          "adopted_target": 2,
+          "retained_a1": 1,
+          "a2_correct": 1
+        },
+        "3hop": {
+          "completed": 6,
+          "adopted_target": 3,
+          "retained_a1": 3,
+          "a2_correct": 3
+        },
+        "4hop": {
+          "completed": 10,
+          "adopted_target": 3,
+          "retained_a1": 7,
+          "a2_correct": 7
+        }
+      }
+    },
+    "correct_correction": {
+      "completed": 45,
+      "skipped": 55,
+      "skip_reasons": {
+        "skipped_requires_incorrect_a1": 48,
+        "skipped_a1_not_answer": 7
+      },
+      "responses": {
+        "adopted_critic": 16,
+        "retained_a1": 28,
+        "unresolved": 1
+      },
+      "adopted_target": 16,
+      "adoption_rate": 0.35555555555555557,
+      "retained_a1": 28,
+      "a2_correct": 16,
+      "corrected": 16,
+      "harmed": 0,
+      "reached_token_budget": 0,
+      "by_hop": {
+        "2hop": {
+          "completed": 15,
+          "adopted_target": 5,
+          "retained_a1": 10,
+          "a2_correct": 5
+        },
+        "3hop": {
+          "completed": 17,
+          "adopted_target": 6,
+          "retained_a1": 11,
+          "a2_correct": 6
+        },
+        "4hop": {
+          "completed": 13,
+          "adopted_target": 5,
+          "retained_a1": 7,
+          "a2_correct": 5
+        }
+      }
+    }
+  },
+  "by_order": {
+    "a1_first": {
+      "plausible_incorrect": {
+        "completed": 16,
+        "skipped": 34,
+        "skip_reasons": {
+          "skipped_requires_correct_a1": 23,
+          "skipped_target_generation_failed": 8,
+          "skipped_a1_not_answer": 3
+        },
+        "responses": {
+          "retained_a1": 12,
+          "adopted_critic": 4
+        },
+        "adopted_target": 4,
+        "adoption_rate": 0.25,
+        "retained_a1": 12,
+        "a2_correct": 12,
+        "corrected": 0,
+        "harmed": 4,
+        "reached_token_budget": 0,
+        "by_hop": {
+          "2hop": {
+            "completed": 4,
+            "adopted_target": 2,
+            "retained_a1": 2,
+            "a2_correct": 2
+          },
+          "3hop": {
+            "completed": 4,
+            "adopted_target": 0,
+            "retained_a1": 4,
+            "a2_correct": 4
+          },
+          "4hop": {
+            "completed": 8,
+            "adopted_target": 2,
+            "retained_a1": 6,
+            "a2_correct": 6
+          }
+        }
+      },
+      "obvious_incorrect": {
+        "completed": 8,
+        "skipped": 42,
+        "skip_reasons": {
+          "skipped_target_generation_failed": 16,
+          "skipped_requires_correct_a1": 23,
+          "skipped_a1_not_answer": 3
+        },
+        "responses": {
+          "retained_a1": 5,
+          "adopted_critic": 3
+        },
+        "adopted_target": 3,
+        "adoption_rate": 0.375,
+        "retained_a1": 5,
+        "a2_correct": 5,
+        "corrected": 0,
+        "harmed": 3,
+        "reached_token_budget": 0,
+        "by_hop": {
+          "2hop": {
+            "completed": 2,
+            "adopted_target": 1,
+            "retained_a1": 1,
+            "a2_correct": 1
+          },
+          "3hop": {
+            "completed": 1,
+            "adopted_target": 0,
+            "retained_a1": 1,
+            "a2_correct": 1
+          },
+          "4hop": {
+            "completed": 5,
+            "adopted_target": 2,
+            "retained_a1": 3,
+            "a2_correct": 3
+          }
+        }
+      },
+      "correct_correction": {
+        "completed": 23,
+        "skipped": 27,
+        "skip_reasons": {
+          "skipped_requires_incorrect_a1": 24,
+          "skipped_a1_not_answer": 3
+        },
+        "responses": {
+          "adopted_critic": 10,
+          "retained_a1": 12,
+          "unresolved": 1
+        },
+        "adopted_target": 10,
+        "adoption_rate": 0.43478260869565216,
+        "retained_a1": 12,
+        "a2_correct": 10,
+        "corrected": 10,
+        "harmed": 0,
+        "reached_token_budget": 0,
+        "by_hop": {
+          "2hop": {
+            "completed": 8,
+            "adopted_target": 4,
+            "retained_a1": 4,
+            "a2_correct": 4
+          },
+          "3hop": {
+            "completed": 9,
+            "adopted_target": 4,
+            "retained_a1": 5,
+            "a2_correct": 4
+          },
+          "4hop": {
+            "completed": 6,
+            "adopted_target": 2,
+            "retained_a1": 3,
+            "a2_correct": 2
+          }
+        }
+      }
+    },
+    "critic_first": {
+      "plausible_incorrect": {
+        "completed": 18,
+        "skipped": 32,
+        "skip_reasons": {
+          "skipped_requires_correct_a1": 22,
+          "skipped_a1_not_answer": 4,
+          "skipped_target_generation_failed": 6
+        },
+        "responses": {
+          "retained_a1": 14,
+          "adopted_critic": 4
+        },
+        "adopted_target": 4,
+        "adoption_rate": 0.2222222222222222,
+        "retained_a1": 14,
+        "a2_correct": 14,
+        "corrected": 0,
+        "harmed": 4,
+        "reached_token_budget": 0,
+        "by_hop": {
+          "2hop": {
+            "completed": 4,
+            "adopted_target": 2,
+            "retained_a1": 2,
+            "a2_correct": 2
+          },
+          "3hop": {
+            "completed": 7,
+            "adopted_target": 1,
+            "retained_a1": 6,
+            "a2_correct": 6
+          },
+          "4hop": {
+            "completed": 7,
+            "adopted_target": 1,
+            "retained_a1": 6,
+            "a2_correct": 6
+          }
+        }
+      },
+      "obvious_incorrect": {
+        "completed": 11,
+        "skipped": 39,
+        "skip_reasons": {
+          "skipped_requires_correct_a1": 22,
+          "skipped_target_generation_failed": 13,
+          "skipped_a1_not_answer": 4
+        },
+        "responses": {
+          "adopted_critic": 5,
+          "retained_a1": 6
+        },
+        "adopted_target": 5,
+        "adoption_rate": 0.45454545454545453,
+        "retained_a1": 6,
+        "a2_correct": 6,
+        "corrected": 0,
+        "harmed": 5,
+        "reached_token_budget": 0,
+        "by_hop": {
+          "2hop": {
+            "completed": 1,
+            "adopted_target": 1,
+            "retained_a1": 0,
+            "a2_correct": 0
+          },
+          "3hop": {
+            "completed": 5,
+            "adopted_target": 3,
+            "retained_a1": 2,
+            "a2_correct": 2
+          },
+          "4hop": {
+            "completed": 5,
+            "adopted_target": 1,
+            "retained_a1": 4,
+            "a2_correct": 4
+          }
+        }
+      },
+      "correct_correction": {
+        "completed": 22,
+        "skipped": 28,
+        "skip_reasons": {
+          "skipped_requires_incorrect_a1": 24,
+          "skipped_a1_not_answer": 4
+        },
+        "responses": {
+          "retained_a1": 16,
+          "adopted_critic": 6
+        },
+        "adopted_target": 6,
+        "adoption_rate": 0.2727272727272727,
+        "retained_a1": 16,
+        "a2_correct": 6,
+        "corrected": 6,
+        "harmed": 0,
+        "reached_token_budget": 0,
+        "by_hop": {
+          "2hop": {
+            "completed": 7,
+            "adopted_target": 1,
+            "retained_a1": 6,
+            "a2_correct": 1
+          },
+          "3hop": {
+            "completed": 8,
+            "adopted_target": 2,
+            "retained_a1": 6,
+            "a2_correct": 2
+          },
+          "4hop": {
+            "completed": 7,
+            "adopted_target": 3,
+            "retained_a1": 4,
+            "a2_correct": 3
+          }
+        }
+      }
+    }
+  },
+  "order_only_baseline": {
+    "all_completed_adoption_vs_nonadoption": {
+      "n": 98,
+      "prediction": "adopt if critic_first; otherwise do not adopt",
+      "accuracy": 0.45918367346938777,
+      "balanced_accuracy": 0.4616477272727273,
+      "confusion_matrix": {
+        "true_positive": 15,
+        "false_positive": 36,
+        "true_negative": 30,
+        "false_negative": 17
+      },
+      "always_adopt_accuracy": 0.32653061224489793,
+      "never_adopt_accuracy": 0.673469387755102
+    },
+    "strict_adoption_vs_retention": {
+      "n": 97,
+      "prediction": "adopt if critic_first; otherwise do not adopt",
+      "accuracy": 0.4536082474226804,
+      "balanced_accuracy": 0.45745192307692306,
+      "confusion_matrix": {
+        "true_positive": 15,
+        "false_positive": 36,
+        "true_negative": 29,
+        "false_negative": 17
+      },
+      "always_adopt_accuracy": 0.32989690721649484,
+      "never_adopt_accuracy": 0.6701030927835051
+    }
+  },
+  "note": "Seeded assignment precedes A2 and is balanced over questions, not forced solver outcomes. All arms of a question share its assigned order. Target failures and repeated arms can unbalance completed trial counts. The order-only baseline is a fixed first-candidate heuristic, not a trained or held-out probe. Keep all variants of a question in the same research partition."
+}

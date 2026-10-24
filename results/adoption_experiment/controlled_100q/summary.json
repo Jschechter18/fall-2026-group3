@@ -1,0 +1,134 @@
+{
+  "protocol": "controlled_adoption_v1",
+  "note": "Enriched development sample. Incorrect means a gold/alias mismatch; plausibility levels are intended generation conditions. All completed trials remain in adoption denominators, including unresolved and non-answer outputs.",
+  "arms": {
+    "plausible_incorrect": {
+      "completed": 34,
+      "skipped": 66,
+      "skip_reasons": {
+        "skipped_requires_correct_a1": 45,
+        "skipped_target_generation_failed": 14,
+        "skipped_a1_not_answer": 7
+      },
+      "responses": {
+        "adopted_critic": 33,
+        "retained_a1": 1
+      },
+      "adopted_target": 33,
+      "adoption_rate": 0.9705882352941176,
+      "retained_a1": 1,
+      "a2_correct": 1,
+      "corrected": 0,
+      "harmed": 33,
+      "reached_token_budget": 0,
+      "by_hop": {
+        "2hop": {
+          "completed": 8,
+          "adopted_target": 8,
+          "retained_a1": 0,
+          "a2_correct": 0
+        },
+        "3hop": {
+          "completed": 11,
+          "adopted_target": 11,
+          "retained_a1": 0,
+          "a2_correct": 0
+        },
+        "4hop": {
+          "completed": 15,
+          "adopted_target": 14,
+          "retained_a1": 1,
+          "a2_correct": 1
+        }
+      }
+    },
+    "obvious_incorrect": {
+      "completed": 19,
+      "skipped": 81,
+      "skip_reasons": {
+        "skipped_target_generation_failed": 29,
+        "skipped_requires_correct_a1": 45,
+        "skipped_a1_not_answer": 7
+      },
+      "responses": {
+        "adopted_critic": 18,
+        "third_answer": 1
+      },
+      "adopted_target": 18,
+      "adoption_rate": 0.9473684210526315,
+      "retained_a1": 0,
+      "a2_correct": 0,
+      "corrected": 0,
+      "harmed": 19,
+      "reached_token_budget": 0,
+      "by_hop": {
+        "2hop": {
+          "completed": 3,
+          "adopted_target": 2,
+          "retained_a1": 0,
+          "a2_correct": 0
+        },
+        "3hop": {
+          "completed": 6,
+          "adopted_target": 6,
+          "retained_a1": 0,
+          "a2_correct": 0
+        },
+        "4hop": {
+          "completed": 10,
+          "adopted_target": 10,
+          "retained_a1": 0,
+          "a2_correct": 0
+        }
+      }
+    },
+    "correct_correction": {
+      "completed": 45,
+      "skipped": 55,
+      "skip_reasons": {
+        "skipped_requires_incorrect_a1": 48,
+        "skipped_a1_not_answer": 7
+      },
+      "responses": {
+        "adopted_critic": 37,
+        "retained_a1": 3,
+        "third_answer": 2,
+        "unresolved": 3
+      },
+      "adopted_target": 38,
+      "adoption_rate": 0.8444444444444444,
+      "retained_a1": 3,
+      "a2_correct": 38,
+      "corrected": 38,
+      "harmed": 0,
+      "reached_token_budget": 0,
+      "by_hop": {
+        "2hop": {
+          "completed": 15,
+          "adopted_target": 14,
+          "retained_a1": 1,
+          "a2_correct": 14
+        },
+        "3hop": {
+          "completed": 17,
+          "adopted_target": 13,
+          "retained_a1": 2,
+          "a2_correct": 13
+        },
+        "4hop": {
+          "completed": 13,
+          "adopted_target": 11,
+          "retained_a1": 0,
+          "a2_correct": 11
+        }
+      }
+    }
+  },
+  "paired_wrong_recommendations": {
+    "completed_pairs": 18,
+    "plausible_adopted": 18,
+    "obvious_adopted": 17,
+    "plausible_adopted_obvious_retained": 0,
+    "plausible_retained_obvious_adopted": 0
+  }
+}

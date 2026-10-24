@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 import json
 import os
 from pathlib import Path
@@ -71,3 +72,15 @@ def read_jsonl(
             for line in file
             if line.strip()
         ]
+
+
+def write_csv(path: str | Path, rows: list[dict[str, Any]]) -> None:
+    """Write a nonempty flat table using the first row's column order.
+
+    Nested values must be serialized by the caller. Unlike append_jsonl, this
+    overwrites the file and does not create its parent directory.
+    """
+    with Path(path).open("w", newline="", encoding="utf-8") as file:
+        writer = csv.DictWriter(file, fieldnames=list(rows[0]))
+        writer.writeheader()
+        writer.writerows(rows)

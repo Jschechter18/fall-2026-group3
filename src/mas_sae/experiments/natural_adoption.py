@@ -1,0 +1,242 @@
+"""Paired protocol comparison using saved Natural Critic recommendations.
+
+Coherence screening uses only A1 and Critic fields. Historical A2, eligibility,
+combined audit candidate_status and correctness never decide inclusion.
+"""
+from collections import Counter
+import csv
+import json
+from pathlib import Path
+
+from mas_sae.agents.critic import Critic
+from mas_sae.agents.solver import Solver
+from mas_sae.evaluation.behavior import textual_relation
+from mas_sae.evaluation.behavior_labels import classify_candidate
+from mas_sae.evaluation.scoring import answer_matches, score_revision
+from mas_sae.experiments.adoption_experiment import load_sample, stratum, training_natural_rows
+from mas_sae.experiments.anonymized_adoption import CANDIDATE_TEMPLATE, ORDERS
+from mas_sae.experiments.randomized_adoption import assign_orders, order_only_baseline
+from mas_sae.experiments.artifacts import sha256_file, sha256_text
+from mas_sae.experiments.records import append_jsonl, read_jsonl, write_csv
+
+SAMPLE_PROTOCOL = "adoption_natural_sample_v1"
+PROTOCOL = "adoption_natural_paired_v1"
+LABEL_VERSION = "natural_adoption_lexical_v1"
+CONDITIONS = ("original", "labeled_randomized")
+
+
+def screen_natural(rows, audit_rows=None):
+    """Screen saved recommendations, optionally joining #115 train coherence.
+
+    Without an audit, coherence is explicitly 'not_assessed'. Parsed feedback must
+    match its saved delivery and recommendations must differ lexically from A1.
+    With an audit, stale or missing joins fail and only consistent rows pass.
+    'consistent' is absence of detected warnings, not human-confirmed coherence.
+    Textually different answers can still be semantically equivalent.
+    """
+    audit = {}
+    for entry in audit_rows or []:
+        if entry["partition"] != "train":
+            raise ValueError("Natural screening requires a train-only audit")
+        qid = entry["question_id"]
+        if qid in audit:
+            raise ValueError(f"Duplicate audit question: {qid}")
+        audit[qid] = entry
+    selected, counts = [], Counter()
+    for row in rows:
+        qid = row["question_id"]
+        if audit_rows is not None and qid not in audit:
+            raise ValueError(f"Missing audit question: {qid}")
+        entry = audit.get(qid, {"coherence": "not_assessed", "coherence_reasons": ""})
+        feedback = Critic.parse_natural(row["critic_raw_output"])
+        for key, expected in (("solver_a1", row["solver_attempt_1"]),
+                              ("delivered_verdict", feedback.verdict or ""),
+                              ("delivered_advocated_answer", feedback.advocated_answer or ""),
+                              ("delivered_explanation", feedback.explanation)):
+            if audit_rows is not None and entry[key] != expected:
+                raise ValueError(f"Stale audit input: {qid}, {key}")
+        if feedback.to_solver_text() != row["critic_feedback"]:
+            raise ValueError(f"Saved feedback differs from parsed delivery: {qid}")
+        if feedback.advocated_answer != row.get("critic_advocated_answer"):
+            raise ValueError(f"Saved recommendation differs from parsed delivery: {qid}")
+        if audit_rows is not None and entry["coherence"] not in ("consistent", "uncertain", "inconsistent", "unusable"):
+            raise ValueError(f"Unknown coherence: {qid}")
+        # Reuse existing input-kind rules, never supplying historical A2.
+        input_labels = classify_candidate({
+            "solver_attempt_1": row["solver_attempt_1"],
+            "critic_advocated_answer": feedback.advocated_answer,
+            "critic_noncommittal": feedback.noncommittal,
+        })
+        if audit_rows is not None and entry["coherence"] != "consistent":
+            counts[entry["coherence"]] += 1
+        elif feedback.noncommittal or not feedback.advocated_answer:
+            counts["missing_recommendation"] += 1
+        elif input_labels["a1_kind"] != "answer":
+            counts["a1_" + input_labels["a1_kind"]] += 1
+        elif input_labels["feedback_type"] != "answer":
+            counts["critic_" + input_labels["feedback_type"]] += 1
+        elif textual_relation(row["solver_attempt_1"], feedback.advocated_answer) != "different":
+            counts["no_clear_lexical_conflict"] += 1
+        else:
+            selected.append({**row, "natural_screen": {
+                "coherence": entry["coherence"], "coherence_reasons": entry["coherence_reasons"],
+                "eligibility": "automatic_screen_only_not_human_confirmed",
+            }})
+    return selected, {"method": "issue115_coherence" if audit_rows is not None else "saved_feedback_lexical_conflict",
+                      "input_questions": len(rows), "screen_pass": len(selected), "excluded": dict(counts)}
+
+
+def prepare_natural_pool(rows, partitions_path, audit_path=None, exclude_sample=None):
+    """Validate training membership, exclude prior questions, then join coherence.
+
+    Return the screened pool and selection metadata; sampling remains the caller's
+    responsibility. Existing behavior labels and historical A2 never filter rows.
+    """
+    rows = training_natural_rows(rows, partitions_path)
+    if not rows:
+        raise ValueError("Not enough training questions for requested sample")
+    excluded = set()
+    if exclude_sample:
+        previous, _ = load_sample(exclude_sample, checksum_error="Excluded sample checksum mismatch")
+        excluded = {r["question_id"] for r in previous["rows"]}
+    rows = [r for r in rows if r["question_id"] not in excluded]
+    audit_rows = None
+    if audit_path is not None:
+        with Path(audit_path).open(newline="") as file:
+            audit_rows = list(csv.DictReader(file))
+    rows, screening = screen_natural(rows, audit_rows)
+    return rows, {"screening": screening,
+                  "screening_implementation_sha256": sha256_file(__file__),
+                  "excluded_prior_questions": len(excluded),
+                  "eligibility": "automatic_screen_only_not_human_confirmed"}
+
+
+def summarize_natural(records):
+    def counts(rows):
+        return dict(trials=len(rows), questions=len({r["question_id"] for r in rows}),
+                    adopted=sum(r["adopted_target"] for r in rows),
+                    retained_a1=sum(r["retained_a1"] for r in rows),
+                    other=sum(r["response_class"] == "other" for r in rows),
+                    ambiguous_overlap=sum(r["response_class"] == "ambiguous_overlap" for r in rows),
+                    a2_correct=sum(r["a2_correct"] for r in rows),
+                    adopted_wrong=sum(r["adopted_target"] and not r["recommendation_correct"] for r in rows),
+                    wrong_recommendations=sum(not r["recommendation_correct"] for r in rows),
+                    adopted_correct=sum(r["adopted_target"] and r["recommendation_correct"] for r in rows),
+                    correct_recommendations=sum(r["recommendation_correct"] for r in rows),
+                    reached_token_budget=sum(bool(r["generation"].get("reached_token_budget")) for r in rows))
+    by_condition = {c: counts([r for r in records if r["instruction_condition"] == c]) for c in CONDITIONS}
+    index = {(r["question_id"], r["instruction_condition"]): r for r in records}
+    pairs = [(r, index[(r["question_id"], CONDITIONS[1])]) for r in records if r["instruction_condition"] == CONDITIONS[0]]
+    candidate = [b for _, b in pairs]
+    return {"protocol": PROTOCOL, "label_version": LABEL_VERSION, "conditions": by_condition,
+            "paired": {"questions": len(pairs),
+                       "response_transitions": dict(Counter(f"{a['response_class']} -> {b['response_class']}" for a, b in pairs)),
+                       "accuracy_gains": sum(not a["a2_correct"] and b["a2_correct"] for a, b in pairs),
+                       "accuracy_losses": sum(a["a2_correct"] and not b["a2_correct"] for a, b in pairs),
+                       "original_matches_historical_a2": sum(a["matches_historical_a2"] for a, _ in pairs)},
+            "by_candidate_order": {o: counts([r for r in candidate if r["candidate_order"] == o]) for o in ORDERS},
+            "order_only_baseline": order_only_baseline(candidate),
+            "note": "Natural recommendations, separate from controlled targets. Original receives full feedback; candidates receive answer only. Automatic lexical labels and eligibility require semantic review. No activation capture."}
+
+
+def load_natural_run(directory):
+    """Load a completed run only if paired inputs and saved summary agree."""
+    natural_path = Path(directory)
+    natural_summary = json.loads((natural_path / "summary.json").read_text())
+    natural_provenance = json.loads((natural_path / "provenance.json").read_text())
+    if natural_summary.get("protocol") != PROTOCOL or natural_provenance.get("protocol") != PROTOCOL:
+        raise ValueError("Expected completed Natural paired experiment")
+    natural_records = read_jsonl(natural_path / "episodes.jsonl")
+    natural_index = {(r["question_id"], r["instruction_condition"]): r for r in natural_records}
+    ids = {r["question_id"] for r in natural_records}
+    if not ids or len(natural_index) != len(natural_records) or set(natural_index) != {(qid, c) for qid in ids for c in CONDITIONS}:
+        raise ValueError("Natural results must contain exactly two paired records per question")
+    for qid in ids:
+        a, b = (natural_index[(qid, c)] for c in CONDITIONS)
+        for key in ("question", "context", "ground_truth", "solver_attempt_1", "critic_advocated_answer", "critic_feedback", "candidate_order"):
+            if a[key] != b[key]:
+                raise ValueError(f"Unpaired Natural inputs: {qid}, {key}")
+    if summarize_natural(natural_records) != natural_summary:
+        raise ValueError("Natural summary does not match saved episodes")
+    return natural_summary
+
+
+def run_natural(rows, examples, solver, candidate_solver, output_dir, seed=42, provenance=None,
+                assigned_orders=None, require_conflict=True):
+    """Freeze order before inference, replay only A2, and save paired outputs."""
+    for row in rows:
+        example = examples[row["question_id"]]
+        if row.get("critic_condition") != "natural" or row.get("natural_screen", {}).get("coherence") not in ("consistent", "not_assessed"):
+            raise ValueError("Expected screened Natural episodes")
+        if row["question"] != example["question"] or row["ground_truth"] != example["answer"]:
+            raise ValueError("Sample differs from pinned dataset")
+        if require_conflict and textual_relation(row["solver_attempt_1"], row["critic_advocated_answer"]) != "different":
+            raise ValueError("Natural candidates must differ")
+    if solver.REVISE_PROMPT_V1 != Solver.REVISE_PROMPT_V1:
+        raise ValueError("Unexpected original revision template")
+    if assigned_orders is None:
+        assignments = assign_orders(rows, examples, seed)
+    else:
+        if set(assigned_orders) != {r["question_id"] for r in rows} or any(v not in ORDERS for v in assigned_orders.values()):
+            raise ValueError("Every matched question requires an original valid order")
+        assignments = dict(assigned_orders)
+    output = Path(output_dir)
+    output.mkdir(parents=True, exist_ok=False)
+    metadata = {**(provenance or {}), "protocol": PROTOCOL, "label_version": LABEL_VERSION,
+                "order_seed": seed, "revision_template": Solver.REVISE_PROMPT_V1,
+                "candidate_template": CANDIDATE_TEMPLATE, "captures_activations": False}
+    (output / "provenance.json").write_text(json.dumps(metadata, indent=2) + "\n")
+    (output / "order_assignments.json").write_text(json.dumps(assignments, indent=2) + "\n")
+    records, pairs = [], []
+    with (output / "results.csv").open("w", newline="") as file:
+        writer = None
+        for row in rows:
+            qid = row["question_id"]
+            ex = examples[qid]
+            target, a1 = row["critic_advocated_answer"], row["solver_attempt_1"]
+            correct = answer_matches(target, ex["answer"], ex.get("answer_aliases", []))
+            pair = {"question_id": qid, "candidate_order": assignments[qid]}
+            for condition in CONDITIONS:
+                if condition == "original":
+                    prompt = solver.build_revise_prompt(row["question"], ex["paragraphs"], a1, row["critic_feedback"])
+                    agent = solver
+                else:
+                    prompt = candidate_solver.build_candidate_prompt(row["question"], ex["paragraphs"], a1, target, "labeled", assignments[qid])
+                    agent = candidate_solver
+                a2 = agent._generate(prompt)
+                scores = score_revision(a2, a1, target, ex["answer"], ex.get("answer_aliases", []),
+                                        accept_gold_aliases=correct)
+                adopted, retained = scores["adopted_target"], scores["retained_a1"]
+                response = "ambiguous_overlap" if adopted and retained else "adopted" if adopted else "retained_a1" if retained else "other"
+                record = dict(protocol=PROTOCOL, label_version=LABEL_VERSION, recommendation_source="natural",
+                              question_id=qid, arm="natural", instruction_condition=condition, status="completed",
+                              candidate_order=assignments[qid], question=row["question"],
+                              context=Solver.format_paragraphs(ex["paragraphs"]), ground_truth=ex["answer"],
+                              answer_aliases=ex.get("answer_aliases", []), solver_attempt_1=a1,
+                              critic_advocated_answer=target, critic_feedback=row["critic_feedback"],
+                              historical_a2=row.get("solver_attempt_2"), evaluation_prompt=prompt,
+                              prompt_sha256=sha256_text(prompt),
+                              solver_attempt_2=a2, adopted_target=adopted, retained_a1=retained,
+                              response_class=response, recommendation_correct=correct,
+                              a1_correct=answer_matches(a1, ex["answer"], ex.get("answer_aliases", [])),
+                              a2_correct=scores["a2_correct"],
+                              matches_historical_a2=answer_matches(a2, row.get("solver_attempt_2") or ""),
+                              stratum=stratum(row), natural_screen=row["natural_screen"],
+                              generation=dict(getattr(agent, "last_generation", None) or {}))
+                append_jsonl(output / "episodes.jsonl", record)
+                if writer is None:
+                    writer = csv.DictWriter(file, fieldnames=list(record))
+                    writer.writeheader()
+                writer.writerow({k: json.dumps(v) if isinstance(v, (dict, list)) else v for k, v in record.items()})
+                file.flush()
+                records.append(record)
+                for key in ("solver_attempt_2", "response_class", "a2_correct", "adopted_target", "retained_a1"):
+                    pair[f"{condition}_{key}"] = record[key]
+            pairs.append(pair)
+    write_csv(output / "comparisons.csv", pairs)
+    summary = summarize_natural(records)
+    table = [{"recommendation_source": "natural", "method": c, **v}
+             for c, v in summary["conditions"].items()]
+    write_csv(output / "slide_table.csv", table)
+    (output / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
+    return summary
