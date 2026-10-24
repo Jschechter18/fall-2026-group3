@@ -10,14 +10,14 @@ from mas_sae.experiments.matched_adoption import prepare_matched_sample, align_m
 from mas_sae.experiments.natural_adoption import run_natural
 from mas_sae.experiments.records import read_jsonl
 
-ROOT = Path(__file__).resolve().parents[3] / 'results/adoption_experiment'
-
-
-def test_matched_preparation_reuses_original_questions_and_orders_without_screening(tmp_path):
-    result = prepare_matched_sample(ROOT/'sample_100q/sample.json', ROOT/'controlled_100q',
-                                    ROOT/'randomized_order_100q', tmp_path/'matched')
-    original, checksum = load_sample(ROOT/'sample_100q/sample.json')
-    sources = read_jsonl(ROOT/'controlled_100q/episodes.jsonl')
+def test_matched_preparation_reuses_original_questions_and_orders_without_screening(
+        tmp_path, adoption_results_root):
+    result = prepare_matched_sample(adoption_results_root/'sample_100q/sample.json',
+                                    adoption_results_root/'controlled_100q',
+                                    adoption_results_root/'randomized_order_100q',
+                                    tmp_path/'matched')
+    original, checksum = load_sample(adoption_results_root/'sample_100q/sample.json')
+    sources = read_jsonl(adoption_results_root/'controlled_100q/episodes.jsonl')
     controlled_ids = {r['question_id'] for r in sources if r['status']=='completed'}
     expected = [r for r in original['rows'] if r['question_id'] in controlled_ids
                 and not r['critic_noncommittal'] and r.get('critic_advocated_answer')]
@@ -27,7 +27,7 @@ def test_matched_preparation_reuses_original_questions_and_orders_without_screen
     assert len(result['rows']) + len(result['screening']['exclusions']) == len(original['rows'])
     assert all(r['natural_screen']['coherence'] == 'not_assessed' for r in result['rows'])
     assert any(r['solver_attempt_1'] == r['critic_advocated_answer'] for r in result['rows'])
-    old_orders=json.loads((ROOT/'randomized_order_100q/order_assignments.json').read_text())
+    old_orders=json.loads((adoption_results_root/'randomized_order_100q/order_assignments.json').read_text())
     assert result['order_assignments']=={r['question_id']:old_orders[r['question_id']] for r in expected}
 
 

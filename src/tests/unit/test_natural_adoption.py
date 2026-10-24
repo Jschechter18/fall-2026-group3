@@ -49,7 +49,8 @@ def test_screen_excludes_agreement_and_uncertain_feedback():
 
 
 @pytest.mark.parametrize("use_audit", [True, False])
-def test_paired_run_preserves_natural_inputs_and_exports_separate_table(tmp_path, monkeypatch, use_audit):
+def test_paired_run_preserves_natural_inputs_and_exports_separate_table(
+        tmp_path, monkeypatch, use_audit, adoption_results_root):
     row, audit = inputs()
     rows, _ = screen_natural([row], [audit] if use_audit else None)
     output = tmp_path / "natural"
@@ -88,7 +89,7 @@ def test_paired_run_preserves_natural_inputs_and_exports_separate_table(tmp_path
     root = Path(__file__).resolve().parents[3]
     report = tmp_path / "report"
     monkeypatch.setattr(sys, "argv", ["summarize_adoption_results.py",
-        "--results-root", str(root / "results/adoption_experiment"),
+        "--results-root", str(adoption_results_root),
         "--natural-run", str(output), "--output", str(report)])
     runpy.run_path(str(root / "scripts/experiments/summarize_adoption_results.py"), run_name="__main__")
     assert (report / "natural_slide_table.csv").exists()
