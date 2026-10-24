@@ -163,6 +163,41 @@ PYTHONPATH=src python scripts/prepare_behavior_v01.py \
 
 This writes `labels.csv`, `split_manifest.csv`, `partitions.csv`, `counts.json` and the `qc/` packet. `counts.json` also records the Git commit, the hashes of the rule files that produced the labels, the partition proportions and seed, and the partition audit. The collection run folders are read and never changed. Activation tensors stay outside Git.
 
+## Labels for the labeled-candidates presentation (`v0.2.0-candidate`)
+
+The candidate policy labels complete A2 responses from the existing candidates collection. It uses deterministic text rules, the question's recorded aliases and saved candidate order. It does not change the collection prompt, generation, activation capture or historical labels, and it uses no new judge or human annotations.
+
+1. **Answer-shaped texts.** A1, the recommendation and A2 pass the existing non-answer checks and v0.1.2 overlay, and contain at most 14 words (the longest train gold answer). Long recommendations are unresolved; non-answers and uncertain responses cannot supply a binary label.
+2. **Question-local equivalence.** Normalized exact matches are equivalent. The saved `ground_truth` and `answer_aliases` form one documented equivalence group for that question; two members are also equivalent. Apply the same comparison to A1/recommendation, A2/A1 and A2/recommendation. Thus "CFL" and "Canadian Football League" are no conflict when both are in that question's alias group. An alias match takes precedence over containment. Correctness booleans never decide adoption or retention, and alias groups are never shared across questions.
+3. **Uncertain equivalence is excluded.** Without documented equivalence, containment remains ambiguous. Possible acronyms matching expansion initials and ordered omissions in multiword names are `ambiguous_alias`, not asserted synonyms or conflicts. Overlap with another answer's documented aliases is also ambiguous. There are no hand-coded exceptions for pilot questions, fuzzy equivalence scores, or external alias lookups. These conservative checks do not identify every paraphrase: remaining differences are still *lexical candidate conflicts*, not proven semantic disagreement.
+4. **Complete-answer behavior.** An exact or documented-alias A2 match to A1 is retention; a match to the recommendation is adoption. A bare "Candidate A/B" maps through the saved order. Missing/invalid order is unresolved. Third answers, ambiguous equivalences, non-answers and unresolved cases never enter the strict binary target.
+
+**Two eligibility flags describe the same episode, not two independent label sets:**
+
+| Field | Meaning |
+|---|---|
+| `eligible_behavior` / `eligible_strict` | Identical flags for usable adoption-versus-retention behavior, independent of token metadata |
+| `strict_target` | Adopted recommendation = 1; retained A1 = 0; otherwise blank |
+| `eligible_first_token` | Behavioral eligibility plus valid, distinct candidate first tokens and A2's first token matching the selected candidate's first token |
+| `decision_token_distinct` | Computed from the two recorded candidate token IDs, or blank if unavailable |
+| `decision_at_first_token` | Operational first-token match to the selected candidate, or blank if unavailable/unresolved; it does not prove when an internal decision occurred |
+| `behavior_exclusion_reasons` | All reasons a row is outside the behavioral binary task, including third answers |
+| `first_token_exclusion_reasons` | Behavioral exclusions plus token-specific exclusions |
+
+Missing, malformed or inconsistent token metadata excludes only the first-token subset. Token IDs must be non-negative integers (not strings or booleans), and the recorded distinctness flag must agree with the IDs. A valid alias or letter response can remain a behavioral example even when its first token differs. Shared first tokens likewise do not invalidate behavior. Token-specific causes include `shared_first_token`, `decision_not_at_first_token`, `first_token_metadata_unavailable`, `first_token_distinctness_unavailable`, `first_token_alignment_unavailable` and `first_token_metadata_inconsistent`.
+
+Use `strict_target` and `eligible_strict` for behavioral probes. The historical `primary_target` also includes third answers as 0, so it is not the adoption-versus-retention target. Raye's first-token-specific analyses additionally select `eligible_first_token`. A baseline cohort should stay fixed across causal interventions; a changed or malformed post-intervention answer is an outcome to report, not a reason to silently remove the question.
+
+Every relation records its basis (`exact`, `question_alias`, `text_rule` or `letter`). `resolved_candidate` and `resolved_via` identify which candidate matched and how. `feedback_coherence` remains diagnostic and does not decide eligibility. Candidate policy provenance explicitly includes the equivalence method, alias fields, ambiguity rules and first-token subset definition. `counts.json` records strict and first-token class counts by partition/correctness, both exclusion summaries, interaction hashes and rule-file hashes. Earlier v0.1.1/v0.1.2 policy definitions, hashes and outputs are unchanged. Existing QC evidence is preserved; it is not new validation of this prompt's labels.
+
+```bash
+PYTHONPATH=src python scripts/prepare_behavior_v01.py --full-results <run results> \
+    --frozen-partitions <approved partitions.csv> \
+    --label-policy v0.2.0-candidate --output <artifacts>/<new folder>
+```
+
+The package writes one row per question; label the frozen two-arm pilot per episode with `classify_candidate`. Frozen-partition coverage checks remain in force, and collection exclusions must be reconciled explicitly. No label package or downstream training should be finalized before this revision is verified and reviewed. The removed `--judgments` argument is no longer accepted.
+
 ## Re-running the collection without moving a single question
 
 The cut above is reproducible only from the exact same question set. Removing even one question can move many other assignments when the split is re-derived. So the assignment was made once and is frozen in `partitions.csv`, committed at `results/behavior/behavior_v011_split80_10_10_20261006/partitions.csv` next to the `split_manifest.csv`, `labels.csv` and `counts.json` it came from. Every later run takes its partitions from that file and never derives them again:

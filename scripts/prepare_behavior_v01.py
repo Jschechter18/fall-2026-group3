@@ -67,7 +67,7 @@ from mas_sae.evaluation.behavior_qc import (
     source_paragraphs,
     write_annotator_files,
 )
-from mas_sae.evaluation import behavior, behavior_labels, scoring
+from mas_sae.evaluation import behavior, behavior_labels, feedback_coherence, scoring
 from mas_sae.evaluation.behavior_labels import (
     DEFAULT_POLICY_NAME,
     POLICIES,
@@ -91,7 +91,9 @@ FIRST_QC_SAMPLE = "issue55_human_qc/sample_manifest.json"
 QC_GUIDE = Path(__file__).resolve().parents[1] / "docs" / "qc_guide.md"
 
 # The modules whose code decides the labels; their hashes go into counts.json.
+# Candidate rules also write the feedback-coherence diagnostic.
 RULE_MODULES = (behavior_labels, behavior, scoring)
+CANDIDATE_RULE_MODULES = (feedback_coherence,)
 
 
 def main():
@@ -213,12 +215,15 @@ def main():
             "overrides": {"premise": list(policy.premise_overrides),
                           "refusal": list(policy.refusal_overrides),
                           "a2_nonanswer": list(policy.a2_nonanswer_overrides)},
+            "candidate_rules": (None if policy.candidate_rules is None
+                                else policy.candidate_rules.definition()),
         },
         "code": {
             "git_commit": get_git_commit(),
             "uncommitted_changes_sha256": get_git_diff_sha256(),
             "rule_files_sha256": {Path(module.__file__).name: sha256_file(module.__file__)
-                                  for module in RULE_MODULES},
+                                  for module in RULE_MODULES + (
+                                      CANDIDATE_RULE_MODULES if policy.candidate_rules else ())},
         },
         "source_files_sha256": hashes_before,
         "inputs": {"full_results": str(full_dir),
@@ -266,6 +271,9 @@ def main():
         "primary_target_by_split": counts["all"]["primary_target_by_split"],
         "split_audit": counts["split_audit"],
     }
+    if policy.candidate_rules is not None:
+        for name in ("strict_target_by_split", "first_token_target_by_split"):
+            summary[name] = counts["all"].get(name, {})
     print(json.dumps(summary, indent=2))
 
 
