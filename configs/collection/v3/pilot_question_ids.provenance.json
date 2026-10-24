@@ -1,0 +1,23 @@
+{
+  "package_manifest_sha256": "aa576d11773091080b444cebcdbe633314cd7826f18f0f8baf182d8d6a81ec5b",
+  "frozen_partitions_sha256": "b0c717d5c4f41129a5d2a838e132df057f6e4f5a72644aa889a41e55cc884389",
+  "partition": "train",
+  "num_questions": 300,
+  "seed": 20261023,
+  "excluded_files": {
+    "/home/ubuntu/capstone-artifacts/a2_candidates_pilot_selection_20261023/pr138_sample_100q.json": "5bf3178a8e389907225c955a3d58243ab851821ef619e128b7ed48b419d155ee",
+    "/home/ubuntu/capstone-artifacts/a2_presentation_throwaway_checks_20261023/run1_format_check/selected_question_ids.json": "d99e211c6e621bded18a8bab0270e9849d23edac420c6dfbbc283360564feec9",
+    "/home/ubuntu/capstone-artifacts/a2_presentation_throwaway_checks_20261023/run2_split_check/selection.json": "788256f8699e8d1de6f7571d680c2f819251509f7e1ec8d0bb924956eb0c35be",
+    "/home/ubuntu/capstone-artifacts/qc_v011_review/human_qc_559_unified.csv": "f6667f9e55a658922e5bb8c42f5a9491d0784ae41bc9c00527cdcbf01d9efaec",
+    "/home/ubuntu/capstone-artifacts/qc_v011_review/human_vs_auto_120.csv": "4596ba1d77c38e8ff8ffb82440b74147d92b1c958b9d813e228e1c86359e198f",
+    "/home/ubuntu/capstone-artifacts/issue55_independent_validation/private_key.json": "6f605ad09bea99b1792bdf044accda8a03ba568ab055ad60c7c7d15b216323c6",
+    "/home/ubuntu/capstone-artifacts/issue115_feedback_audit_20261013/train/review_packet/private_key.json": "09960e7c58a9676adc176595622a37538d53b5e7a2d0674bef0c2439489e24bd",
+    "/home/ubuntu/capstone-artifacts/issue115_feedback_audit_20261014/train/review_packet_non_answers/private_key.json": "8fd7a29411cc50064773e022ffafdd5241cbb3d5f12bd1adc5d26c6a9ba83f46",
+    "/home/ubuntu/capstone-artifacts/natural_critic_validation_100q/scenario_e_gemma-3-4b-it_one_step_256.jsonl": "db6c48f4ce5047e5f3fff6ba424a364a3739052f4850ca045ff44398d92da745",
+    "/home/ubuntu/capstone-artifacts/issue55_human_qc/review_sample_100.csv": "e264d51b7c401837457c6da77ef1bad22877ab517359e028ce38ea5d90dd6b8d",
+    "/home/ubuntu/capstone-artifacts/issue55_human_qc/diagnostics/nonanswer_diagnostic_report.json": "4fd3716cd91bbae7e321969713cca80783f63032ff62705ea88dcc24135983fa"
+  },
+  "excluded_ids": 1339,
+  "rule": "hop-proportional seeded sample; in_development_data and excluded ids never drawn",
+  "output_sha256": "ffb80036b155c9335dfafc39ab5f73a68feefb9363a88b0b3b762d4723d34a9c"
+}

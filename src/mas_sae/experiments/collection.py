@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 import logging
+from pathlib import Path
 from typing import Any, TypedDict
 
 import torch
@@ -13,11 +15,18 @@ from mas_sae.data.musique import (
     assign_experiment_splits,
     describe_sampled_questions,
     load_musique_examples,
+    load_musique_examples_by_id,
     sample_musique_examples,
 )
 from mas_sae.experiments.controlled_targets import ControlledTargetError
-from mas_sae.experiments.pipeline import run_question
-from mas_sae.experiments.conditions import OMITTED, resolve_conditions
+from mas_sae.experiments.pipeline import CriticRecommendationError, run_question
+from mas_sae.experiments.conditions import (
+    OMITTED,
+    A2Presentation,
+    assign_candidate_orders,
+    resolve_conditions,
+    resolve_presentations,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -38,12 +47,14 @@ class QuestionSelection(TypedDict):
     examples: list[MuSiQueExample]
     experiment_splits: dict[str, str] | None
     sampled_questions: list[dict[str, Any]] | None
+    candidate_orders: dict[str, str] | None
 
 
 def select_questions(
     dataset_config: dict[str, Any],
     *,
     default_seed: int,
+    a2_presentations=OMITTED,
 ) -> QuestionSelection:
     """Select questions and assign experiment splits from ``config.dataset``.
 
@@ -52,6 +63,11 @@ def select_questions(
     order and no experiment split. Otherwise a seeded (optionally
     hop-stratified) sample is drawn, and when ``experiment_split`` is
     configured each question id is assigned exactly one split.
+    ``strategy: listed`` collects exactly the questions in
+    ``sampling.question_ids_file`` (a JSON list), in that order.
+    When ``a2_presentations`` includes candidates, every question is given
+    a candidate order before anything is generated, and it is recorded in
+    the manifest.
     ``sampled_questions`` is the ordered reproducibility manifest, or
     ``None`` on the pure dataset-order path.
     Seeds default to ``default_seed`` (``collection.seed``).
@@ -68,6 +84,18 @@ def select_questions(
             source_split=source_split,
             num_questions=num_questions,
             revision=revision,
+        )
+    elif strategy == "listed":
+        question_ids = json.loads(
+            Path(sampling["question_ids_file"]).read_text(encoding="utf-8")
+        )
+        if len(question_ids) != num_questions:
+            raise ValueError(
+                f"{sampling['question_ids_file']} lists {len(question_ids)} "
+                f"questions but dataset.num_questions is {num_questions}."
+            )
+        examples = load_musique_examples_by_id(
+            source_split, question_ids, revision=revision
         )
     else:
         examples = sample_musique_examples(
@@ -90,17 +118,25 @@ def select_questions(
             seed=split_config.get("seed", default_seed),
         )
 
-    if strategy == "first_n" and split_config is None:
+    candidate_orders = None
+    if A2Presentation.CANDIDATES in resolve_presentations(a2_presentations):
+        candidate_orders = assign_candidate_orders(
+            [str(example["id"]) for example in examples],
+            seed=default_seed,
+        )
+
+    if strategy == "first_n" and split_config is None and candidate_orders is None:
         sampled_questions = None
     else:
         sampled_questions = describe_sampled_questions(
-            examples, experiment_splits
+            examples, experiment_splits, candidate_orders
         )
 
     return {
         "examples": examples,
         "experiment_splits": experiment_splits,
         "sampled_questions": sampled_questions,
+        "candidate_orders": candidate_orders,
     }
 
 
@@ -118,6 +154,8 @@ def collect_examples(
     type_checked_target: bool = False,
     active_conditions=OMITTED,
     question_offset: int = 0,
+    a2_presentations=OMITTED,
+    candidate_orders: dict[str, str] | None = None,
 ) -> CollectionResult:
     """Collect paired Solver-Critic episodes and activation-row mappings.
 
@@ -168,6 +206,14 @@ def collect_examples(
         chunk of a longer run passes its start position so seeds and
         exclusion ``question_index`` values match an uninterrupted run;
         activation indices stay local to this call.
+    a2_presentations
+        Forwarded to ``run_question``. Each presentation adds one episode
+        and one Attempt 2 activation row per condition.
+    candidate_orders
+        Question id to candidate order, required for every question when
+        the candidates presentation is on (``select_questions`` assigns it).
+        A question whose Critic gives no recommendation is excluded with
+        stage ``critic_recommendation``.
 
     Returns
     -------
@@ -181,6 +227,7 @@ def collect_examples(
         ``experiment_splits`` is given but lacks one of the question ids.
     """
     resolve_conditions(active_conditions)
+    presentations = resolve_presentations(a2_presentations)
     if not examples:
         raise ValueError("examples must not be empty.")
     if not candidate_sites:
@@ -197,6 +244,18 @@ def collect_examples(
         if missing:
             raise ValueError(
                 "experiment_splits is missing question ids: "
+                f"{missing[:5]}{'...' if len(missing) > 5 else ''}."
+            )
+
+    if A2Presentation.CANDIDATES in presentations:
+        missing = [
+            str(example["id"])
+            for example in examples
+            if str(example["id"]) not in (candidate_orders or {})
+        ]
+        if missing:
+            raise ValueError(
+                "candidate_orders is missing question ids: "
                 f"{missing[:5]}{'...' if len(missing) > 5 else ''}."
             )
 
@@ -234,22 +293,29 @@ def collect_examples(
                 decomposition=example.get("question_decomposition") or [],
                 type_checked_target=type_checked_target,
                 active_conditions=active_conditions,
+                a2_presentations=a2_presentations,
+                candidate_order=(candidate_orders or {}).get(str(example["id"])),
             )
-        except (CriticBlindAnswerError, ControlledTargetError) as error:
+        except (CriticBlindAnswerError, ControlledTargetError,
+                CriticRecommendationError) as error:
             logger.warning(
                 "Skipping question %s: %s", example["id"], error
             )
             # A1 always exists here (it is generated first). The blind step
             # produced (unusable) critic output; whether the target step
-            # called the critic is not known at this level.
+            # called the critic is not known at this level. A missing
+            # recommendation stops before that condition's Attempt 2.
             blind_failure = isinstance(error, CriticBlindAnswerError)
+            no_recommendation = isinstance(error, CriticRecommendationError)
             exclusions.append({
                 "question_id": str(example["id"]),
                 "question_index": question_index, "seed": seed,
-                "stage": "critic_blind" if blind_failure else "controlled_target",
+                "stage": ("critic_blind" if blind_failure
+                          else "critic_recommendation" if no_recommendation
+                          else "controlled_target"),
                 "error_type": type(error).__name__, "reason": str(error),
                 "a1_exists": True,
-                "critic_exists": True if blind_failure else None,
+                "critic_exists": True if blind_failure or no_recommendation else None,
                 "a2_exists": False,
             })
             continue

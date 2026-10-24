@@ -132,7 +132,10 @@ def main() -> None:
         protocol_version=protocol_version,
         type_checked_target=protocol["type_checked_target"],
     )
-    selection = select_questions(config["dataset"], default_seed=seed)
+    a2_presentations = config["collection"].get("a2_presentations", OMITTED)
+    selection = select_questions(
+        config["dataset"], default_seed=seed, a2_presentations=a2_presentations
+    )
 
     if selection["sampled_questions"] is not None:
         logger.info(
@@ -176,6 +179,8 @@ def main() -> None:
             active_conditions=config["collection"].get("active_conditions", OMITTED),
             type_checked_target=protocol["type_checked_target"],
             question_offset=start,
+            a2_presentations=a2_presentations,
+            candidate_orders=selection["candidate_orders"],
         )
         collection_progress.write_chunk(
             progress,

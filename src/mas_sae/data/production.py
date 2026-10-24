@@ -33,6 +33,8 @@ from collections import Counter
 import csv
 import json
 from pathlib import Path
+import random
+import re
 
 import torch
 
@@ -41,6 +43,7 @@ from mas_sae.data.musique import (
     SUPPORTED_EXPERIMENT_SPLITS,
     SUPPORTED_PARTITIONS,
     SUPPORTED_SOURCE_SPLITS,
+    allocate_counts,
     assign_experiment_splits,
     hop_group,
 )
@@ -307,6 +310,37 @@ def split_audit(manifest):
         "qc100_by_partition": by_partition(in_qc100),
         "in_development_data_by_partition": by_partition(in_development),
     }
+
+
+# A MuSiQue question id such as 2hop__13548_13529 or 3hop1__9285_5188_23307.
+MUSIQUE_ID = re.compile(r"\b\d+hop\d*__\d+(?:_\d+)+\b")
+
+
+def question_ids_in(path):
+    """Every MuSiQue question id that appears anywhere in a file, whatever its format."""
+    return set(MUSIQUE_ID.findall(Path(path).read_text(encoding="utf-8", errors="ignore")))
+
+
+def sample_partition_questions(manifest, *, partition, num_questions, seed, exclude=frozenset()):
+    """A seeded sample of one partition's questions, in proportion to its hop groups.
+
+    Questions flagged ``in_development_data`` and any id in ``exclude`` are
+    never drawn. Returns the ids in a seeded shuffled order, so a partial run
+    still mixes hop groups.
+    """
+    pool = sorted(
+        q for q, m in manifest.items()
+        if m["partition"] == partition and not m["in_development_data"] and q not in exclude)
+    by_group = {}
+    for q in pool:
+        by_group.setdefault(manifest[q]["hop_group"], []).append(q)
+    if num_questions > len(pool):
+        raise ValueError(f"{num_questions} questions requested but {partition} has {len(pool)} eligible")
+    counts = allocate_counts(num_questions, {g: len(ids) / len(pool) for g, ids in sorted(by_group.items())})
+    rng = random.Random(seed)
+    picked = [q for g in sorted(by_group) for q in rng.sample(by_group[g], counts[g])]
+    rng.shuffle(picked)
+    return picked
 
 
 def write_manifest(path, manifest):
