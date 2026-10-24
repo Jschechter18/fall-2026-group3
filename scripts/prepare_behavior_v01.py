@@ -39,11 +39,6 @@ first rule set, v0.1.1, until the team adopts another under issue #108. The
 policy's version and the hash of its full definition go into counts.json, so a
 package always says which rules produced it.
 
-A policy with candidate rules (v0.2.0-candidate) also reads judge verdicts:
-pass --judgments with the folder ``scripts/judge_answer_pairs.py`` wrote for
-this run. It is refused unless it was made from these exact interaction files
-under the same policy definition, and any other policy refuses it.
-
 The QC packet is sampled from the train partition only. Pass --reuse-qc only
 for a packet that was itself sampled under the same partition rule; a packet
 issued under an earlier split is refused because it would show annotators
@@ -78,7 +73,6 @@ from mas_sae.evaluation.behavior_labels import (
     POLICIES,
     classify_candidate,
     label_counts,
-    load_run_judgments,
     write_labels,
 )
 from mas_sae.experiments.artifacts import (
@@ -129,9 +123,6 @@ def main():
     parser.add_argument("--label-policy", choices=sorted(POLICIES), default=DEFAULT_POLICY_NAME,
                         help="rule set that labels every episode; the default is the frozen first "
                              "rule set until the team adopts another (issue #108)")
-    parser.add_argument("--judgments", type=Path,
-                        help="folder written by scripts/judge_answer_pairs.py for this run; required by, "
-                             "and only accepted with, a policy with candidate rules")
     parser.add_argument("--coverage", choices=COVERAGE_MODES, default="complete",
                         help="with --frozen-partitions: 'complete' fails if any frozen question is "
                              "missing from the run; 'subset' records the missing ids instead")
@@ -163,9 +154,6 @@ def main():
     if qc_sample is None and args.artifacts is not None and (args.artifacts / FIRST_QC_SAMPLE).is_file():
         qc_sample = args.artifacts / FIRST_QC_SAMPLE
     policy = POLICIES[args.label_policy]
-    if (policy.candidate_rules is not None) != (args.judgments is not None):
-        parser.error(f"--judgments is required by, and only accepted with, a policy with candidate rules "
-                     f"(--label-policy {args.label_policy})")
     ensure_output_available(args.output)
 
     # Remember the input files' hashes so we can confirm they were not changed.
@@ -173,11 +161,6 @@ def main():
                    for run_dir in (full_dir, scan_dir) if run_dir is not None
                    for source_split in ("train", "validation")]
     hashes_before = {str(path): sha256_file(path) for path in input_files}
-    judgments, judgments_record = None, None
-    if args.judgments is not None:
-        judgments, judgments_record = load_run_judgments(
-            args.judgments, policy, [hashes_before[str(full_dir / s / "interactions.jsonl")]
-                                     for s in ("train", "validation")])
 
     # 1. Read the run(s) and give each question its partition.
     full_rows = read_run_interactions(full_dir)
@@ -200,14 +183,9 @@ def main():
                                             frozen=frozen, coverage=args.coverage)
 
     # 2. Label every episode of the full run.
-    if judgments is not None:
-        unknown = set(judgments) - {row["episode_id"] for row in full_rows}
-        if unknown:
-            raise ValueError(f"{len(unknown)} judged episodes are not in this run, e.g. {sorted(unknown)[:3]}")
     for row in full_rows:
         row["partition"] = manifest[row["question_id"]]["partition"]
-        row["label"] = classify_candidate(
-            row, policy, None if judgments is None else judgments.get(row["episode_id"], {}))
+        row["label"] = classify_candidate(row, policy)
 
     # 3. Write the tables and the counts. partitions.csv is the frozen mapping
     #    in full whenever one is in use, however much of it this run covers.
@@ -239,7 +217,6 @@ def main():
                           "a2_nonanswer": list(policy.a2_nonanswer_overrides)},
             "candidate_rules": (None if policy.candidate_rules is None
                                 else policy.candidate_rules.definition()),
-            "judgments": judgments_record,
         },
         "code": {
             "git_commit": get_git_commit(),
@@ -294,6 +271,9 @@ def main():
         "primary_target_by_split": counts["all"]["primary_target_by_split"],
         "split_audit": counts["split_audit"],
     }
+    if policy.candidate_rules is not None:
+        for name in ("strict_target_by_split", "first_token_target_by_split"):
+            summary[name] = counts["all"].get(name, {})
     print(json.dumps(summary, indent=2))
 
 

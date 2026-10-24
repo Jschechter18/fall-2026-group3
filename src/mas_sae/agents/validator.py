@@ -13,36 +13,8 @@ class ValidatorVerdict:
     raw_output: str
 
 
-@dataclass
-class AnswerRelation:
-    """Whether two answers to one question name the same thing.
-
-    ``relation`` is "same", "different" or "uncertain", or None when the reply
-    was none of these.
-    """
-    relation: str | None
-    raw_output: str
-
-
 class Validator(Agent):
     """LLM-based secondary answer-equivalence judge."""
-
-    SAME_ANSWER_PROMPT = (
-        "You compare two answers to the same question.\n"
-        "Decide whether both answers name the same entity, value or event "
-        "as the answer to this question.\n"
-        "Different wording, abbreviations, spelled-out numbers or extra detail "
-        "about the same answer count as the same.\n"
-        "A related but different person, place, organisation, date or quantity "
-        "is different.\n"
-        "Do not decide which answer is correct.\n"
-        "Reply with one word only: SAME, DIFFERENT or UNCERTAIN.\n\n"
-        "Question: {question}\n"
-        "Answer 1: {answer_a}\n"
-        "Answer 2: {answer_b}\n"
-        "Reply:"
-    )
-    SAME_ANSWER_REPLIES = {"SAME": "same", "DIFFERENT": "different", "UNCERTAIN": "uncertain"}
 
     VALIDATE_PROMPT = (
         "You are an exact answer-equivalence checker.\n"
@@ -131,35 +103,5 @@ class Validator(Agent):
 
         return ValidatorVerdict(
             is_correct=verdict,
-            raw_output=raw,
-        )
-
-    def build_same_answer_prompt(
-        self,
-        question: str,
-        answer_a: str,
-        answer_b: str,
-    ) -> str:
-        return self.SAME_ANSWER_PROMPT.format(
-            question=question,
-            answer_a=answer_a,
-            answer_b=answer_b,
-        )
-
-    def judge_same_answer(
-        self,
-        question: str,
-        answer_a: str,
-        answer_b: str,
-    ) -> AnswerRelation:
-        """Ask whether two answers to ``question`` name the same thing."""
-        raw = self._generate(
-            self.build_same_answer_prompt(question, answer_a, answer_b)
-        )
-        tokens = raw.strip().split()
-        first = tokens[0].strip(".,:;!?\"'").upper() if tokens else ""
-
-        return AnswerRelation(
-            relation=self.SAME_ANSWER_REPLIES.get(first),
             raw_output=raw,
         )

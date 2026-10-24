@@ -22,23 +22,24 @@ A policy with ``CandidateRules`` is for episodes where A1 and the Critic's
 recommendation were shown to the Solver as two candidates. On top of the
 overlay it requires every text to be answer-shaped (no longer than
 ``max_answer_words``), maps a bare "Candidate A/B" A2 to its source through the
-episode's ``candidate_order``, takes every non-exact relation between
-answer-shaped texts from a supplied judge verdict instead of lexical
-containment, and excludes episodes whose two candidates start with the same
-token. ``judgment_pairs`` in its labels names the pairs that needed a verdict.
+episode's ``candidate_order``, and recognizes the question's recorded answer
+aliases. Unverified abbreviations, shortened names and containment are
+ambiguous, never guessed to be equivalent. Behavioral eligibility uses the
+complete A2; first-token eligibility is a separate, narrower subset. No model
+or person judges any new text, and lexical differences remain candidate
+conflicts rather than proven semantic disagreements.
 """
 from collections import Counter
 from dataclasses import dataclass, field
 import csv
 import hashlib
 import json
-from pathlib import Path
 import re
 from types import MappingProxyType
 from typing import Mapping
 
 from mas_sae.evaluation import behavior, feedback_coherence
-from mas_sae.experiments.artifacts import sha256_file
+from mas_sae.evaluation.scoring import normalize_answer
 
 SOLVER_RESPONSES = (
     "adopted_critic",           # A2 is the Critic's answer
@@ -62,25 +63,23 @@ BOOLEAN_COLUMNS = ("eligible_primary", "eligible_strict", "critic_unresolved_fla
                    "critic_premise_rejection_flag", "critic_refusal_flag")
 INTEGER_OR_BLANK_COLUMNS = ("primary_target", "strict_target")
 TEXT_OR_BLANK_COLUMNS = ("subtype", "human_validated_behavior_v1")
-LIST_COLUMNS = ("exclusion_reasons", "qc_rules", "judgment_pairs")  # the last two only under some policies
-BOOLEAN_OR_BLANK_COLUMNS = ("decision_token_distinct",)              # only under candidate rules
+LIST_COLUMNS = ("exclusion_reasons", "qc_rules", "behavior_exclusion_reasons",
+                "first_token_exclusion_reasons")  # optional fields depend on the policy
+BOOLEAN_OR_BLANK_COLUMNS = ("decision_token_distinct", "decision_at_first_token")  # only under candidate rules
+OPTIONAL_BOOLEAN_COLUMNS = ("eligible_behavior", "eligible_first_token")
 
 # Written only under a policy with an overlay: which rules fired and what they replaced.
 TRACE_FIELDS = ("qc_rules", "base_feedback_type", "base_a2_kind")
 
 # Written only under a policy with candidate rules.
-CANDIDATE_FIELDS = ("a1_vs_critic_basis", "a2_vs_a1_basis", "a2_vs_critic_basis",
-                    "resolved_candidate", "resolved_via", "decision_token_distinct",
-                    "judgment_pairs", "feedback_coherence")
+CANDIDATE_FIELDS = ("resolved_candidate", "resolved_via", "decision_token_distinct",
+                    "decision_at_first_token", "feedback_coherence",
+                    "a1_vs_critic_basis", "a2_vs_a1_basis", "a2_vs_critic_basis",
+                    "eligible_behavior", "eligible_first_token",
+                    "behavior_exclusion_reasons", "first_token_exclusion_reasons")
 
-# The pairs a judge may be asked about, the episode fields each compares, and
-# what each verdict means for a relation.
-JUDGMENT_PAIRS = ("a1_vs_critic", "a2_vs_a1", "a2_vs_critic")
-JUDGMENT_PAIR_FIELDS = {"a1_vs_critic": ("solver_attempt_1", "critic_advocated_answer"),
-                        "a2_vs_a1": ("solver_attempt_2", "solver_attempt_1"),
-                        "a2_vs_critic": ("solver_attempt_2", "critic_advocated_answer")}
-JUDGE_VERDICTS = ("same", "different", "uncertain")
-JUDGED_RELATION = {"same": "exact", "different": "different", "uncertain": "uncertain"}
+RELATION_FIELDS = ("a1_vs_critic", "a2_vs_a1", "a2_vs_critic")
+ACRONYM_CONNECTORS = frozenset({"and", "of", "for", "in", "on", "at", "to"})
 
 # A text an answer-shape rule rejects: an answer longer than any gold answer.
 NOT_ANSWER_SHAPED = "not_answer_shaped"
@@ -197,6 +196,11 @@ class CandidateRules:
 
     def definition(self):
         return {"max_answer_words": self.max_answer_words,
+                "equivalence_method": "question_aliases_conservative_text_v1",
+                "alias_fields": ["ground_truth", "answer_aliases"],
+                "ambiguous_forms": ["containment", "token_subsequence", "acronym_initials"],
+                "acronym_connectors": sorted(ACRONYM_CONNECTORS),
+                "first_token_subset": "behavior_eligible_and_valid_distinct_aligned_tokens_v1",
                 "letter_pattern": [self.letter_pattern.pattern, self.letter_pattern.flags]}
 
 
@@ -393,65 +397,113 @@ def _letter_source(a2, candidate_order, rules):
     return LETTER_SOURCES.get(candidate_order, {}).get(match.group(1).upper(), "unknown")
 
 
-def _candidate_relations(row, rules, feedback_type, a1_kind, a2_kind, relations, judgments):
-    """Apply the candidate rules to the lexical relations.
+def _question_aliases(row):
+    """One question-local equivalence group from the saved dataset metadata.
 
-    Only an episode that can hold a conflict (the Critic gave an answer, A1 is an
-    answer, and the two are not an exact match) needs more than exact matching.
-    Then A1 versus the recommendation always takes the judge's verdict; A2 is
-    mapped through its letter, or, when it matches neither candidate exactly,
-    takes a verdict against each. A pair without a usable verdict is ``unjudged``.
-    Returns (relations, basis of each relation, pairs that needed a verdict).
+    Correctness flags and the question's wording are never used to pick a
+    response class. No alias is inferred or shared with another question.
     """
-    relations = dict(relations)
-    basis = {pair: "exact" if relations[pair] == "exact" else "not_judged" for pair in JUDGMENT_PAIRS}
-    if feedback_type != "answer" or a1_kind != "answer" or relations["a1_vs_critic"] == "exact":
-        return relations, basis, []
+    aliases = row.get("answer_aliases") or []
+    if isinstance(aliases, str):
+        aliases = [aliases]
+    if not isinstance(aliases, (list, tuple)) or any(not isinstance(x, str) for x in aliases):
+        raise ValueError("answer_aliases must be a string or a list of strings")
+    values = [row.get("ground_truth"), *aliases]
+    return {normalize_answer(text) for text in values
+            if isinstance(text, str) and normalize_answer(text)}
 
-    pairs = ["a1_vs_critic"]
-    letter = _letter_source(row.get("solver_attempt_2"), row.get("candidate_order"), rules)
-    if letter is not None:
+
+def _possible_shortening(left, right):
+    """Detect possible equivalence without declaring it: ordered name omissions
+    or an acronym matching initials. Deliberately no fuzzy equivalence rule."""
+    a, b = normalize_answer(left).split(), normalize_answer(right).split()
+    short, long = sorted((a, b), key=len)
+    if 2 <= len(short) < len(long):
+        remaining = iter(long)
+        if all(any(token == other for other in remaining) for token in short):
+            return True
+    for compact, expansion in ((left, b), (right, a)):
+        letters = re.sub(r"[.\s]", "", compact)
+        if 2 <= len(letters) <= 10 and letters.isalpha() and letters.isupper() and len(expansion) >= 2:
+            initials = "".join(word[0] for word in expansion if word not in ACRONYM_CONNECTORS)
+            if letters.casefold() == initials:
+                return True
+    return False
+
+
+def _candidate_relation(left, right, aliases):
+    """Symmetric relation and evidence basis for a pair of complete answers."""
+    lexical = behavior.textual_relation(left, right)
+    if lexical in ("exact", "unresolved"):
+        return lexical, "exact" if lexical == "exact" else "text_rule"
+    a, b = normalize_answer(left), normalize_answer(right)
+    if a in aliases and b in aliases:
+        return "exact", "question_alias"
+    if lexical == "containment":
+        return "containment", "text_rule"
+    if _possible_shortening(left, right):
+        return "ambiguous_alias", "text_rule"
+    # An unlisted variant overlapping any member of the other answer's known
+    # alias group is ambiguous even if the displayed pair does not overlap.
+    for normalized, other in ((a, right), (b, left)):
+        if normalized in aliases and any(
+                behavior.textual_relation(other, alias) == "containment"
+                or _possible_shortening(other, alias) for alias in aliases):
+            return "ambiguous_alias", "text_rule"
+    return "different", "text_rule"
+
+
+def _candidate_relations(row, rules, feedback_type, a1_kind, a2_kind):
+    aliases = _question_aliases(row)
+    a1, critic, a2 = (row.get(name) for name in
+                      ("solver_attempt_1", "critic_advocated_answer", "solver_attempt_2"))
+    pairs = ((a1, critic), (a2, a1), (a2, critic))
+    evidence = {name: _candidate_relation(left, right, aliases)
+                for name, (left, right) in zip(RELATION_FIELDS, pairs)}
+    relations = {name: value[0] for name, value in evidence.items()}
+    basis = {name: value[1] for name, value in evidence.items()}
+    letter = _letter_source(a2, row.get("candidate_order"), rules)
+    if letter is not None and feedback_type == a1_kind == a2_kind == "answer":
+        conflict = relations["a1_vs_critic"]
         relations["a2_vs_a1"], relations["a2_vs_critic"] = {
-            "a1": ("exact", "different"), "critic": ("different", "exact"),
+            "a1": ("exact", conflict), "critic": (conflict, "exact"),
         }.get(letter, ("unresolved", "unresolved"))
         basis["a2_vs_a1"] = basis["a2_vs_critic"] = "letter"
-    elif a2_kind == "answer" and "exact" not in (relations["a2_vs_a1"], relations["a2_vs_critic"]):
-        pairs += ["a2_vs_a1", "a2_vs_critic"]
-
-    for pair in pairs:
-        relations[pair] = JUDGED_RELATION.get(judgments.get(pair), "unjudged")
-        basis[pair] = "judge"
-    a2_pairs = ("a2_vs_a1", "a2_vs_critic")
-    if relations["a1_vs_critic"] == "exact":
-        # Judged the same answer: an A2 that matches either one matches both.
-        for pair in a2_pairs:
-            if relations[pair] != "exact" and "exact" in (relations[p] for p in a2_pairs):
-                relations[pair], basis[pair] = "exact", "judge"
-    elif relations["a2_vs_a1"] == relations["a2_vs_critic"] == "exact":
-        # A judge can call A2 the same as both candidates after calling them different.
-        relations["a2_vs_a1"] = relations["a2_vs_critic"] = "unresolved"
-    return relations, basis, pairs
+    return relations, basis
 
 
-def _check_judgments(judgments, policy):
-    if judgments is None:
-        return {}
-    if policy.candidate_rules is None:
-        raise ValueError(f"judgments are only read by a policy with candidate rules, not {policy.version}")
-    return _check_judgment_values(judgments)
+def _first_token_eligibility(row, chosen, behavior_reasons):
+    """Token-specific eligibility never changes the complete-answer behavior label.
+
+    Missing, invalid or inconsistent token metadata fails closed for this subset.
+    Token ids must be non-negative integers, not booleans or coercible strings.
+    """
+    ids = row.get("candidate_first_token_ids")
+    ids = ids if isinstance(ids, dict) else {}
+    valid = lambda value: type(value) is int and value >= 0
+    a1, critic, generated = ids.get("a1"), ids.get("critic"), row.get("solver_a2_first_token_id")
+    pair_valid = valid(a1) and valid(critic)
+    distinct = a1 != critic if pair_valid else None
+    selected = ids.get(chosen) if chosen is not None else None
+    aligned = generated == selected if valid(generated) and valid(selected) else None
+    reasons = list(behavior_reasons)
+    if distinct is None:
+        reasons.append("first_token_metadata_unavailable")
+    elif not distinct:
+        reasons.append("shared_first_token")
+    recorded_distinct = row.get("decision_token_distinct")
+    if type(recorded_distinct) is not bool:
+        reasons.append("first_token_distinctness_unavailable")
+    elif distinct is not None and recorded_distinct != distinct:
+        reasons.append("first_token_metadata_inconsistent")
+    if aligned is None:
+        reasons.append("first_token_alignment_unavailable")
+    elif not aligned:
+        reasons.append("decision_not_at_first_token")
+    return distinct, aligned, reasons
 
 
-def _check_judgment_values(judgments):
-    unknown = set(judgments) - set(JUDGMENT_PAIRS)
-    if unknown:
-        raise ValueError(f"unknown judgment pairs {sorted(unknown)}; expected {list(JUDGMENT_PAIRS)}")
-    bad = {pair: v for pair, v in judgments.items() if v is not None and v not in JUDGE_VERDICTS}
-    if bad:
-        raise ValueError(f"judge verdicts must be one of {list(JUDGE_VERDICTS)} or None, got {bad}")
-    return judgments
-
-
-def classify_candidate(row, policy=DEFAULT_POLICY, judgments=None):
+def classify_candidate(row, policy=DEFAULT_POLICY):
     """Label one episode under ``policy``. Returns a new dict and does not change the row.
 
     The base rules compute the facts. When the policy has an overlay, one generic
@@ -460,13 +512,7 @@ def classify_candidate(row, policy=DEFAULT_POLICY, judgments=None):
     regardless), and the label records which rules fired in ``qc_rules`` and the
     base values in ``base_feedback_type`` / ``base_a2_kind``. Everything downstream
     is derived by ``assemble_labels`` the same way for every policy.
-
-    ``judgments`` maps pair names in ``JUDGMENT_PAIRS`` to a judge verdict
-    (``JUDGE_VERDICTS``, or None for unparsed output) and is read only under a
-    policy with candidate rules. Labelling with no judgments lists, in
-    ``judgment_pairs``, every pair this episode needs a verdict for.
     """
-    judgments = _check_judgments(judgments, policy)
     candidate_rules = policy.candidate_rules
     a1 = row.get("solver_attempt_1")
     a2 = row.get("solver_attempt_2")
@@ -502,15 +548,12 @@ def classify_candidate(row, policy=DEFAULT_POLICY, judgments=None):
     extra_reasons = []
     if candidate_rules is not None:
         a2_kind = _shaped(a2_kind, a2, candidate_rules)
-        relations, basis, pairs = _candidate_relations(
-            row, candidate_rules, feedback_type, a1_kind, a2_kind,
-            {"a1_vs_critic": a1_vs_critic, "a2_vs_a1": a2_vs_a1, "a2_vs_critic": a2_vs_critic},
-            judgments)
-        a1_vs_critic, a2_vs_a1, a2_vs_critic = (relations[pair] for pair in JUDGMENT_PAIRS)
+        relations, basis = _candidate_relations(row, candidate_rules, feedback_type, a1_kind, a2_kind)
+        a1_vs_critic, a2_vs_a1, a2_vs_critic = (relations[name] for name in RELATION_FIELDS)
         if critic_kind == NOT_ANSWER_SHAPED:
             extra_reasons.append("critic_not_answer_shaped")
-        if row.get("decision_token_distinct") is False:
-            extra_reasons.append("shared_first_token")
+        if "ambiguous_alias" in (a2_vs_a1, a2_vs_critic):
+            extra_reasons.append("a2_equivalence_uncertain")
 
     label = assemble_labels(feedback_type, a1_kind, a2_kind, critic_kind,
                             a1_vs_critic, a2_vs_a1, a2_vs_critic,
@@ -522,17 +565,24 @@ def classify_candidate(row, policy=DEFAULT_POLICY, judgments=None):
         label["base_a2_kind"] = base_a2_kind
     if candidate_rules is not None:
         resolved = {"adopted_critic": "reviewer", "retained_a1": "previous"}.get(label["solver_response"], "none")
-        deciding = {"reviewer": "a2_vs_critic", "previous": "a2_vs_a1"}.get(resolved)
+        chosen = {"previous": "a1", "reviewer": "critic"}.get(resolved)
+        deciding = {"previous": "a2_vs_a1", "reviewer": "a2_vs_critic"}.get(resolved)
+        behavior_reasons = list(label["exclusion_reasons"])
+        if label["solver_response"] == "third_answer":
+            behavior_reasons.append("third_answer")
+        distinct, at_first_token, token_reasons = _first_token_eligibility(row, chosen, behavior_reasons)
         coherence = feedback_coherence.assess(row.get("critic_raw_output"), a1,
                                               telemetry=row.get("generation_telemetry"))
         label.update({
-            "a1_vs_critic_basis": basis["a1_vs_critic"],
-            "a2_vs_a1_basis": basis["a2_vs_a1"],
-            "a2_vs_critic_basis": basis["a2_vs_critic"],
             "resolved_candidate": resolved,
             "resolved_via": basis[deciding] if deciding else "none",
-            "decision_token_distinct": row.get("decision_token_distinct"),
-            "judgment_pairs": pairs,
+            **{name + "_basis": basis[name] for name in RELATION_FIELDS},
+            "eligible_behavior": label["eligible_strict"],
+            "eligible_first_token": label["eligible_strict"] and not token_reasons,
+            "behavior_exclusion_reasons": behavior_reasons,
+            "first_token_exclusion_reasons": token_reasons,
+            "decision_token_distinct": distinct,
+            "decision_at_first_token": at_first_token,
             # Diagnostic only: the issue #115 rules never decide eligibility here.
             "feedback_coherence": coherence["coherence"],
         })
@@ -586,66 +636,6 @@ def assemble_labels(feedback_type, a1_kind, a2_kind, critic_kind,
     }
 
 
-def judge_answer_pairs(rows, policy, judge):
-    """One judgment record per pair the episodes need a verdict for under ``policy``.
-
-    The pairs are exactly the ``judgment_pairs`` the episode's own label lists,
-    so the judge is never asked about a pair the label does not read.
-    ``judge(question, answer_1, answer_2)`` returns (verdict or None, raw output,
-    generation telemetry).
-    """
-    if policy.candidate_rules is None:
-        raise ValueError(f"{policy.version} has no candidate rules, so it reads no judgments")
-    records, seen = [], set()
-    for row in rows:
-        episode_id = row["episode_id"]
-        if episode_id in seen:
-            raise ValueError(f"episode {episode_id} appears more than once")
-        seen.add(episode_id)
-        for pair in classify_candidate(row, policy, judgments={})["judgment_pairs"]:
-            left, right = (row[name] for name in JUDGMENT_PAIR_FIELDS[pair])
-            verdict, raw_output, generation = judge(row["question"], left, right)
-            records.append({"episode_id": episode_id, "question_id": row["question_id"], "pair": pair,
-                            "answer_1": left, "answer_2": right, "relation": verdict,
-                            "raw_output": raw_output, "generation": generation})
-    return records
-
-
-def read_judgments(path):
-    """Read a judgments JSONL back as {episode_id: {pair: verdict}}, refusing repeats."""
-    judgments = {}
-    with open(path) as f:
-        for line in f:
-            record = json.loads(line)
-            pairs = judgments.setdefault(record["episode_id"], {})
-            if record["pair"] in pairs:
-                raise ValueError(f"{record['episode_id']}: pair {record['pair']} judged twice")
-            pairs[record["pair"]] = record["relation"]
-    for pairs in judgments.values():
-        _check_judgment_values(pairs)
-    return judgments
-
-
-def load_run_judgments(folder, policy, interaction_sha256s):
-    """Verdicts from a judgments folder, refused unless they were made under this
-    policy's exact definition from interaction files with exactly these hashes.
-
-    Returns ({episode_id: {pair: verdict}}, a provenance record for the package).
-    """
-    folder = Path(folder)
-    provenance = json.loads((folder / "provenance.json").read_text())
-    if provenance["label_policy"]["definition_sha256"] != policy.definition_sha256():
-        raise ValueError(f"{folder} was judged under a different policy definition")
-    if sorted(interaction_sha256s) != sorted(provenance["interactions_sha256"].values()):
-        raise ValueError(f"{folder} was judged from different interaction files")
-    record = {"folder": str(folder),
-              "judgments_sha256": sha256_file(folder / "judgments.jsonl"),
-              "provenance_sha256": sha256_file(folder / "provenance.json"),
-              "judge_model": provenance["judge"].get("model_id"),
-              "judge_prompt_sha256": provenance["prompt_sha256"]}
-    return read_judgments(folder / "judgments.jsonl"), record
-
-
 def write_labels(path, rows):
     """Write one CSV row per question. Each row needs ``label`` and ``partition``.
 
@@ -679,6 +669,11 @@ def read_labels(path):
         for field in LIST_COLUMNS:
             if field in label:
                 label[field] = label[field].split(";") if label[field] else []
+        for field in OPTIONAL_BOOLEAN_COLUMNS:
+            if field in label:
+                if label[field] not in ("True", "False"):
+                    raise ValueError(f"{qid}: {field} must be True or False, got {label[field]!r}")
+                label[field] = label[field] == "True"
         for field in BOOLEAN_OR_BLANK_COLUMNS:
             if field in label:
                 if label[field] not in ("True", "False", ""):
@@ -710,7 +705,7 @@ def label_counts(rows):
                            f"critic_correct={row['critic_feedback_correct']}")
             target_by_correctness[f"{correctness} / {response}"] += 1
 
-    return {
+    counts = {
         "rows": len(rows),
         "feedback_by_response": dict(sorted(feedback_by_response.items())),
         "lexical_v2_to_candidate": dict(sorted(lexical_v2_to_candidate.items())),
@@ -718,3 +713,15 @@ def label_counts(rows):
         "primary_target_by_split": dict(sorted(target_by_split.items())),
         "primary_target_by_correctness": dict(sorted(target_by_correctness.items())),
     }
+    if any("eligible_behavior" in row["label"] for row in rows):
+        for name, flag in (("strict", "eligible_strict"), ("first_token", "eligible_first_token")):
+            selected = [row for row in rows if row["label"][flag]]
+            counts[name + "_target_by_split"] = dict(sorted(Counter(
+                f"{row['partition']} / {row['label']['solver_response']}" for row in selected).items()))
+            counts[name + "_target_by_correctness"] = dict(sorted(Counter(
+                f"a1_correct={row['solver_attempt_1_correct']} / "
+                f"critic_correct={row['critic_feedback_correct']} / {row['label']['solver_response']}"
+                for row in selected).items()))
+        for field in ("behavior_exclusion_reasons", "first_token_exclusion_reasons"):
+            counts[field] = dict(sorted(Counter(reason for row in rows for reason in row["label"][field]).items()))
+    return counts

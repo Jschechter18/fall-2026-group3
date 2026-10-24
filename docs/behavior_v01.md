@@ -148,7 +148,6 @@ Evidence (private, not committed, contains the unblinded key): `~/capstone-artif
 | `src/mas_sae/data/production.py` | The split table and the loader that enforces it |
 | `scripts/prepare_behavior_v01.py` | Runs the steps above on the finished production run |
 | `scripts/qc_agreement.py` | Compares two completed annotator files |
-| `scripts/judge_answer_pairs.py` | Asks the run's validator model for the same/different verdicts the candidate policy needs |
 
 The scripts only read arguments and call the package functions. Existing project helpers are reused for JSONL reading, file hashing, safe output folders and the pinned MuSiQue loader.
 
@@ -166,27 +165,38 @@ This writes `labels.csv`, `split_manifest.csv`, `partitions.csv`, `counts.json` 
 
 ## Labels for the labeled-candidates presentation (`v0.2.0-candidate`)
 
-When A2 is generated from Josh's labeled-candidates prompt (A1 and the Critic's recommendation shown as "your previous answer" and "the reviewer's recommendation", in a recorded random `candidate_order`), label the run with `--label-policy v0.2.0-candidate`. The policy is the v0.1.2 overlay plus candidate rules; it adds no human check. Label validity comes from these automatic rules, applied in this order:
+The candidate policy labels complete A2 responses from the existing candidates collection. It uses deterministic text rules, the question's recorded aliases and saved candidate order. It does not change the collection prompt, generation, activation capture or historical labels, and it uses no new judge or human annotations.
 
-1. **Answer-shaped.** A1, the recommendation and A2 must each be an answer under the existing non-answer checks and the v0.1.2 overlay, and no longer than 14 words (the longest gold answer in the train interactions). A longer text is `not_answer_shaped`; a long recommendation makes the Critic `unresolved`.
-2. **A real disagreement.** A1 and the recommendation are the same if their normalized text matches exactly. Otherwise a judge decides: `same` (no conflict), `different` (a conflict), or `uncertain` (excluded).
-3. **Which candidate A2 chose.** An exact normalized match to A1 is `previous`, to the recommendation `reviewer`. A bare "Candidate A" or "Candidate B" is mapped through `candidate_order`. Otherwise the judge compares A2 with each candidate: the same as exactly one decides it, different from both is a third answer, and anything else is unresolved.
-4. **The decision is in the first token.** Activations are taken where the first answer token is predicted, so an episode whose two candidates start with the same token (`decision_token_distinct` false, mostly numbers such as 1953 / 1967) is excluded.
+1. **Answer-shaped texts.** A1, the recommendation and A2 pass the existing non-answer checks and v0.1.2 overlay, and contain at most 14 words (the longest train gold answer). Long recommendations are unresolved; non-answers and uncertain responses cannot supply a binary label.
+2. **Question-local equivalence.** Normalized exact matches are equivalent. The saved `ground_truth` and `answer_aliases` form one documented equivalence group for that question; two members are also equivalent. Apply the same comparison to A1/recommendation, A2/A1 and A2/recommendation. Thus "CFL" and "Canadian Football League" are no conflict when both are in that question's alias group. An alias match takes precedence over containment. Correctness booleans never decide adoption or retention, and alias groups are never shared across questions.
+3. **Uncertain equivalence is excluded.** Without documented equivalence, containment remains ambiguous. Possible acronyms matching expansion initials and ordered omissions in multiword names are `ambiguous_alias`, not asserted synonyms or conflicts. Overlap with another answer's documented aliases is also ambiguous. There are no hand-coded exceptions for pilot questions, fuzzy equivalence scores, or external alias lookups. These conservative checks do not identify every paraphrase: remaining differences are still *lexical candidate conflicts*, not proven semantic disagreement.
+4. **Complete-answer behavior.** An exact or documented-alias A2 match to A1 is retention; a match to the recommendation is adoption. A bare "Candidate A/B" maps through the saved order. Missing/invalid order is unresolved. Third answers, ambiguous equivalences, non-answers and unresolved cases never enter the strict binary target.
 
-The strict target is `reviewer` = 1 and `previous` = 0. It requires rules 1 to 4 to pass. Third answers, non-answers, unresolved or uncertain relations and shared first tokens are recorded outcomes with their own exclusion reasons (`a1_not_answer_shaped`, `critic_not_answer_shaped`, `a2_not_answer_shaped`, `a1_critic_uncertain`, `a1_critic_unjudged`, `a2_relationship_unresolved`, `shared_first_token`, and the v0.1 reasons); none of them is ever counted as retention. The issue #115 coherence rules are written as `feedback_coherence` for diagnosis only and never decide eligibility. Each label also records how every relation was decided (`*_basis`: exact, judge, letter or not judged), `resolved_candidate`, `resolved_via` and `judgment_pairs`.
+**Two eligibility flags describe the same episode, not two independent label sets:**
 
-The judge is the run's own validator role, asked one question per pair: do these two answers to this question name the same thing (`SAME_ANSWER_PROMPT` in `agents/validator.py`). It is only asked about the pairs a label lists in `judgment_pairs`:
+| Field | Meaning |
+|---|---|
+| `eligible_behavior` / `eligible_strict` | Identical flags for usable adoption-versus-retention behavior, independent of token metadata |
+| `strict_target` | Adopted recommendation = 1; retained A1 = 0; otherwise blank |
+| `eligible_first_token` | Behavioral eligibility plus valid, distinct candidate first tokens and A2's first token matching the selected candidate's first token |
+| `decision_token_distinct` | Computed from the two recorded candidate token IDs, or blank if unavailable |
+| `decision_at_first_token` | Operational first-token match to the selected candidate, or blank if unavailable/unresolved; it does not prove when an internal decision occurred |
+| `behavior_exclusion_reasons` | All reasons a row is outside the behavioral binary task, including third answers |
+| `first_token_exclusion_reasons` | Behavioral exclusions plus token-specific exclusions |
+
+Missing, malformed or inconsistent token metadata excludes only the first-token subset. Token IDs must be non-negative integers (not strings or booleans), and the recorded distinctness flag must agree with the IDs. A valid alias or letter response can remain a behavioral example even when its first token differs. Shared first tokens likewise do not invalidate behavior. Token-specific causes include `shared_first_token`, `decision_not_at_first_token`, `first_token_metadata_unavailable`, `first_token_distinctness_unavailable`, `first_token_alignment_unavailable` and `first_token_metadata_inconsistent`.
+
+Use `strict_target` and `eligible_strict` for behavioral probes. The historical `primary_target` also includes third answers as 0, so it is not the adoption-versus-retention target. Raye's first-token-specific analyses additionally select `eligible_first_token`. A baseline cohort should stay fixed across causal interventions; a changed or malformed post-intervention answer is an outcome to report, not a reason to silently remove the question.
+
+Every relation records its basis (`exact`, `question_alias`, `text_rule` or `letter`). `resolved_candidate` and `resolved_via` identify which candidate matched and how. `feedback_coherence` remains diagnostic and does not decide eligibility. Candidate policy provenance explicitly includes the equivalence method, alias fields, ambiguity rules and first-token subset definition. `counts.json` records strict and first-token class counts by partition/correctness, both exclusion summaries, interaction hashes and rule-file hashes. Earlier v0.1.1/v0.1.2 policy definitions, hashes and outputs are unchanged. Existing QC evidence is preserved; it is not new validation of this prompt's labels.
 
 ```bash
-PYTHONPATH=src python scripts/judge_answer_pairs.py \
-    --interactions <run results>/train/interactions.jsonl <run results>/validation/interactions.jsonl \
-    --output <artifacts>/<run>_judgments
 PYTHONPATH=src python scripts/prepare_behavior_v01.py --full-results <run results> \
-    --frozen-partitions results/behavior/behavior_v011_split80_10_10_20261006/partitions.csv \
-    --label-policy v0.2.0-candidate --judgments <artifacts>/<run>_judgments --output <artifacts>/<new folder>
+    --frozen-partitions <approved partitions.csv> \
+    --label-policy v0.2.0-candidate --output <artifacts>/<new folder>
 ```
 
-`prepare_behavior_v01.py` refuses judgments made from other interaction files or under another policy definition, and refuses the candidate policy without judgments. A pair that needed a verdict and has none is excluded as unjudged, never guessed. The package writes one row per question, so it is for a run with one A2 presentation per question; a two-presentation pilot is labelled per episode with `classify_candidate`. The v0.1.1 and v0.1.2 policies, their definition hashes and the labels they produce are unchanged.
+The package writes one row per question; label the frozen two-arm pilot per episode with `classify_candidate`. Frozen-partition coverage checks remain in force, and collection exclusions must be reconciled explicitly. No label package or downstream training should be finalized before this revision is verified and reviewed. The removed `--judgments` argument is no longer accepted.
 
 ## Re-running the collection without moving a single question
 
