@@ -505,10 +505,13 @@ def load_production_activations(rows, manifest, activation_root, *,
 
 DEVELOPMENT_PARTITIONS = ("train", "validation")
 
+# The partitions one exported run holds side by side. Intervention is always its own run.
+EXPORT_PARTITIONS = ("train", "validation", "test")
+
 
 def export_partition_activations(rows, manifest, activation_root, *, run, layers,
                                  export_activation_root, export_result_root, export_run_name,
-                                 partitions=DEVELOPMENT_PARTITIONS):
+                                 partitions=EXPORT_PARTITIONS):
     """Write one run's activations and episodes regrouped by partition.
 
     The output has the layout the collection pipeline already produces, with the
@@ -522,17 +525,21 @@ def export_partition_activations(rows, manifest, activation_root, *, run, layers
             the original row is kept as source_run / source_activation_index)
         <export_result_root>/<export_run_name>/intervention_question_ids.json
 
-    Only the named ``partitions`` are written. The default is the development
-    pair, so a training directory never contains ``test.pt`` and nothing can
-    score test by accident; ``test`` is exported at the freeze and
-    ``intervention`` at the causal stage, each under its own run name. The
-    intervention id file is always written. Both destination directories must
-    not exist yet, so an export can never overwrite or leave stale files.
-    Returns {partition: {"questions", "rows", "files": {path: sha256}}}.
+    Only the named ``partitions`` are written. The default is train, validation
+    and test in one layer folder, which is what the loaders expect: the SAE
+    trainer reads ``train`` and ``validation`` and scores ``test.pt`` when it is
+    there, and the probe loaders read only the partitions they name.
+    ``intervention`` is reserved for the causal experiment, so it can only be
+    exported on its own, under its own run name, and its rows never sit next to
+    the others. The intervention id file is always written. Both destination
+    directories must not exist yet, so an export can never overwrite or leave
+    stale files. Returns {partition: {"questions", "rows", "files": {path: sha256}}}.
     """
     unknown = set(partitions) - set(PARTITIONS)
     if unknown:
         raise ValueError(f"unknown partitions {sorted(unknown)}; expected a subset of {list(PARTITIONS)}")
+    if "intervention" in partitions and set(partitions) != {"intervention"}:
+        raise ValueError("intervention is exported on its own, under its own run name")
     by_partition = {partition: [] for partition in PARTITIONS}
     for row in rows:
         by_partition[manifest[row["question_id"]]["partition"]].append(row)

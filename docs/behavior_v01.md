@@ -120,7 +120,7 @@ The collection run stores tensors by MuSiQue source split (`train.pt`, `validati
 <export root>/results/collection/<export run>/export_summary.json             # commit, manifest hash, proportions, seed, layers, counts, file hashes
 ```
 
-Only the partitions named on the command line are written; no `intervention.pt` is produced, because the causal stage re-runs the Solver live and needs only the reserved ids and the stored episodes. The destination must not exist, so an export can never overwrite or leave stale files. Loaders that take a run name and a split name (the SAE trainer, the layer-selection probe) point at the exported run and read `train` and `validation`; `test` is scored once on the frozen checkpoint.
+By default one export run holds `train`, `validation` and `test` in the same `layer_NN/` folders (for the full nine-layer run: `natural_4b_full9_partitioned`). The `intervention` partition is reserved for the causal experiment and is exported only on its own, under its own run name (`--partitions intervention`, e.g. `natural_4b_full9_intervention_partitioned`); asking for it together with another partition is refused. The destination must not exist, so an export can never overwrite or leave stale files. Loaders take a run name and read only the partitions they name: the SAE trainer reads `train` and `validation` and, when `test.pt` is in the same folder, reports reconstruction on it for comparing finished SAE versions; the layer- and feature-selection probes read `train` and `validation` only.
 
 ## Human check
 
