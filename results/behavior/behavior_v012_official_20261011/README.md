@@ -13,11 +13,11 @@ labels.csv SHA256:
 Policy: v0.1.2-qc
 
 ## Nine-layer activations
-Train/validation:
+Train, validation and test, in one run since PR #147:
 s3://dats-capstone/shared/group3/data/activations/natural_4b_full9_partitioned/
 
-Restricted test:
-s3://dats-capstone/shared/group3/data/activations/natural_4b_full9_test_partitioned/
+The earlier separate test export, natural_4b_full9_test_partitioned/, is kept as
+history; its 27 tensor files are byte-identical to the test files above.
 
 ## Required downstream actions
 - Josh: confirm SAE checkpoint and training provenance. Fit SAEs on train, use validation for tuning and checkpoint selection, and use test to compare completed SAE versions under Issue #97. Keep intervention reserved for causal experiments
@@ -32,4 +32,5 @@ s3://dats-capstone/shared/group3/data/activations/natural_4b_full9_test_partitio
 - Earlier development exposed some test/intervention questions.
 - Report final sensitivity analyses excluding previously exposed question IDs using manifest flags.
 
-Data files and checksums remain in S3. No private QC files are included here.
+The data files and SHA256SUMS are committed in this folder and mirrored in S3.
+No private QC files are included here.
