@@ -1,7 +1,7 @@
 """Train one SAE, run a tuning study, or finish a validation-only trial.
 
 
-python scripts/train_sae.py \
+python scripts/sae/train_sae.py \
   --hp-tune \
   --config configs/sae_hp_tuning/layer_33.yaml \
   --dry-run
@@ -29,7 +29,7 @@ def main():
     parser.add_argument("--sparsity-mode", choices=["topk", "l1"])
     parser.add_argument("--top-k", type=int)
     args = parser.parse_args()
-    project_root = Path(__file__).resolve().parents[1]
+    project_root = Path(__file__).resolve().parents[2]
 
     if args.hp_tune != (args.config is not None):
         parser.error("--hp-tune and --config must be provided together.")

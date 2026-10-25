@@ -366,7 +366,7 @@ mapping; see `docs/behavior_v01.md`, "Re-running the collection".
 For grouped hyperparameter searches, trial comparisons, and continuing a selected
 trial, see [SAE training and tuning](results/sae/README.md).
 
-After each successful `scripts/train_sae.py` run, a row is appended to
+After each successful `scripts/sae/train_sae.py` run, a row is appended to
 `results/sae/musique/runs/layer_<N>/sae_versions.csv`. Columns are `run_id`,
 `checkpoint_path` (relative to the repository root), `commit`, `test_score`,
 and `best_val_score`. Scores are reconstruction MSE plus the sparsity penalty;

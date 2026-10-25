@@ -3,8 +3,8 @@
 From the repository root, activate the training environment and run:
 
 ```bash
-PYTHONPATH=src python scripts/experiment_sae_resampling.py --config configs/sae_hp_tuning/layer_25_resampling.yaml --dry-run
-PYTHONPATH=src python scripts/experiment_sae_resampling.py --config configs/sae_hp_tuning/layer_25_resampling.yaml
+PYTHONPATH=src python scripts/sae/experiment_sae_resampling.py --config configs/sae_hp_tuning/layer_25_resampling.yaml --dry-run
+PYTHONPATH=src python scripts/sae/experiment_sae_resampling.py --config configs/sae_hp_tuning/layer_25_resampling.yaml
 ```
 
 The source must be a completed, validation-only TopK trial with a last checkpoint. Outputs are separate; an existing output directory is rejected. The original sweep is untouched. This script does not resume interrupted experiment branches: choose a new output directory to restart.
@@ -20,8 +20,8 @@ Neuron resampling is motivated by [Bricken et al. (2023), Towards Monosemanticit
 ## Initialization and warmup comparison
 
 ```bash
-PYTHONPATH=src python scripts/experiment_sae_resampling.py --config configs/sae_hp_tuning/layer_25_resampling_comparison.yaml --dry-run
-PYTHONPATH=src python scripts/experiment_sae_resampling.py --config configs/sae_hp_tuning/layer_25_resampling_comparison.yaml
+PYTHONPATH=src python scripts/sae/experiment_sae_resampling.py --config configs/sae_hp_tuning/layer_25_resampling_comparison.yaml --dry-run
+PYTHONPATH=src python scripts/sae/experiment_sae_resampling.py --config configs/sae_hp_tuning/layer_25_resampling_comparison.yaml
 ```
 
 The comparison uses a separate output directory with five branches: `control`, `warmup_control`, `residual`, `residual_warmup`, and `bricken_warmup`. The legacy two-branch YAML remains supported. All branches restore the same source model/Adam state. Treatments share replacement IDs per seed; controls track those IDs without replacing them. Training loaders have explicit matched generators independent of diagnostic scans. Repeated seeds vary continuation order and replacement sampling; they do not constitute independent source SAE training seeds.

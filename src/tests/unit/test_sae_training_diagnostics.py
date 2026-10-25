@@ -90,7 +90,7 @@ def test_training_writes_diagnostics_and_frozen_feature_artifact(
 
 
 def test_training_cli_delegates_to_shared_trainer(tmp_path, monkeypatch):
-    script = Path(__file__).resolve().parents[3] / "scripts" / "train_sae.py"
+    script = Path(__file__).resolve().parents[3] / "scripts" / "sae" / "train_sae.py"
     spec = importlib.util.spec_from_file_location("train_sae_cli", script)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
