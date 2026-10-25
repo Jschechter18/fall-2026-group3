@@ -1,0 +1,28 @@
+# Authoritative layer selection: official full nine-layer Natural export + Behavior v0.1.2 labels.
+# Fit on `train`, rank on `validation`; test and intervention rows are never read.
+# Activations and interactions must both come from the same natural_4b_full9_partitioned export:
+#   s3://dats-capstone/shared/group3/data/activations/natural_4b_full9_partitioned/
+#   s3://dats-capstone/shared/group3/results/collection/natural_4b_full9_partitioned/
+#   s3://dats-capstone/shared/group3/results/behavior/behavior_v012_official_20261011/
+# Expected labels.csv SHA256: 8d9d1a49a1ff562ec44ea531aea544b9844244cf785514d91409b0365fe2bf6b
+capstone_data_root: .
+activations_dir: data/activations/natural_4b_full9_partitioned        # <dir>/layer_NN/{split}_attempt2.pt
+results_dir: results/collection/natural_4b_full9_partitioned          # <dir>/{split}/interactions.jsonl
+labels_csv: results/behavior/behavior_v012_official_20261011/labels.csv
+manifest_csv: results/behavior/behavior_v012_official_20261011/split_manifest.csv
+index_column: full_index
+layers: [4, 8, 17, 25, 29, 30, 31, 32, 33]
+activation_file: "{split}_attempt2.pt"
+protocol: holdout
+fit_partition: train
+eval_partition: validation
+text_fields:
+  - solver_attempt_1
+  - critic_advocated_answer
+  - critic_feedback
+seed: 42
+c_grid: [0.001, 0.01, 0.1, 1.0, 10.0, 100.0]          # tuned INSIDE the train rows (inner grouped CV)
+inner_folds: 3
+n_bootstrap: 1000
+n_permutations: 0                                     # ~20 = label-shuffle control on the top layer
+output_dir: results/layer_selection_full9

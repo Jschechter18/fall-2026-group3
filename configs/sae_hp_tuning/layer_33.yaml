@@ -1,0 +1,61 @@
+# layer_33.yaml
+activation_run_name: natural_4b_full9_partitioned
+layer: 33
+
+defaults:
+  latent_dim: 12888
+  epochs: 200
+  batch_size: 256
+  seed: 42
+  train_shuffle: true
+  patience: 20
+  # Absolute validation-loss improvement needed to reset stopping patience.
+  early_stopping_min_delta: 0.0001
+  lr_patience: 5
+  inactivity_window_examples: 10000
+
+groups:
+  # - name: l1
+  #   fixed:
+  #     sparsity_mode: l1
+  #   grid:
+  #     lr: [0.0001, 0.0003]
+  #     sparsity_coefficient: [0.001, 0.01, 0.1, 1.0]
+
+  # - name: topk
+  #   fixed:
+  #     sparsity_mode: topk
+  #   grid:
+  #     lr: [0.0003]
+  #     top_k: [64, 128, 256, 512]
+  #     tied_initialization: [false, true]
+
+  # - name: auxk
+  #   fixed:
+  #     sparsity_mode: topk
+  #     tied_initialization: true
+  #     # top_k: 64
+  #     lr: 0.0003
+  #     aux_k: 512
+  #     aux_dead_window_examples: 10000
+  #   grid:
+  #     aux_coefficient: [0.03125, 0.0]
+  #     top_k: [64, 512]
+
+  - name: auxk_diagnostics
+    fixed:
+      sparsity_mode: topk
+      tied_initialization: true
+      # top_k: 64
+      lr: 0.0003
+      aux_k: 512
+      aux_dead_window_examples: 10000
+    grid:
+      top_k: [64, 128, 256, 512]
+      aux_coefficient: [0.0078125, 0.03125]
+
+# Initially review the reconstruction–sparsity Pareto frontier.
+# Enable automatic selection after choosing an activity budget:
+#
+# selection:
+#   max_mean_active_features: 128

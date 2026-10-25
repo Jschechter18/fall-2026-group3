@@ -7,7 +7,7 @@ from mas_sae.evaluation.behavior_qc import (
     choose_qc_rows,
     write_annotator_files,
 )
-from mas_sae.evaluation.behavior_v01 import SOLVER_RESPONSES, classify_candidate
+from mas_sae.evaluation.behavior_labels import SOLVER_RESPONSES, classify_candidate
 
 
 def episode(number, a2, partition="train"):

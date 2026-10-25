@@ -210,6 +210,8 @@ Local paths are mirrored beneath the group S3 prefix:
 | ------------------- | ---------------------------------------------------- |
 | `data/activations/` | `s3://dats-capstone/shared/group3/data/activations/` |
 | `results/sae/`      | `s3://dats-capstone/shared/group3/results/sae/`      |
+| `results/causal_replay/` | `s3://dats-capstone/shared/group3/results/causal_replay/` |
+| `results/collection/` (`interactions.jsonl`) | `s3://dats-capstone/shared/group3/results/collection/` |
 
 ### Upload Activations
 
@@ -360,6 +362,9 @@ the frozen question-to-partition mapping are committed under
 mapping; see `docs/behavior_v01.md`, "Re-running the collection".
 
 ## SAE versions
+
+For grouped hyperparameter searches, trial comparisons, and continuing a selected
+trial, see [SAE training and tuning](results/sae/README.md).
 
 After each successful `scripts/train_sae.py` run, a row is appended to
 `results/sae/musique/runs/layer_<N>/sae_versions.csv`. Columns are `run_id`,

@@ -16,7 +16,12 @@ import yaml
 from mas_sae.data.activation_store import ActivationStore
 from mas_sae.experiments.collection import stack_site_activations
 from mas_sae.experiments.records import write_jsonl
-from mas_sae.experiments.conditions import OMITTED, resolve_conditions
+from mas_sae.experiments.conditions import (
+    OMITTED,
+    A2Presentation,
+    resolve_conditions,
+    resolve_presentations,
+)
 
 
 def behavioral_summary(records: list[dict[str, Any]], *, production: bool) -> dict[str, Any]:
@@ -124,11 +129,18 @@ def _validate_alignment(
             raise ValueError("Record activation indices do not align")
     active = resolved_config.get("collection", {}).get("active_conditions", OMITTED)
     if active is not OMITTED:
-        expected = {c.value for c in resolve_conditions(active)}
+        # One episode per condition and presentation; without a2_presentations
+        # every episode is the feedback presentation, as before.
+        presentations = resolve_presentations(
+            resolved_config.get("collection", {}).get("a2_presentations", OMITTED))
+        expected = Counter(
+            (c.value, p.value) for c in resolve_conditions(active) for p in presentations)
         for qid in successful_ids:
-            conditions = [row["critic_condition"] for row in records if row["question_id"] == qid]
-            if len(conditions) != len(expected) or set(conditions) != expected:
-                raise ValueError("Episode conditions do not match active_conditions")
+            episodes = Counter(
+                (row["critic_condition"], row.get("a2_presentation", A2Presentation.FEEDBACK.value))
+                for row in records if row["question_id"] == qid)
+            if episodes != expected:
+                raise ValueError("Episode conditions do not match active_conditions and a2_presentations")
         episode_ids = [row.get("episode_id") for row in records]
         if None in episode_ids or len(set(episode_ids)) != len(episode_ids):
             raise ValueError("Episode IDs must be present and unique")

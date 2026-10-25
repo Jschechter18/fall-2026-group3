@@ -60,6 +60,19 @@ def get_git_diff_sha256() -> str:
     return hashlib.sha256(get_git_diff()).hexdigest()
 
 
+def get_untracked_files(*paths: str) -> list[str]:
+    """Untracked, non-ignored files under ``paths``, sorted."""
+    try:
+        result = subprocess.run(
+            ["git", "ls-files", "--others", "--exclude-standard", "-z", "--", *paths],
+            check=True,
+            capture_output=True,
+        )
+    except (OSError, subprocess.CalledProcessError) as error:
+        raise RuntimeError("Could not list untracked files.") from error
+    return sorted(name.decode() for name in result.stdout.split(b"\0") if name)
+
+
 def get_untracked_sha256(*paths: str) -> str:
     """SHA-256 of untracked, non-ignored files under ``paths``: names and bytes.
 
@@ -190,12 +203,15 @@ def create_sae_run_directory(
     layer: int,
     results_root: Path = Path("results"),
     subdirectories: tuple[str, ...] = (),
+    *,
+    category: str = "runs",
+    output_directory: Path | None = None,
 ) -> Path:
     """Create one experiment run directory and its initial manifest."""
     timestamp = utc_now()
     git_commit = get_git_commit()
     run_id = build_run_id(timestamp, git_commit)
-    run_directory = (results_root / "runs" / f"layer_{layer:02d}" / run_id)
+    run_directory = output_directory or (results_root / category / f"layer_{layer:02d}" / run_id)
 
     run_directory.mkdir(parents=True)
     for subdirectory in subdirectories:

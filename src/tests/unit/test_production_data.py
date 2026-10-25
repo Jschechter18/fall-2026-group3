@@ -8,6 +8,7 @@ import pytest
 import torch
 
 from mas_sae.data.production import (
+    EXPORT_PARTITIONS,
     INTERVENTION_IDS_FILE,
     MANIFEST_FIELDS,
     MISSING_IDS_FILE,
@@ -30,7 +31,7 @@ from mas_sae.data.production import (
     write_package_tables,
     write_partitions,
 )
-from mas_sae.evaluation.behavior_v01 import classify_candidate, write_labels
+from mas_sae.evaluation.behavior_labels import classify_candidate, write_labels
 from mas_sae.experiments.records import read_jsonl, write_jsonl
 
 PROPORTIONS = {"train": 0.6, "test": 0.2, "intervention": 0.2}
@@ -309,6 +310,11 @@ def test_load_labeled_rows_joins_labels_and_manifest(tmp_path):
     assert authorize_rows(rows[:1], loaded, purpose="fit") == rows[:1]
     assert authorize_rows(rows[1:], loaded, purpose="tune") == rows[1:]
 
+    # Asked for train only, the validation file is never opened.
+    (results / "validation" / "interactions.jsonl").write_text("{not json\n")
+    train_rows, _ = load_labeled_rows(results, package, partitions={"train"})
+    assert [r["question_id"] for r in train_rows] == ["2hop__1_1"]
+
 
 # ------------------------------------------------------------------ the export
 
@@ -323,7 +329,7 @@ def write_run(root, full, dim=2):
                              name=f"{source}_attempt{attempt}.pt")
 
 
-def exported_run(tmp_path, partitions=("train", "validation"), name="partitioned"):
+def exported_run(tmp_path, partitions=EXPORT_PARTITIONS, name="partitioned"):
     full, manifest, _ = partition_examples()
     if not (tmp_path / "src").exists():
         write_run(tmp_path / "src", full)
@@ -337,7 +343,7 @@ def exported_run(tmp_path, partitions=("train", "validation"), name="partitioned
 def test_export_mirrors_collection_layout_and_keeps_a1_a2_together(tmp_path):
     full, manifest, summary = exported_run(tmp_path)
     layer_dir = tmp_path / "data" / "partitioned" / "layer_08"
-    for partition in ("train", "validation"):
+    for partition in ("train", "validation", "test"):
         a1 = torch.load(layer_dir / f"{partition}_attempt1.pt")
         a2 = torch.load(layer_dir / f"{partition}_attempt2.pt")
         both = torch.load(layer_dir / f"{partition}.pt")
@@ -355,39 +361,45 @@ def test_export_mirrors_collection_layout_and_keeps_a1_a2_together(tmp_path):
             assert record["source_activation_index"] == original and record["source_run"] == "full"
             assert a1[position].tolist() == [original + 100., float(record["source_split"] == "validation")]
             assert a2[position].tolist() == [original + 200., float(record["source_split"] == "validation")]
-    # Development export: no test or intervention files anywhere, so nothing can score them.
-    for sealed in ("test", "intervention"):
-        assert not (layer_dir / f"{sealed}.pt").exists()
-        assert not (tmp_path / "results" / "partitioned" / sealed).exists()
-        assert summary[sealed]["rows"] == 0
+    # Train, validation and test share one run; nothing from intervention is written there.
+    assert sorted(p.name for p in layer_dir.iterdir()) == sorted(
+        f"{p}{suffix}.pt" for p in ("train", "validation", "test") for suffix in ("", "_attempt1", "_attempt2"))
+    assert not (tmp_path / "results" / "partitioned" / "intervention").exists()
+    assert summary["intervention"]["rows"] == 0
     ids = json.loads((tmp_path / "results" / "partitioned" / INTERVENTION_IDS_FILE).read_text())
     assert ids == sorted(q for q, m in manifest.items() if m["partition"] == "intervention")
     assert summary["intervention"]["questions"] == len(ids)
 
 
 def test_no_question_appears_in_two_exported_partitions(tmp_path):
-    exported_run(tmp_path, partitions=PARTITIONS, name="everything")
+    exported_run(tmp_path)
+    exported_run(tmp_path, partitions=("intervention",), name="partitioned_intervention")
     seen = {}
-    for path in sorted((tmp_path / "results" / "everything").glob("*/interactions.jsonl")):
+    for path in sorted((tmp_path / "results").glob("*/*/interactions.jsonl")):
         for record in read_jsonl(path):
             assert record["question_id"] not in seen, (record["question_id"], seen.get(record["question_id"]), path)
             seen[record["question_id"]] = path.parent.name
     assert set(seen.values()) == set(PARTITIONS)
-    assert (tmp_path / "data" / "everything" / "layer_08" / "intervention.pt").exists()
 
 
-def test_test_and_intervention_are_exported_only_when_named_and_under_their_own_name(tmp_path):
-    exported_run(tmp_path)                                   # development pair
-    _, _, summary = exported_run(tmp_path, partitions=("test",), name="partitioned_test")
-    assert summary["test"]["rows"] > 0 and summary["train"]["rows"] == 0
-    assert (tmp_path / "data" / "partitioned_test" / "layer_08" / "test.pt").exists()
-    assert not (tmp_path / "data" / "partitioned" / "layer_08" / "test.pt").exists()
+def test_intervention_is_exported_only_on_its_own_under_its_own_name(tmp_path):
+    exported_run(tmp_path)
+    _, _, summary = exported_run(tmp_path, partitions=("intervention",), name="partitioned_intervention")
+    assert summary["intervention"]["rows"] > 0
+    assert all(summary[p]["rows"] == 0 for p in ("train", "validation", "test"))
+    assert (tmp_path / "data" / "partitioned_intervention" / "layer_08" / "intervention.pt").exists()
+    assert not (tmp_path / "data" / "partitioned" / "layer_08" / "intervention.pt").exists()
+    # Asked for together with another partition: refused before anything is written.
+    for partitions in (PARTITIONS, ("train", "intervention")):
+        with pytest.raises(ValueError, match="on its own"):
+            exported_run(tmp_path, partitions=partitions, name="mixed")
+    assert not (tmp_path / "data" / "mixed").exists() and not (tmp_path / "results" / "mixed").exists()
     with pytest.raises(ValueError, match="unknown partitions"):
         exported_run(tmp_path, partitions=("holdout",), name="bad")
 
 
 def test_export_refuses_an_existing_destination_so_nothing_goes_stale(tmp_path):
-    exported_run(tmp_path, partitions=PARTITIONS, name="first")
+    exported_run(tmp_path, name="first")
     before = sorted(str(p.relative_to(tmp_path)) for p in tmp_path.rglob("*") if p.is_file())
     # Same destination, fewer partitions: refused before anything is written.
     with pytest.raises(FileExistsError):
@@ -599,3 +611,34 @@ def test_committed_manifest_is_reproduced_by_its_recorded_rule_from_the_same_que
         ids.setdefault(m["source_split"], []).append(m["question_id"])
     assignment = assign_partitions(ids, proportions=rule["proportions_of_source_train"], seed=rule["seed"])
     assert assignment == {q: m["partition"] for q, m in manifest.items()}
+
+
+# ------------------------------------------------------------------ pilot question lists
+
+def test_partition_sample_is_hop_proportional_and_never_draws_used_questions():
+    from mas_sae.data.production import sample_partition_questions
+    manifest = {}
+    for group, count in (("2hop", 60), ("3hop", 30), ("4hop", 10)):
+        for i in range(count):
+            q = f"{group}__{i}_{i}" if group == "2hop" else f"{group}1__{i}_{i}_{i}"
+            manifest[q] = {"partition": "train", "hop_group": group, "in_development_data": i == 0}
+    manifest["2hop__999_1"] = {"partition": "test", "hop_group": "2hop", "in_development_data": False}
+    exclude = {"2hop__1_1", "3hop1__1_1_1"}
+
+    picked = sample_partition_questions(manifest, partition="train", num_questions=20, seed=7, exclude=exclude)
+
+    assert len(picked) == len(set(picked)) == 20
+    assert all(manifest[q]["partition"] == "train" and not manifest[q]["in_development_data"] for q in picked)
+    assert not set(picked) & exclude
+    assert Counter(manifest[q]["hop_group"] for q in picked) == {"2hop": 12, "3hop": 6, "4hop": 2}
+    assert picked == sample_partition_questions(manifest, partition="train", num_questions=20, seed=7, exclude=exclude)
+    with pytest.raises(ValueError, match="eligible"):
+        sample_partition_questions(manifest, partition="train", num_questions=1000, seed=7)
+
+
+def test_question_ids_are_found_in_any_file_format(tmp_path):
+    from mas_sae.data.production import question_ids_in
+    (tmp_path / "packet.csv").write_text("review_id,question_id\nQ1,2hop__14164_60600\nQ2,3hop1__9285_5188_23307\n")
+    (tmp_path / "key.json").write_text('[{"question_id": "4hop3__1_2_3_4", "note": "2hop is not an id"}]')
+    assert question_ids_in(tmp_path / "packet.csv") == {"2hop__14164_60600", "3hop1__9285_5188_23307"}
+    assert question_ids_in(tmp_path / "key.json") == {"4hop3__1_2_3_4"}

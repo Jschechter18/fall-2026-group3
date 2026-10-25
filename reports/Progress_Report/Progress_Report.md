@@ -67,75 +67,70 @@
 ## Date: Week 5 - 09 22 2026
 
 - Topics of discussion
-  - Item1
-  - Item2
-  - Item3
+  - Demonstrate the 3 condition case
+  - Switch MAS to use 2 different underlying LLM's to expose different ways of thinking
+  - Continue pipeline development
 
 - Action Items:
 
-* [ ] Action Item 1
-* [ ] Action Item 2
-* [ ] Action Item 3
-* [ ] Action Item 4
-* [ ] Action Item 5
+* [ ] Remove the need for 3 conditioned case
+* [ ] Continue integrating pipeline development
+* [ ] Work on literature reviews
 
 ---
 
-## Date: Week 6 - Month Day Year
+## Date: Week 6 - 09 29 2026
 
 - Topics of discussion
-  - Item1
-  - Item2
-  - Item3
+  - NO CLASS
 
 - Action Items:
 
-* [ ] Action Item 1
-* [ ] Action Item 2
-* [ ] Action Item 3
-* [ ] Action Item 4
-* [ ] Action Item 5
+* [ ] Continue pipeline development
+* [ ] Found that we don't need the 3 experimental conditions in the activation collection pipeline
 
 ---
 
-## Date: Week 7 - Month Day Year
+## Date: Week 7 - 10 06 Year
 
 - Topics of discussion
-  - Item1
-  - Item2
-  - Item3
+  - Finish linear probing
+  - Better training of SAE
+  - Data cleanup, QC needs to be addressed AFTER preliminary presentations
+  - By preliminary presentations, have a full run for a single layer done with causality
+  - Goal will be to compare this to an advanced LLM at a later date
 
 - Action Items:
 
-* [ ] Action Item 1
-* [ ] Action Item 2
-* [ ] Action Item 3
-* [ ] Action Item 4
-* [ ] Action Item 5
+* [ ] Complete entirety of experimental pipeline
+* [ ] Train a sparse, useful SAE using the 2 different regularization methods (top k and l1)
+* [ ] Implement linear probes for both tasks
+* [ ] Implement causality pipeline
+* [ ] For layer 33 (for inital results), find features to experiment on and run causality experiment
+* [ ] Prepare preliminary results presentation
 
 ---
 
-## Date: Week 8 - Month Day Year
+## Date: Week 8 - 10 13 Year
 
 - Topics of discussion
-  - Item1
-  - Item2
-  - Item3
+  - NO CLASS
 
 - Action Items:
 
-* [ ] Action Item 1
-* [ ] Action Item 2
-* [ ] Action Item 3
-* [ ] Action Item 4
-* [ ] Action Item 5
+* [ ] Finish training SAE with the 2 training methods
+* [ ] Finish feature selection
+* [ ] Finish linear probing
+* [ ] Finish causality pipeline
+* [ ] Run causality pipeline
+* [ ] Finish preliminary presentation
 
 ---
 
-## Date: Week 9 - Month Day Year
+## Date: Week 9 - 10 20 Year
 
 - Topics of discussion
-  - Item1
+  - Preliminary Presentation day
   - Item2
   - Item3
 

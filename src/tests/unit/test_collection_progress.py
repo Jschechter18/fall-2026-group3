@@ -17,6 +17,7 @@ from mas_sae.experiments import collection, collection_progress, provenance
 from mas_sae.experiments.collection_artifacts import save_collection_artifacts
 from mas_sae.experiments.collection_config import load_collection_config
 from mas_sae.experiments.records import read_jsonl
+from mas_sae.experiments.artifacts import sha256_json
 from mas_sae.experiments.reproducibility import config_sha256
 from mas_sae.sae.dataloader import create_sae_dataloader
 
@@ -355,3 +356,13 @@ def test_source_splits_resume_independently_and_share_sae_directory(tmp_path):
         with pytest.raises(FileExistsError):
             collection_progress.ensure_can_start(
                 resume=True, final_output_dir=result_root / run_name / split, progress=progress_by_split[split])
+
+
+def test_manifest_hash_sees_candidate_order_and_keeps_old_digests():
+    entry = {"question_id": "q0", "hop_group": "2hop", "experiment_split": None}
+    with_order = {**entry, "candidate_order": "a1_first"}
+    assert collection_progress.manifest_sha256([with_order]) \
+        != collection_progress.manifest_sha256([{**entry, "candidate_order": "critic_first"}])
+    # a manifest without candidate orders hashes exactly as before
+    assert collection_progress.manifest_sha256([entry]) == sha256_json(
+        [{"question_id": "q0", "experiment_split": None, "hop_group": "2hop"}])

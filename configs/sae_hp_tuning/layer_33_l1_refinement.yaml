@@ -1,0 +1,32 @@
+# Refine the gap between L1=1 (dense) and L1=10 (low dictionary usage).
+# Eight trials; keep the activation source and training budget of the coarse sweep.
+activation_run_name: natural_4b_full9_partitioned
+layer: 33
+
+defaults:
+  latent_dim: 12888
+  epochs: 200
+  batch_size: 256
+  seed: 42
+  train_shuffle: true
+  patience: 20
+  early_stopping_min_delta: 0.0001
+  lr_patience: 5
+  inactivity_window_examples: 10000
+
+groups:
+  - name: l1_refinement
+    fixed:
+      sparsity_mode: l1
+      tied_initialization: true
+      aux_coefficient: 0.0
+    grid:
+      lr: [0.0001, 0.0003]
+      sparsity_coefficient: [2.0, 3.0, 5.0, 7.0]
+
+# Suggest the best reconstruction within the existing per-example activity budget.
+# Selection does not optimize dictionary coverage: also review train/validation
+# inactivity and firing frequencies in each trial's history.json and
+# feature_frequencies.json. Repeat promising configurations across seeds afterward.
+selection:
+  max_mean_active_features: 128

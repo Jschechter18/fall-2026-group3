@@ -33,6 +33,8 @@ from collections import Counter
 import csv
 import json
 from pathlib import Path
+import random
+import re
 
 import torch
 
@@ -41,10 +43,11 @@ from mas_sae.data.musique import (
     SUPPORTED_EXPERIMENT_SPLITS,
     SUPPORTED_PARTITIONS,
     SUPPORTED_SOURCE_SPLITS,
+    allocate_counts,
     assign_experiment_splits,
     hop_group,
 )
-from mas_sae.evaluation.behavior_v01 import LABEL_INPUT_FIELDS, read_labels
+from mas_sae.evaluation.behavior_labels import LABEL_INPUT_FIELDS, read_labels
 from mas_sae.experiments.artifacts import ensure_output_available, sha256_file
 from mas_sae.experiments.collection_artifacts import _add_sae_indices, _save_and_verify
 from mas_sae.experiments.records import read_jsonl, write_jsonl
@@ -88,11 +91,20 @@ MISSING_IDS_FILE = "missing_question_ids.json"   # frozen questions a partial ru
 COVERAGE_MODES = ("complete", "subset")
 
 
+def interaction_paths(results_dir, partitions=None):
+    """The run's ``interactions.jsonl`` files that can hold ``partitions`` (all when None)."""
+    if partitions is None:
+        sources = SUPPORTED_SOURCE_SPLITS
+    else:
+        sources = {"train" if p in TRAIN_SOURCE_PARTITIONS else "validation" for p in partitions}
+    return [Path(results_dir) / source_split / "interactions.jsonl" for source_split in sorted(sources)]
+
+
 def read_run_interactions(results_dir):
     """All episodes of one run: its train and validation ``interactions.jsonl`` together."""
     rows = []
-    for source_split in sorted(SUPPORTED_SOURCE_SPLITS):
-        rows.extend(read_jsonl(Path(results_dir) / source_split / "interactions.jsonl"))
+    for path in interaction_paths(results_dir):
+        rows.extend(read_jsonl(path))
     return rows
 
 
@@ -300,6 +312,37 @@ def split_audit(manifest):
     }
 
 
+# A MuSiQue question id such as 2hop__13548_13529 or 3hop1__9285_5188_23307.
+MUSIQUE_ID = re.compile(r"\b\d+hop\d*__\d+(?:_\d+)+\b")
+
+
+def question_ids_in(path):
+    """Every MuSiQue question id that appears anywhere in a file, whatever its format."""
+    return set(MUSIQUE_ID.findall(Path(path).read_text(encoding="utf-8", errors="ignore")))
+
+
+def sample_partition_questions(manifest, *, partition, num_questions, seed, exclude=frozenset()):
+    """A seeded sample of one partition's questions, in proportion to its hop groups.
+
+    Questions flagged ``in_development_data`` and any id in ``exclude`` are
+    never drawn. Returns the ids in a seeded shuffled order, so a partial run
+    still mixes hop groups.
+    """
+    pool = sorted(
+        q for q, m in manifest.items()
+        if m["partition"] == partition and not m["in_development_data"] and q not in exclude)
+    by_group = {}
+    for q in pool:
+        by_group.setdefault(manifest[q]["hop_group"], []).append(q)
+    if num_questions > len(pool):
+        raise ValueError(f"{num_questions} questions requested but {partition} has {len(pool)} eligible")
+    counts = allocate_counts(num_questions, {g: len(ids) / len(pool) for g, ids in sorted(by_group.items())})
+    rng = random.Random(seed)
+    picked = [q for g in sorted(by_group) for q in rng.sample(by_group[g], counts[g])]
+    rng.shuffle(picked)
+    return picked
+
+
 def write_manifest(path, manifest):
     with open(path, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=MANIFEST_FIELDS)
@@ -409,12 +452,16 @@ def authorize_rows(rows, manifest, *, purpose):
     return rows
 
 
-def load_labeled_rows(results_dir, package_dir):
+def load_labeled_rows(results_dir, package_dir, *, partitions=None):
     """Join a run's interactions with the labels and the partition manifest.
 
     ``results_dir`` holds ``train/`` and ``validation/`` folders, each with an
     ``interactions.jsonl`` (full run or layer scan). ``package_dir`` is the
     folder written by ``scripts/prepare_behavior_v01.py``.
+
+    With ``partitions``, only the interaction files that can hold them are
+    opened, and rows of other partitions sharing a file are dropped as soon as
+    their id is read, before any label is attached.
 
     Returns ``(rows, manifest)``. Each row is the original interaction with two
     additions: ``partition`` and ``label``.
@@ -423,7 +470,9 @@ def load_labeled_rows(results_dir, package_dir):
     manifest = read_manifest(package_dir / "split_manifest.csv")
     labels = read_labels(package_dir / "labels.csv")
 
-    rows = read_run_interactions(results_dir)
+    rows = [row for path in interaction_paths(results_dir, partitions) for row in read_jsonl(path)]
+    if partitions is not None:
+        rows = [row for row in rows if manifest[row["question_id"]]["partition"] in partitions]
     for row in rows:
         qid = row["question_id"]
         row["partition"] = manifest[qid]["partition"]
@@ -490,10 +539,13 @@ def load_production_activations(rows, manifest, activation_root, *,
 
 DEVELOPMENT_PARTITIONS = ("train", "validation")
 
+# The partitions one exported run holds side by side. Intervention is always its own run.
+EXPORT_PARTITIONS = ("train", "validation", "test")
+
 
 def export_partition_activations(rows, manifest, activation_root, *, run, layers,
                                  export_activation_root, export_result_root, export_run_name,
-                                 partitions=DEVELOPMENT_PARTITIONS):
+                                 partitions=EXPORT_PARTITIONS):
     """Write one run's activations and episodes regrouped by partition.
 
     The output has the layout the collection pipeline already produces, with the
@@ -507,17 +559,21 @@ def export_partition_activations(rows, manifest, activation_root, *, run, layers
             the original row is kept as source_run / source_activation_index)
         <export_result_root>/<export_run_name>/intervention_question_ids.json
 
-    Only the named ``partitions`` are written. The default is the development
-    pair, so a training directory never contains ``test.pt`` and nothing can
-    score test by accident; ``test`` is exported at the freeze and
-    ``intervention`` at the causal stage, each under its own run name. The
-    intervention id file is always written. Both destination directories must
-    not exist yet, so an export can never overwrite or leave stale files.
-    Returns {partition: {"questions", "rows", "files": {path: sha256}}}.
+    Only the named ``partitions`` are written. The default is train, validation
+    and test in one layer folder, which is what the loaders expect: the SAE
+    trainer reads ``train`` and ``validation`` and scores ``test.pt`` when it is
+    there, and the probe loaders read only the partitions they name.
+    ``intervention`` is reserved for the causal experiment, so it can only be
+    exported on its own, under its own run name, and its rows never sit next to
+    the others. The intervention id file is always written. Both destination
+    directories must not exist yet, so an export can never overwrite or leave
+    stale files. Returns {partition: {"questions", "rows", "files": {path: sha256}}}.
     """
     unknown = set(partitions) - set(PARTITIONS)
     if unknown:
         raise ValueError(f"unknown partitions {sorted(unknown)}; expected a subset of {list(PARTITIONS)}")
+    if "intervention" in partitions and set(partitions) != {"intervention"}:
+        raise ValueError("intervention is exported on its own, under its own run name")
     by_partition = {partition: [] for partition in PARTITIONS}
     for row in rows:
         by_partition[manifest[row["question_id"]]["partition"]].append(row)

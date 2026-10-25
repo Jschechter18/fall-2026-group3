@@ -1,0 +1,645 @@
+{
+  "protocol": "adoption_anonymization_v1",
+  "by_condition_and_order": {
+    "labeled_a1_first": {
+      "plausible_incorrect": {
+        "completed": 34,
+        "skipped": 66,
+        "skip_reasons": {
+          "skipped_requires_correct_a1": 45,
+          "skipped_target_generation_failed": 14,
+          "skipped_a1_not_answer": 7
+        },
+        "responses": {
+          "retained_a1": 25,
+          "adopted_critic": 9
+        },
+        "adopted_target": 9,
+        "adoption_rate": 0.2647058823529412,
+        "retained_a1": 25,
+        "a2_correct": 25,
+        "corrected": 0,
+        "harmed": 9,
+        "reached_token_budget": 0,
+        "by_hop": {
+          "2hop": {
+            "completed": 8,
+            "adopted_target": 4,
+            "retained_a1": 4,
+            "a2_correct": 4
+          },
+          "3hop": {
+            "completed": 11,
+            "adopted_target": 1,
+            "retained_a1": 10,
+            "a2_correct": 10
+          },
+          "4hop": {
+            "completed": 15,
+            "adopted_target": 4,
+            "retained_a1": 11,
+            "a2_correct": 11
+          }
+        }
+      },
+      "obvious_incorrect": {
+        "completed": 19,
+        "skipped": 81,
+        "skip_reasons": {
+          "skipped_target_generation_failed": 29,
+          "skipped_requires_correct_a1": 45,
+          "skipped_a1_not_answer": 7
+        },
+        "responses": {
+          "retained_a1": 12,
+          "adopted_critic": 7
+        },
+        "adopted_target": 7,
+        "adoption_rate": 0.3684210526315789,
+        "retained_a1": 12,
+        "a2_correct": 12,
+        "corrected": 0,
+        "harmed": 7,
+        "reached_token_budget": 0,
+        "by_hop": {
+          "2hop": {
+            "completed": 3,
+            "adopted_target": 2,
+            "retained_a1": 1,
+            "a2_correct": 1
+          },
+          "3hop": {
+            "completed": 6,
+            "adopted_target": 1,
+            "retained_a1": 5,
+            "a2_correct": 5
+          },
+          "4hop": {
+            "completed": 10,
+            "adopted_target": 4,
+            "retained_a1": 6,
+            "a2_correct": 6
+          }
+        }
+      },
+      "correct_correction": {
+        "completed": 45,
+        "skipped": 55,
+        "skip_reasons": {
+          "skipped_requires_incorrect_a1": 48,
+          "skipped_a1_not_answer": 7
+        },
+        "responses": {
+          "adopted_critic": 19,
+          "retained_a1": 24,
+          "unresolved": 1,
+          "non_answer": 1
+        },
+        "adopted_target": 19,
+        "adoption_rate": 0.4222222222222222,
+        "retained_a1": 24,
+        "a2_correct": 19,
+        "corrected": 19,
+        "harmed": 0,
+        "reached_token_budget": 0,
+        "by_hop": {
+          "2hop": {
+            "completed": 15,
+            "adopted_target": 7,
+            "retained_a1": 8,
+            "a2_correct": 7
+          },
+          "3hop": {
+            "completed": 17,
+            "adopted_target": 8,
+            "retained_a1": 9,
+            "a2_correct": 8
+          },
+          "4hop": {
+            "completed": 13,
+            "adopted_target": 4,
+            "retained_a1": 7,
+            "a2_correct": 4
+          }
+        }
+      }
+    },
+    "labeled_critic_first": {
+      "plausible_incorrect": {
+        "completed": 34,
+        "skipped": 66,
+        "skip_reasons": {
+          "skipped_requires_correct_a1": 45,
+          "skipped_target_generation_failed": 14,
+          "skipped_a1_not_answer": 7
+        },
+        "responses": {
+          "retained_a1": 23,
+          "adopted_critic": 10,
+          "third_answer": 1
+        },
+        "adopted_target": 10,
+        "adoption_rate": 0.29411764705882354,
+        "retained_a1": 23,
+        "a2_correct": 23,
+        "corrected": 0,
+        "harmed": 11,
+        "reached_token_budget": 0,
+        "by_hop": {
+          "2hop": {
+            "completed": 8,
+            "adopted_target": 5,
+            "retained_a1": 3,
+            "a2_correct": 3
+          },
+          "3hop": {
+            "completed": 11,
+            "adopted_target": 1,
+            "retained_a1": 9,
+            "a2_correct": 9
+          },
+          "4hop": {
+            "completed": 15,
+            "adopted_target": 4,
+            "retained_a1": 11,
+            "a2_correct": 11
+          }
+        }
+      },
+      "obvious_incorrect": {
+        "completed": 19,
+        "skipped": 81,
+        "skip_reasons": {
+          "skipped_target_generation_failed": 29,
+          "skipped_requires_correct_a1": 45,
+          "skipped_a1_not_answer": 7
+        },
+        "responses": {
+          "adopted_critic": 8,
+          "retained_a1": 11
+        },
+        "adopted_target": 8,
+        "adoption_rate": 0.42105263157894735,
+        "retained_a1": 11,
+        "a2_correct": 11,
+        "corrected": 0,
+        "harmed": 8,
+        "reached_token_budget": 0,
+        "by_hop": {
+          "2hop": {
+            "completed": 3,
+            "adopted_target": 1,
+            "retained_a1": 2,
+            "a2_correct": 2
+          },
+          "3hop": {
+            "completed": 6,
+            "adopted_target": 3,
+            "retained_a1": 3,
+            "a2_correct": 3
+          },
+          "4hop": {
+            "completed": 10,
+            "adopted_target": 4,
+            "retained_a1": 6,
+            "a2_correct": 6
+          }
+        }
+      },
+      "correct_correction": {
+        "completed": 45,
+        "skipped": 55,
+        "skip_reasons": {
+          "skipped_requires_incorrect_a1": 48,
+          "skipped_a1_not_answer": 7
+        },
+        "responses": {
+          "adopted_critic": 18,
+          "retained_a1": 25,
+          "third_answer": 1,
+          "unresolved": 1
+        },
+        "adopted_target": 18,
+        "adoption_rate": 0.4,
+        "retained_a1": 25,
+        "a2_correct": 18,
+        "corrected": 18,
+        "harmed": 0,
+        "reached_token_budget": 0,
+        "by_hop": {
+          "2hop": {
+            "completed": 15,
+            "adopted_target": 6,
+            "retained_a1": 9,
+            "a2_correct": 6
+          },
+          "3hop": {
+            "completed": 17,
+            "adopted_target": 6,
+            "retained_a1": 10,
+            "a2_correct": 6
+          },
+          "4hop": {
+            "completed": 13,
+            "adopted_target": 6,
+            "retained_a1": 6,
+            "a2_correct": 6
+          }
+        }
+      }
+    },
+    "anonymous_a1_first": {
+      "plausible_incorrect": {
+        "completed": 34,
+        "skipped": 66,
+        "skip_reasons": {
+          "skipped_requires_correct_a1": 45,
+          "skipped_target_generation_failed": 14,
+          "skipped_a1_not_answer": 7
+        },
+        "responses": {
+          "retained_a1": 28,
+          "third_answer": 5,
+          "adopted_critic": 1
+        },
+        "adopted_target": 1,
+        "adoption_rate": 0.029411764705882353,
+        "retained_a1": 28,
+        "a2_correct": 28,
+        "corrected": 0,
+        "harmed": 6,
+        "reached_token_budget": 0,
+        "by_hop": {
+          "2hop": {
+            "completed": 8,
+            "adopted_target": 0,
+            "retained_a1": 5,
+            "a2_correct": 5
+          },
+          "3hop": {
+            "completed": 11,
+            "adopted_target": 0,
+            "retained_a1": 10,
+            "a2_correct": 10
+          },
+          "4hop": {
+            "completed": 15,
+            "adopted_target": 1,
+            "retained_a1": 13,
+            "a2_correct": 13
+          }
+        }
+      },
+      "obvious_incorrect": {
+        "completed": 19,
+        "skipped": 81,
+        "skip_reasons": {
+          "skipped_target_generation_failed": 29,
+          "skipped_requires_correct_a1": 45,
+          "skipped_a1_not_answer": 7
+        },
+        "responses": {
+          "retained_a1": 14,
+          "third_answer": 3,
+          "adopted_critic": 2
+        },
+        "adopted_target": 2,
+        "adoption_rate": 0.10526315789473684,
+        "retained_a1": 14,
+        "a2_correct": 14,
+        "corrected": 0,
+        "harmed": 5,
+        "reached_token_budget": 0,
+        "by_hop": {
+          "2hop": {
+            "completed": 3,
+            "adopted_target": 0,
+            "retained_a1": 2,
+            "a2_correct": 2
+          },
+          "3hop": {
+            "completed": 6,
+            "adopted_target": 1,
+            "retained_a1": 5,
+            "a2_correct": 5
+          },
+          "4hop": {
+            "completed": 10,
+            "adopted_target": 1,
+            "retained_a1": 7,
+            "a2_correct": 7
+          }
+        }
+      },
+      "correct_correction": {
+        "completed": 45,
+        "skipped": 55,
+        "skip_reasons": {
+          "skipped_requires_incorrect_a1": 48,
+          "skipped_a1_not_answer": 7
+        },
+        "responses": {
+          "retained_a1": 31,
+          "adopted_critic": 7,
+          "third_answer": 7
+        },
+        "adopted_target": 7,
+        "adoption_rate": 0.15555555555555556,
+        "retained_a1": 31,
+        "a2_correct": 7,
+        "corrected": 7,
+        "harmed": 0,
+        "reached_token_budget": 0,
+        "by_hop": {
+          "2hop": {
+            "completed": 15,
+            "adopted_target": 4,
+            "retained_a1": 10,
+            "a2_correct": 4
+          },
+          "3hop": {
+            "completed": 17,
+            "adopted_target": 1,
+            "retained_a1": 12,
+            "a2_correct": 1
+          },
+          "4hop": {
+            "completed": 13,
+            "adopted_target": 2,
+            "retained_a1": 9,
+            "a2_correct": 2
+          }
+        }
+      }
+    },
+    "anonymous_critic_first": {
+      "plausible_incorrect": {
+        "completed": 34,
+        "skipped": 66,
+        "skip_reasons": {
+          "skipped_requires_correct_a1": 45,
+          "skipped_target_generation_failed": 14,
+          "skipped_a1_not_answer": 7
+        },
+        "responses": {
+          "retained_a1": 21,
+          "third_answer": 6,
+          "adopted_critic": 6,
+          "non_answer": 1
+        },
+        "adopted_target": 6,
+        "adoption_rate": 0.17647058823529413,
+        "retained_a1": 21,
+        "a2_correct": 21,
+        "corrected": 0,
+        "harmed": 13,
+        "reached_token_budget": 0,
+        "by_hop": {
+          "2hop": {
+            "completed": 8,
+            "adopted_target": 4,
+            "retained_a1": 3,
+            "a2_correct": 3
+          },
+          "3hop": {
+            "completed": 11,
+            "adopted_target": 1,
+            "retained_a1": 8,
+            "a2_correct": 8
+          },
+          "4hop": {
+            "completed": 15,
+            "adopted_target": 1,
+            "retained_a1": 10,
+            "a2_correct": 10
+          }
+        }
+      },
+      "obvious_incorrect": {
+        "completed": 19,
+        "skipped": 81,
+        "skip_reasons": {
+          "skipped_target_generation_failed": 29,
+          "skipped_requires_correct_a1": 45,
+          "skipped_a1_not_answer": 7
+        },
+        "responses": {
+          "retained_a1": 9,
+          "adopted_critic": 8,
+          "third_answer": 2
+        },
+        "adopted_target": 8,
+        "adoption_rate": 0.42105263157894735,
+        "retained_a1": 9,
+        "a2_correct": 9,
+        "corrected": 0,
+        "harmed": 10,
+        "reached_token_budget": 0,
+        "by_hop": {
+          "2hop": {
+            "completed": 3,
+            "adopted_target": 2,
+            "retained_a1": 0,
+            "a2_correct": 0
+          },
+          "3hop": {
+            "completed": 6,
+            "adopted_target": 1,
+            "retained_a1": 5,
+            "a2_correct": 5
+          },
+          "4hop": {
+            "completed": 10,
+            "adopted_target": 5,
+            "retained_a1": 4,
+            "a2_correct": 4
+          }
+        }
+      },
+      "correct_correction": {
+        "completed": 45,
+        "skipped": 55,
+        "skip_reasons": {
+          "skipped_requires_incorrect_a1": 48,
+          "skipped_a1_not_answer": 7
+        },
+        "responses": {
+          "third_answer": 12,
+          "retained_a1": 20,
+          "adopted_critic": 11,
+          "unresolved": 2
+        },
+        "adopted_target": 12,
+        "adoption_rate": 0.26666666666666666,
+        "retained_a1": 20,
+        "a2_correct": 12,
+        "corrected": 12,
+        "harmed": 0,
+        "reached_token_budget": 0,
+        "by_hop": {
+          "2hop": {
+            "completed": 15,
+            "adopted_target": 5,
+            "retained_a1": 7,
+            "a2_correct": 5
+          },
+          "3hop": {
+            "completed": 17,
+            "adopted_target": 2,
+            "retained_a1": 10,
+            "a2_correct": 2
+          },
+          "4hop": {
+            "completed": 13,
+            "adopted_target": 5,
+            "retained_a1": 3,
+            "a2_correct": 5
+          }
+        }
+      }
+    }
+  },
+  "paired_label_effects": {
+    "plausible_incorrect": {
+      "a1_first": {
+        "completed_pairs": 34,
+        "labeled_adopted": 9,
+        "anonymous_adopted": 1,
+        "labeled_retained": 25,
+        "anonymous_retained": 28,
+        "adopted_to_retained": 6,
+        "retained_to_adopted": 0,
+        "accuracy_gains": 6,
+        "accuracy_losses": 3
+      },
+      "critic_first": {
+        "completed_pairs": 34,
+        "labeled_adopted": 10,
+        "anonymous_adopted": 6,
+        "labeled_retained": 23,
+        "anonymous_retained": 21,
+        "adopted_to_retained": 3,
+        "retained_to_adopted": 1,
+        "accuracy_gains": 3,
+        "accuracy_losses": 5
+      }
+    },
+    "obvious_incorrect": {
+      "a1_first": {
+        "completed_pairs": 19,
+        "labeled_adopted": 7,
+        "anonymous_adopted": 2,
+        "labeled_retained": 12,
+        "anonymous_retained": 14,
+        "adopted_to_retained": 5,
+        "retained_to_adopted": 0,
+        "accuracy_gains": 5,
+        "accuracy_losses": 3
+      },
+      "critic_first": {
+        "completed_pairs": 19,
+        "labeled_adopted": 8,
+        "anonymous_adopted": 8,
+        "labeled_retained": 11,
+        "anonymous_retained": 9,
+        "adopted_to_retained": 4,
+        "retained_to_adopted": 4,
+        "accuracy_gains": 4,
+        "accuracy_losses": 6
+      }
+    },
+    "correct_correction": {
+      "a1_first": {
+        "completed_pairs": 45,
+        "labeled_adopted": 19,
+        "anonymous_adopted": 7,
+        "labeled_retained": 24,
+        "anonymous_retained": 31,
+        "adopted_to_retained": 8,
+        "retained_to_adopted": 0,
+        "accuracy_gains": 0,
+        "accuracy_losses": 12
+      },
+      "critic_first": {
+        "completed_pairs": 45,
+        "labeled_adopted": 18,
+        "anonymous_adopted": 12,
+        "labeled_retained": 25,
+        "anonymous_retained": 20,
+        "adopted_to_retained": 3,
+        "retained_to_adopted": 3,
+        "accuracy_gains": 3,
+        "accuracy_losses": 9
+      }
+    }
+  },
+  "paired_order_effects": {
+    "plausible_incorrect": {
+      "labeled": {
+        "completed_pairs": 34,
+        "target_adopted_a1_first": 9,
+        "target_adopted_critic_first": 10,
+        "adoption_changes_with_order": 9,
+        "retained_a1_both_orders": 19,
+        "adopted_target_both_orders": 5,
+        "selected_candidate_a_both_orders": 5,
+        "selected_candidate_b_both_orders": 4
+      },
+      "anonymous": {
+        "completed_pairs": 34,
+        "target_adopted_a1_first": 1,
+        "target_adopted_critic_first": 6,
+        "adoption_changes_with_order": 5,
+        "retained_a1_both_orders": 20,
+        "adopted_target_both_orders": 1,
+        "selected_candidate_a_both_orders": 3,
+        "selected_candidate_b_both_orders": 0
+      }
+    },
+    "obvious_incorrect": {
+      "labeled": {
+        "completed_pairs": 19,
+        "target_adopted_a1_first": 7,
+        "target_adopted_critic_first": 8,
+        "adoption_changes_with_order": 9,
+        "retained_a1_both_orders": 7,
+        "adopted_target_both_orders": 3,
+        "selected_candidate_a_both_orders": 5,
+        "selected_candidate_b_both_orders": 4
+      },
+      "anonymous": {
+        "completed_pairs": 19,
+        "target_adopted_a1_first": 2,
+        "target_adopted_critic_first": 8,
+        "adoption_changes_with_order": 6,
+        "retained_a1_both_orders": 8,
+        "adopted_target_both_orders": 2,
+        "selected_candidate_a_both_orders": 6,
+        "selected_candidate_b_both_orders": 0
+      }
+    },
+    "correct_correction": {
+      "labeled": {
+        "completed_pairs": 45,
+        "target_adopted_a1_first": 19,
+        "target_adopted_critic_first": 18,
+        "adoption_changes_with_order": 13,
+        "retained_a1_both_orders": 18,
+        "adopted_target_both_orders": 12,
+        "selected_candidate_a_both_orders": 6,
+        "selected_candidate_b_both_orders": 6
+      },
+      "anonymous": {
+        "completed_pairs": 45,
+        "target_adopted_a1_first": 7,
+        "target_adopted_critic_first": 12,
+        "adoption_changes_with_order": 9,
+        "retained_a1_both_orders": 18,
+        "adopted_target_both_orders": 5,
+        "selected_candidate_a_both_orders": 6,
+        "selected_candidate_b_both_orders": 1
+      }
+    }
+  },
+  "note": "Same frozen A1 and recommendation in each cell. Conditions differ only in source labels; both orders are tested. Cells are repeated trials, not independent questions. All completed outputs remain in denominators; source skips are preserved. No historical baseline is treated as a matched layout control."
+}

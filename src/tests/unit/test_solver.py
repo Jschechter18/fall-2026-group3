@@ -1,3 +1,4 @@
+import pytest
 from unittest.mock import Mock
 
 import torch
@@ -188,3 +189,61 @@ def test_revise_uses_revision_prompt():
     assert "Previous answer: Lyon" in text
     assert "Reviewer feedback: The answer should be Paris." in text
     assert text.endswith("Final answer:")
+
+
+CANDIDATE_PARAGRAPHS = [{"idx": 0, "title": "Green", "paragraph_text": "Green is by Steve Hillage."}]
+
+
+def test_candidate_prompt_lists_both_answers_with_their_source_in_either_order():
+    solver, _, _ = make_solver()
+
+    a1_first = solver.build_candidate_prompt("Who made Green?", CANDIDATE_PARAGRAPHS,
+                                             "Steve Hillage", "Miquette Giraudy", "a1_first")
+    assert a1_first == (
+        "Answer the question using only the paragraphs provided.\n"
+        "Consider the two candidate answers below. You may use either candidate, "
+        "provide another answer, or state that the evidence is insufficient.\n"
+        "Respond with the final answer text only, no explanation.\n\n"
+        "[0] Green: Green is by Steve Hillage.\n\nQuestion: Who made Green?\n"
+        "Candidate A (your previous answer): Steve Hillage\n"
+        "Candidate B (the reviewer's recommendation): Miquette Giraudy\n"
+        "Final answer:"
+    )
+    critic_first = solver.build_candidate_prompt("Who made Green?", CANDIDATE_PARAGRAPHS,
+                                                 "Steve Hillage", "Miquette Giraudy", "critic_first")
+    assert critic_first.endswith(
+        "Candidate A (the reviewer's recommendation): Miquette Giraudy\n"
+        "Candidate B (your previous answer): Steve Hillage\n"
+        "Final answer:"
+    )
+    with pytest.raises(ValueError, match="order must be one of"):
+        solver.build_candidate_prompt("Q", CANDIDATE_PARAGRAPHS, "a", "b", "random")
+
+
+def test_candidate_prompt_is_the_adoption_pilot_labeled_prompt():
+    """The production prompt is the labeled condition of PR #138, word for word."""
+    pilot = pytest.importorskip("mas_sae.experiments.anonymized_adoption")
+    assert Solver.CANDIDATE_PROMPT == pilot.CANDIDATE_TEMPLATE
+    assert Solver.CANDIDATE_LABELS == pilot.LABELS
+    assert Solver.CANDIDATE_ORDERS == pilot.ORDERS
+    solver, _, _ = make_solver()
+    for order in Solver.CANDIDATE_ORDERS:
+        assert solver.build_candidate_prompt("Q?", CANDIDATE_PARAGRAPHS, "x", "y", order) == (
+            pilot.CandidateSolver.build_candidate_prompt(solver, "Q?", CANDIDATE_PARAGRAPHS, "x", "y", "labeled", order))
+
+
+def test_choose_generates_from_the_candidate_prompt():
+    solver, _, processor = make_solver()
+    assert solver.choose("Q?", CANDIDATE_PARAGRAPHS, "x", "y", "critic_first") == "Miquette Giraudy"
+    messages = processor.apply_chat_template.call_args.args[0]
+    assert messages[0]["content"][0]["text"] == solver.build_candidate_prompt(
+        "Q?", CANDIDATE_PARAGRAPHS, "x", "y", "critic_first")
+
+
+def test_first_token_id_uses_the_tokenizer_on_the_stripped_text():
+    solver, _, processor = make_solver()
+    processor.tokenizer = Mock(return_value={"input_ids": [7, 8]})
+    assert solver.first_token_id("  1953 ") == 7
+    processor.tokenizer.assert_called_once_with("1953", add_special_tokens=False)
+    processor.tokenizer.return_value = {"input_ids": []}
+    assert solver.first_token_id("") is None

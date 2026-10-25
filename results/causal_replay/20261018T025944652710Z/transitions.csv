@@ -1,0 +1,141 @@
+experiment,condition,control_response,response,count
+TopK SAE,no_ablation,adopted_critic,adopted_critic,458
+TopK SAE,no_ablation,third_answer,third_answer,38
+TopK SAE,no_ablation,retained_a1,retained_a1,18
+TopK SAE,no_ablation,third_answer,unresolved,1
+TopK SAE,no_ablation,retained_a1,third_answer,1
+TopK SAE,no_ablation,retained_a1,unresolved,1
+TopK SAE,targeted_ablation,adopted_critic,adopted_critic,458
+TopK SAE,targeted_ablation,third_answer,third_answer,38
+TopK SAE,targeted_ablation,retained_a1,retained_a1,18
+TopK SAE,targeted_ablation,unresolved,third_answer,1
+TopK SAE,targeted_ablation,unresolved,retained_a1,1
+TopK SAE,targeted_ablation,third_answer,unresolved,1
+TopK SAE,random_ablation,adopted_critic,adopted_critic,9080
+TopK SAE,random_ablation,third_answer,third_answer,748
+TopK SAE,random_ablation,retained_a1,retained_a1,351
+TopK SAE,random_ablation,unresolved,unresolved,21
+TopK SAE,random_ablation,third_answer,non_answer,9
+TopK SAE,random_ablation,unresolved,retained_a1,9
+TopK SAE,random_ablation,adopted_critic,third_answer,46
+TopK SAE,random_ablation,third_answer,retained_a1,6
+TopK SAE,random_ablation,unresolved,third_answer,10
+TopK SAE,random_ablation,third_answer,unresolved,12
+TopK SAE,random_ablation,adopted_critic,retained_a1,7
+TopK SAE,random_ablation,adopted_critic,unresolved,26
+TopK SAE,random_ablation,retained_a1,unresolved,2
+TopK SAE,random_ablation,retained_a1,third_answer,6
+TopK SAE,random_ablation,third_answer,adopted_critic,5
+TopK SAE,random_ablation,retained_a1,adopted_critic,1
+TopK SAE,random_ablation,adopted_critic,non_answer,1
+TopK SAE · error-preserving,targeted_ablation,adopted_critic,adopted_critic,457
+TopK SAE · error-preserving,targeted_ablation,third_answer,third_answer,37
+TopK SAE · error-preserving,targeted_ablation,retained_a1,retained_a1,19
+TopK SAE · error-preserving,targeted_ablation,retained_a1,third_answer,1
+TopK SAE · error-preserving,targeted_ablation,third_answer,retained_a1,1
+TopK SAE · error-preserving,targeted_ablation,adopted_critic,third_answer,1
+TopK SAE · error-preserving,targeted_ablation,third_answer,unresolved,1
+TopK SAE · error-preserving,random_ablation,adopted_critic,adopted_critic,9052
+TopK SAE · error-preserving,random_ablation,third_answer,third_answer,748
+TopK SAE · error-preserving,random_ablation,retained_a1,retained_a1,378
+TopK SAE · error-preserving,random_ablation,third_answer,unresolved,9
+TopK SAE · error-preserving,random_ablation,adopted_critic,third_answer,61
+TopK SAE · error-preserving,random_ablation,third_answer,retained_a1,15
+TopK SAE · error-preserving,random_ablation,retained_a1,third_answer,18
+TopK SAE · error-preserving,random_ablation,adopted_critic,unresolved,33
+TopK SAE · error-preserving,random_ablation,adopted_critic,retained_a1,10
+TopK SAE · error-preserving,random_ablation,retained_a1,unresolved,3
+TopK SAE · error-preserving,random_ablation,third_answer,non_answer,3
+TopK SAE · error-preserving,random_ablation,third_answer,adopted_critic,5
+TopK SAE · error-preserving,random_ablation,adopted_critic,non_answer,4
+TopK SAE · error-preserving,random_ablation,retained_a1,adopted_critic,1
+L1 SAE,no_ablation,adopted_critic,adopted_critic,458
+L1 SAE,no_ablation,third_answer,third_answer,37
+L1 SAE,no_ablation,retained_a1,retained_a1,18
+L1 SAE,no_ablation,third_answer,unresolved,1
+L1 SAE,no_ablation,third_answer,non_answer,1
+L1 SAE,no_ablation,retained_a1,third_answer,1
+L1 SAE,no_ablation,retained_a1,unresolved,1
+L1 SAE,targeted_ablation,adopted_critic,unresolved,70
+L1 SAE,targeted_ablation,adopted_critic,adopted_critic,303
+L1 SAE,targeted_ablation,adopted_critic,third_answer,83
+L1 SAE,targeted_ablation,third_answer,third_answer,36
+L1 SAE,targeted_ablation,retained_a1,retained_a1,8
+L1 SAE,targeted_ablation,unresolved,third_answer,1
+L1 SAE,targeted_ablation,retained_a1,unresolved,6
+L1 SAE,targeted_ablation,non_answer,third_answer,1
+L1 SAE,targeted_ablation,retained_a1,adopted_critic,2
+L1 SAE,targeted_ablation,adopted_critic,non_answer,1
+L1 SAE,targeted_ablation,adopted_critic,retained_a1,1
+L1 SAE,targeted_ablation,retained_a1,third_answer,2
+L1 SAE,targeted_ablation,unresolved,retained_a1,1
+L1 SAE,targeted_ablation,third_answer,non_answer,1
+L1 SAE,targeted_ablation,third_answer,unresolved,1
+L1 SAE,random_ablation,adopted_critic,adopted_critic,9155
+L1 SAE,random_ablation,third_answer,third_answer,757
+L1 SAE,random_ablation,retained_a1,retained_a1,360
+L1 SAE,random_ablation,unresolved,unresolved,40
+L1 SAE,random_ablation,non_answer,non_answer,20
+L1 SAE,random_ablation,third_answer,adopted_critic,3
+L1 SAE,random_ablation,adopted_critic,third_answer,5
+L1 SAE · error-preserving,targeted_ablation,adopted_critic,retained_a1,2
+L1 SAE · error-preserving,targeted_ablation,adopted_critic,adopted_critic,321
+L1 SAE · error-preserving,targeted_ablation,adopted_critic,unresolved,53
+L1 SAE · error-preserving,targeted_ablation,adopted_critic,third_answer,81
+L1 SAE · error-preserving,targeted_ablation,third_answer,third_answer,33
+L1 SAE · error-preserving,targeted_ablation,third_answer,unresolved,4
+L1 SAE · error-preserving,targeted_ablation,retained_a1,retained_a1,12
+L1 SAE · error-preserving,targeted_ablation,third_answer,retained_a1,1
+L1 SAE · error-preserving,targeted_ablation,retained_a1,unresolved,2
+L1 SAE · error-preserving,targeted_ablation,retained_a1,third_answer,6
+L1 SAE · error-preserving,targeted_ablation,third_answer,non_answer,1
+L1 SAE · error-preserving,targeted_ablation,adopted_critic,non_answer,1
+L1 SAE · error-preserving,random_ablation,adopted_critic,adopted_critic,9155
+L1 SAE · error-preserving,random_ablation,third_answer,third_answer,767
+L1 SAE · error-preserving,random_ablation,retained_a1,retained_a1,395
+L1 SAE · error-preserving,random_ablation,retained_a1,third_answer,1
+L1 SAE · error-preserving,random_ablation,third_answer,retained_a1,12
+L1 SAE · error-preserving,random_ablation,retained_a1,unresolved,4
+L1 SAE · error-preserving,random_ablation,adopted_critic,third_answer,5
+L1 SAE · error-preserving,random_ablation,third_answer,unresolved,1
+Pretrained SAE,no_ablation,adopted_critic,adopted_critic,458
+Pretrained SAE,no_ablation,third_answer,third_answer,35
+Pretrained SAE,no_ablation,retained_a1,retained_a1,19
+Pretrained SAE,no_ablation,third_answer,non_answer,1
+Pretrained SAE,no_ablation,retained_a1,third_answer,1
+Pretrained SAE,no_ablation,third_answer,adopted_critic,1
+Pretrained SAE,no_ablation,third_answer,retained_a1,1
+Pretrained SAE,no_ablation,third_answer,unresolved,1
+Pretrained SAE,targeted_ablation,adopted_critic,adopted_critic,457
+Pretrained SAE,targeted_ablation,third_answer,third_answer,36
+Pretrained SAE,targeted_ablation,retained_a1,retained_a1,20
+Pretrained SAE,targeted_ablation,non_answer,non_answer,1
+Pretrained SAE,targeted_ablation,adopted_critic,unresolved,1
+Pretrained SAE,targeted_ablation,adopted_critic,third_answer,1
+Pretrained SAE,targeted_ablation,unresolved,unresolved,1
+Pretrained SAE,random_ablation,adopted_critic,adopted_critic,9165
+Pretrained SAE,random_ablation,third_answer,third_answer,712
+Pretrained SAE,random_ablation,retained_a1,retained_a1,399
+Pretrained SAE,random_ablation,non_answer,third_answer,6
+Pretrained SAE,random_ablation,unresolved,unresolved,20
+Pretrained SAE,random_ablation,non_answer,non_answer,14
+Pretrained SAE,random_ablation,adopted_critic,third_answer,12
+Pretrained SAE,random_ablation,third_answer,unresolved,4
+Pretrained SAE,random_ablation,adopted_critic,unresolved,2
+Pretrained SAE,random_ablation,third_answer,retained_a1,3
+Pretrained SAE,random_ablation,adopted_critic,retained_a1,1
+Pretrained SAE,random_ablation,retained_a1,unresolved,1
+Pretrained SAE,random_ablation,third_answer,non_answer,1
+Pretrained SAE · error-preserving,targeted_ablation,adopted_critic,adopted_critic,456
+Pretrained SAE · error-preserving,targeted_ablation,third_answer,third_answer,39
+Pretrained SAE · error-preserving,targeted_ablation,retained_a1,retained_a1,20
+Pretrained SAE · error-preserving,targeted_ablation,adopted_critic,third_answer,2
+Pretrained SAE · error-preserving,random_ablation,adopted_critic,adopted_critic,9141
+Pretrained SAE · error-preserving,random_ablation,third_answer,third_answer,754
+Pretrained SAE · error-preserving,random_ablation,retained_a1,retained_a1,390
+Pretrained SAE · error-preserving,random_ablation,third_answer,unresolved,14
+Pretrained SAE · error-preserving,random_ablation,retained_a1,third_answer,9
+Pretrained SAE · error-preserving,random_ablation,adopted_critic,third_answer,18
+Pretrained SAE · error-preserving,random_ablation,third_answer,retained_a1,12
+Pretrained SAE · error-preserving,random_ablation,adopted_critic,retained_a1,1
+Pretrained SAE · error-preserving,random_ablation,retained_a1,unresolved,1

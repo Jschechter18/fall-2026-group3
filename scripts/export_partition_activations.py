@@ -10,17 +10,17 @@ the partition in place of the MuSiQue source split:
     <export-result-root>/<export-run-name>/export_summary.json
 
 Nothing is recomputed and no source file is changed. The destination must not
-exist. Which partitions are written is stated explicitly on the command line.
-Before anything is written, every question's partition in the package manifest
-is checked against the committed frozen mapping (``--frozen-partitions``); a
-package built under a different assignment is refused.
+exist. By default train, validation and test are written into one run; the
+intervention partition is exported on its own (``--partitions intervention``)
+under its own run name. Before anything is written, every question's partition
+in the package manifest is checked against the committed frozen mapping
+(``--frozen-partitions``); a package built under a different assignment is refused.
 
     PYTHONPATH=src python scripts/export_partition_activations.py \\
         --package /home/ubuntu/capstone-artifacts/<package folder> \\
         --source-results /home/ubuntu/capstone-artifacts/natural_4b_full/results \\
         --source-activations /home/ubuntu/capstone-artifacts/natural_4b_full/data \\
         --run full --layers 8 17 25 33 \\
-        --partitions train validation test \\
         --export-run-name natural_4b_partitioned \\
         --export-activation-root <export root>/data/activations \\
         --export-result-root <export root>/results/collection
@@ -32,6 +32,7 @@ import json
 from pathlib import Path
 
 from mas_sae.data.production import (
+    EXPORT_PARTITIONS,
     PARTITIONS,
     PARTITIONS_FILE,
     check_manifest_matches_frozen,
@@ -63,8 +64,9 @@ def main():
     parser.add_argument("--run", choices=("full", "scan"), required=True,
                         help="which run the source folders are; decides the manifest index used")
     parser.add_argument("--layers", type=int, nargs="+", required=True)
-    parser.add_argument("--partitions", nargs="+", choices=PARTITIONS, required=True,
-                        help="partitions to write; the intervention id file is always written")
+    parser.add_argument("--partitions", nargs="+", choices=PARTITIONS, default=list(EXPORT_PARTITIONS),
+                        help="partitions to write (default: train validation test; intervention only "
+                             "on its own); the intervention id file is always written")
     parser.add_argument("--export-run-name", required=True)
     parser.add_argument("--export-activation-root", type=Path, required=True)
     parser.add_argument("--export-result-root", type=Path, required=True)

@@ -10,12 +10,16 @@ from mas_sae.data.musique import (
     validate_experiment_split_proportions,
     validate_proportions,
 )
-from mas_sae.experiments.conditions import OMITTED, resolve_conditions
+from mas_sae.experiments.conditions import (
+    OMITTED,
+    resolve_conditions,
+    resolve_presentations,
+)
 from mas_sae.experiments.reproducibility import validate_commit_revision
 from mas_sae.models.roles import resolve_roles
 
 
-SUPPORTED_SAMPLING_STRATEGIES = ("first_n", "random", "stratified")
+SUPPORTED_SAMPLING_STRATEGIES = ("first_n", "random", "stratified", "listed")
 
 
 class ModelConfig(TypedDict):
@@ -28,12 +32,15 @@ class SamplingConfig(TypedDict):
     ``first_n`` is the original behaviour (dataset order). ``random`` draws
     a seeded uniform sample. ``stratified`` draws a seeded sample with the
     given ``hop_proportions`` over hop groups (``2hop``, ``3hop``, ``4hop``).
+    ``listed`` collects the questions in ``question_ids_file`` (a JSON list
+    of ids), in that order.
     ``seed`` defaults to ``collection.seed`` when omitted.
     """
 
     strategy: str
     seed: NotRequired[int]
     hop_proportions: NotRequired[dict[str, float]]
+    question_ids_file: NotRequired[str]
 
 
 class ExperimentSplitConfig(TypedDict):
@@ -69,6 +76,7 @@ class CollectionSettings(TypedDict):
     seed: int
     protocol_version: NotRequired[str]
     active_conditions: NotRequired[list[str]]
+    a2_presentations: NotRequired[list[str]]
 
 
 class OutputConfig(TypedDict):
@@ -117,6 +125,7 @@ def load_collection_config(path: str | Path) -> CollectionConfig:
     # section (including ``model.id``), and ``active_conditions``.
     resolve_roles(raw)
     resolve_conditions(raw["collection"].get("active_conditions", OMITTED))
+    resolve_presentations(raw["collection"].get("a2_presentations", OMITTED))
     dataset = raw["dataset"]
     collection = raw["collection"]
     output = raw["output"]
@@ -215,6 +224,23 @@ def _validate_sampling(sampling: Any) -> None:
         raise ValueError(
             "dataset.sampling.hop_proportions is only allowed when "
             "strategy is 'stratified'."
+        )
+
+    has_ids_file = "question_ids_file" in sampling
+
+    if strategy == "listed" and (
+        not isinstance(sampling.get("question_ids_file"), str)
+        or not sampling["question_ids_file"].strip()
+    ):
+        raise ValueError(
+            "dataset.sampling.question_ids_file is required when "
+            "strategy is 'listed'."
+        )
+
+    if strategy != "listed" and has_ids_file:
+        raise ValueError(
+            "dataset.sampling.question_ids_file is only allowed when "
+            "strategy is 'listed'."
         )
 
     if has_proportions:

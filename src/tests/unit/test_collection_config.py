@@ -6,7 +6,7 @@ import yaml
 from mas_sae.experiments.collection_config import (
     load_collection_config,
 )
-from mas_sae.experiments.conditions import resolve_conditions
+from mas_sae.experiments.conditions import resolve_conditions, resolve_presentations
 
 
 def test_load_collection_config(tmp_path: Path) -> None:
@@ -411,3 +411,40 @@ def test_explicit_role_config_roundtrip(tmp_path):
 def test_production_template_requires_team_decisions():
     with pytest.raises(ValueError):
         load_collection_config("configs/collection/v2/natural_production.yaml")
+
+
+# ``collection.a2_presentations`` and ``sampling.strategy: listed``.
+
+
+@pytest.mark.parametrize("value", [[], ["feedback", "feedback"], ["letters"], "candidates"])
+def test_invalid_presentations(tmp_path, value):
+    config = yaml.safe_load(open("configs/collection/v2/smoke_train.yaml"))
+    config["collection"]["a2_presentations"] = value
+    path = tmp_path / "invalid.yaml"
+    path.write_text(yaml.safe_dump(config))
+    with pytest.raises(ValueError):
+        load_collection_config(path)
+
+
+def test_presentations_omitted_keep_the_feedback_prompt():
+    assert [p.value for p in resolve_presentations()] == ["feedback"]
+    assert [p.value for p in resolve_presentations(["feedback", "candidates"])] == ["feedback", "candidates"]
+
+
+@pytest.mark.parametrize(("sampling", "valid"), [
+    ({"strategy": "listed", "question_ids_file": "ids.json"}, True),
+    ({"strategy": "listed"}, False),
+    ({"strategy": "listed", "question_ids_file": " "}, False),
+    ({"strategy": "random", "question_ids_file": "ids.json"}, False),
+    ({"strategy": "listed", "question_ids_file": "ids.json", "hop_proportions": {"2hop": 1.0}}, False),
+])
+def test_listed_sampling_needs_exactly_an_ids_file(tmp_path, sampling, valid):
+    config = yaml.safe_load(open("configs/collection/v2/smoke_train.yaml"))
+    config["dataset"]["sampling"] = sampling
+    path = tmp_path / "listed.yaml"
+    path.write_text(yaml.safe_dump(config))
+    if valid:
+        assert load_collection_config(path)["dataset"]["sampling"] == sampling
+    else:
+        with pytest.raises(ValueError):
+            load_collection_config(path)

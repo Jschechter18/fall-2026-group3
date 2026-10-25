@@ -289,3 +289,152 @@ def test_default_path_is_unchanged(monkeypatch):
     assert records(result)["controlled_incorrect"]["critic_advocated_answer"] == (
         "Paris"
     )
+
+
+def run_presentations(monkeypatch, prompts, *, a2_presentations, candidate_order="critic_first"):
+    captures = []
+
+    class CountingCapture(FakeCapture):
+        def __init__(self, model, sites):
+            super().__init__(model, sites)
+            captures.append(self)
+
+    monkeypatch.setattr(pipeline, "MultiSiteCapture", CountingCapture)
+    solver, critic, validator = make_agents(prompts)
+    critic._generate = lambda prompt: (prompts.append(prompt), NATURAL_JSON)[1]
+    solver.choose.return_value = "Steve Hillage"
+    solver.first_token_id.side_effect = lambda text: {"Steve Hillage": 11, "Miquette Giraudy": 12}[text]
+    solver.last_generated_token_ids = [12, 99]
+    solver.solve.return_value = "Steve Hillage"
+    result = pipeline.run_question(
+        question_id="2hop__1_2", question=QUESTION, paragraphs=PARAGRAPHS, gold=GOLD,
+        aliases=[], model=object(), solver=solver, critic=critic, validator=validator,
+        candidate_sites=SITES, seed=42, active_conditions=["natural"],
+        a2_presentations=a2_presentations, candidate_order=candidate_order,
+    )
+    return result, solver, captures
+
+
+def test_each_presentation_is_its_own_episode_from_the_same_a1_and_feedback(monkeypatch):
+    prompts: list[str] = []
+    result, solver, captures = run_presentations(
+        monkeypatch, prompts, a2_presentations=["feedback", "candidates"])
+
+    feedback, candidates = (ep["record"] for ep in result["episodes"])
+    assert [feedback["episode_id"], candidates["episode_id"]] == [
+        "2hop__1_2__natural__feedback", "2hop__1_2__natural__candidates"]
+    # one Critic review, one A1 capture and one capture per A2
+    assert sum('"verdict": "agree" or' in p or "Your own answer:" in p for p in prompts) == 1
+    assert len(captures) == 3
+    assert len(result["episodes"]) == 2
+    solver.revise.assert_called_once()
+    solver.choose.assert_called_once_with(
+        QUESTION, PARAGRAPHS, "Steve Hillage", "Miquette Giraudy", "critic_first")
+    assert feedback["critic_feedback"] == candidates["critic_feedback"]
+
+    assert feedback["a2_presentation"] == "feedback"
+    assert feedback["candidate_order"] is None and feedback["decision_token_distinct"] is None
+    assert candidates["a2_presentation"] == "candidates"
+    assert candidates["solver_attempt_2"] == "Steve Hillage"
+    assert candidates["candidate_order"] == "critic_first"
+    assert candidates["candidate_first_token_ids"] == {"a1": 11, "critic": 12}
+    assert candidates["decision_token_distinct"] is True
+    assert candidates["solver_a2_first_token_id"] == 12
+
+
+def test_shared_first_token_is_flagged():
+    solver = Mock(last_generated_token_ids=[5])
+    solver.first_token_id.side_effect = lambda text: 5   # e.g. "1953" vs "1967"
+    fields = pipeline._candidate_fields(
+        solver, pipeline.A2Presentation.CANDIDATES, "a1_first", "1953", "1967")
+    assert fields["candidate_first_token_ids"] == {"a1": 5, "critic": 5}
+    assert fields["decision_token_distinct"] is False
+    solver.first_token_id.side_effect = lambda text: None
+    fields = pipeline._candidate_fields(
+        solver, pipeline.A2Presentation.CANDIDATES, "a1_first", "", "1967")
+    assert fields["decision_token_distinct"] is False
+
+
+def test_missing_recommendation_aborts_before_any_second_attempt(monkeypatch):
+    monkeypatch.setattr(pipeline, "MultiSiteCapture", FakeCapture)
+    solver, critic, validator = make_agents([])
+    critic._generate = lambda prompt: '{"verdict": "disagree", "advocated_answer": "", "explanation": "x"}'
+    with pytest.raises(pipeline.CriticRecommendationError, match="no recommendation"):
+        pipeline.run_question(
+            question_id="2hop__1_2", question=QUESTION, paragraphs=PARAGRAPHS, gold=GOLD,
+            aliases=[], model=object(), solver=solver, critic=critic, validator=validator,
+            candidate_sites=SITES, seed=42, active_conditions=["natural"],
+            a2_presentations=["feedback", "candidates"], candidate_order="a1_first",
+        )
+    solver.revise.assert_not_called()
+    solver.choose.assert_not_called()
+
+
+def test_candidates_presentation_requires_an_order(monkeypatch):
+    with pytest.raises(ValueError, match="candidate_order must be one of"):
+        run_presentations(monkeypatch, [], a2_presentations=["candidates"], candidate_order=None)
+
+
+def test_presentations_omitted_keeps_the_record_schema(monkeypatch):
+    result = run(monkeypatch, [])
+    for record in records(result).values():
+        assert "a2_presentation" not in record and "candidate_order" not in record
+        assert record["episode_id"] == f"2hop__1_2__{record['critic_condition']}"
+
+
+def test_two_presentations_save_with_aligned_activation_rows(monkeypatch, tmp_path):
+    from mas_sae.data.activation_store import ActivationStore
+    from mas_sae.experiments import collection
+    from mas_sae.experiments.collection_artifacts import save_collection_artifacts
+    from mas_sae.experiments.records import read_jsonl
+
+    calls = iter(range(100))
+
+    class RowCapture(FakeCapture):
+        def __init__(self, model, sites):
+            value = float(next(calls))   # one distinct row per capture, in call order
+            self.activations = {site: torch.full((1, 4), value) for site in sites}
+
+    monkeypatch.setattr(pipeline, "MultiSiteCapture", RowCapture)
+    solver, critic, validator = make_agents([])
+    critic._generate = lambda prompt: NATURAL_JSON
+    solver.solve.return_value = "Steve Hillage"
+    solver.choose.return_value = "Steve Hillage"
+    solver.first_token_id.side_effect = lambda text: len(text)
+    solver.last_generated_token_ids = [3]
+    solver.last_generation = solver.last_prompt = validator.last_generation = None
+    examples = [{"id": q, "question": QUESTION, "paragraphs": PARAGRAPHS, "answer": GOLD}
+                for q in ("2hop__1_2", "2hop__3_4")]
+    orders = {"2hop__1_2": "a1_first", "2hop__3_4": "critic_first"}
+    result = collection.collect_examples(
+        examples=examples, source_split="train", model=object(), solver=solver, critic=critic,
+        validator=validator, candidate_sites=SITES, base_seed=42, active_conditions=["natural"],
+        a2_presentations=["feedback", "candidates"], candidate_orders=orders,
+    )
+    resolved = {"collection": {"active_conditions": ["natural"], "a2_presentations": ["feedback", "candidates"]}}
+    save_collection_artifacts(
+        activation_root=tmp_path / "activations", result_root=tmp_path / "results",
+        run_name="r", source_split="train", candidate_sites=SITES,
+        attempt1_by_site=result["attempt1_by_site"], attempt2_by_site=result["attempt2_by_site"],
+        records=result["records"], resolved_config=resolved, exclusions=result["exclusions"],
+    )
+
+    rows = read_jsonl(tmp_path / "results" / "r" / "train" / "interactions.jsonl")
+    assert [(r["question_id"], r["a2_presentation"], r["candidate_order"]) for r in rows] == [
+        ("2hop__1_2", "feedback", None), ("2hop__1_2", "candidates", "a1_first"),
+        ("2hop__3_4", "feedback", None), ("2hop__3_4", "candidates", "critic_first")]
+    store = ActivationStore(tmp_path / "activations" / "r" / "layer_08")
+    a1, a2 = store.load_activations("train_attempt1"), store.load_activations("train_attempt2")
+    # captures run A1, A2 feedback, A2 candidates per question: rows 0,1,2 then 3,4,5
+    assert a1[:, 0].tolist() == [0.0, 3.0]
+    assert [a2[r["attempt2_activation_index"], 0].item() for r in rows] == [1.0, 2.0, 4.0, 5.0]
+    assert [a1[r["attempt1_activation_index"], 0].item() for r in rows] == [0.0, 0.0, 3.0, 3.0]
+
+    with pytest.raises(ValueError, match="a2_presentations"):
+        save_collection_artifacts(
+            activation_root=tmp_path / "activations", result_root=tmp_path / "results",
+            run_name="other", source_split="train", candidate_sites=SITES,
+            attempt1_by_site=result["attempt1_by_site"], attempt2_by_site=result["attempt2_by_site"],
+            records=result["records"], resolved_config={"collection": {"active_conditions": ["natural"]}},
+            exclusions=result["exclusions"],
+        )

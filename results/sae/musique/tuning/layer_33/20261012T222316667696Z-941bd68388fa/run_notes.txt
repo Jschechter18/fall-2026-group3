@@ -1,0 +1,1 @@
+- Initial hp tuned experiment for top k sparcity method. Goal is to get a baseline idea of how to configure the models

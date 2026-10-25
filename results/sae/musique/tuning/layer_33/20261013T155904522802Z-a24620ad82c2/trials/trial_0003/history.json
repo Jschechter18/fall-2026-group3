@@ -1,0 +1,39 @@
+{
+  "history": [
+    {
+      "epoch": 1,
+      "learning_rate": 0.0003,
+      "train_loss": 0.31983458624786165,
+      "train_rec_loss": 0.31983458624786165,
+      "train_weighted_sparsity_loss": 0.0,
+      "train_mean_active_features": 64.0,
+      "train_inactive_feature_fraction": 0.4915425479412079,
+      "train_firing_frequency_min": 0.0,
+      "train_firing_frequency_p50": 3.1375500839203596e-05,
+      "train_firing_frequency_p90": 0.0004078815400134772,
+      "train_firing_frequency_p99": 0.019802017137408257,
+      "train_firing_frequency_max": 0.9755271077156067,
+      "train_mean_baseline_rec_loss": 0.2810430556655409,
+      "train_variance_explained": -0.13802700262583656,
+      "train_aux_loss": 0.0,
+      "train_weighted_aux_loss": 0.0,
+      "train_aux_eligible_feature_fraction": 0.0,
+      "train_persistent_inactive_feature_fraction": 0.9733085036277771,
+      "train_training_examples_seen": 31872,
+      "val_loss": 0.13281325466384347,
+      "val_rec_loss": 0.13281325466384347,
+      "val_weighted_sparsity_loss": 0.0,
+      "val_mean_active_features": 64.0,
+      "val_inactive_feature_fraction": 0.98603355884552,
+      "val_firing_frequency_min": 0.0,
+      "val_firing_frequency_p50": 0.0,
+      "val_firing_frequency_p90": 0.0,
+      "val_firing_frequency_p99": 0.0002341240760870278,
+      "val_firing_frequency_max": 1.0,
+      "val_mean_baseline_rec_loss": 0.2580109989055202,
+      "val_variance_explained": 0.48524188803099155
+    }
+  ],
+  "test_loss": null,
+  "summary": null
+}
