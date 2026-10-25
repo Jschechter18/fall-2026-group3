@@ -65,7 +65,7 @@ def test_candidate_policy_is_registered_and_carries_its_rules_in_the_hash():
 
 def test_earlier_policies_write_no_candidate_fields():
     for policy in (V011, V012_QC):
-        assert not set(CANDIDATE_FIELDS) & set(classify_candidate(row(), policy))
+        assert not set(CANDIDATE_FIELDS) & set(classify_candidate(row(a2_presentation=None), policy))
 
 
 # --- a lexical conflict -------------------------------------------------------
@@ -323,10 +323,9 @@ def test_prepare_rejects_removed_judgments_argument(tmp_path, monkeypatch):
     assert error.value.code == 2 and not (tmp_path / "out").exists()
 
 
-def test_prepare_builds_candidate_package_without_judgments_and_preserves_inputs(tmp_path, monkeypatch):
+def write_candidate_run(tmp_path, **fields):
+    """A two-split candidates run and its frozen partitions; ``fields`` override every episode."""
     import csv
-    from mas_sae.experiments.artifacts import sha256_file
-    script = load_script()
     inputs = tmp_path / "run"
     episodes = []
     for split in ("train", "validation"):
@@ -337,7 +336,7 @@ def test_prepare_builds_candidate_package_without_judgments_and_preserves_inputs
                        attempt1_activation_index=i, attempt2_activation_index=i,
                        solver_behavior="retained_solver_a1" if i == 0 else "adopted_critic",
                        solver_attempt_1_correct=False, critic_feedback_correct=True,
-                       critic_feedback="The reviewer recommends Paris.")
+                       critic_feedback="The reviewer recommends Paris.", **fields)
                    for i, answer in enumerate(("London", "Paris"))]
         write_jsonl(folder / "interactions.jsonl", records)
         (folder / "resolved_config.yaml").write_text(yaml.safe_dump({"dataset": {"revision": "fixture"}}))
@@ -348,11 +347,22 @@ def test_prepare_builds_candidate_package_without_judgments_and_preserves_inputs
         writer.writeheader()
         writer.writerows({"question_id": r["question_id"], "source_split": r["source_split"],
                           "partition": r["source_split"], "hop_group": "2hop"} for r in episodes)
+    return inputs, frozen, episodes
+
+
+def prepare_argv(inputs, frozen, output, policy="v0.2.0-candidate"):
+    return ["prepare", "--full-results", str(inputs), "--output", str(output),
+            "--frozen-partitions", str(frozen), "--label-policy", policy]
+
+
+def test_prepare_builds_candidate_package_without_judgments_and_preserves_inputs(tmp_path, monkeypatch):
+    import csv
+    from mas_sae.experiments.artifacts import sha256_file
+    script = load_script()
+    inputs, frozen, episodes = write_candidate_run(tmp_path)
     hashes = {str(p): sha256_file(p) for p in inputs.glob("*/*")}
-    monkeypatch.setattr(script, "source_paragraphs", lambda ids, revision: {qid: [] for qid in ids})
     output = tmp_path / "package"
-    monkeypatch.setattr(sys, "argv", ["prepare", "--full-results", str(inputs), "--output", str(output),
-                                      "--frozen-partitions", str(frozen), "--label-policy", "v0.2.0-candidate"])
+    monkeypatch.setattr(sys, "argv", prepare_argv(inputs, frozen, output))
     script.main()
     labels = read_labels(output / "labels.csv")
     assert [labels[r["question_id"]]["strict_target"] for r in episodes] == [0, 1, 0, 1]
@@ -365,8 +375,113 @@ def test_prepare_builds_candidate_package_without_judgments_and_preserves_inputs
     assert counts["all"]["first_token_target_by_split"] == counts["all"]["strict_target_by_split"]
     assert {str(p): sha256_file(p) for p in inputs.glob("*/*")} == hashes
     assert list(csv.DictReader((output / "partitions.csv").open())) == list(csv.DictReader(frozen.open()))
+    assert not (output / "qc").exists()
     with pytest.raises(FileExistsError):
         script.main()
+
+
+@pytest.mark.parametrize("policy", POLICIES)
+@pytest.mark.parametrize("option", [["--reuse-qc", "old_qc"], ["--seed", "1"]])
+def test_no_policy_takes_a_qc_packet_option(tmp_path, monkeypatch, policy, option):
+    script = load_script()
+    inputs, frozen, _ = write_candidate_run(tmp_path)
+    output = tmp_path / "package"
+    monkeypatch.setattr(sys, "argv", prepare_argv(inputs, frozen, output, policy=policy) + option)
+    with pytest.raises(SystemExit) as error:
+        script.main()
+    assert error.value.code == 2 and not output.exists()
+
+
+def test_candidate_package_loads_only_against_the_run_it_was_built_from(tmp_path, monkeypatch):
+    from mas_sae.data.production import load_labeled_rows
+    script = load_script()
+    inputs, frozen, episodes = write_candidate_run(tmp_path)
+    output = tmp_path / "package"
+    monkeypatch.setattr(sys, "argv", prepare_argv(inputs, frozen, output))
+    script.main()
+    rows, _ = load_labeled_rows(inputs, output)
+    assert [r["label"]["strict_target"] for r in rows] == [0, 1, 0, 1]
+    # Same questions, one answer changed: the saved label no longer describes it.
+    changed = [{**episodes[0], "solver_attempt_2": "Paris", "solver_a2_first_token_id": 2}, episodes[1]]
+    write_jsonl(inputs / "train" / "interactions.jsonl", changed)
+    with pytest.raises(ValueError, match="is not an interaction file"):
+        load_labeled_rows(inputs, output)
+
+
+def test_prepare_refuses_a_feedback_policy_on_a_candidates_run(tmp_path, monkeypatch):
+    script = load_script()
+    inputs, frozen, _ = write_candidate_run(tmp_path)
+    output = tmp_path / "package"
+    monkeypatch.setattr(sys, "argv", prepare_argv(inputs, frozen, output, policy="v0.1.2-qc"))
+    with pytest.raises(ValueError, match="not 'candidates'"):
+        script.main()
+    assert not output.exists()
+
+
+@pytest.mark.parametrize("presentation", ["feedback", None])
+def test_prepare_refuses_episodes_not_collected_as_candidates(tmp_path, monkeypatch, presentation):
+    script = load_script()
+    inputs, frozen, _ = write_candidate_run(tmp_path, a2_presentation=presentation)
+    output = tmp_path / "package"
+    monkeypatch.setattr(sys, "argv", prepare_argv(inputs, frozen, output))
+    with pytest.raises(ValueError, match="labels a2_presentation 'candidates', not"):
+        script.main()
+    assert not output.exists()
+
+
+def test_prepare_refuses_two_episodes_for_one_question(tmp_path, monkeypatch):
+    script = load_script()
+    inputs, frozen, episodes = write_candidate_run(tmp_path)
+    extra = {**episodes[0], "episode_id": "2hop__train0__second", "attempt1_activation_index": 2,
+             "attempt2_activation_index": 2}
+    write_jsonl(inputs / "train" / "interactions.jsonl", episodes[:2] + [extra])
+    output = tmp_path / "package"
+    monkeypatch.setattr(sys, "argv", prepare_argv(inputs, frozen, output))
+    with pytest.raises(ValueError, match="one episode per question"):
+        script.main()
+    assert not output.exists()
+
+
+@pytest.mark.parametrize("presentation", ["feedback", None])
+def test_each_policy_labels_only_its_own_presentation(presentation):
+    episode = row(a2_presentation=presentation)
+    with pytest.raises(ValueError, match=f"q: .* not {presentation!r}"):
+        classify_candidate(episode, POLICY)
+    for policy in (V011, V012_QC):
+        assert classify_candidate(episode, policy)["strict_target"] == 1
+        with pytest.raises(ValueError, match="not 'candidates'"):
+            classify_candidate(row(), policy)
+    del episode["a2_presentation"]
+    with pytest.raises(ValueError, match="not None"):
+        classify_candidate(episode, POLICY)
+    assert classify_candidate(episode, V011)["strict_target"] == 1
+
+
+class ReadRecorder(dict):
+    """An episode that remembers which fields were read from it."""
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.read = set()
+
+    def get(self, key, default=None):
+        self.read.add(key)
+        return super().get(key, default)
+
+    def __getitem__(self, key):
+        self.read.add(key)
+        return super().__getitem__(key)
+
+
+@pytest.mark.parametrize("policy", [V011, V012_QC, POLICY])
+def test_policy_input_fields_are_what_the_labels_read(policy):
+    """The scan check compares input_fields, so every field the label is computed
+    from must be one. The coherence diagnostic's inputs decide no eligibility or
+    target and are left out."""
+    presentation = policy.a2_presentations[-1]
+    episode = ReadRecorder(row(ground_truth="Paris", answer_aliases=[], a2_presentation=presentation))
+    classify_candidate(episode, policy)
+    diagnostic = {"critic_raw_output", "generation_telemetry"}
+    assert episode.read - diagnostic == set(policy.input_fields)
 
 
 def test_counts_keep_third_answers_out_of_binary_populations():

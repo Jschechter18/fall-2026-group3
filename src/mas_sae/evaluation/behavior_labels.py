@@ -51,9 +51,18 @@ SOLVER_RESPONSES = (
     "unresolved",               # A2 is missing, hedged or only a partial match
 )
 
-# The fields of an episode that decide its label.
+# The fields of an episode that decide its label, and whether a policy may label it.
 LABEL_INPUT_FIELDS = ("solver_attempt_1", "critic_advocated_answer", "solver_attempt_2",
-                      "critic_noncommittal")
+                      "critic_noncommittal", "a2_presentation")
+
+# What candidate rules also depend on: the question's recorded answers, the
+# candidate order and the first-token metadata.
+CANDIDATE_INPUT_FIELDS = ("ground_truth", "answer_aliases", "candidate_order",
+                          "candidate_first_token_ids", "decision_token_distinct",
+                          "solver_a2_first_token_id")
+
+# The presentation every run used before runs recorded one (None).
+FEEDBACK_PRESENTATIONS = (None, "feedback")
 
 # Columns of labels.csv that identify the episode; the label columns follow them.
 LABEL_KEY_FIELDS = ["question_id", "source_split", "partition", "lexical_v2_label"]
@@ -186,16 +195,20 @@ V012_A2_NONANSWER_PATTERNS = {
 class CandidateRules:
     """Rules for episodes where A1 and the recommendation were shown as two candidates.
 
+    a2_presentation   the only ``a2_presentation`` these rules label; episodes
+                      from any other presentation are refused, not labelled.
     max_answer_words  longest text still treated as an answer. A longer A1,
                       recommendation or A2 is ``not_answer_shaped``.
     letter_pattern    an A2 that is only a candidate letter, matched against the
                       whole stripped A2; group 1 is the letter.
     """
+    a2_presentation: str
     max_answer_words: int
     letter_pattern: re.Pattern
 
     def definition(self):
-        return {"max_answer_words": self.max_answer_words,
+        return {"a2_presentation": self.a2_presentation,
+                "max_answer_words": self.max_answer_words,
                 "equivalence_method": "question_aliases_conservative_text_v1",
                 "alias_fields": ["ground_truth", "answer_aliases"],
                 "ambiguous_forms": ["containment", "token_subsequence", "acronym_initials"],
@@ -230,6 +243,21 @@ class LabelPolicy:
     def has_overlay(self):
         return bool(self.premise_overrides or self.refusal_overrides or self.a2_nonanswer_overrides)
 
+    @property
+    def a2_presentations(self):
+        """The recorded ``a2_presentation`` values this policy labels. Rules without
+        candidate rules were written for the feedback prompt."""
+        if self.candidate_rules is None:
+            return FEEDBACK_PRESENTATIONS
+        return (self.candidate_rules.a2_presentation,)
+
+    @property
+    def input_fields(self):
+        """The episode fields this policy's labels depend on."""
+        if self.candidate_rules is None:
+            return LABEL_INPUT_FIELDS
+        return LABEL_INPUT_FIELDS + CANDIDATE_INPUT_FIELDS
+
     def definition(self):
         """Everything that decides this policy's output, as plain data for provenance."""
         def rules(overrides):
@@ -263,6 +291,7 @@ V020_CANDIDATE = LabelPolicy(version="behavior_v0.2.0_candidate",
                              refusal_overrides=V012_REFUSAL_PATTERNS,
                              a2_nonanswer_overrides=V012_A2_NONANSWER_PATTERNS,
                              candidate_rules=CandidateRules(
+                                 a2_presentation="candidates",
                                  max_answer_words=14,
                                  letter_pattern=re.compile(r"candidate\s+([ab])\W*", re.I)))
 
@@ -512,8 +541,15 @@ def classify_candidate(row, policy=DEFAULT_POLICY):
     regardless), and the label records which rules fired in ``qc_rules`` and the
     base values in ``base_feedback_type`` / ``base_a2_kind``. Everything downstream
     is derived by ``assemble_labels`` the same way for every policy.
+
+    An episode from an A2 presentation the policy was not written for is refused,
+    not labelled (``LabelPolicy.a2_presentations``).
     """
     candidate_rules = policy.candidate_rules
+    if row.get("a2_presentation") not in policy.a2_presentations:
+        raise ValueError(f"{row.get('question_id')}: {policy.version} labels a2_presentation "
+                         f"{' or '.join(map(repr, policy.a2_presentations))}, "
+                         f"not {row.get('a2_presentation')!r}")
     a1 = row.get("solver_attempt_1")
     a2 = row.get("solver_attempt_2")
     critic = row.get("critic_advocated_answer")
@@ -655,8 +691,12 @@ def write_labels(path, rows):
 
 def read_labels(path):
     """Read labels.csv back as {question_id: label}, with the types ``write_labels`` was given."""
+    labels = {}
     with open(path, newline="") as f:
-        labels = {record["question_id"]: record for record in csv.DictReader(f)}
+        for record in csv.DictReader(f):
+            if record["question_id"] in labels:
+                raise ValueError(f"{path}: question {record['question_id']} appears twice")
+            labels[record["question_id"]] = record
     for qid, label in labels.items():
         for field in BOOLEAN_COLUMNS:
             if label[field] not in ("True", "False"):

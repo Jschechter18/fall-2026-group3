@@ -44,7 +44,7 @@ from mas_sae.data.musique import (
     assign_experiment_splits,
     hop_group,
 )
-from mas_sae.evaluation.behavior_labels import LABEL_INPUT_FIELDS, read_labels
+from mas_sae.evaluation.behavior_labels import read_labels
 from mas_sae.experiments.artifacts import ensure_output_available, sha256_file
 from mas_sae.experiments.collection_artifacts import _add_sae_indices, _save_and_verify
 from mas_sae.experiments.records import read_jsonl, write_jsonl
@@ -273,16 +273,20 @@ def check_manifest_matches_frozen(manifest, frozen):
     return manifest
 
 
-def check_scan_repeats_full_run(full_rows, scan_rows):
+def check_scan_repeats_full_run(full_rows, scan_rows, fields):
     """The scan must repeat the full run on every field that decides a label.
 
-    Otherwise the full run's labels would not apply to the scan's episodes.
+    ``fields`` is the label policy's ``input_fields``. Otherwise the full run's
+    labels would not apply to the scan's episodes. Values are compared as JSON,
+    so True is not 1 and 2 is not 2.0, also inside a dict; the labeler tells
+    them apart. A missing field reads as None, as it does for the labeler.
     """
     full_by_question = {row["question_id"]: row for row in full_rows}
     for row in scan_rows:
         full = full_by_question[row["question_id"]]
-        for field in LABEL_INPUT_FIELDS:
-            if row[field] != full[field]:
+        for field in fields:
+            if (json.dumps(row.get(field), sort_keys=True)
+                    != json.dumps(full.get(field), sort_keys=True)):
                 raise ValueError(f"{row['question_id']}: scan and full run disagree on {field}")
 
 
@@ -320,12 +324,16 @@ def write_manifest(path, manifest):
 def read_manifest(path):
     with open(path, newline="") as f:
         records = list(csv.DictReader(f))
+    manifest = {}
     for record in records:
+        if record["question_id"] in manifest:
+            raise ValueError(f"{path}: question {record['question_id']} appears twice")
         for field in ("in_qc100", "in_development_data"):
             record[field] = record[field] == "True"
         for field in ("full_index", "scan_index"):
             record[field] = int(record[field]) if record[field] else None
-    return {record["question_id"]: record for record in records}
+        manifest[record["question_id"]] = record
+    return manifest
 
 
 def write_partitions(path, manifest):
@@ -418,6 +426,23 @@ def authorize_rows(rows, manifest, *, purpose):
     return rows
 
 
+def check_package_sources(package_dir, paths):
+    """Raise unless every interaction file in ``paths`` is one the package was built from.
+
+    Labels are joined to episodes by question id, so a re-collected, resumed or
+    different run of the same questions (the feedback run in place of the
+    candidates run, say) would otherwise take the package's labels silently.
+    ``counts.json`` records the SHA-256 of every interaction file the package
+    read; only the content is compared, so a moved run still loads.
+    """
+    counts = json.loads((Path(package_dir) / "counts.json").read_text())
+    recorded = set(counts.get("source_files_sha256", {}).values())
+    for path in paths:
+        if sha256_file(path) not in recorded:
+            raise ValueError(f"{path} is not an interaction file {package_dir} was built from; "
+                             "its labels may not describe these episodes")
+
+
 def load_labeled_rows(results_dir, package_dir, *, partitions=None):
     """Join a run's interactions with the labels and the partition manifest.
 
@@ -427,7 +452,8 @@ def load_labeled_rows(results_dir, package_dir, *, partitions=None):
 
     With ``partitions``, only the interaction files that can hold them are
     opened, and rows of other partitions sharing a file are dropped as soon as
-    their id is read, before any label is attached.
+    their id is read, before any label is attached. Every file opened must be
+    one the package was built from (``check_package_sources``).
 
     Returns ``(rows, manifest)``. Each row is the original interaction with two
     additions: ``partition`` and ``label``.
@@ -436,7 +462,9 @@ def load_labeled_rows(results_dir, package_dir, *, partitions=None):
     manifest = read_manifest(package_dir / "split_manifest.csv")
     labels = read_labels(package_dir / "labels.csv")
 
-    rows = [row for path in interaction_paths(results_dir, partitions) for row in read_jsonl(path)]
+    paths = interaction_paths(results_dir, partitions)
+    check_package_sources(package_dir, paths)
+    rows = [row for path in paths for row in read_jsonl(path)]
     if partitions is not None:
         rows = [row for row in rows if manifest[row["question_id"]]["partition"] in partitions]
     for row in rows:

@@ -161,7 +161,7 @@ PYTHONPATH=src python scripts/prepare_behavior_v01.py \
     --split-seed 42
 ```
 
-This writes `labels.csv`, `split_manifest.csv`, `partitions.csv`, `counts.json` and the `qc/` packet. `counts.json` also records the Git commit, the hashes of the rule files that produced the labels, the partition proportions and seed, and the partition audit. The collection run folders are read and never changed. Activation tensors stay outside Git.
+This writes `labels.csv`, `split_manifest.csv`, `partitions.csv` and `counts.json`. Human QC is finished, so no policy writes a `qc/` annotation packet any more; the packets that were issued stay unchanged in their packages. `load_labeled_rows` (used by the export) refuses any interaction file whose SHA-256 is not among the source hashes in the package's `counts.json`, so labels cannot be attached to a changed or different run, and the label and manifest readers refuse a repeated question id. `counts.json` also records the Git commit, the hashes of the rule files that produced the labels, the partition proportions and seed, and the partition audit. The collection run folders are read and never changed. Activation tensors stay outside Git.
 
 ## Labels for the labeled-candidates presentation (`v0.2.0-candidate`)
 
@@ -196,7 +196,7 @@ PYTHONPATH=src python scripts/prepare_behavior_v01.py --full-results <run result
     --label-policy v0.2.0-candidate --output <artifacts>/<new folder>
 ```
 
-The package writes one row per question; label the frozen two-arm pilot per episode with `classify_candidate`. Frozen-partition coverage checks remain in force, and collection exclusions must be reconciled explicitly. No label package or downstream training should be finalized before this revision is verified and reviewed. The removed `--judgments` argument is no longer accepted.
+`classify_candidate` refuses any episode without `a2_presentation: candidates` under this policy (a feedback run, or one that never recorded its presentation, cannot receive candidate labels), and the v0.1.x policies refuse candidates episodes, so the builder stops before writing anything; it also refuses a run with more than one episode per question. When a layer scan is passed, it must repeat the full run on every field the policy reads (`LabelPolicy.input_fields`), including the candidate order, recorded answers and token metadata. Values are compared with their JSON types, so `true` is not `1` and `2` is not `2.0`; a field missing from one run reads as null, as it does for the labeler. The package writes one row per question; label the frozen two-arm pilot per episode with `classify_candidate`. Frozen-partition coverage checks remain in force, and collection exclusions must be reconciled explicitly. No label package or downstream training should be finalized before this revision is verified and reviewed. The removed `--judgments` argument is no longer accepted.
 
 ## Re-running the collection without moving a single question
 

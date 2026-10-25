@@ -20,6 +20,7 @@ from mas_sae.data.production import (
     check_manifest_matches_frozen,
     check_scan_repeats_full_run,
     export_partition_activations,
+    interaction_paths,
     load_labeled_rows,
     load_production_activations,
     partition_coverage,
@@ -30,7 +31,8 @@ from mas_sae.data.production import (
     write_package_tables,
     write_partitions,
 )
-from mas_sae.evaluation.behavior_labels import classify_candidate, write_labels
+from mas_sae.evaluation.behavior_labels import V011, V020_CANDIDATE, classify_candidate, read_labels, write_labels
+from mas_sae.experiments.artifacts import sha256_file
 from mas_sae.experiments.records import read_jsonl, write_jsonl
 
 PROPORTIONS = {"train": 0.6, "test": 0.2, "intervention": 0.2}
@@ -269,11 +271,59 @@ def test_scan_text_must_match_the_full_run():
     answers = {"solver_attempt_1": "London", "critic_advocated_answer": "Paris",
                "solver_attempt_2": "Paris", "critic_noncommittal": False}
     full = [{**row(), **answers}]
-    check_scan_repeats_full_run(full, [{**row(), **answers}])
+    check_scan_repeats_full_run(full, [{**row(), **answers}], V011.input_fields)
     with pytest.raises(ValueError, match="disagree on solver_attempt_2"):
-        check_scan_repeats_full_run(full, [{**row(), **answers, "solver_attempt_2": "Rome"}])
+        check_scan_repeats_full_run(full, [{**row(), **answers, "solver_attempt_2": "Rome"}],
+                                    V011.input_fields)
     with pytest.raises(ValueError, match="disagree on critic_noncommittal"):
-        check_scan_repeats_full_run(full, [{**row(), **answers, "critic_noncommittal": True}])
+        check_scan_repeats_full_run(full, [{**row(), **answers, "critic_noncommittal": True}],
+                                    V011.input_fields)
+
+
+CANDIDATE_EPISODE = {**row(), "solver_attempt_1": "London", "critic_advocated_answer": "Paris",
+                     "solver_attempt_2": "Candidate B", "critic_noncommittal": False,
+                     "a2_presentation": "candidates", "ground_truth": "Paris", "answer_aliases": [],
+                     "candidate_order": "a1_first", "candidate_first_token_ids": {"a1": 1, "critic": 2},
+                     "decision_token_distinct": True, "solver_a2_first_token_id": 2}
+
+
+def test_scan_must_match_every_field_the_candidate_policy_reads():
+    episode = CANDIDATE_EPISODE
+    check_scan_repeats_full_run([episode], [dict(episode)], V020_CANDIDATE.input_fields)
+    flipped = {**episode, "candidate_order": "critic_first"}
+    check_scan_repeats_full_run([episode], [flipped], V011.input_fields)  # the old check missed it
+    with pytest.raises(ValueError, match="disagree on candidate_order"):
+        check_scan_repeats_full_run([episode], [flipped], V020_CANDIDATE.input_fields)
+
+
+@pytest.mark.parametrize("change", [
+    {"critic_noncommittal": 0},
+    {"decision_token_distinct": 1},
+    {"candidate_first_token_ids": {"a1": True, "critic": 2}},
+    {"solver_a2_first_token_id": 2.0},
+])
+def test_scan_values_must_match_in_type_not_only_in_python_equality(change):
+    """Each change is == in Python but changes eligibility in the labeler."""
+    changed = {**CANDIDATE_EPISODE, **change}
+    field = next(iter(change))
+    assert changed[field] == CANDIDATE_EPISODE[field]
+    assert classify_candidate(changed, V020_CANDIDATE) != classify_candidate(CANDIDATE_EPISODE, V020_CANDIDATE)
+    with pytest.raises(ValueError, match=f"disagree on {field}"):
+        check_scan_repeats_full_run([CANDIDATE_EPISODE], [changed], V020_CANDIDATE.input_fields)
+
+
+def test_scan_treats_a_missing_field_as_the_labeler_does():
+    optional = ("candidate_first_token_ids", "decision_token_distinct", "solver_a2_first_token_id")
+    bare = {k: v for k, v in CANDIDATE_EPISODE.items() if k not in optional}
+    check_scan_repeats_full_run([bare], [dict(bare)], V020_CANDIDATE.input_fields)
+    check_scan_repeats_full_run([bare], [{**bare, "candidate_first_token_ids": None}],
+                                V020_CANDIDATE.input_fields)
+    with pytest.raises(ValueError, match="disagree on candidate_first_token_ids"):
+        check_scan_repeats_full_run([bare], [CANDIDATE_EPISODE], V020_CANDIDATE.input_fields)
+    with pytest.raises(ValueError, match="disagree on a2_presentation"):
+        check_scan_repeats_full_run([CANDIDATE_EPISODE], [{k: v for k, v in CANDIDATE_EPISODE.items()
+                                                           if k != "a2_presentation"}],
+                                    V020_CANDIDATE.input_fields)
 
 
 def test_load_labeled_rows_joins_labels_and_manifest(tmp_path):
@@ -297,6 +347,7 @@ def test_load_labeled_rows_joins_labels_and_manifest(tmp_path):
                              "label": classify_candidate(item)})
     write_manifest(package / "split_manifest.csv", manifest)
     write_labels(package / "labels.csv", labelled)
+    write_source_hashes(package, results)
 
     rows, loaded = load_labeled_rows(results, package)
     assert [r["partition"] for r in rows] == ["train", "validation"]
@@ -313,6 +364,55 @@ def test_load_labeled_rows_joins_labels_and_manifest(tmp_path):
     (results / "validation" / "interactions.jsonl").write_text("{not json\n")
     train_rows, _ = load_labeled_rows(results, package, partitions={"train"})
     assert [r["question_id"] for r in train_rows] == ["2hop__1_1"]
+
+
+def write_source_hashes(package, *runs):
+    """The counts.json source hashes prepare_behavior_v01.py records for the runs it read."""
+    hashes = {str(p): sha256_file(p) for run in runs for p in interaction_paths(run)}
+    (package / "counts.json").write_text(json.dumps({"source_files_sha256": hashes}))
+
+
+def labelled_package(tmp_path):
+    episodes = [{**row("2hop__1_1", source="train", i=0), "solver_attempt_1": "London",
+                 "critic_advocated_answer": "Paris", "solver_attempt_2": "Paris",
+                 "critic_noncommittal": False, "solver_behavior": "lexical"}]
+    results, package = tmp_path / "results", tmp_path / "package"
+    package.mkdir()
+    write_jsonl(results / "train" / "interactions.jsonl", episodes)
+    write_jsonl(results / "validation" / "interactions.jsonl", [])
+    manifest = build_partition_manifest(episodes, proportions={"train": 0.98, "test": 0.01,
+                                                               "intervention": 0.01}, seed=0)
+    write_manifest(package / "split_manifest.csv", manifest)
+    write_labels(package / "labels.csv", [{**e, "partition": manifest[e["question_id"]]["partition"],
+                                           "label": classify_candidate(e)} for e in episodes])
+    write_source_hashes(package, results)
+    return results, package, episodes
+
+
+def test_labels_are_never_attached_to_a_changed_or_different_run(tmp_path):
+    results, package, episodes = labelled_package(tmp_path)
+    assert load_labeled_rows(results, package)[0][0]["label"]["primary_target"] == 1
+    moved = tmp_path / "moved"
+    (results).rename(moved)
+    assert load_labeled_rows(moved, package)[0][0]["label"]["primary_target"] == 1  # content, not path
+    write_jsonl(moved / "train" / "interactions.jsonl", [{**episodes[0], "solver_attempt_2": "London"}])
+    with pytest.raises(ValueError, match="is not an interaction file"):
+        load_labeled_rows(moved, package)
+    (package / "counts.json").write_text("{}")  # a package that recorded no sources
+    with pytest.raises(ValueError, match="is not an interaction file"):
+        load_labeled_rows(moved, package, partitions={"validation"})
+
+
+def test_readers_refuse_a_repeated_question(tmp_path):
+    results, package, episodes = labelled_package(tmp_path)
+    for name in ("labels.csv", "split_manifest.csv"):
+        path = package / name
+        lines = path.read_text().splitlines(keepends=True)
+        path.write_text("".join(lines + lines[1:]))
+    with pytest.raises(ValueError, match="2hop__1_1 appears twice"):
+        read_labels(package / "labels.csv")
+    with pytest.raises(ValueError, match="2hop__1_1 appears twice"):
+        read_manifest(package / "split_manifest.csv")
 
 
 # ------------------------------------------------------------------ the export
