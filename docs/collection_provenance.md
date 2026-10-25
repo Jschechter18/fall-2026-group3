@@ -23,7 +23,7 @@ Built by `build_collection_progress_provenance`. A resume compares every key in 
 | Key | Meaning |
 |---|---|
 | `config_sha256` | sha256 of the canonical JSON of the collection config without its `output` section. |
-| `manifest_sha256` | sha256 of the canonical JSON of the ordered question list `{question_id, experiment_split, hop_group}`. Different sampling, order or count changes it. |
+| `manifest_sha256` | sha256 of the canonical JSON of the ordered question list `{question_id, experiment_split, hop_group}`, plus `candidate_order` when one is recorded, so a resume cannot show a question's candidates in another order. Different sampling, order or count changes it. |
 | `dataset_revision` | Hugging Face Hub revision of `dgslibisey/MuSiQue` that was loaded. |
 | `model_revisions.{solver,critic,validator}` | `requested_revision` from the config and `resolved_revision` from the loaded checkpoint; they must agree. |
 | `git_commit` | HEAD of the repository when the run started. |
@@ -35,7 +35,7 @@ Built by `build_collection_progress_provenance`. A resume compares every key in 
 
 ## The `provenance:` block of `resolved_config.yaml`
 
-Adds, per role, the full `role_metadata`: `model_id`, requested and resolved revision, `architecture`, `loader`, `dtype`, `device`, `device_map`, `requested_placement`, `quantization`, `generation`, `chat_template_kwargs`. Also `environment` (`git_dirty`, `cuda_version`, `gpus`), `protocol_version`, `capabilities` (`blind_then_compare`, `controlled_as_own_conclusion`, `type_checked_target`: the behaviours the protocol version selected), `prompt_versions` (the named prompt constants used by each role and condition), and the token budgets.
+Adds, per role, the full `role_metadata`: `model_id`, requested and resolved revision, `architecture`, `loader`, `dtype`, `device`, `device_map`, `requested_placement`, `quantization`, `generation`, `chat_template_kwargs`. Also `environment` (`git_dirty`, `cuda_version`, `gpus`), `protocol_version`, `capabilities` (`blind_then_compare`, `controlled_as_own_conclusion`, `type_checked_target`: the behaviours the protocol version selected), `prompt_versions` (the named prompt constants used by each role and condition), and the token budgets. When the config sets `a2_presentations`, the block also records them; with the candidates presentation, `prompt_versions.solver_candidates` is `CANDIDATE_PROMPT` and `prompt_sha256.solver_candidates` hashes that template together with its candidate labels.
 
 Version labels are recorded here as configuration; the capabilities list is what actually ran. A later protocol is defined by choosing capabilities, not by branching on the version name.
 
@@ -73,7 +73,7 @@ The plain-English dictionary is `episode_record.md`. This table is the complete 
 
 | Field | Type | Set in | Definition |
 |---|---|---|---|
-| `episode_id` | str | P | `<question_id>__<critic_condition>` |
+| `episode_id` | str | P | `<question_id>__<critic_condition>`, plus `__<a2_presentation>` when the config sets `a2_presentations` |
 | `question_id`, `question`, `ground_truth`, `answer_aliases` | str, str, str, list | P from the MuSiQue example | aliases `[]` when absent |
 | `seed` | int | `collection.py` | `collection.seed + question_index` |
 | `source_split` | str | `collection.py` | MuSiQue split |
@@ -89,7 +89,12 @@ The plain-English dictionary is `episode_record.md`. This table is the complete 
 | `critic_raw_output` | str | P | raw compare/critique generation |
 | `critic_noncommittal` | bool | `critic.py` | `verdict is None or advocated_answer is None`; always false for controlled |
 | `controlled_target_source`, `controlled_target_type_check` | str/any or null | P | present when `capabilities.type_checked_target`; null for natural; `gold`/null for controlled-correct |
-| `solver_attempt_2` | str | P | `Solver.revise` |
+| `solver_attempt_2` | str | P | `Solver.revise` (feedback presentation) or `Solver.choose` (candidates presentation) |
+| `a2_presentation` | str | P | `feedback` or `candidates`; present when the config sets `a2_presentations` |
+| `candidate_order` | str or null | `conditions.assign_candidate_orders` | `a1_first` or `critic_first`; null in the feedback presentation |
+| `candidate_first_token_ids` | dict or null | P | `{a1, critic}`: `Solver.first_token_id` of A1 and of the advocated answer; null in the feedback presentation |
+| `decision_token_distinct` | bool or null | P | both ids present and different; null in the feedback presentation |
+| `solver_a2_first_token_id` | int or null | P | first generated token id of A2 |
 | `solver_attempt_2_correct` | bool | `scoring.py` | `answer_matches(A2, gold, aliases)` |
 | `critic_feedback_correct` | bool or null | `scoring.py` | `answer_matches(advocated, gold, aliases)`; null without an advocated answer |
 | `solver_accepted_feedback` | bool or null | `scoring.py` | legacy V1: A2 matches gold if the Critic was right, else matches the advocated string; null without an advocated answer |

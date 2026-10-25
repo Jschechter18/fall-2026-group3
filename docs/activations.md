@@ -7,7 +7,7 @@ For every Solver generation the collector installs a forward hook on each reques
 So, per question and layer:
 
 - **Attempt 1 activation**: the state before the Solver writes A1, with the question and paragraphs in context.
-- **Attempt 2 activation**: the state before the Solver writes A2, with the question, paragraphs, A1 and the Critic's feedback in context. This is the position where "will the Solver take the feedback" is decided but not yet expressed.
+- **Attempt 2 activation**: the state before the Solver writes A2, with the question, paragraphs, A1 and the Critic's feedback in context (in the candidates presentation, A1 and the Critic's recommendation shown as two labelled candidates, without the feedback text). This is the position where "will the Solver take the feedback" is decided but not yet expressed.
 
 Only Solver activations are captured. The hidden size for Gemma-3-4b-it is 2560.
 
@@ -32,7 +32,7 @@ While a run is in progress, chunks live under `data/activations/<run>/_progress/
 | `sae_attempt1_index` | `<split>.pt` | `attempt1_activation_index` |
 | `sae_attempt2_index` | `<split>.pt` | `len(attempt1 rows) + attempt2_activation_index` |
 
-With one condition per question (the production policy) the two collection-order indices are equal, and `production._activation_index` refuses a record where they differ. `collected_question_ids.json` lists question ids in the same order, so row `i` of every per-layer file is the same question.
+With one condition and one A2 presentation per question (the production policy) the two collection-order indices are equal, and `production._activation_index` refuses a record where they differ. A run with two presentations, such as the candidates pilot, writes two A2 rows for each A1 row, so its indices differ. `collected_question_ids.json` lists question ids in the same order, so row `i` of every per-layer file is the same question.
 
 Alignment is checked twice: by `_validate_alignment` when chunks are merged, and by `load_production_activations` when rows are read, which compares the manifest index with the record's index and the file's row count.
 

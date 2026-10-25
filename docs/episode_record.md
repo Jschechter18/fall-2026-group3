@@ -9,18 +9,30 @@ This page explains the fields a reader needs to follow the experiment. The compl
 | Field | What it means | Why it matters |
 |---|---|---|
 | `question_id` | MuSiQue id; the prefix gives the hop count (`2hop__`, `3hop1__`, `4hop…`) | The key that joins labels, partitions and activations |
-| `episode_id` | `question_id` plus the feedback condition | One row per episode; always ends in `natural` in production |
+| `episode_id` | `question_id` plus the feedback condition, and the A2 presentation in runs that record one | One row per episode; the condition is always `natural` in production |
 | `question` | The question Gemma was asked | What the whole exchange is about |
 | `ground_truth`, `answer_aliases` | MuSiQue's correct answer and accepted alternative spellings | Lets us say whether each answer was right |
 | `solver_attempt_1` | Gemma's first answer (A1), before any feedback | The starting position |
 | `critic_blind_answer` | Qwen's own answer, given before it saw A1 | Shows the Critic formed a position of its own |
 | `critic_verdict` | `agree` or `disagree` with A1 | Whether the Critic pushed back |
 | `critic_advocated_answer` | The answer Qwen argued for | What "adopting the Critic" means for this episode |
-| `critic_feedback` | The exact text Gemma read before answering again | The treatment: this is what the Solver responded to |
+| `critic_feedback` | The exact text Gemma read before answering again, in the feedback presentation | The treatment in the feedback presentation; the candidates presentation shows only `critic_advocated_answer` |
 | `critic_noncommittal` | `true` when Qwen's output gave no usable position | Such episodes cannot measure uptake and are excluded |
 | `critic_raw_output`, `critic_blind_raw_output` | Qwen's unedited outputs | Kept so the review can be re-read or re-parsed |
-| `solver_attempt_2` | Gemma's second answer (A2), after reading the feedback | The outcome: adopt, keep, or change |
+| `solver_attempt_2` | Gemma's second answer (A2), after reading the feedback or the two candidates | The outcome: adopt, keep, or change |
 | `critic_condition` | The feedback condition | Always `natural` in the production run; the controlled conditions are off |
+
+## How A2 was prompted (runs that record it)
+
+Runs whose config sets `a2_presentations` record how the second answer was asked for. Runs collected before that, including `natural_4b_full` and `natural_4b_full9`, used the feedback presentation and do not have these fields.
+
+| Field | Meaning |
+|---|---|
+| `a2_presentation` | `feedback`: Gemma read the Critic's feedback text. `candidates`: Gemma saw A1 and the Critic's recommendation as Candidate A and Candidate B, labelled "your previous answer" and "the reviewer's recommendation" |
+| `candidate_order` | `a1_first` or `critic_first`: which answer was Candidate A. Seeded per question, balanced within each hop group, and fixed before any generation; null in the feedback presentation |
+| `candidate_first_token_ids` | the first token id of each candidate (`a1`, `critic`) |
+| `decision_token_distinct` | whether the two candidates start with different tokens; when they do not, the activation before the first output token cannot tell them apart |
+| `solver_a2_first_token_id` | the first token Gemma generated for A2 |
 
 ## Correctness (string match against the gold answer and aliases)
 
@@ -35,7 +47,7 @@ Correctness is kept apart from behaviour on purpose: a wrong Critic can still be
 
 ## Behaviour: what Gemma did
 
-The labels to use are the Behavior v0.1.1 rules in `labels.csv` of the label package (`behavior_v01.md`). They are joined to the record by `question_id`.
+For the feedback runs, the labels to use are the official Behavior v0.1.2 labels (policy `v0.1.2-qc`, `results/behavior/behavior_v012_official_20261011/labels.csv`; see `behavior_v01.md`). They are joined to the record by `question_id`.
 
 | Field (in `labels.csv`) | Meaning |
 |---|---|
