@@ -1,5 +1,7 @@
 """Reference activations for causal-replay steering: each targeted and random-control feature's mean
-activation where it fires on the fit partition, for the SAEs of one feature-selection run.
+activation where it fires on the fit partition, for the SAEs of one feature-selection run, plus per-latent
+statistics of every latent (firing frequency, mean activation where firing, RMS, decoder norm) that the
+replay draws contribution-matched random controls from (``random_controls: contribution``).
 
 The result is written next to the summary it comes from, so each layer has its own:
 

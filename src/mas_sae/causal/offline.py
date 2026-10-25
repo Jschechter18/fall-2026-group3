@@ -72,6 +72,36 @@ def frequency_matched_controls(freq: np.ndarray, targeted, n_draws: int, seed: i
     return draws
 
 
+def contribution_matched_controls(freq: np.ndarray, contribution: np.ndarray, targeted, n_draws: int, seed: int,
+                                  pool_size: int = 50, exclude=()) -> list[list[int]]:
+    """Like ``frequency_matched_controls``, but each targeted feature is replaced by a random feature
+    among the ``pool_size`` nearest to it in (log firing frequency, log decoded contribution), where
+    ``contribution`` is RMS(z_i) * ||decoder column i||: the typical size of what feature i adds to the
+    reconstruction. Matching on frequency alone pairs a large, always-on feature with small ones, so
+    zeroing the targeted set makes a far bigger edit than zeroing its controls. ``exclude`` are further
+    features never drawn (e.g. the rest of the targeted set when ``targeted`` is a subset of it)."""
+    targeted = [int(f) for f in targeted]
+    freq, contribution = np.asarray(freq, float), np.asarray(contribution, float)
+    candidates = np.setdiff1d(np.flatnonzero((freq > 0) & (contribution > 0)),
+                              [*targeted, *(int(f) for f in exclude)])
+    if len(candidates) < len(targeted):
+        raise ValueError("Not enough live features to draw a matched random control.")
+    if any(not (freq[f] > 0 and contribution[f] > 0) for f in targeted):
+        raise ValueError("Every targeted feature must fire on the fit partition to be matched.")
+    coords = np.stack([np.log(freq, where=freq > 0, out=np.zeros_like(freq)),
+                       np.log(contribution, where=contribution > 0, out=np.zeros_like(contribution))], axis=1)
+    rng = np.random.default_rng(seed)
+    draws = []
+    for _ in range(n_draws):
+        chosen: list[int] = []
+        for f in targeted:
+            pool = candidates[~np.isin(candidates, chosen)]
+            near = pool[np.argsort(np.linalg.norm(coords[pool] - coords[f], axis=1))[:pool_size]]
+            chosen.append(int(rng.choice(near)))
+        draws.append(chosen)
+    return draws
+
+
 # ----------------------------------------------------------------------------- readout probe
 
 def _readout_model(C: float, seed: int) -> Pipeline:
@@ -137,19 +167,27 @@ def targeted_vs_random(targeted: np.ndarray, random: np.ndarray, control: np.nda
     """
     targeted, control = np.asarray(targeted, float), np.asarray(control, float)
     random = np.asarray(random, float)
-    direct = paired_effect(targeted, random.mean(1), groups, n_bootstrap, n_permutations, seed)
+    # NaN marks a random draw left out for that question (e.g. an edit that changed nothing); every
+    # question needs at least one draw. Without NaNs these are plain means.
+    if np.isnan(targeted).any() or np.isnan(random).all(1).any():
+        raise ValueError("targeted_vs_random needs a targeted value and at least one random draw per question.")
+    direct = paired_effect(targeted, np.nanmean(random, 1), groups, n_bootstrap, n_permutations, seed)
     rng = np.random.default_rng(seed + 1)
     n_draws = random.shape[1]
-    both = [targeted[i].mean() - random[i][:, rng.integers(0, n_draws, n_draws)].mean()
-            for i in grouped_bootstrap_indices(groups, n_bootstrap, seed)]
+    with warnings.catch_warnings():
+        # a resample, or a draw, with no values left (all NaN) is NaN and left out below
+        warnings.simplefilter("ignore", RuntimeWarning)
+        both = [targeted[i].mean() - np.nanmean(random[i][:, rng.integers(0, n_draws, n_draws)])
+                for i in grouped_bootstrap_indices(groups, n_bootstrap, seed)]
+        draw_effects = np.nanmean(random - control[:, None], 0)
     t_effect = (targeted - control).mean()
-    draw_effects = (random - control[:, None]).mean(0)
+    finite = draw_effects[np.isfinite(draw_effects)]
     return {**direct,
-            "ci95_pp_questions_and_draws": [100 * float(np.quantile(both, q)) for q in (0.025, 0.975)],
+            "ci95_pp_questions_and_draws": [100 * float(np.nanquantile(both, q)) for q in (0.025, 0.975)],
             "n_random_draws": int(n_draws),
             "targeted_vs_control_pp": 100 * float(t_effect),
             "random_draw_vs_control_pp": [100 * float(e) for e in draw_effects],
-            "draw_tail_fraction": float((1 + np.sum(np.abs(draw_effects) >= abs(t_effect) - 1e-15)) / (1 + n_draws))}
+            "draw_tail_fraction": float((1 + np.sum(np.abs(finite) >= abs(t_effect) - 1e-15)) / (1 + len(finite)))}
 
 
 def holm(p_values) -> list[float]:
