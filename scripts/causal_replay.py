@@ -14,8 +14,8 @@ Edit-size-matched replays (issue #146) rescale every targeted and random edit to
 matched on firing frequency and decoded contribution. Those draws use per-latent statistics that the reference file
 has only once recomputed by this version (add --overwrite to the command above); then:
 
-    python scripts/causal_replay.py --config configs/causal_edit_size_layer25.yaml        # all three SAEs
-    python scripts/causal_replay.py --config configs/causal_edit_size_l1_layer25.yaml     # L1: feature 7025 vs the rest
+    python scripts/causal_replay.py --config configs/causal_edit_size_layer25.yaml --limit 5   # check s/generation
+    python scripts/causal_replay.py --config configs/causal_edit_size_layer25.yaml            # all 517 episodes
 
     # GPU smoke test (a few episodes, real model and SAEs), then the full run
     python scripts/causal_replay.py --config configs/causal_replay_layer33.yaml --limit 5

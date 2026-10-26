@@ -197,17 +197,14 @@ def test_committed_configs_load():
         assert (steer.layer, steer.ablation, steer.steer_strengths, steer.n_random_draws) == (layer, False, [-2, 2, 5], 7)
         assert all(f"layer_{layer}" in spec["path"] for spec in steer.saes.values())
         assert Path(steer.feature_reference).parent == Path(steer.feature_selection_summary).parent
-        main = replay.ReplayConfig.from_yaml(repo / f"configs/causal_edit_size_layer{layer}.yaml")
-        l1 = replay.ReplayConfig.from_yaml(repo / f"configs/causal_edit_size_l1_layer{layer}.yaml")
-        for c in (main, l1):
-            assert (c.layer, c.random_controls, c.reconstruction, c.error_preserving) == (layer, "contribution", False, True)
-            assert (c.feature_selection_summary, c.feature_reference) == (steer.feature_selection_summary, steer.feature_reference)
-            assert c.ablation and not c.steer_strengths and all(c.saes[n] == steer.saes[n] for n in c.saes)
-        assert set(main.saes) == set(steer.saes) and set(l1.saes) == {"L1 SAE"}
-        assert (main.limit, l1.limit, main.random_directions, l1.random_directions) == (None, None, 3, 0)
+        c = replay.ReplayConfig.from_yaml(repo / f"configs/causal_edit_size_layer{layer}.yaml")
+        assert (c.layer, c.random_controls, c.reconstruction, c.error_preserving) == (layer, "contribution", False, True)
+        assert (c.feature_selection_summary, c.feature_reference) == (steer.feature_selection_summary, steer.feature_reference)
+        assert c.ablation and not c.steer_strengths and c.saes == steer.saes
+        assert (c.limit, c.random_directions, list(c.targeted_subsets)) == (None, 3, ["L1 SAE"])
         summary = json.loads((repo / steer.feature_selection_summary).read_text())
-        (full, alone), = [(set(summary["saes"]["L1 SAE"]["targeted_features"]), s) for s in l1.targeted_subsets.values()]
-        one, rest = alone.values()
+        full = set(summary["saes"]["L1 SAE"]["targeted_features"])
+        one, rest = c.targeted_subsets["L1 SAE"].values()
         assert len(one) == 1 and set(one) | set(rest) == full and not set(one) & set(rest)
     assert smoke.steer_strengths and smoke.ablation
 

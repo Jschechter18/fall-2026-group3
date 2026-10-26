@@ -9,13 +9,17 @@
 #   python scripts/feature_reference_activations.py --config configs/feature_selection_layer25.yaml \
 #       --summary results/feature_selection/20261018T025217187826Z/feature_selection_summary.json --overwrite
 #
-# Per episode: plain replay + 3 SAEs x (targeted + 5 random draws) x (ablation + 8 norm-matched edits)
-# + 3 random directions x 8 norm-matched edits = 187 generations: about 22.6 h for all 517 eligible episodes, at 0.843 s each
-# (the steering runs used --limit 450).
+# L1 decomposition: feature 7025 fires on ~100% of fit-partition rows with a mean activation of ~46, far above
+# the other targeted L1 features, so its subsets run as their own experiments, each with its own matched draws:
+# 7025 alone and the other nine without it, beside the full set.
+#
+# Per episode: plain replay + (3 SAEs + 2 L1 subsets) x (targeted + 5 random draws) x (ablation + 8 norm-matched
+# edits) + 3 random directions x 8 norm-matched edits = 295 generations: about 35.7 h for all 517
+# eligible episodes at 0.843 s each.
 #
 # PRELIMINARY (dose-finding) run: 5 random draws and a grid of doses, to see where targeted and random edits separate
 # at all. The confirmatory run will fix 1-2 doses from this one and use more draws (each draw costs one generation per
-# dose, SAE and episode, so 100 draws over this whole grid would be ~280 GPU-hours).
+# dose, SAE and episode, so 100 draws over this whole grid would be ~540 GPU-hours).
 capstone_data_root: .
 # intervention episodes from the natural_4b_full9 run (separate intervention-only export)
 interactions_jsonl: results/collection/natural_4b_full9_intervention_partitioned/intervention/interactions.jsonl
@@ -55,10 +59,15 @@ random_controls: contribution
 n_random_draws: 5
 # SAE-free control at the same edit sizes, never a no-op (e.g. for an always-on feature like 7025)
 random_directions: 3
+# subsets of a targeted set, each its own experiment (L1 SAE · f7025, ...) with its own draws
+targeted_subsets:
+  L1 SAE:
+    f7025: [7025]
+    without_7025: [4428, 4153, 1232, 456, 5438, 9006, 12634, 4819, 8119]
 reconstruction: false
 error_preserving: true
 ablation: true
 edit_norms: [-1.0, -0.5, -0.25, -0.1, 0.1, 0.25, 0.5, 1.0]
 # warn if the SAE conditions are projected to take longer than this
-max_hours: 24
+max_hours: 38
 output_dir: results/causal_edit_size
