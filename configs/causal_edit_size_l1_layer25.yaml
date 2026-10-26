@@ -5,8 +5,14 @@
 # alternative to the negative clamps of the steering run. Needs the same reference file as
 # configs/causal_edit_size_layer25.yaml.
 #
+# Its random-direction control is in configs/causal_edit_size_layer25.yaml (same episodes and edit sizes).
+#
 # Per episode: plain replay + 3 sets x (targeted + 5 random draws) x (ablation + 4 norm-matched + 2 scaled edits)
-# = 127 generations, about 13.4 h for 450 episodes.
+# = 127 generations: about 13.4 h for 450 episodes (all 517: 15.4 h), at 0.843 s each.
+#
+# PRELIMINARY (dose-finding) run: 5 random draws and a grid of doses, to see where targeted and random edits separate
+# at all. The confirmatory run will fix 1-2 doses from this one and use more draws (each draw costs one generation per
+# dose, SAE and episode, so 100 draws over this whole grid would be ~280 GPU-hours).
 capstone_data_root: .
 # intervention episodes from the natural_4b_full9 run (separate intervention-only export)
 interactions_jsonl: results/collection/natural_4b_full9_intervention_partitioned/intervention/interactions.jsonl
@@ -31,6 +37,8 @@ feature_reference: results/feature_selection/20261018T025217187826Z/feature_refe
 # plain replay must reproduce collection before any SAE condition runs (see replay_check.json)
 min_replay_label_match: 0.98
 on_replay_check_fail: stop
+# the same 450 episodes as the main run and the steering runs
+limit: 450
 seed: 42
 n_bootstrap: 1000
 n_permutations: 10000

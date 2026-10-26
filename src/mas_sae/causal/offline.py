@@ -73,13 +73,18 @@ def frequency_matched_controls(freq: np.ndarray, targeted, n_draws: int, seed: i
 
 
 def contribution_matched_controls(freq: np.ndarray, contribution: np.ndarray, targeted, n_draws: int, seed: int,
-                                  pool_size: int = 50, exclude=()) -> list[list[int]]:
-    """Like ``frequency_matched_controls``, but each targeted feature is replaced by a random feature
-    among the ``pool_size`` nearest to it in (log firing frequency, log decoded contribution), where
-    ``contribution`` is RMS(z_i) * ||decoder column i||: the typical size of what feature i adds to the
-    reconstruction. Matching on frequency alone pairs a large, always-on feature with small ones, so
-    zeroing the targeted set makes a far bigger edit than zeroing its controls. ``exclude`` are further
-    features never drawn (e.g. the rest of the targeted set when ``targeted`` is a subset of it)."""
+                                  pool_size: int = 50, exclude=(), freq_tolerance: float = 1.25) -> list[list[int]]:
+    """Like ``frequency_matched_controls``, but matched on decoded contribution as well: each targeted
+    feature is replaced by a random feature among those firing within a factor ``freq_tolerance`` as
+    often as it does, the ``pool_size`` of them nearest in log decoded contribution. ``contribution`` is
+    RMS(z_i) * ||decoder column i||, the typical size of what feature i adds to the reconstruction.
+
+    Frequency comes first because a control that rarely fires where its targeted feature does is
+    mostly a no-op edit, whatever its size; within that band, contribution keeps a large feature from
+    being paired with small ones (which would make zeroing the targeted set a far bigger edit). When no
+    feature fires that often, the pool is the ``pool_size`` nearest in frequency alone: ``match_quality``
+    shows how close each draw came. ``exclude`` are further features never drawn (e.g. the rest of the
+    targeted set when ``targeted`` is a subset of it)."""
     targeted = [int(f) for f in targeted]
     freq, contribution = np.asarray(freq, float), np.asarray(contribution, float)
     candidates = np.setdiff1d(np.flatnonzero((freq > 0) & (contribution > 0)),
@@ -88,18 +93,32 @@ def contribution_matched_controls(freq: np.ndarray, contribution: np.ndarray, ta
         raise ValueError("Not enough live features to draw a matched random control.")
     if any(not (freq[f] > 0 and contribution[f] > 0) for f in targeted):
         raise ValueError("Every targeted feature must fire on the fit partition to be matched.")
-    coords = np.stack([np.log(freq, where=freq > 0, out=np.zeros_like(freq)),
-                       np.log(contribution, where=contribution > 0, out=np.zeros_like(contribution))], axis=1)
+    log_f = np.log(freq, where=freq > 0, out=np.zeros_like(freq))
+    log_c = np.log(contribution, where=contribution > 0, out=np.zeros_like(contribution))
     rng = np.random.default_rng(seed)
     draws = []
     for _ in range(n_draws):
         chosen: list[int] = []
         for f in targeted:
             pool = candidates[~np.isin(candidates, chosen)]
-            near = pool[np.argsort(np.linalg.norm(coords[pool] - coords[f], axis=1))[:pool_size]]
+            band = pool[np.abs(log_f[pool] - log_f[f]) <= np.log(freq_tolerance) + 1e-12]
+            near = (band[np.argsort(np.abs(log_c[band] - log_c[f]), kind="stable")[:pool_size]] if len(band)
+                    else pool[np.argsort(np.abs(log_f[pool] - log_f[f]), kind="stable")[:pool_size]])
             chosen.append(int(rng.choice(near)))
         draws.append(chosen)
     return draws
+
+
+def match_quality(freq: np.ndarray, contribution: np.ndarray, targeted, draws) -> list[dict]:
+    """How closely each random control matches its targeted feature: one row per (draw, position), with
+    both features' firing frequency and decoded contribution and the control / targeted ratios."""
+    freq, contribution = np.asarray(freq, float), np.asarray(contribution, float)
+    return [{"draw": d, "targeted": int(t), "control": int(c),
+             "targeted_frequency": float(freq[t]), "control_frequency": float(freq[c]),
+             "frequency_ratio": float(freq[c] / freq[t]),
+             "targeted_contribution": float(contribution[t]), "control_contribution": float(contribution[c]),
+             "contribution_ratio": float(contribution[c] / contribution[t])}
+            for d, draw in enumerate(draws) for t, c in zip(targeted, draw)]
 
 
 # ----------------------------------------------------------------------------- readout probe

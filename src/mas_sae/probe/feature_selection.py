@@ -190,10 +190,15 @@ def latent_stats(sae, X: np.ndarray, batch_size: int = 512) -> dict:
     for i in range(0, len(X), batch_size):
         Z = offline.encode(sae, X[i:i + batch_size]).astype(np.float64)
         n_fire, s, s2 = n_fire + (Z > 0).sum(0), s + Z.sum(0), s2 + (Z ** 2).sum(0)
-    # decoders are affine, so decode(e_i) - decode(0) is latent i's decoder column in activation units
-    eye = torch.eye(sae.latent_dim)
-    cols = torch.cat([sae.decoder(eye[j:j + batch_size]) for j in range(0, sae.latent_dim, batch_size)])
-    dec_norm = (cols - sae.decoder(torch.zeros(1, sae.latent_dim))).norm(dim=1).numpy()
+    # decoders are affine, so decode(e_i) - decode(0) is latent i's decoder column in activation units;
+    # one batch of unit vectors at a time (a full identity is latent_dim^2 floats: 1 GiB at 16k latents)
+    bias = sae.decoder(torch.zeros(1, sae.latent_dim))
+    dec_norm = np.empty(sae.latent_dim)
+    for j in range(0, sae.latent_dim, batch_size):
+        k = min(batch_size, sae.latent_dim - j)
+        unit = torch.zeros(k, sae.latent_dim)
+        unit[torch.arange(k), torch.arange(j, j + k)] = 1.0
+        dec_norm[j:j + k] = (sae.decoder(unit) - bias).norm(dim=1).numpy()
     r = lambda v: float(f"{v:.6g}")
     return {"n_rows": len(X),
             "firing_frequency": [r(v) for v in n_fire / len(X)],

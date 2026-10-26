@@ -204,6 +204,7 @@ def test_committed_configs_load():
             assert (c.feature_selection_summary, c.feature_reference) == (steer.feature_selection_summary, steer.feature_reference)
             assert c.ablation and not c.steer_strengths and all(c.saes[n] == steer.saes[n] for n in c.saes)
         assert set(main.saes) == set(steer.saes) and set(l1.saes) == {"L1 SAE"}
+        assert (main.limit, l1.limit, main.random_directions, l1.random_directions) == (450, 450, 3, 0)
         summary = json.loads((repo / steer.feature_selection_summary).read_text())
         (full, alone), = [(set(summary["saes"]["L1 SAE"]["targeted_features"]), s) for s in l1.targeted_subsets.values()]
         one, rest = alone.values()
@@ -744,7 +745,9 @@ def test_steering_run_writes_dose_response_and_bidirectional_tables(tmp_path, la
     every = tvr[tvr.Rows == "all"]
     assert list(tvr.columns) == replay.TVR_COLUMNS and len(every) == 6 * 3 and (every.N == 3).all()
     assert every.loc[every.Splice == "reconstruction", "p-value (Holm)"].notna().all()
-    assert tvr.loc[tvr.Rows == "edited only", "p-value (Holm)"].isna().all() and (tvr.N <= 3).all()
+    edited = tvr[tvr.Rows == "edited only"]                   # its own Holm family, on the primary splice too
+    assert edited.loc[edited.Splice == "reconstruction", "p-value (Holm)"].notna().all() and (tvr.N <= 3).all()
+    assert (tvr.Control == "matched features").all() and tvr["Random no-op (%)"].between(0, 100).all()
     dose = pd.read_csv(run_dir / "dose_response.csv")
     assert len(dose) == 6 * 3
     topk = dose[dose.Experiment == "TopK SAE"]
@@ -894,13 +897,22 @@ def test_conditions_for_scaling_norm_matched_edits_and_subsets():
     assert [replay.arm_family(a) for a in ("ablation", "steer_+2", "scale_-1", "norm_+0.1")] == list(replay.FAMILIES)
 
 
-def test_contribution_matched_controls_match_on_decoded_contribution_too():
-    # feature 0 is targeted; 1 matches its frequency but not its contribution, 2 is close on both
-    freq = np.array([0.01, 0.01, 0.02, 0.5, 0.0])
-    contribution = np.array([10.0, 1.0, 10.0, 10.0, 10.0])
+def test_contribution_matched_controls_match_frequency_first_then_contribution():
+    # feature 0 is targeted; 1 and 5 fire as often (5 also matches its contribution), 2 fires 2x as often
+    freq = np.array([0.01, 0.01, 0.02, 0.5, 0.0, 0.011])
+    contribution = np.array([10.0, 1.0, 10.0, 10.0, 10.0, 9.0])
     assert offline.frequency_matched_controls(freq, [0], 3, seed=0, pool_size=1) == [[1]] * 3
-    assert offline.contribution_matched_controls(freq, contribution, [0], 3, seed=0, pool_size=1) == [[2]] * 3
-    assert offline.contribution_matched_controls(freq, contribution, [0], 3, seed=0, pool_size=1, exclude=[2]) == [[1]] * 3
+    assert offline.contribution_matched_controls(freq, contribution, [0], 3, seed=0, pool_size=1) == [[5]] * 3
+    # within the frequency band contribution decides; outside it (2 fires 2x as often) it does not count
+    assert offline.contribution_matched_controls(freq, contribution, [0], 3, seed=0, pool_size=1, exclude=[5]) == [[1]] * 3
+    assert offline.contribution_matched_controls(freq, contribution, [0], 3, seed=0, pool_size=1, exclude=[5],
+                                                 freq_tolerance=2.5) == [[2]] * 3
+    # nothing fires as often as 3 (0.5): the pool falls back to the nearest frequencies
+    assert offline.contribution_matched_controls(freq, contribution, [3], 2, seed=0, pool_size=1) == [[2]] * 2
+    q = offline.match_quality(freq, contribution, [0], [[5]])
+    assert q == [{"draw": 0, "targeted": 0, "control": 5, "targeted_frequency": 0.01, "control_frequency": 0.011,
+                  "frequency_ratio": pytest.approx(1.1), "targeted_contribution": 10.0, "control_contribution": 9.0,
+                  "contribution_ratio": pytest.approx(0.9)}]
     draws = offline.contribution_matched_controls(freq, contribution, [0, 2], 4, seed=1, pool_size=3)
     assert draws == offline.contribution_matched_controls(freq, contribution, [0, 2], 4, seed=1, pool_size=3)
     assert all(len(set(d)) == 2 and not set(d) & {0, 2, 4} for d in draws)    # dead feature 4 is never drawn
@@ -966,6 +978,8 @@ def test_feature_sets_redraw_contribution_matched_controls_and_draw_for_each_sub
     assert f["targeted"] == [1, 2] and f["random"] == expected
     sub = f["subsets"]["one"]
     assert sub["targeted"] == [1] and len(sub["random"]) == 2 and all(len(d) == 1 and d[0] not in (1, 2) for d in sub["random"])
+    assert f["match"] == offline.match_quality(lat["firing_frequency"], contribution, [1, 2], expected)
+    assert [m["control"] for m in sub["match"]] == [d[0] for d in sub["random"]]
     used = {i for s in (f, sub) for i in [*s["targeted"], *(i for d in s["random"] for i in d)]}
     assert f["ref"] == {str(i): lat["ref"][i] for i in sorted(used)}   # refs of the new draws come from the latents
     for subsets, match in (({"TopK SAE": {"all": [1, 2]}}, "proper subset"), ({"TopK SAE": {"x": [9]}}, "proper subset")):
@@ -1001,20 +1015,27 @@ def test_norm_matched_run_reports_edit_sizes_no_ops_and_both_directions(tmp_path
     cfg, episodes, comp = _smoke(tmp_path)
     _with_subset(comp.features)
     cfg = dataclasses.replace(cfg, ablation=False, reconstruction=False, scale_fractions=[-0.5, 0.5],
-                              edit_norms=[-0.25, 0.25])
+                              edit_norms=[-0.25, 0.25], random_directions=2)
     run_dir = replay.replay(cfg, episodes.head(3), comp, tmp_path / "run")
     rows = replay._read_rows(run_dir / "per_row.jsonl")
-    assert len(rows) == 3 * (1 + 4 * 3 * 4)
+    assert len(rows) == 3 * (1 + 4 * 3 * 4 + 2 * 2)          # + 2 edit norms x 2 random directions
+    directed = [r for r in rows if r["experiment"] == replay.DIRECTION]
+    assert len(directed) == 3 * 4 and all(r["removed_rel_norm"] == pytest.approx(0.25, rel=1e-4) for r in directed)
     normed = [r for r in rows if "_norm_" in r["condition"]]
     assert all(r["removed_rel_norm"] == pytest.approx(0.25, rel=1e-4) or (r["removed_rel_norm"] == 0 and r["edit_scale"] is None)
                for r in normed)
     assert {r["edit_norm"] for r in normed} == {-0.25, 0.25} and all(r["fraction"] is None for r in normed)
     table = replay.analyse(run_dir)
-    assert len(table) == 2 + 4 * (1 + 2 * 4)
+    assert len(table) == 2 + 4 * (1 + 2 * 4) + (1 + 2)
     tvr = pd.read_csv(run_dir / "targeted_vs_random.csv")
-    every = tvr[tvr.Rows == "all"]
+    every = tvr[(tvr.Rows == "all") & (tvr.Control == "matched features")]
     assert len(every) == 4 * 4 and every["p-value (Holm)"].notna().all()     # error-preserving is primary here
     assert "L1 SAE · first · error-preserving" in set(every.Experiment)
+    direction = tvr[(tvr.Rows == "all") & (tvr.Control == "random direction")]
+    assert len(direction) == 4 * 2 and set(direction.Arm) == {"norm_-0.25", "norm_+0.25"}
+    assert (direction["Random no-op (%)"] == 0).all() and direction["p-value (Holm)"].notna().all()
+    assert replay.DIRECTION in set(table.Experiment) and replay.DIRECTION not in set(pd.read_csv(run_dir / "dose_response.csv").Experiment)
+    assert list(pd.read_csv(run_dir / "control_match.csv").columns) == replay.MATCH_COLUMNS
     bi = pd.read_csv(run_dir / "steering_bidirectional.csv")
     assert sorted(bi.Edit.unique()) == ["norm", "scale"] and len(bi) == 4 * 2
     diag = pd.read_csv(run_dir / "diagnostics.csv")
@@ -1025,3 +1046,45 @@ def test_norm_matched_run_reports_edit_sizes_no_ops_and_both_directions(tmp_path
     s = json.loads((run_dir / "causal_replay_summary.json").read_text())
     assert s["intervention"]["arms"] == ["scale_-0.5", "scale_+0.5", "norm_-0.25", "norm_+0.25"]
     assert "error_preserving splice" in s["multiple_comparisons"]
+
+
+def test_random_direction_edit_has_the_requested_size_and_is_fixed_by_its_seed():
+    m = _host()
+    h = torch.randn(1, 4, 16)
+    x = h[0, -1]
+    out = {}
+    for r, seed in ((-0.25, 7), (0.25, 7), (0.25, 8)):
+        with replay.DirectionSplice(m, "layer", r, seed) as sp:
+            out[r, seed] = m.layer(h)[0, -1] - x
+        assert sp.stats["removed_rel_norm"] == pytest.approx(abs(r), rel=1e-5) and sp.stats["edit_scale"] is None
+    assert (out[0.25, 7].norm() / x.norm()).item() == pytest.approx(0.25, rel=1e-5)
+    assert torch.allclose(out[-0.25, 7], -out[0.25, 7], atol=1e-6)            # same direction, opposite sign
+    with replay.DirectionSplice(m, "layer", 0.25, 7):
+        again = m.layer(h)[0, -1] - x
+    assert torch.equal(again, out[0.25, 7]) and not torch.allclose(out[0.25, 8], out[0.25, 7])
+    with pytest.raises(ValueError, match="nonzero"):
+        replay.DirectionSplice(m, "layer", 0.0, 1)
+
+
+def test_random_direction_conditions():
+    feats = tiny_features(tiny_saes(), n_random_draws=2)
+    conds = replay.conditions(feats, error_preserving=True, edit_norms=[-0.1, 0.1], random_directions=3, seed=42)
+    d = [c for c in conds if c["experiment"] == replay.DIRECTION]
+    assert len(d) == 2 * 3 and {c["direction_seed"] for c in d} == {42000, 42001, 42002}
+    assert all(c["features"] == [] and c["mode"] == "error_preserving" and replay.control_key(c) == (replay.BASELINE, "no_sae", None)
+               for c in d)
+    # the control uses the error-preserving splice, so a reconstruction-only run has none
+    assert not any(c["experiment"] == replay.DIRECTION for c in replay.conditions(feats, edit_norms=[0.1], random_directions=3))
+
+
+def test_config_checks_the_random_direction_settings(tmp_path):
+    p = tmp_path / "c.yaml"
+    base = "capstone_data_root: .\ninteractions_jsonl: a\nlabels_csv: b\nfeature_selection_summary: c\nlayer: 25\n"
+    for extra, match in (("random_directions: -1\nedit_norms: [0.1]\n", "nonnegative"),
+                         ("random_directions: 2\n", "needs edit_norms"),
+                         ("random_directions: 2\nedit_norms: [0.1]\nerror_preserving: false\n", "needs edit_norms")):
+        p.write_text(base + extra)
+        with pytest.raises(ValueError, match=match):
+            replay.ReplayConfig.from_yaml(p)
+    p.write_text(base + "random_directions: 2\nedit_norms: [0.1]\n")
+    assert replay.ReplayConfig.from_yaml(p).random_directions == 2
