@@ -10,8 +10,8 @@
 #       --summary results/feature_selection/20261018T025217187826Z/feature_selection_summary.json --overwrite
 #
 # Per episode: plain replay + 3 SAEs x (targeted + 5 random draws) x (ablation + 8 norm-matched edits)
-# + 3 random directions x 8 norm-matched edits = 187 generations: about 19.7 h for the 450 episodes
-# of the steering runs (limit below; all 517 eligible episodes would take about 22.6 h), at 0.843 s each.
+# + 3 random directions x 8 norm-matched edits = 187 generations: about 22.6 h for all 517 eligible episodes, at 0.843 s each
+# (the steering runs used --limit 450).
 #
 # PRELIMINARY (dose-finding) run: 5 random draws and a grid of doses, to see where targeted and random edits separate
 # at all. The confirmatory run will fix 1-2 doses from this one and use more draws (each draw costs one generation per
@@ -46,8 +46,6 @@ feature_reference: results/feature_selection/20261018T025217187826Z/feature_refe
 # plain replay must reproduce collection before any SAE condition runs (see replay_check.json)
 min_replay_label_match: 0.98
 on_replay_check_fail: stop
-# the first 450 episodes of the seeded order: the steering runs' cohort (they used --limit 450)
-limit: 450
 seed: 42
 n_bootstrap: 1000
 n_permutations: 10000
@@ -62,5 +60,5 @@ error_preserving: true
 ablation: true
 edit_norms: [-1.0, -0.5, -0.25, -0.1, 0.1, 0.25, 0.5, 1.0]
 # warn if the SAE conditions are projected to take longer than this
-max_hours: 21
+max_hours: 24
 output_dir: results/causal_edit_size

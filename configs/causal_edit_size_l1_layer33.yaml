@@ -8,7 +8,7 @@
 # Its random-direction control is in configs/causal_edit_size_layer33.yaml (same episodes and edit sizes).
 #
 # Per episode: plain replay + 3 sets x (targeted + 5 random draws) x (ablation + 4 norm-matched + 2 scaled edits)
-# = 127 generations: about 13.1 h for 450 episodes (all 517: 15.1 h), at 0.826 s each.
+# = 127 generations: about 15.1 h for all 517 eligible episodes, at 0.826 s each.
 #
 # PRELIMINARY (dose-finding) run: 5 random draws and a grid of doses, to see where targeted and random edits separate
 # at all. The confirmatory run will fix 1-2 doses from this one and use more draws (each draw costs one generation per
@@ -37,8 +37,6 @@ feature_reference: results/feature_selection/20261016T003252665105Z/feature_refe
 # plain replay must reproduce collection before any SAE condition runs (see replay_check.json)
 min_replay_label_match: 0.98
 on_replay_check_fail: stop
-# the same 450 episodes as the main run and the steering runs
-limit: 450
 seed: 42
 n_bootstrap: 1000
 n_permutations: 10000
@@ -55,5 +53,5 @@ error_preserving: true
 ablation: true
 edit_norms: [-1.0, -0.25, 0.25, 1.0]
 scale_fractions: [-0.5, 0.5]
-max_hours: 15
+max_hours: 17
 output_dir: results/causal_edit_size

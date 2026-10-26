@@ -204,7 +204,7 @@ def test_committed_configs_load():
             assert (c.feature_selection_summary, c.feature_reference) == (steer.feature_selection_summary, steer.feature_reference)
             assert c.ablation and not c.steer_strengths and all(c.saes[n] == steer.saes[n] for n in c.saes)
         assert set(main.saes) == set(steer.saes) and set(l1.saes) == {"L1 SAE"}
-        assert (main.limit, l1.limit, main.random_directions, l1.random_directions) == (450, 450, 3, 0)
+        assert (main.limit, l1.limit, main.random_directions, l1.random_directions) == (None, None, 3, 0)
         summary = json.loads((repo / steer.feature_selection_summary).read_text())
         (full, alone), = [(set(summary["saes"]["L1 SAE"]["targeted_features"]), s) for s in l1.targeted_subsets.values()]
         one, rest = alone.values()
