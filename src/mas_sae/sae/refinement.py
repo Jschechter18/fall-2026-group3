@@ -212,7 +212,8 @@ def run_refinement(settings, root, *, dry_run=False, resume=False):
                                  training_mean=training_mean,
                                  inactivity_window_examples=config['inactivity_window_examples'],
                                  aux_coefficient=config['aux_coefficient'], aux_k=config['aux_k'],
-                                 aux_dead_window_examples=config['aux_dead_window_examples'])
+                                 aux_dead_window_examples=config['aux_dead_window_examples'],
+                                 weight_l2_coefficient=config.get('weight_l2_coefficient', 0.0))
             runner.training_examples_seen = state['training_examples_seen']
             runner.last_fired_example = state['last_fired_example'].clone().cpu()
             if source_scan is None:

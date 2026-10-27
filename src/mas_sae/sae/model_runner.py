@@ -19,6 +19,7 @@ class ModelRunner:
         aux_coefficient: float = 0.0,
         aux_k: int = 512,
         aux_dead_window_examples: int = 10000,
+        weight_l2_coefficient: float = 0.0,
     ):
         if inactivity_window_examples < 1:
             raise ValueError("inactivity_window_examples must be positive.")
@@ -35,6 +36,10 @@ class ModelRunner:
             if aux_k > model.latent_dim:
                 raise ValueError("aux_k must not exceed latent_dim when AuxK is enabled.")
         self.aux_coefficient = aux_coefficient
+        if (type(weight_l2_coefficient) not in (int, float)
+                or not math.isfinite(weight_l2_coefficient) or weight_l2_coefficient < 0):
+            raise ValueError("weight_l2_coefficient must be finite and nonnegative.")
+        self.weight_l2_coefficient = weight_l2_coefficient
         self.aux_k = aux_k
         self.aux_dead_window_examples = aux_dead_window_examples
         self.model = model
@@ -167,8 +172,18 @@ class ModelRunner:
                 activations, reconstructed, pre_topk,
             )
         weighted_aux_loss = self.aux_coefficient * aux_loss
+        # Explicit L2 objective, not optimizer weight decay. Biases are excluded.
+        # Keep validation selection on the existing main-path objective, so a
+        # shrinking weight norm cannot by itself improve checkpoint selection.
+        weight_l2_loss = reconstructed.new_zeros(())
+        if training_mode and self.weight_l2_coefficient > 0:
+            weight_l2_loss = (self.model.encoder_layer[0].weight.square().sum()
+                              + self.model.decoder_layer[0].weight.square().sum())
+        weighted_weight_l2_loss = self.weight_l2_coefficient * weight_l2_loss
 
-        return {'loss': losses["loss"] + weighted_aux_loss,
+        return {'loss': losses["loss"] + weighted_aux_loss + weighted_weight_l2_loss,
+                'weight_l2_loss': weight_l2_loss,
+                'weighted_weight_l2_loss': weighted_weight_l2_loss,
                 'aux_loss': aux_loss,
                 'weighted_aux_loss': weighted_aux_loss,
                 'aux_eligible_feature_fraction': eligible_fraction,
@@ -202,6 +217,8 @@ class ModelRunner:
         running_weighted_sparsity_loss = 0
         running_aux_loss = 0.0
         running_weighted_aux_loss = 0.0
+        running_weight_l2_loss = 0.0
+        running_weighted_weight_l2_loss = 0.0
         running_aux_eligible_fraction = 0.0
         auxiliary_sums: dict[str, float] = {}
         num_examples = 0
@@ -239,6 +256,8 @@ class ModelRunner:
             running_weighted_sparsity_loss += outputs['weighted_sparsity_loss'].item() * batch_size
             running_aux_loss += outputs['aux_loss'].item() * batch_size
             running_weighted_aux_loss += outputs['weighted_aux_loss'].item() * batch_size
+            running_weight_l2_loss += outputs['weight_l2_loss'].item() * batch_size
+            running_weighted_weight_l2_loss += outputs['weighted_weight_l2_loss'].item() * batch_size
             running_aux_eligible_fraction += outputs['aux_eligible_feature_fraction'] * batch_size
             for key, value in outputs['aux_diagnostics'].items():
                 auxiliary_sums[key] = auxiliary_sums.get(key, 0.0) + value
@@ -267,6 +286,8 @@ class ModelRunner:
             metrics["mean_baseline_rec_loss"] = baseline
             metrics["variance_explained"] = 1 - metrics["rec_loss"] / baseline if baseline > 0 else None
         if training_mode:
+            metrics["weight_l2_loss"] = running_weight_l2_loss / num_examples
+            metrics["weighted_weight_l2_loss"] = running_weighted_weight_l2_loss / num_examples
             metrics["aux_loss"] = running_aux_loss / num_examples
             metrics["weighted_aux_loss"] = running_weighted_aux_loss / num_examples
             metrics["aux_eligible_feature_fraction"] = running_aux_eligible_fraction / num_examples

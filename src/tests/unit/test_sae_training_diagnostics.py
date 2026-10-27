@@ -30,6 +30,7 @@ def test_training_writes_diagnostics_and_frozen_feature_artifact(
     hp = Hyperparameters(
         epochs=2, batch_size=3, latent_dim=6, top_k=2,
         sparsity_mode=mode, inactivity_window_examples=8,
+        weight_l2_coefficient=0.0001,
     )
     original_hp = asdict(hp)
     monkeypatch.setattr(training, "get_git_provenance", lambda: {})
@@ -60,6 +61,7 @@ def test_training_writes_diagnostics_and_frozen_feature_artifact(
     assert manifest["status"] == "completed"
     assert set(manifest["activation_files"]) == set(splits)
     history = json.loads((run / "history.json").read_text())
+    assert history["history"][0]["train_weighted_weight_l2_loss"] > 0
     assert history["history"][0]["train_persistent_inactive_feature_fraction"] is None
     assert history["history"][1]["train_persistent_inactive_feature_fraction"] is not None
     assert "val_variance_explained" in history["history"][0]

@@ -63,6 +63,7 @@ def _saved_hyperparameters(config: dict) -> HP:
         "early_stopping_min_delta": 0.0,
         "tied_initialization": False,
         "aux_coefficient": 0.0,
+        "weight_l2_coefficient": 0.0,
         "aux_k": 512,
         "aux_dead_window_examples": 10000,
         **config,
@@ -261,16 +262,20 @@ def train_sae(
                 "Not applied; weighted_sparsity_loss is recorded as zero for compatibility."
             ),
             "total_loss": (
+                (
                 "reconstruction_loss + sparsity_coefficient * sparsity_loss"
                 if hp.sparsity_mode == "l1" else
                 "reconstruction_loss + aux_coefficient * aux_loss"
                 if hp.aux_coefficient > 0 else "reconstruction_loss"
+                ) + (" + weight_l2_coefficient * weight_l2_loss (training only)"
+                     if hp.weight_l2_coefficient > 0 else "")
             ),
             "auxiliary_loss": "Training-only mean squared error against the detached RMS-normalized reconstruction residual, decoded without bias using eligible inactive features; zero when disabled or no features qualify.",
             "auxiliary_eligibility": "No positive main-path activation in the last aux_dead_window_examples training examples, measured after the current batch; disabled until the window has elapsed. Auxiliary activations do not reset counters.",
             "auxiliary_metrics": "Training auxiliary loss, weighted auxiliary loss, and eligible feature fraction are averaged with example weighting across batches.",
             "auxiliary_effectiveness": "train_auxiliary groups eligible fraction, measured_examples, positive features per example, positive encoder activation fraction across eligible feature/example pairs before auxiliary selection, prediction and residual RMS in normalized units, and 1 - auxiliary error SSE / residual SSE. Effectiveness uses only batches with eligible features; RMS and reduction use accumulated squared sums. Undefined values are null; negative reduction means worse than predicting zero.",
             "selection_metric": "val_loss",
+            "weight_l2_loss": "Training-only sum of squared encoder and decoder matrix weights, excluding biases; explicit L2 penalty, not AdamW weight decay. Unit-norm decoder columns make its decoder value constant at step boundaries.",
             "early_stopping": "Stop after patience epochs without validation loss decreasing by more than early_stopping_min_delta from the last significant improvement. The threshold is absolute, and smaller improvements accumulate. Checkpoint selection still saves the lowest validation loss.",
             "selection_loss": "Main-path validation loss, excluding AuxK; reconstruction loss for TopK and reconstruction plus weighted sparsity loss for L1.",
             "variance_explained": "1 - reconstruction SSE / SSE around the training-mean activation; null if baseline SSE is zero.",
@@ -302,6 +307,7 @@ def train_sae(
             aux_coefficient=hp.aux_coefficient,
             aux_k=hp.aux_k,
             aux_dead_window_examples=hp.aux_dead_window_examples,
+            weight_l2_coefficient=hp.weight_l2_coefficient,
         )
 
         checkpoint_evaluator = CheckpointEvaluatorCallback(run_directory / "checkpoints")
