@@ -181,8 +181,8 @@ Two team reference cases (Bordeaux, Marvin Gaye) are among the moved episodes.
 
 | file | sha256 |
 |---|---|
-| reports/candidate_final_labels_20261027/proposal_snapshot.py | 6b744b45c789f780… |
-| reports/candidate_final_labels_20261027/final_labels.py | b08463e5c7cc21cc… |
+| results/experiments/candidate_final_labels_20261027/proposal_snapshot.py | 6b744b45c789f780… |
+| results/experiments/candidate_final_labels_20261027/final_labels.py | 3560896b2d86e2b6… |
 | results/behavior/behavior_v012_official_20261011/partitions.csv | b0c717d5c4f41129… |
 | natural_4b_full9_candidates/train/sampled_questions.json | b7760be0335b83c7… |
 | natural_4b_full9_candidates/train/interactions.jsonl | 9e64a49668586d95… |
@@ -191,4 +191,4 @@ Two team reference cases (Bordeaux, Marvin Gaye) are among the moved episodes.
 | natural_4b_full9_candidates/validation/interactions.jsonl | f27201c784c78046… |
 | natural_4b_full9_candidates/validation/exclusions.jsonl | 17465782b833e37c… |
 
-Tests: `PYTHONPATH=src:reports/candidate_final_labels_20261027 python -m pytest -p no:cacheprovider reports/candidate_final_labels_20261027/test_final_labels.py`
+Tests: `PYTHONPATH=src:results/experiments/candidate_final_labels_20261027 python -m pytest -p no:cacheprovider results/experiments/candidate_final_labels_20261027/test_final_labels.py`

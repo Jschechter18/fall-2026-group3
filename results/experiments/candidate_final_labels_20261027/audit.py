@@ -33,7 +33,7 @@ def main():
     args = parser.parse_args()
     here = Path(__file__).resolve().parent
     manifest = json.loads((here / "counts.json").read_text())
-    records = fl.build(args.run, here.parents[1] / "results/behavior/behavior_v012_official_20261011/partitions.csv")
+    records = fl.build(args.run, here.parents[2] / "results/behavior/behavior_v012_official_20261011/partitions.csv")
     if fl.labels_sha256(records) != manifest["labels_sha256"]:
         raise ValueError("the labels built from this run differ from the approved labels in counts.json")
     text = {r["question_id"]: r for s in fl.SPLITS for r in read_jsonl(args.run / s / "interactions.jsonl")}
@@ -120,8 +120,8 @@ def main():
             table(["question_id", "A1", "C1", "A2"], [qa(r["question_id"]) for r in hybrids]), ""]
 
     out += ["## Sources\n", table(["file", "sha256"], [[k, v[:16] + "…"] for k, v in manifest["sources"].items()]), "",
-            "Tests: `PYTHONPATH=src:reports/candidate_final_labels_20261027 python -m pytest -p no:cacheprovider "
-            "reports/candidate_final_labels_20261027/test_final_labels.py`\n"]
+            "Tests: `PYTHONPATH=src:results/experiments/candidate_final_labels_20261027 python -m pytest -p no:cacheprovider "
+            "results/experiments/candidate_final_labels_20261027/test_final_labels.py`\n"]
     (here / "AUDIT.md").write_text("\n".join(out))
     print("wrote", here / "AUDIT.md")
 

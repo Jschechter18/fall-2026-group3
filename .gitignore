@@ -77,3 +77,7 @@ results/causal_replay/*/per_row.jsonl
 /results/adoption_experiment/*/episodes.jsonl
 /results/adoption_experiment/*/results.csv
 /results/adoption_experiment/verification_100q/comparisons.csv
+
+# Generated candidate final labels (rebuild with the commands in the folder README)
+results/experiments/candidate_final_labels_20261027/output/
+results/experiments/candidate_final_labels_20261027/figures/

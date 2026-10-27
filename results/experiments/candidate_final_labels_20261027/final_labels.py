@@ -334,7 +334,7 @@ def main():
     if sha256_file(args.partitions) != before:
         raise RuntimeError("frozen partitions changed during the build")
     (args.output / "final_labels.jsonl").write_text(labels_jsonl(records))
-    root = Path(__file__).resolve().parents[2]
+    root = Path(__file__).resolve().parents[3]
     sources = {str(p.relative_to(root)): sha256_file(p)
                for p in (Path(snap.__file__).resolve(), Path(__file__).resolve(), args.partitions.resolve())}
     sources |= {f"{args.run.name}/{s}/{f}": sha256_file(args.run / s / f) for s in SPLITS

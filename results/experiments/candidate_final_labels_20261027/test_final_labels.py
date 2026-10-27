@@ -6,7 +6,7 @@ import pytest
 
 import final_labels as fl
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 PARTITIONS = ROOT / "results/behavior/behavior_v012_official_20261011/partitions.csv"
 RUN = Path(os.environ.get("CANDIDATE_RUN_DIR", ROOT / "results/collection/natural_4b_full9_candidates"))
 APPROVED = json.loads((Path(__file__).parent / "counts.json").read_text())

@@ -55,7 +55,7 @@ Rules use saved text only: no gold answers, LLM judges or question-ID exceptions
 aws s3 sync s3://dats-capstone/shared/group3/results/collection/natural_4b_full9_candidates \
   results/collection/natural_4b_full9_candidates --profile school
 export CANDIDATE_RUN_DIR=results/collection/natural_4b_full9_candidates
-D=reports/candidate_final_labels_20261027
+D=results/experiments/candidate_final_labels_20261027
 PYTHONPATH=src:$D python $D/final_labels.py --run $CANDIDATE_RUN_DIR \
   --partitions results/behavior/behavior_v012_official_20261011/partitions.csv --output $D/output   # output must not exist
 sha256sum $D/output/final_labels.jsonl          # must equal labels_sha256 in counts.json
