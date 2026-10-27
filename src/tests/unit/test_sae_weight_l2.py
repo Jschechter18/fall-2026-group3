@@ -22,8 +22,11 @@ def test_penalty_gradients_and_validation_exclusion(mode):
     output = runner._common(batch, training_mode=True)
     penalty = output['weighted_weight_l2_loss']
     encoder = model.encoder_layer[0]
+    decoder = model.decoder_layer[0]
+    assert isinstance(encoder, torch.nn.Linear)
+    assert isinstance(decoder, torch.nn.Linear)
     expected = 0.01 * (encoder.weight.square().sum()
-                       + model.decoder_layer[0].weight.square().sum())
+                       + decoder.weight.square().sum())
     torch.testing.assert_close(penalty, expected)
     grad, bias_grad = torch.autograd.grad(
         penalty, (encoder.weight, encoder.bias), allow_unused=True)

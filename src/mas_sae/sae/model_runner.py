@@ -177,8 +177,12 @@ class ModelRunner:
         # shrinking weight norm cannot by itself improve checkpoint selection.
         weight_l2_loss = reconstructed.new_zeros(())
         if training_mode and self.weight_l2_coefficient > 0:
-            weight_l2_loss = (self.model.encoder_layer[0].weight.square().sum()
-                              + self.model.decoder_layer[0].weight.square().sum())
+            encoder = self.model.encoder_layer[0]
+            decoder = self.model.decoder_layer[0]
+            assert isinstance(encoder, torch.nn.Linear)
+            assert isinstance(decoder, torch.nn.Linear)
+            weight_l2_loss = (encoder.weight.square().sum()
+                              + decoder.weight.square().sum())
         weighted_weight_l2_loss = self.weight_l2_coefficient * weight_l2_loss
 
         return {'loss': losses["loss"] + weighted_aux_loss + weighted_weight_l2_loss,
