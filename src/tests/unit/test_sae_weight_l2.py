@@ -51,6 +51,6 @@ def test_legacy_config_and_sweep():
     root = Path(__file__).resolve().parents[3]
     config = yaml.safe_load((root / 'configs/sae_hp_tuning/layer_25_l1_weight_l2.yaml').read_text())
     candidates = expand_search_space(config)
-    assert len(candidates) == 6
+    assert len(candidates) == 4
     assert candidates[0][1].weight_l2_coefficient == 0
     assert all(hp.sparsity_mode == 'l1' for _, hp in candidates)

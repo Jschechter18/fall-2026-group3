@@ -18,9 +18,11 @@ Adam itself retains its existing zero weight decay. Coefficients multiply a sum,
 not a mean; do not transfer them across model sizes or normalization conventions
 without checking relative loss scales.
 
-The six-trial pilot fixes the previous layer-25 L1 baseline (learning rate 0.0001,
+The four-trial pilot fixes the previous layer-25 L1 baseline (learning rate 0.0001,
 activation sparsity coefficient 2.0, 12,888 latents, tied initialization, seed 42)
-and sweeps coefficients from zero through 1e-4. The maximum is 200 epochs per
+and screens coefficients 0, 1e-8, 1e-6, and 1e-4. Intermediate values can be
+tested after observing the response; prior L1 trials do not establish which L2
+coefficients will work. The maximum is 200 epochs per
 trial with the existing validation scheduler and early stopping. It uses training
 and validation only, with no resampling or automatic model selection.
 
