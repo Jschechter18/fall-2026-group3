@@ -67,17 +67,14 @@ results/sae/musique/runs/*/*/checkpoints/
 # Tuning and continuation checkpoints
 /results/sae/musique/tuning/**/checkpoints/
 
-# Archived adoption experiment artifacts
-/results/adoption_experiment/archive/
 # Large artifacts mirrored to s3://dats-capstone/shared/group3/
 results/sae/pretrained/
 results/causal_replay/*/per_row.jsonl
+*.pt
 
-# Per-row adoption experiment files mirrored to S3 (results/adoption_experiment/s3_artifacts.json)
-/results/adoption_experiment/*/episodes.jsonl
-/results/adoption_experiment/*/results.csv
-/results/adoption_experiment/verification_100q/comparisons.csv
-
-# Generated candidate final labels (rebuild with the commands in the folder README)
-results/experiments/candidate_final_labels_20261027/output/
-results/experiments/candidate_final_labels_20261027/figures/
+# Detailed SAE per-feature artifacts (archive under the matching S3 results/sae/ path)
+/results/sae/**/feature_counts_epoch_*.json
+/results/sae/**/feature_counts.json
+/results/sae/**/baseline_counts.json
+/results/sae/**/post_intervention_counts.json
+/results/sae/**/feature_frequencies.json
