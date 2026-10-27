@@ -71,3 +71,10 @@ results/sae/musique/runs/*/*/checkpoints/
 results/sae/pretrained/
 results/causal_replay/*/per_row.jsonl
 *.pt
+
+# Detailed SAE per-feature artifacts (archive under the matching S3 results/sae/ path)
+/results/sae/**/feature_counts_epoch_*.json
+/results/sae/**/feature_counts.json
+/results/sae/**/baseline_counts.json
+/results/sae/**/post_intervention_counts.json
+/results/sae/**/feature_frequencies.json
