@@ -1,0 +1,75 @@
+{
+  "policy_version": "candidate-final-2026-10-27",
+  "total": 22355,
+  "labels": {
+    "adoption": 5834,
+    "retention": 4810,
+    "agreement": 8451,
+    "out": 3260
+  },
+  "labels_by_partition": {
+    "train": {
+      "adoption": 4146,
+      "retention": 3465,
+      "agreement": 6063,
+      "out": 2262
+    },
+    "validation": {
+      "adoption": 625,
+      "retention": 491,
+      "agreement": 901,
+      "out": 396
+    },
+    "test": {
+      "adoption": 529,
+      "retention": 416,
+      "agreement": 755,
+      "out": 292
+    },
+    "intervention": {
+      "adoption": 534,
+      "retention": 438,
+      "agreement": 732,
+      "out": 287
+    },
+    "null": {
+      "adoption": 0,
+      "retention": 0,
+      "agreement": 0,
+      "out": 23
+    }
+  },
+  "flags": {
+    "critic_mentions_a1": 345,
+    "letter_reply": 586,
+    "citation_only": 70,
+    "both_refused": 1060,
+    "team_reviewed": 46,
+    "potential_hybrid": 9
+  },
+  "steps": {
+    "proposal: out": 2289,
+    "proposal: adoption": 5549,
+    "moved_out: out": 345,
+    "proposal: retention": 4600,
+    "proposal: agreement": 8450,
+    "addition: adoption": 275,
+    "guard: out": 626,
+    "addition: retention": 188,
+    "v020_usable: adoption": 10,
+    "v020_usable: retention": 22,
+    "addition: agreement": 1
+  },
+  "labels_sha256": "21a5c7716ae4fd59bfc0731acb8683b25ff01e5861d867bee5ffcc48982c9092",
+  "sources": {
+    "results/experiments/candidate_final_labels_20261027/proposal_snapshot.py": "6b744b45c789f780127b23a3975501ffcd02fb2b7b19cd406a15251903538c3b",
+    "results/experiments/candidate_final_labels_20261027/final_labels.py": "3560896b2d86e2b68297ab8bcd0a11a1a0ce2d7f8e299cdab94a4e28907dd052",
+    "results/behavior/behavior_v012_official_20261011/partitions.csv": "b0c717d5c4f41129a5d2a838e132df057f6e4f5a72644aa889a41e55cc884389",
+    "natural_4b_full9_candidates/train/sampled_questions.json": "b7760be0335b83c77f1a75c5517a6b70779e68dcfa3dc37ac430768b8f161ac1",
+    "natural_4b_full9_candidates/train/interactions.jsonl": "9e64a49668586d95a31f604ed9e1405f10ab4bce42462d376a6bb7ecbd48764b",
+    "natural_4b_full9_candidates/train/exclusions.jsonl": "b56154513f5a45aacbdd94f85025095b8ee9fed4213319dfe6543395019cfff8",
+    "natural_4b_full9_candidates/validation/sampled_questions.json": "95407f3111d55eab8b68df0f98cc845b39ecc8957ec5650f615dbfe23fa17364",
+    "natural_4b_full9_candidates/validation/interactions.jsonl": "f27201c784c78046ffe57259a1f5439fc1b9204c460369e3dbd42b573c13784a",
+    "natural_4b_full9_candidates/validation/exclusions.jsonl": "17465782b833e37c4d55485ed1c76e511ec4fd7b7531f0a1db9fd8e053650e74"
+  }
+}
