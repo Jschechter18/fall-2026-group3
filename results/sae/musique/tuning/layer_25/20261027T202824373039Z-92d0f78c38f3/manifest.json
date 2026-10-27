@@ -1,0 +1,26 @@
+{
+  "run_id": "20261027T202824373039Z-92d0f78c38f3",
+  "run_name": "natural_4b_full9_partitioned",
+  "layer": 25,
+  "created_at": "2026-10-27T20:28:24.373039+00:00",
+  "git_commit": "92d0f78c38f39c578abfc28cbb8d337ee9696291",
+  "command": "/home/ubuntu/miniconda3/envs/capstone/bin/python scripts/sae/train_sae.py --hp-tune --config configs/sae_hp_tuning/layer_25_l1_weight_l2.yaml",
+  "status": "completed",
+  "error_message": "",
+  "git_dirty": false,
+  "git_status": "",
+  "git_diff": "",
+  "git_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "git_diff_scope": "Staged and unstaged tracked changes relative to HEAD; untracked contents excluded.",
+  "activation_files": {
+    "train": {
+      "path": "/home/ubuntu/capstone/fall-2026-group3/data/activations/natural_4b_full9_partitioned/layer_25/train.pt",
+      "sha256": "3f45088fdbd80a0d6737d8e388c5abc580e04cb0fa2593f6313d1c16f4c13e7d"
+    },
+    "validation": {
+      "path": "/home/ubuntu/capstone/fall-2026-group3/data/activations/natural_4b_full9_partitioned/layer_25/validation.pt",
+      "sha256": "b5f099dce94db0f28f217bda5422f1f217cfc742d825982edde556d2ca2b21c0"
+    }
+  },
+  "updated_at": "2026-10-27T22:55:06.969029+00:00"
+}
