@@ -35,7 +35,9 @@ def parser():
     q.add_argument("--config", type=Path, required=True,
                    help="JSON/YAML with top-level proportions and seed, plus optional musique_validation_policy; not a collection-model config.")
     q.add_argument("--existing", type=Path,
-                   help="Previous frozen JSON/YAML with a 'questions' list whose assignments should be preserved; historical CSV files are not supported here.")
+                   help="Previous frozen JSON/YAML or historical MuSiQue partition CSV; preserve its assignments.")
+    q.add_argument("--exposure-manifest", type=Path,
+                   help="Optional historical split_manifest.csv supplying QC/development flags when --existing is a CSV.")
     q.add_argument("--output", type=Path, required=True,
                    help="New frozen partition manifest JSON file; must not already exist.")
 
@@ -133,9 +135,17 @@ def main():
     )
     if a.command == "master": _write_new(a.output, build_master_dataset(_load(a.inputs)["inputs"])); return
     if a.command == "freeze":
-        c = _load(a.config); existing = _load(a.existing) if a.existing else None
-        old = ({r["question_id"]: r for r in existing["questions"]} if existing else None)
-        _write_new(a.output, freeze_partitions(_load(a.master), proportions=c["proportions"], seed=c["seed"], existing=old, musique_validation_policy=c.get("musique_validation_policy", "validation"))); return
+        c = _load(a.config)
+        master = _load(a.master)
+        if a.existing and a.existing.suffix == ".csv":
+            from mas_sae.data.partition_adapter import import_historical_partitions
+            old = import_historical_partitions(master, a.existing, exposure_manifest=a.exposure_manifest)
+        else:
+            if a.exposure_manifest:
+                raise ValueError("--exposure-manifest requires historical CSV --existing")
+            existing = _load(a.existing) if a.existing else None
+            old = ({r["question_id"]: r for r in existing["questions"]} if existing else None)
+        _write_new(a.output, freeze_partitions(master, proportions=c["proportions"], seed=c["seed"], existing=old, musique_validation_policy=c.get("musique_validation_policy", "validation"))); return
     if a.command == "plan":
         master = _load(a.master); plan = plan_chunks(master, _load(a.partitions), run_id=a.run_id, chunk_size=a.chunk_size, compatibility=_load(a.compatibility) if a.compatibility else {})
         _write_new(a.output, plan); write_work_packages(a.packages, master, plan); return

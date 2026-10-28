@@ -48,6 +48,7 @@ from pathlib import Path
 
 from mas_sae.data.production import (
     COVERAGE_MODES,
+    interaction_paths,
     build_partition_manifest,
     check_scan_repeats_full_run,
     read_partitions,
@@ -117,7 +118,13 @@ def main():
                         help="first derivation only: share reserved for the causal experiment")
     parser.add_argument("--split-seed", type=int,
                         help="first derivation only: seed of the hop-stratified cut")
+    parser.add_argument("--layout", choices=("legacy", "partitioned"), default="legacy",
+                        help="Input directory layout; partitioned uses the distributed finalizer's manifests and test folder.")
     args = parser.parse_args()
+    if args.layout == "partitioned" and args.frozen_partitions is None:
+        if args.full_results is None:
+            parser.error("--layout partitioned requires --full-results")
+        args.frozen_partitions = args.full_results / "partitions.csv"
 
     deriving = args.frozen_partitions is None
     derivation = (args.train_proportion, args.test_proportion, args.intervention_proportion, args.split_seed)
@@ -140,13 +147,14 @@ def main():
     ensure_output_available(args.output)
 
     # Remember the input files' hashes so we can confirm they were not changed.
-    input_files = [run_dir / source_split / "interactions.jsonl"
-                   for run_dir in (full_dir, scan_dir) if run_dir is not None
-                   for source_split in ("train", "validation")]
+    if args.layout == "partitioned" and scan_dir is not None:
+        parser.error("Partitioned full runs do not use the historical scan-merge path")
+    input_files = [path for run_dir in (full_dir, scan_dir) if run_dir is not None
+                   for path in interaction_paths(run_dir, layout=args.layout)]
     hashes_before = {str(path): sha256_file(path) for path in input_files}
 
     # 1. Read the run(s) and give each question its partition.
-    full_rows = read_run_interactions(full_dir)
+    full_rows = read_run_interactions(full_dir, layout=args.layout)
     scan_rows = read_run_interactions(scan_dir) if scan_dir is not None else []
     if scan_rows:
         check_scan_repeats_full_run(full_rows, scan_rows, policy.input_fields)
@@ -161,9 +169,21 @@ def main():
         manifest = build_partition_manifest(full_rows, scan_rows, qc100_ids,
                                             proportions=proportions, seed=args.split_seed)
     else:
-        frozen = read_partitions(args.frozen_partitions)
+        frozen = read_partitions(args.frozen_partitions, layout=args.layout)
+        if args.layout == "partitioned":
+            # Historical QC files use original MuSiQue IDs; only that source
+            # inherits their exposure, even if synthetic IDs share the suffix.
+            musique_ids = {r["original_id"]: q for q, r in frozen.items() if r["dataset_source"] == "musique"}
+            for original_id in qc100_ids:
+                qid = original_id if original_id in frozen else musique_ids.get(original_id)
+                if qid is not None:
+                    frozen[qid].update(in_qc100=True, in_development_data=True,
+                                       prior_development_exposure=True, exposure_history_known=True)
+        exclusions = (json.loads((full_dir/"collection_status.json").read_text())["excluded"]
+                      if args.layout == "partitioned" else [])
         manifest = build_partition_manifest(full_rows, scan_rows, qc100_ids,
-                                            frozen=frozen, coverage=args.coverage)
+                                            frozen=frozen, coverage=args.coverage,
+                                            layout=args.layout, exclusions=exclusions)
 
     # 2. Label every episode of the full run.
     for row in full_rows:
@@ -174,7 +194,8 @@ def main():
     #    in full whenever one is in use, however much of it this run covers.
     args.output.mkdir(parents=True)
     write_labels(args.output / "labels.csv", full_rows)
-    coverage = write_package_tables(args.output, manifest, frozen)
+    coverage = write_package_tables(args.output, manifest, frozen, layout=args.layout,
+                                    exclusions=exclusions if not deriving else ())
     if deriving:
         partition_record = {"proportions_of_source_train": proportions, "seed": args.split_seed,
                             "rule": "MuSiQue-validation -> validation; MuSiQue-train cut by sorted "
@@ -216,6 +237,9 @@ def main():
         "all": label_counts(full_rows),
         "source_train": label_counts(train_rows),
         "source_validation": label_counts(validation_rows),
+        "by_storage_split": {split: label_counts([r for r in full_rows if r["source_split"] == split])
+                             for split in sorted({r["source_split"] for r in full_rows})},
+        "layout": args.layout,
         "split_audit": split_audit(manifest),
     }
     write_json_atomic(args.output / "counts.json", counts)

@@ -28,6 +28,7 @@ from mas_sae.experiments.collection_artifacts import save_collection_artifacts
 from mas_sae.experiments.records import read_jsonl
 from mas_sae.experiments.conditions import assign_candidate_orders
 from mas_sae.agents.solver import Solver
+from mas_sae.data.partition_adapter import canonical_partitions, write_distributed_tables
 
 MASTER_VERSION = 1
 PLAN_VERSION = 1
@@ -213,6 +214,10 @@ def freeze_partitions(master: dict[str, Any], *, proportions: dict[str, float], 
         frozen[row["question_id"]].update(partition=partition,
             collection_seed=int.from_bytes(hashlib.sha256(f"{seed}:{row['question_id']}".encode()).digest()[:8], "big") % (2**31),
             prior_development_exposure=prior)
+    for question in master["questions"]:
+        record = frozen[question["question_id"]]
+        record["original_id"] = question["original_id"]
+        record["original_source_split"] = question["source_split"]
     ordered = [frozen[r["question_id"]] for r in master["questions"]]
     # Freeze presentation order once, independently of worker/chunk boundaries.
     # On extension, preserve existing orders and assign only missing ones.
@@ -271,9 +276,14 @@ def plan_chunks(master: dict[str, Any], frozen: dict[str, Any], *, run_id: str,
             chunks.append({"chunk_id": chunk_id, "partition": partition, "partition_start": start,
                            "question_ids": [r["question_id"] for r in group],
                            "membership_sha256": sha256_json(membership), "questions": membership})
+    by_id = {r["question_id"]: r for r in master["questions"]}
+    planned_questions = [{**r, "original_id": by_id[r["question_id"]]["original_id"],
+                          "original_source_split": by_id[r["question_id"]]["source_split"]}
+                         for r in frozen["questions"]]
     basis = {"schema_version": PLAN_VERSION, "run_id": run_id,
              "master_sha256": master["master_sha256"], "partitions_sha256": frozen["partitions_sha256"],
-             "compatibility": compatibility or {}, "chunks": chunks}
+             "compatibility": compatibility or {}, "chunks": chunks,
+             "questions": planned_questions}
     return {**basis, "plan_sha256": sha256_json(basis)}
 
 
@@ -595,6 +605,7 @@ def finalize_local_chunks(*, plan: dict[str, Any], chunk_dirs: dict[str, str | P
     stage_name = f".{run_name}.staging-{uuid.uuid4()}"
     summaries = {}
     worker_provenance = []
+    question_metadata = canonical_partitions(plan["questions"]) if "questions" in plan else {}
     try:
         with tempfile.TemporaryDirectory() as progress_parent:
             for partition in COLLECTABLE_PARTITIONS:
@@ -645,6 +656,12 @@ def finalize_local_chunks(*, plan: dict[str, Any], chunk_dirs: dict[str, str | P
                 for site in candidate_sites:
                     merged = collection_progress.merge_chunks(
                         progress, question_ids=question_ids, candidate_sites=[site])
+                    if question_metadata:
+                        for record in merged["records"]:
+                            fixed = question_metadata[record["question_id"]]
+                            for field in ("dataset_source", "original_id", "original_source_split", "partition",
+                                          "hop_group", "in_qc100", "in_development_data", "exposure_history_known"):
+                                record[field] = fixed[field]
                     if reference_records is None:
                         reference_records, reference_exclusions = merged["records"], merged["exclusions"]
                     elif (merged["records"] != reference_records
@@ -656,13 +673,17 @@ def finalize_local_chunks(*, plan: dict[str, Any], chunk_dirs: dict[str, str | P
                         attempt1_by_site=merged["attempt1_by_site"], attempt2_by_site=merged["attempt2_by_site"],
                         records=merged["records"], exclusions=merged["exclusions"],
                         resolved_config=resolved_config,
-                        sampled_questions=[{"question_id": q, "hop_group": "explicit"} for q in question_ids])
+                        sampled_questions=[question_metadata[q] if question_metadata else
+                                           {"question_id": q, "hop_group": "explicit"} for q in question_ids])
                     site_shapes.update(current["site_shapes"])
                     summary = current
                     del merged
                 summary["site_shapes"] = site_shapes
+                summary["run_name"] = run_name
                 write_json_atomic(result_root/stage_name/partition/"summary.json", summary)
                 summaries[partition] = summary
+        if question_metadata:
+            write_distributed_tables(result_root/stage_name, plan["questions"], summaries)
         staged_a, staged_r = activation_root/stage_name, result_root/stage_name
         # Rename only after every partition has validated and been written.
         if staged_a.exists(): staged_a.replace(final_a)

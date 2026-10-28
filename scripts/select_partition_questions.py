@@ -42,12 +42,22 @@ def main():
     parser.add_argument("--exclude", type=Path, nargs="*", default=[])
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--frozen-partitions", type=Path, default=FROZEN_PARTITIONS)
+    parser.add_argument("--layout", choices=("legacy", "partitioned"), default="legacy",
+                        help="Partitioned uses namespaced master IDs; --exclude files must then be JSON ID lists.")
     args = parser.parse_args()
 
     ensure_output_available(args.output)
     manifest = read_manifest(args.package / "split_manifest.csv")
-    check_manifest_matches_frozen(manifest, read_partitions(args.frozen_partitions))
-    excluded = set().union(*(question_ids_in(path) for path in args.exclude))
+    check_manifest_matches_frozen(manifest, read_partitions(args.frozen_partitions, layout=args.layout))
+    excluded = set()
+    for path in args.exclude:
+        if args.layout == "partitioned":
+            ids = json.loads(path.read_text())
+            if not isinstance(ids, list) or any(not isinstance(qid, str) for qid in ids):
+                raise ValueError("Partitioned exclusion files must be JSON lists of namespaced question IDs")
+            excluded.update(ids)
+        else:
+            excluded.update(question_ids_in(path))
     ids = sample_partition_questions(manifest, partition=args.partition,
                                      num_questions=args.num_questions, seed=args.seed, exclude=excluded)
 

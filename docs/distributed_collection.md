@@ -171,3 +171,87 @@ and enough disk for chunks plus staged and final files
 (approximately three copies at the rename boundary). If that estimate is too
 large for the selected instance, use smaller partitions or provision a larger
 local volume; do not merge by concatenating already-combined chunk tensors.
+
+## Historical partitions and downstream loading
+
+Historical MuSiQue assignments can be imported directly when freezing the master
+question pool. Keep the original CSV unchanged:
+
+```bash
+PYTHONPATH=src python scripts/distributed_collection.py freeze \
+  --master artifacts/master-v1.json --config REPLACE_PARTITION_CONFIG.yaml \
+  --existing REPLACE_HISTORICAL_PARTITIONS.csv \
+  --exposure-manifest REPLACE_HISTORICAL_SPLIT_MANIFEST.csv \
+  --output artifacts/partitions-v1.json
+```
+
+`--exposure-manifest` is optional when the input CSV already includes
+`in_qc100`/`in_development_data`. With partitions alone, unavailable development
+history stays unknown and is reported; it is not evidence that a question is
+untouched. The existing partition sampler does not select unknown-history rows
+as unexposed data. Import matches `(musique, original_id)` to the master ID,
+preserves membership, and rejects missing IDs or conflicting origin/hop metadata.
+Synthetic questions with the same original ID do not inherit MuSiQue assignments.
+Only questions absent from the imported mapping receive new partitions. For a
+later master expansion, use the previous frozen JSON as `--existing`.
+
+New work plans carry question metadata for finalization. Final results include:
+
+- `partitions.csv`: permanent membership for **all** questions, including the
+  reserved intervention pool and collection exclusions.
+- `split_manifest.csv`: collected questions only, with actual per-split
+  `full_index` activation addresses and available episode IDs.
+- `run_layout.json`: the directories readers must open, including `test` when
+  assigned. A missing expected file raises rather than silently dropping data.
+- `collection_status.json`: collected, excluded (with reasons), reserved, and
+  unknown-exposure IDs. Expected intervention/exclusions are not missing runs.
+- `counts.json`: source-file hashes and collected counts by partition/source;
+  this contains no behavioral labels.
+
+For run records/manifests, `source_split` identifies the tensor and interaction
+folder. `original_source_split` retains the original dataset split; `partition`
+controls permitted use. `dataset_source`, `original_id`, explicit hop metadata,
+and exposure flags are retained. Thus a question can originate in MuSiQue train,
+be assigned research test, and live at `test/interactions.jsonl` and
+`layer_NN/test_attempt2.pt` without losing its origin.
+
+Historical readers keep `layout="legacy"` by default. Use
+`read_run_interactions(..., layout="partitioned")`,
+`read_partitions(..., layout="partitioned")`, and
+`load_labeled_rows(..., layout="partitioned")` for the new results. The existing
+activation loader uses those manifests directly. SAE dataloaders already read
+`train.pt`, `validation.pt`, and `test.pt`; intervention tensors are not produced.
+Probe configurations point `manifest_csv` at the new `split_manifest.csv`, use
+`index_column: full_index`, and name their input folders in `source_splits`.
+Fitting/tuning uses `[train, validation]`; final test evaluation must explicitly
+select test using the existing sealed-partition controls.
+
+Labels remain a separate post-processing product. Existing behavioral labeling
+can be exercised without changing its rules:
+
+```bash
+PYTHONPATH=src python scripts/prepare_behavior_v01.py \
+  --full-results results/collection/REPLACE_FINAL_RUN --layout partitioned \
+  --label-policy v0.2.0-candidate --output REPLACE_NEW_LABEL_PACKAGE
+```
+
+This reads frozen membership from the run's `partitions.csv` by default, opens
+all recorded split folders, and accounts for reserved/excluded questions. The
+historical source-run/layer-scan merge stays on the legacy path. The activation
+export script also accepts `--layout partitioned` with the new frozen CSV.
+Claude labeling is outside this change: a future label adapter can use stable
+question/episode IDs without changing membership or tensors. Labels from an
+older collection must not be blindly reused for newly generated answers.
+
+Older work plans without embedded question metadata retain their prior merge
+behavior but do not produce these integrated downstream tables. Regenerate the
+plan/packages from the same frozen assignments to use this workflow.
+
+The integrated row manifest assumes one condition and one A2 presentation per
+question, matching the current collection configuration. Multiple episodes per
+question require a separate episode-level manifest extension. Feedback audit
+and partition-selection commands also accept `--layout partitioned`. Selection
+returns namespaced master IDs; its `--exclude` inputs must be JSON lists of
+those IDs. These IDs are for master-dataset workflows, not direct input to the
+legacy MuSiQue Hub `sampling.strategy: listed` loader. Reserved intervention IDs
+come from `intervention_question_ids.json`, not collected episode sampling.

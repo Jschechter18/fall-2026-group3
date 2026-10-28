@@ -125,3 +125,18 @@ in manifest provenance. Missing orders fail before model loading; finalization
 checks candidates records against planned orders. Tests exercise mixed-source
 fixtures, chunk-size independence, extensions, and the actual worker entry point
 with model execution mocked. No synthetic release or paid model run was used.
+
+## Partition and downstream integration
+
+Implemented: historical CSV assignments are mapped by dataset source/original
+ID, with optional historical exposure metadata and no reassignment of known
+questions. Finalization carries explicit origin/hop/exposure metadata and writes
+permanent membership, collected-row manifests, source hashes, and a coverage
+report separating exclusions and reserved intervention questions. Explicit
+partitioned-layout readers include test files and preserve legacy defaults.
+Existing behavior-package and activation-export CLIs accept the new layout;
+SAE and probe loaders are exercised against the actual merged tensors.
+
+Claude label generation remains a separate ticket. Distributed full runs do not
+use the historical layer-scan merge path. Old work plans without question
+metadata retain their old outputs and need regeneration for the new tables.
