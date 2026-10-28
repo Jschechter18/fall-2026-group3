@@ -103,3 +103,25 @@ about synthetic inputs, which are not available yet.
 - Recommended repair order: candidate/identity validation; historical and
   downstream adapters; resume; publication and metadata; then a small two-EC2
   S3 smoke run before scaling.
+
+<!-- REVIEWING NOW -->
+
+## Simplification after review
+
+The experimental identity-generation, source fingerprinting, and strict
+code/environment compatibility gates were removed at the user's request.
+Use the agreed collection YAML and run ID operationally, and review scientific
+changes before mixing results. Provenance is recorded rather than enforced.
+Lightweight master/partition linkage, question-seed checks, existing merge
+alignment checks, and retained S3 download checksums remain. This deliberately
+does not implement the audit's proposed comprehensive compatibility enforcement.
+
+## Candidate-order wiring
+
+Fixed: freeze now assigns candidate order using explicit partition/hop groups,
+preserves existing orders on extension, and carries them through chunk membership
+and work packages. Workers pass them to the existing collector and record them
+in manifest provenance. Missing orders fail before model loading; finalization
+checks candidates records against planned orders. Tests exercise mixed-source
+fixtures, chunk-size independence, extensions, and the actual worker entry point
+with model execution mocked. No synthetic release or paid model run was used.

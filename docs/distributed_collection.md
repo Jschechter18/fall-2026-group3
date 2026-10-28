@@ -2,8 +2,8 @@
 
 The unit of work is a **question**, not an activation row. Preparation freezes
 the question payload, partition, seed, and ordered chunk membership before any
-model outcome is observed. A worker loads its models once, processes one or
-more explicitly assigned packages, writes the existing local chunk format, and
+model outcome is observed. A worker invocation loads its models, processes one
+explicitly assigned package, writes the existing local chunk format, and
 uploads that directory as an isolated S3 attempt. S3 is transport only;
 `ActivationStore` remains local.
 
@@ -38,8 +38,37 @@ metadata, and generation provenance with the producer.
 - Collection success and disagreement eligibility are separate. Exclusions
   describe collection failures; existing label policies remain the authority
   for consumer-specific eligibility.
+- `freeze` assigns `candidate_order` (`a1_first` or `critic_first`) before any
+  chunking, using the partition configuration's seed and explicit hop metadata.
+  Orders are balanced within each partition/hop group and are retained when
+  extending a frozen manifest. Only newly added or previously missing orders
+  are assigned; chunk sizes and worker assignments do not change them.
+  Work packages carry the orders to the collector, and finalization checks
+  candidates records against them. Feedback-only collection does not need them.
+
+For an older frozen manifest without candidate orders, rerun `freeze` with
+`--existing OLD_PARTITIONS.json` and a new output path, then rerun `plan` with
+new output/package paths. This preserves old partition assignments and seeds
+while adding the missing orders. Candidates workers reject missing/invalid
+orders before loading models rather than deciding presentation order locally.
 
 ## Example commands
+
+Use the same agreed collection YAML and prepared run ID across the team, assign
+non-overlapping chunk IDs, and upload each chunk under that run. Code and package
+versions are recorded as provenance, not enforced as compatibility gates. If
+prompts, generation, or activation capture change, decide explicitly whether to
+start a new experiment instead of mixing scientific treatments unknowingly.
+There is no identity-generation command or source-code fingerprinting step.
+The optional `plan --compatibility` mapping remains available for specific
+configuration checks, but is not required.
+
+Checks retained for data correctness include matching master/partition IDs and
+payload references, chunk membership and seeds, complete coverage, tensor/index
+alignment, and S3 download checksums. Download receipts are retained so changed
+local files are detected again during finalization. Actual worker provenance is
+saved in chunk metadata and retained in the final `worker_provenance.json`;
+it does not block execution based on Git commit, GPU, or package versions.
 
 All `REPLACE_*` values below are placeholders, not project decisions. First
 split `configs/distributed_collection.example.yaml` into the small inputs and
@@ -58,7 +87,6 @@ PYTHONPATH=src python scripts/distributed_collection.py freeze \
 PYTHONPATH=src python scripts/distributed_collection.py plan \
   --master artifacts/master-v1.json --partitions artifacts/partitions-v1.json \
   --run-id REPLACE_RUN_ID --chunk-size REPLACE_CHUNK_SIZE \
-  --compatibility REPLACE_COMPATIBILITY.json \
   --output artifacts/work-plan.json --packages artifacts/work-packages
 ```
 

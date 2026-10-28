@@ -60,6 +60,7 @@ def test_frozen_extension_never_reshuffles_and_seeds_ignore_chunk_size(tmp_path)
     p3 = plan_chunks(extended, second, run_id="r", chunk_size=3, compatibility={})
     seeds = lambda p: {q["question_id"]: q["collection_seed"] for c in p["chunks"] for q in c["questions"]}
     assert seeds(p1) == seeds(p3)
+    assert all(now[q]["candidate_order"] == r["candidate_order"] for q, r in old.items())
 
 
 def test_musique_validation_policy_defaults_to_historical_behavior(tmp_path):
@@ -140,12 +141,15 @@ def test_transport_completion_retry_and_conflict(tmp_path):
     with pytest.raises(RuntimeError, match="conflicting"): transport.accept_attempt(bad)
 
 
-def _finalize_fixture(tmp_path, name, groups):
+def _finalize_fixture(tmp_path, name, groups, *, candidate_orders=None):
     site = "model.layers.8"; chunks = []; locations = {}
     for number, ids in enumerate(groups):
         start = sum(len(g) for g in groups[:number]); chunk_id = f"train-{number:06d}"
         membership = [{"question_id": q, "collection_seed": i+10, "payload_sha256": q}
                       for i, q in enumerate(ids, start=start)]
+        if candidate_orders is not None:
+            for row in membership:
+                row["candidate_order"] = candidate_orders[row["question_id"]]
         chunks.append({"chunk_id": chunk_id, "partition": "train", "partition_start": start,
                        "question_ids": ids, "membership_sha256": sha256_json(membership),
                        "questions": membership})
@@ -159,7 +163,9 @@ def _finalize_fixture(tmp_path, name, groups):
             value = float(int(q[1:]))
             result["records"].append({"question_id": q, "source_split": "train",
                 "solver_accepted_feedback": True, "attempt1_activation_index": len(result["records"]),
-                "attempt2_activation_index": len(result["records"]), "seed": int(value)})
+                "attempt2_activation_index": len(result["records"]), "seed": int(value)+10})
+            if candidate_orders is not None:
+                result["records"][-1].update(a2_presentation="candidates", candidate_order=candidate_orders[q])
             result["attempt1_by_site"][site].append(torch.tensor([[value, value]]))
             result["attempt2_by_site"][site].append(torch.tensor([[value+.5, value+.5]]))
         progress = tmp_path/name/"source"/chunk["chunk_id"]; progress.mkdir(parents=True)
@@ -196,3 +202,163 @@ def test_finalization_rejects_empty_sites_before_writing(tmp_path):
         )
     assert not (tmp_path/"activations").exists()
     assert not (tmp_path/"results").exists()
+
+
+def test_planning_without_compatibility_and_rejecting_wrong_master(tmp_path):
+    master = build_master_dataset(inputs(tmp_path))
+    frozen = freeze_partitions(master, proportions=PROPORTIONS, seed=7)
+    plan = plan_chunks(master, frozen, run_id="r", chunk_size=2)
+    assert plan["compatibility"] == {}
+    frozen["master_sha256"] = "another dataset"
+    with pytest.raises(ValueError, match="different master"):
+        plan_chunks(master, frozen, run_id="r", chunk_size=2)
+
+
+@pytest.mark.parametrize("change", ["seed", "downloaded_file"])
+def test_finalization_keeps_basic_data_checks(tmp_path, monkeypatch, change):
+    original = collection_progress.write_chunk
+
+    def changed_chunk(*args, **kwargs):
+        root = original(*args, **kwargs)
+        if change == "seed":
+            path = root/"records.jsonl"
+            rows = read_jsonl(path)
+            rows[0]["seed"] = 999
+            path.write_text(''.join(json.dumps(row)+'\n' for row in rows))
+        else:
+            receipt = {"run_id": "run", "chunk_id": kwargs["metadata_extra"]["chunk_id"],
+                       "package_sha256": core.chunk_file_manifest(root)["package_sha256"]}
+            (root/"download_receipt.json").write_text(json.dumps(receipt))
+            with (root/"activations.pt").open('ab') as stream:
+                stream.write(b'changed')
+        return root
+
+    monkeypatch.setattr(collection_progress, "write_chunk", changed_chunk)
+    with pytest.raises(ValueError, match="seed differs|downloaded files changed"):
+        _finalize_fixture(tmp_path, "changed", [["q0"]])
+
+
+def test_worker_provenance_is_recorded_without_enforcing_versions(tmp_path, monkeypatch):
+    original = collection_progress.write_chunk
+
+    def add_provenance(*args, **kwargs):
+        kwargs["metadata_extra"].update(provenance={"git_commit": "different", "package_versions": {"torch": "different"}})
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(collection_progress, "write_chunk", add_provenance)
+    _finalize_fixture(tmp_path, "provenance", [["q0"]])
+    workers = json.loads((tmp_path/"provenance/results/final/worker_provenance.json").read_text())["workers"]
+    assert workers[0]["progress"]["git_commit"] == "different"
+
+
+def test_candidate_orders_are_frozen_balanced_and_independent_of_chunks(tmp_path):
+    from collections import Counter
+    master = build_master_dataset(inputs(tmp_path))
+    frozen = freeze_partitions(master, proportions=PROPORTIONS, seed=7)
+    expected = {r["question_id"]: r["candidate_order"] for r in frozen["questions"]}
+    groups = {}
+    for row in frozen["questions"]:
+        groups.setdefault((row["partition"], row["hop_group"]), []).append(row["candidate_order"])
+    for orders in groups.values():
+        counts = Counter(orders)
+        assert abs(counts["a1_first"]-counts["critic_first"]) <= 1
+    for size in (1, 3):
+        plan = plan_chunks(master, frozen, run_id="r", chunk_size=size)
+        write_work_packages(tmp_path/f"packages-{size}", master, plan)
+        for package_path in (tmp_path/f"packages-{size}").glob('*.json'):
+            package = json.loads(package_path.read_text())
+            for row in package["chunk"]["questions"]:
+                assert row["candidate_order"] == expected[row["question_id"]]
+
+
+def test_explicit_candidate_groups_support_namespaced_ids():
+    from mas_sae.experiments.conditions import assign_candidate_orders
+    ids = [f"synthetic:q{i}" for i in range(8)]
+    groups = {qid: "2hop" if i < 4 else "3hop" for i, qid in enumerate(ids)}
+    orders = assign_candidate_orders(ids, seed=7, hop_groups=groups)
+    for group in ("2hop", "3hop"):
+        selected = [orders[qid] for qid in ids if groups[qid] == group]
+        assert selected.count("a1_first") == selected.count("critic_first") == 2
+    with pytest.raises(ValueError, match="hop_groups is missing"):
+        assign_candidate_orders(ids, seed=7, hop_groups={})
+
+
+@pytest.mark.parametrize("missing_order", [False, True])
+def test_candidates_worker_receives_frozen_orders_before_collection(tmp_path, monkeypatch, missing_order):
+    import runpy
+    from mas_sae.experiments import collection
+    from mas_sae.agents.solver import Solver
+    master = build_master_dataset(inputs(tmp_path))
+    frozen = freeze_partitions(master, proportions=PROPORTIONS, seed=7)
+    plan = plan_chunks(master, frozen, run_id="r", chunk_size=2)
+    write_work_packages(tmp_path/"packages", master, plan)
+    package_path = next((tmp_path/"packages").glob("train-*.json"))
+    package = json.loads(package_path.read_text())
+    if missing_order:
+        package["chunk"]["questions"][0].pop("candidate_order")
+        package_path.write_text(json.dumps(package))
+    output = tmp_path/"completed"
+    config = {"model": {"id": "fixture"}, "dataset": {"source_split": "train", "num_questions": 2},
+              "collection": {"layers": [8], "seed": 42, "active_conditions": ["natural"], "a2_presentations": ["candidates"]},
+              "output": {"run_name": "fixture"}}
+    worker = runpy.run_path(str(Path(__file__).resolve().parents[3]/"scripts/collect_activations.py"))["main"]
+
+    class Agent:
+        CANDIDATE_ORDERS = Solver.CANDIDATE_ORDERS
+        def __init__(self, *args, **kwargs):
+            pass
+
+    def load_models(_):
+        assert not missing_order, "Invalid orders should fail before loading models"
+        return {r: (object(), object()) for r in ("solver", "critic", "validator")}
+
+    replacements = {
+        "parse_args": lambda: SimpleNamespace(config=tmp_path/"unused.yaml", work_package=package_path, chunk_output=output, resume=False),
+        "load_collection_config": lambda _: config, "load_role_models": load_models,
+        "resolve_solver_sites": lambda *args: ["model.layers.8"],
+        "Solver": Agent, "Critic": Agent, "Validator": Agent, "configure_agent": lambda *args: None,
+        "build_resolved_config": lambda *args, **kwargs: config,
+        "build_collection_progress_provenance": lambda *args, **kwargs: kwargs,
+    }
+    for key, value in replacements.items():
+        monkeypatch.setitem(worker.__globals__, key, value)
+
+    seen = {}
+    def run_question(**kwargs):
+        qid = kwargs["question_id"]
+        seen[qid] = kwargs["candidate_order"]
+        return {"attempt1_activations": {"model.layers.8": torch.ones(1, 2)}, "episodes": [{
+            "record": {"question_id": qid, "episode_id": qid+"__natural__candidates", "seed": kwargs["seed"],
+                       "critic_condition": "natural", "a2_presentation": "candidates",
+                       "candidate_order": kwargs["candidate_order"], "solver_accepted_feedback": True},
+            "attempt2_activations": {"model.layers.8": torch.ones(1, 2)},
+        }]}
+    monkeypatch.setattr(collection, "run_question", run_question)
+    if missing_order:
+        with pytest.raises(ValueError, match="regenerate frozen partitions"):
+            worker()
+        assert not output.exists()
+    else:
+        worker()
+        expected = {r["question_id"]: r["candidate_order"] for r in package["chunk"]["questions"]}
+        assert seen == expected
+        assert {r["question_id"]: r["candidate_order"] for r in read_jsonl(output/"records.jsonl")} == expected
+        metadata = json.loads((output/"metadata.json").read_text())
+        manifest = collection.describe_sampled_questions(package["examples"], None, expected)
+        assert metadata["provenance"]["manifest_sha256"] == collection_progress.manifest_sha256(manifest)
+
+
+@pytest.mark.parametrize("wrong_order", [False, True])
+def test_finalization_preserves_or_rejects_candidate_orders(tmp_path, monkeypatch, wrong_order):
+    if wrong_order:
+        original = collection_progress.write_chunk
+        def changed(*args, **kwargs):
+            kwargs["result"]["records"][0]["candidate_order"] = "critic_first"
+            return original(*args, **kwargs)
+        monkeypatch.setattr(collection_progress, "write_chunk", changed)
+        with pytest.raises(ValueError, match="candidate order differs"):
+            _finalize_fixture(tmp_path, "wrong", [["q0"]], candidate_orders={"q0": "a1_first"})
+    else:
+        _, rows = _finalize_fixture(tmp_path, "right", [["q0"], ["q1"]],
+                                    candidate_orders={"q0": "a1_first", "q1": "critic_first"})
+        assert [r["candidate_order"] for r in rows] == ["a1_first", "critic_first"]

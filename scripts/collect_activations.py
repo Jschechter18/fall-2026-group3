@@ -24,7 +24,7 @@ from mas_sae.experiments.provenance import (
 )
 from mas_sae.models.roles import resolve_roles, load_role_models, configure_agent
 from mas_sae.activations.sites import resolve_solver_sites
-from mas_sae.experiments.conditions import OMITTED
+from mas_sae.experiments.conditions import OMITTED, A2Presentation, resolve_presentations
 
 
 logger = logging.getLogger(__name__)
@@ -89,6 +89,15 @@ def main() -> None:
     role_specs = resolve_roles(config)
     model_id = role_specs["solver"]["id"]
     package = json.loads(work_package.read_text()) if work_package else None
+    candidate_orders = None
+    if package and A2Presentation.CANDIDATES in resolve_presentations(
+        config["collection"].get("a2_presentations", OMITTED)
+    ):
+        candidate_orders = {r["question_id"]: r.get("candidate_order") for r in package["chunk"]["questions"]}
+        invalid = [qid for qid in package["chunk"]["question_ids"]
+                   if candidate_orders.get(qid) not in Solver.CANDIDATE_ORDERS]
+        if invalid:
+            raise ValueError("Missing or invalid frozen candidate orders; regenerate frozen partitions and work packages.")
     source_split = package["chunk"]["partition"] if package else config["dataset"]["source_split"]
     num_questions = config["dataset"]["num_questions"]
     layers = config["collection"]["layers"]
@@ -152,7 +161,7 @@ def main() -> None:
     a2_presentations = config["collection"].get("a2_presentations", OMITTED)
     if package:
         selection = {"examples": package["examples"], "experiment_splits": None,
-                     "sampled_questions": None, "candidate_orders": None}
+                     "sampled_questions": None, "candidate_orders": candidate_orders}
         expected = package.get("compatibility", {})
         if expected and expected != {k: resolved_config.get(k) for k in expected}:
             raise RuntimeError("work-package experiment compatibility does not match the resolved config")
@@ -170,7 +179,7 @@ def main() -> None:
 
     manifest = selection["sampled_questions"]
     if manifest is None:
-        manifest = describe_sampled_questions(selection["examples"], None)
+        manifest = describe_sampled_questions(selection["examples"], None, selection["candidate_orders"])
     identity = build_collection_progress_provenance(
         config,
         resolved_config,
@@ -188,7 +197,7 @@ def main() -> None:
             solver=solver, critic=critic, validator=validator, candidate_sites=candidate_sites,
             base_seed=seed, active_conditions=config["collection"].get("active_conditions", OMITTED),
             type_checked_target=protocol["type_checked_target"], a2_presentations=a2_presentations,
-            question_seeds=question_seeds)
+            question_seeds=question_seeds, candidate_orders=selection["candidate_orders"])
         with tempfile.TemporaryDirectory(dir=chunk_output.parent) as temporary:
             temp_progress = Path(temporary)
             written = collection_progress.write_chunk(
@@ -197,7 +206,8 @@ def main() -> None:
                 metadata_extra={"chunk_id": package["chunk"]["chunk_id"],
                                 "run_id": package["run_id"], "plan_sha256": package["plan_sha256"],
                                 "membership_sha256": package["chunk"]["membership_sha256"],
-                                "candidate_sites": candidate_sites})
+                                "candidate_sites": candidate_sites,
+                                "provenance": identity, "resolved_config": resolved_config})
             shutil.move(str(written), chunk_output)
         logger.info("Completed portable chunk %s -> %s", package["chunk"]["chunk_id"], chunk_output)
         return

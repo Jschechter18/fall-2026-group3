@@ -25,6 +25,9 @@ from mas_sae.data.musique import SUPPORTED_PARTITIONS
 from mas_sae.experiments.artifacts import sha256_file, sha256_json, write_json_atomic
 from mas_sae.experiments import collection_progress
 from mas_sae.experiments.collection_artifacts import save_collection_artifacts
+from mas_sae.experiments.records import read_jsonl
+from mas_sae.experiments.conditions import assign_candidate_orders
+from mas_sae.agents.solver import Solver
 
 MASTER_VERSION = 1
 PLAN_VERSION = 1
@@ -211,6 +214,18 @@ def freeze_partitions(master: dict[str, Any], *, proportions: dict[str, float], 
             collection_seed=int.from_bytes(hashlib.sha256(f"{seed}:{row['question_id']}".encode()).digest()[:8], "big") % (2**31),
             prior_development_exposure=prior)
     ordered = [frozen[r["question_id"]] for r in master["questions"]]
+    # Freeze presentation order once, independently of worker/chunk boundaries.
+    # On extension, preserve existing orders and assign only missing ones.
+    missing_orders = [r for r in ordered if "candidate_order" not in r]
+    candidate_orders = assign_candidate_orders(
+        [r["question_id"] for r in missing_orders], seed=seed,
+        hop_groups={r["question_id"]: f"{r['partition']}:{r['hop_group']}" for r in missing_orders},
+    )
+    for row in ordered:
+        if "candidate_order" not in row:
+            row["candidate_order"] = candidate_orders[row["question_id"]]
+        if row["candidate_order"] not in Solver.CANDIDATE_ORDERS:
+            raise ValueError(f"{row['question_id']}: invalid frozen candidate_order")
     basis = {"schema_version": 1, "master_sha256": master["master_sha256"], "seed": seed,
              "proportions": proportions, "musique_validation_policy": musique_validation_policy,
              "questions": ordered}
@@ -218,7 +233,7 @@ def freeze_partitions(master: dict[str, Any], *, proportions: dict[str, float], 
 
 
 def plan_chunks(master: dict[str, Any], frozen: dict[str, Any], *, run_id: str,
-                chunk_size: int, compatibility: dict[str, Any]) -> dict[str, Any]:
+                chunk_size: int, compatibility: dict[str, Any] | None = None) -> dict[str, Any]:
     """Plan chunks for distributed processing based on the frozen partitions and master dataset. Done in manifest order; intervention is never planned
 
     Args:
@@ -232,7 +247,14 @@ def plan_chunks(master: dict[str, Any], frozen: dict[str, Any], *, run_id: str,
         dict[str, Any]: A manifest describing the planned chunks.
     """
     if chunk_size < 1: raise ValueError("chunk_size must be positive")
+    if frozen["master_sha256"] != master["master_sha256"]:
+        raise ValueError("partitions belong to a different master dataset")
     assignments = {r["question_id"]: r for r in frozen["questions"]}
+    if len(assignments) != len(frozen["questions"]) or set(assignments) != {r["question_id"] for r in master["questions"]}:
+        raise ValueError("partition question membership differs from master")
+    for row in master["questions"]:
+        if assignments[row["question_id"]]["payload_sha256"] != row["payload_sha256"]:
+            raise ValueError(f"{row['question_id']}: partition payload differs from master")
     chunks = []
     for partition in COLLECTABLE_PARTITIONS:
         # Plan chunks for the current partition (train, val, test)
@@ -242,12 +264,16 @@ def plan_chunks(master: dict[str, Any], frozen: dict[str, Any], *, run_id: str,
             chunk_id = f"{partition}-{start//chunk_size:06d}"
             membership = [{"question_id": r["question_id"], "collection_seed": assignments[r["question_id"]]["collection_seed"],
                            "payload_sha256": r["payload_sha256"]} for r in group]
+            for member in membership:
+                order = assignments[member["question_id"]].get("candidate_order")
+                if order is not None:
+                    member["candidate_order"] = order
             chunks.append({"chunk_id": chunk_id, "partition": partition, "partition_start": start,
                            "question_ids": [r["question_id"] for r in group],
                            "membership_sha256": sha256_json(membership), "questions": membership})
     basis = {"schema_version": PLAN_VERSION, "run_id": run_id,
              "master_sha256": master["master_sha256"], "partitions_sha256": frozen["partitions_sha256"],
-             "compatibility": compatibility, "chunks": chunks}
+             "compatibility": compatibility or {}, "chunks": chunks}
     return {**basis, "plan_sha256": sha256_json(basis)}
 
 
@@ -492,6 +518,7 @@ class S3Transport:
         actual = chunk_file_manifest(destination)
         if actual["package_sha256"] != accepted["package_sha256"]:
             raise RuntimeError(f"corrupt accepted package for {chunk_id}")
+        write_json_atomic(destination/"download_receipt.json", accepted)
         return destination
 
 
@@ -567,6 +594,7 @@ def finalize_local_chunks(*, plan: dict[str, Any], chunk_dirs: dict[str, str | P
     if final_a.exists() or final_r.exists(): raise FileExistsError("final run output already exists")
     stage_name = f".{run_name}.staging-{uuid.uuid4()}"
     summaries = {}
+    worker_provenance = []
     try:
         with tempfile.TemporaryDirectory() as progress_parent:
             for partition in COLLECTABLE_PARTITIONS:
@@ -585,7 +613,26 @@ def finalize_local_chunks(*, plan: dict[str, Any], chunk_dirs: dict[str, str | P
                         raise ValueError(f"{chunk['chunk_id']}: metadata is incompatible with work plan")
                     if meta.get("candidate_sites") != candidate_sites:
                         raise ValueError(f"{chunk['chunk_id']}: activation sites differ")
-                    chunk_file_manifest(source)
+                    actual = chunk_file_manifest(source)
+                    receipt = source/"download_receipt.json"
+                    if receipt.is_file():
+                        downloaded = json.loads(receipt.read_text())
+                        if (downloaded.get("run_id") != plan["run_id"]
+                                or downloaded.get("chunk_id") != chunk["chunk_id"]
+                                or downloaded.get("package_sha256") != actual["package_sha256"]):
+                            raise ValueError(f"{chunk['chunk_id']}: downloaded files changed")
+                    seeds = {r["question_id"]: r["collection_seed"] for r in chunk["questions"]}
+                    orders = {r["question_id"]: r.get("candidate_order") for r in chunk["questions"]}
+                    for name in ("records.jsonl", "exclusions.jsonl"):
+                        for row in read_jsonl(source/name):
+                            qid = row.get("question_id")
+                            if qid not in seeds or type(row.get("seed")) is not int or row["seed"] != seeds[qid]:
+                                raise ValueError(f"{chunk['chunk_id']}: question seed differs from plan")
+                            if row.get("a2_presentation") == "candidates":
+                                if orders[qid] not in Solver.CANDIDATE_ORDERS or row.get("candidate_order") != orders[qid]:
+                                    raise ValueError(f"{chunk['chunk_id']}: candidate order differs from plan")
+                    worker_provenance.append({"chunk_id": chunk["chunk_id"],
+                        "progress": meta.get("provenance"), "resolved_config": meta.get("resolved_config")})
                     shutil.copytree(source, progress/f"chunk_{chunk['partition_start']:08d}")
                     question_ids.extend(chunk["question_ids"])
                 # Merge/write one captured site at a time. Chunk files contain
@@ -620,6 +667,7 @@ def finalize_local_chunks(*, plan: dict[str, Any], chunk_dirs: dict[str, str | P
         # Rename only after every partition has validated and been written.
         if staged_a.exists(): staged_a.replace(final_a)
         staged_r.replace(final_r)
+        write_json_atomic(final_r/"worker_provenance.json", {"workers": worker_provenance})
         write_json_atomic(final_r/"distributed_summary.json", {"plan_sha256": plan["plan_sha256"], "partitions": summaries})
         return summaries
     except Exception:

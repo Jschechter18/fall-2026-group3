@@ -48,8 +48,8 @@ def parser():
                    help="Run identifier embedded in the plan and packages; use the same value for their S3 transfers.")
     q.add_argument("--chunk-size", type=int, required=True,
                    help="Positive maximum number of questions assigned to each chunk, not the number of activation rows.")
-    q.add_argument("--compatibility", type=Path, required=True,
-                   help="JSON/YAML mapping of expected top-level resolved-config fields checked by workers. Currently an empty mapping disables this check.")
+    q.add_argument("--compatibility", type=Path,
+                   help="Optional JSON/YAML mapping of expected top-level resolved-config fields. Omit to manage experiment settings through the team's shared collection YAML.")
     q.add_argument("--output", type=Path, required=True,
                    help="New work-plan JSON file containing ordered chunk membership; must not already exist.")
     q.add_argument("--packages", type=Path, required=True,
@@ -137,7 +137,7 @@ def main():
         old = ({r["question_id"]: r for r in existing["questions"]} if existing else None)
         _write_new(a.output, freeze_partitions(_load(a.master), proportions=c["proportions"], seed=c["seed"], existing=old, musique_validation_policy=c.get("musique_validation_policy", "validation"))); return
     if a.command == "plan":
-        master = _load(a.master); plan = plan_chunks(master, _load(a.partitions), run_id=a.run_id, chunk_size=a.chunk_size, compatibility=_load(a.compatibility))
+        master = _load(a.master); plan = plan_chunks(master, _load(a.partitions), run_id=a.run_id, chunk_size=a.chunk_size, compatibility=_load(a.compatibility) if a.compatibility else {})
         _write_new(a.output, plan); write_work_packages(a.packages, master, plan); return
     if a.command == "finalize":
         plan = _load(a.plan); chunk_dirs = {c["chunk_id"]: a.chunks/c["chunk_id"] for c in plan["chunks"]}
