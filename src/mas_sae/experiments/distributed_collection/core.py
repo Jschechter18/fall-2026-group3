@@ -17,6 +17,9 @@ import shutil
 import tempfile
 from typing import Any, Iterable
 import uuid
+from urllib.error import HTTPError
+from urllib.parse import quote
+from urllib.request import Request, urlopen
 
 from mas_sae.data.musique import SUPPORTED_PARTITIONS
 from mas_sae.experiments.artifacts import sha256_file, sha256_json, write_json_atomic
@@ -26,7 +29,7 @@ from mas_sae.experiments.collection_artifacts import save_collection_artifacts
 MASTER_VERSION = 1
 PLAN_VERSION = 1
 REQUIRED_CHUNK_FILES = ("metadata.json", "records.jsonl", "exclusions.jsonl", "activations.pt")
-COLLECTABLE_PARTITIONS = ("train", "validation", "test")
+COLLECTABLE_PARTITIONS = ("train", "validation", "test") # NOTE: WE MAY NEED TO THINK ABOUT THIS
 
 
 def _canonical_payload(value: Any) -> bytes:
@@ -51,21 +54,29 @@ def build_master_dataset(inputs: list[dict[str, Any]]) -> dict[str, Any]:
     Each input names ``source``, ``version``, and ``path``. Optional
     ``source_split``, ``id_field`` and ``hop_field`` describe, rather than
     transform, the supplied data. Global ids are ``source:original_id``.
+
+    Synthetic-input contract (not yet verified against a real release): the
+    producer supplies schema-validated, deduplicated MuSiQue-compatible records.
+    This importer checks identity/metadata, not schema or question quality.
+    Synthetic input is optional; a MuSiQue-only input list is supported today.
     """
     rows: list[dict[str, Any]] = []
     seen_global: set[str] = set()
     seen_source_ids: set[tuple[str, str]] = set()
     input_records = []
+    
     for spec in inputs:
         source, version = str(spec["source"]), str(spec["version"])
         if not source or ":" in source or not version:
             raise ValueError("input source/version must be non-empty and source may not contain ':'")
+        
         path = Path(spec["path"])
         raw = path.read_bytes()
         records = _read_records(path)
         input_records.append({"source": source, "version": version, "path": str(path),
                               "sha256": hashlib.sha256(raw).hexdigest(), "count": len(records)})
         id_field = spec.get("id_field", "id")
+        
         for source_index, payload in enumerate(records):
             if not isinstance(payload, dict):
                 raise ValueError(f"{path}: record {source_index} is not an object")
@@ -77,6 +88,9 @@ def build_master_dataset(inputs: list[dict[str, Any]]) -> dict[str, Any]:
                 raise ValueError(f"duplicate input id {global_id!r}")
             seen_source_ids.add(key); seen_global.add(global_id)
             hop_field = spec.get("hop_field")
+            # No real synthetic release exists yet. MuSiQue-compatible schema
+            # alone does not promise a hop_group field: agree on hop metadata
+            # with the producer before enabling synthetic inputs.
             hop = payload.get(hop_field) if hop_field else spec.get("hop")
             if hop is None and source == "musique":
                 # Parse before namespacing and persist the result; consumers never parse global ids.
@@ -98,8 +112,7 @@ def build_master_dataset(inputs: list[dict[str, Any]]) -> dict[str, Any]:
                              r["source_split"], r["original_id"]))
     for i, row in enumerate(rows): row["master_index"] = i
     basis = {"schema_version": MASTER_VERSION, "inputs": input_records, "questions": rows}
-    # Local filenames are audit metadata, not dataset identity: moving identical
-    # versioned inputs to another machine must preserve the master digest.
+    # Local filenames are audit metadata, not dataset identity: moving identical versioned inputs to another machine must preserve the master digest.
     hash_basis = {**basis, "inputs": [{k: v for k, v in item.items() if k != "path"}
                                       for item in input_records]}
     return {**basis, "master_sha256": sha256_json(hash_basis)}
@@ -122,7 +135,6 @@ def _weighted_assignment(rows: list[dict[str, Any]], proportions: dict[str, floa
             previous = end
     return result
 
-
 def freeze_partitions(master: dict[str, Any], *, proportions: dict[str, float], seed: int,
                       existing: dict[str, dict[str, Any]] | None = None,
                       musique_validation_policy: str = "validation") -> dict[str, Any]:
@@ -131,7 +143,37 @@ def freeze_partitions(master: dict[str, Any], *, proportions: dict[str, float], 
     Historical policy ``validation`` reserves every MuSiQue validation-source
     item for validation. ``stratify`` deliberately includes it in the general
     allocation; ``error`` forces callers to preprocess it explicitly.
+
+    Parameters
+    ----------
+    master : dict[str, Any]
+        The master dataset containing all questions and their metadata.
+    proportions : dict[str, float]
+        The desired proportions for each partition (train, validation, test, intervention).
+    seed : int
+        The random seed used for deterministic assignment of new questions.
+    existing : dict[str, dict[str, Any]] | None, optional
+        Previously existing assignments, by question ID, to be preserved. If None, no existing assignments are considered.
+    musique_validation_policy : str, optional
+        Policy for handling MuSiQue validation-source items. Can be "validation", "stratify", or "error". Defaults to "validation".
+
+    Returns
+    -------
+    dict[str, Any]
+        The updated master dataset with frozen and newly assigned partitions.
+
+    Raises
+    ------
+    ValueError
+        Raised if the musique_validation_policy is invalid.
+    ValueError
+        Raised if existing assignments contain unknown question IDs.
+    ValueError
+        Raised if a frozen question's metadata has changed.
+    ValueError
+        Raised if there is an inconsistency in the assignment process.
     """
+    
     if musique_validation_policy not in {"validation", "stratify", "error"}:
         raise ValueError("musique_validation_policy must be validation, stratify, or error")
     existing = existing or {}
@@ -177,11 +219,23 @@ def freeze_partitions(master: dict[str, Any], *, proportions: dict[str, float], 
 
 def plan_chunks(master: dict[str, Any], frozen: dict[str, Any], *, run_id: str,
                 chunk_size: int, compatibility: dict[str, Any]) -> dict[str, Any]:
-    """Make portable chunks in manifest order; intervention is never planned."""
+    """Plan chunks for distributed processing based on the frozen partitions and master dataset. Done in manifest order; intervention is never planned
+
+    Args:
+        master (dict[str, Any]): The master dataset containing all questions.
+        frozen (dict[str, Any]): The frozen partitions of the dataset.
+        run_id (str): The unique identifier for this run.
+        chunk_size (int): The desired size of each chunk.
+        compatibility (dict[str, Any]): Compatibility constraints for the chunks.
+
+    Returns:
+        dict[str, Any]: A manifest describing the planned chunks.
+    """
     if chunk_size < 1: raise ValueError("chunk_size must be positive")
     assignments = {r["question_id"]: r for r in frozen["questions"]}
     chunks = []
     for partition in COLLECTABLE_PARTITIONS:
+        # Plan chunks for the current partition (train, val, test)
         members = [r for r in master["questions"] if assignments[r["question_id"]]["partition"] == partition]
         for start in range(0, len(members), chunk_size):
             group = members[start:start+chunk_size]
@@ -198,6 +252,22 @@ def plan_chunks(master: dict[str, Any], frozen: dict[str, Any], *, run_id: str,
 
 
 def write_work_packages(root: str | Path, master: dict[str, Any], plan: dict[str, Any]) -> None:
+    """Write work packages for distributed collection based on the master dataset and plan.
+
+    Parameters
+    ----------
+    root : str | Path
+        The root directory where the work packages will be written.
+    master : dict[str, Any]
+        The master dataset containing all questions.
+    plan : dict[str, Any]
+        The plan describing how the dataset should be chunked.
+
+    Raises
+    ------
+    FileExistsError
+        Raised if the root directory already exists.
+    """
     root = Path(root)
     if root.exists(): raise FileExistsError(root)
     root.mkdir(parents=True)
@@ -223,6 +293,7 @@ def chunk_file_manifest(chunk_dir: str | Path) -> dict[str, Any]:
 
 @dataclass
 class S3Transport:
+    """Transport class for handling S3 interactions for distributed collection work packages."""
     bucket: str
     prefix: str
     client: Any = None
@@ -237,7 +308,49 @@ class S3Transport:
     def _key(self, *parts: str) -> str:
         return "/".join(p.strip("/") for p in (self.prefix, *parts) if p.strip("/"))
 
+    def check_reachable(self, *, timeout: float = 5.0) -> None:
+        """Check HTTPS reachability without testing credentials or writing objects.
+
+        Use the SDK's configured endpoint, including its region or custom URL.
+        HTTP errors such as 403 still prove that the endpoint responded.
+        """
+        endpoint = self.client.meta.endpoint_url.rstrip("/")
+        url = f"{endpoint}/{quote(self.bucket, safe='')}"
+        try:
+            with urlopen(Request(url, method="HEAD"), timeout=timeout):
+                pass
+        except HTTPError as error:
+            error.close()
+        except OSError as error:
+            raise ConnectionError(
+                f"S3 endpoint is unreachable at {url}: {error}. "
+                "Check DNS/network connectivity and retry; local results are unchanged."
+            ) from error
+
     def upload_work_package(self, run_id: str, chunk_id: str, path: str | Path) -> dict[str, Any]:
+        """Upload a work package to the remote S3 storage.
+
+        Parameters
+        ----------
+        run_id : str
+            The unique identifier for the current run.
+        chunk_id : str
+            The unique identifier for the chunk being uploaded.
+        path : str | Path
+            The local path to the work package file to be uploaded.
+
+        Returns
+        -------
+        dict[str, Any]
+            A dictionary containing the S3 key, SHA-256 digest, and size of the uploaded work package.
+
+        Raises
+        ------
+        ValueError
+            Raised if the work package identity does not match the destination.
+        RuntimeError
+            Raised if there is a mismatch between the expected and actual upload size.
+        """
         path = Path(path); body = path.read_bytes()
         package = json.loads(body)
         if package.get("run_id") != run_id or package.get("chunk", {}).get("chunk_id") != chunk_id:
@@ -251,6 +364,29 @@ class S3Transport:
         return {"key": key, "sha256": digest, "size": len(body)}
 
     def download_work_package(self, run_id: str, chunk_id: str, destination: str | Path) -> Path:
+        """Download a work package from the remote storage to a local destination.
+
+        Parameters
+        ----------
+        run_id : str
+            The unique identifier for the current run.
+        chunk_id : str
+            The unique identifier for the chunk being downloaded.
+        destination : str | Path
+            The local path where the downloaded work package should be saved.
+
+        Returns
+        -------
+        Path
+            The path to the downloaded work package file.
+
+        Raises
+        ------
+        FileExistsError
+            Raised if the destination file already exists.
+        RuntimeError
+            Raised if there is a mismatch between the expected and actual work package identity or checksum.
+        """
         destination = Path(destination)
         if destination.exists(): raise FileExistsError(destination)
         key = self._key("inputs", run_id, f"{chunk_id}.json")
@@ -268,6 +404,32 @@ class S3Transport:
 
     def upload_attempt(self, run_id: str, chunk_id: str, chunk_dir: str | Path,
                        attempt_id: str | None = None, hardware: dict[str, Any] | None = None) -> dict[str, Any]:
+        """Upload an attempt for a specific chunk to the remote storage.
+
+        Parameters
+        ----------
+        run_id : str
+            The unique identifier for the current run.
+        chunk_id : str
+            The unique identifier for the chunk being uploaded.
+        chunk_dir : str | Path
+            The local directory containing the chunk files to be uploaded.
+        attempt_id : str | None, optional
+            The unique identifier for the attempt. If not provided, a new UUID will be generated, by default None.
+        hardware : dict[str, Any] | None, optional
+            Information about the hardware used for the attempt, by default None.
+
+        Returns
+        -------
+        dict[str, Any]
+            Metadata about the uploaded attempt, including run_id, chunk_id, attempt_id, and hardware information.
+
+        Raises
+        ------
+        RuntimeError
+            Raised if there is a mismatch between the expected and actual uploaded file sizes.
+        """
+
         attempt_id = attempt_id or str(uuid.uuid4())
         manifest = chunk_file_manifest(chunk_dir)
         base = self._key("results", run_id, chunk_id, "attempts", attempt_id)
@@ -299,6 +461,27 @@ class S3Transport:
             return current
 
     def download_accepted(self, run_id: str, chunk_id: str, destination: str | Path) -> Path:
+        """Download the accepted attempt for a specific chunk to a local destination.
+
+        Parameters
+        ----------
+        run_id : str
+            The unique identifier for the current run.
+        chunk_id : str
+            The unique identifier for the chunk to be downloaded.
+        destination : str | Path
+            The local directory where the accepted chunk files will be downloaded.
+
+        Returns
+        -------
+        Path
+            The local path to the downloaded chunk directory.
+
+        Raises
+        ------
+        RuntimeError
+            Raised if the downloaded chunk's package hash does not match the accepted package hash.
+        """
         accepted_key = self._key("results", run_id, chunk_id, "accepted.json")
         accepted = json.loads(self.client.get_object(Bucket=self.bucket, Key=accepted_key)["Body"].read())
         base = self._key("results", run_id, chunk_id, "attempts", accepted["attempt_id"])
@@ -324,7 +507,6 @@ def collection_report(frozen: dict[str, Any], records: Iterable[dict[str, Any]],
     return {"assigned": counts(lookup), "collected": counts(successful),
             "excluded": counts(excluded), "eligible": counts(eligible)}
 
-
 def finalize_local_chunks(*, plan: dict[str, Any], chunk_dirs: dict[str, str | Path],
                           candidate_sites: list[str], activation_root: str | Path,
                           result_root: str | Path, run_name: str,
@@ -335,7 +517,47 @@ def finalize_local_chunks(*, plan: dict[str, Any], chunk_dirs: dict[str, str | P
     counts. The existing artifact writer then creates ``A1``, ``A2`` and
     ``cat(A1, A2)`` separately for every site; combined per-chunk SAE tensors
     are never consumed.
+
+    Parameters
+    ----------
+    plan : dict[str, Any]
+        Mapping from chunk IDs to their corresponding local directories containing chunk files.
+    chunk_dirs : dict[str, str  |  Path]
+        Mapping from chunk IDs to their corresponding local directories containing chunk files.
+    candidate_sites : list[str]
+        List of candidate sites for the collection process.
+    activation_root : str | Path
+        Root directory for activation files.
+    result_root : str | Path
+        Root directory for result files.
+    run_name : str
+        Name of the current run.
+    resolved_config : dict[str, Any]
+        Resolved configuration for the collection process.
+
+    Returns
+    -------
+    dict[str, Any]
+        Summary of the finalized local chunks, typically including status and any relevant metadata.
+
+    Raises
+    ------
+    ValueError
+        Raised if candidate_sites is empty.
+    ValueError
+        Raised if there is a mismatch between the expected and provided chunk directories.
+    FileExistsError
+        Raised if the final run output already exists.
+    ValueError
+        Raised if there is an issue with the chunk validation or merging process.
+    ValueError
+        Raised if there is an issue with the resolved configuration.
+    RuntimeError
+        Raised if there is a corruption detected in the accepted chunks.
     """
+    
+    if not candidate_sites:
+        raise ValueError("candidate_sites must not be empty.")
     expected = {c["chunk_id"]: c for c in plan["chunks"]}
     if set(chunk_dirs) != set(expected):
         missing, extra = set(expected)-set(chunk_dirs), set(chunk_dirs)-set(expected)
@@ -371,7 +593,7 @@ def finalize_local_chunks(*, plan: dict[str, Any], chunk_dirs: dict[str, str | P
                 # the next site is materialized, bounding peak tensor memory to
                 # roughly one partition-layer plus one chunk container.
                 reference_records = reference_exclusions = None
-                summary = None
+                summary: dict[str, Any] = {}
                 site_shapes = {}
                 for site in candidate_sites:
                     merged = collection_progress.merge_chunks(

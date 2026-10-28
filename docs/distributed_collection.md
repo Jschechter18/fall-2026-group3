@@ -7,6 +7,18 @@ more explicitly assigned packages, writes the existing local chunk format, and
 uploads that directory as an isolated S3 attempt. S3 is transport only;
 `ActivationStore` remains local.
 
+Implementation lives in `src/mas_sae/experiments/distributed_collection/`:
+`core.py` holds preparation, S3 transport, and finalization; `cli.py` holds
+argument parsing and command dispatch. `__init__.py` re-exports the public
+functions to preserve existing imports. `scripts/distributed_collection.py`
+remains the command-line entry point.
+
+Synthetic data is not available yet. The synthetic example paths and hop field
+are a proposed producer contract, and unit tests use handcrafted records only.
+For current MuSiQue-only preparation, omit the synthetic input entry entirely.
+Before adding a real synthetic release, verify its schema, deduplication, hop
+metadata, and generation provenance with the producer.
+
 ## Policies and compatibility
 
 - Global IDs are `<dataset_source>:<original_id>`. Original IDs and complete
@@ -86,6 +98,13 @@ An interrupted local attempt is retried into a new local directory and uploaded
 with a new attempt ID. Acceptance is idempotent for byte-identical results and
 rejects a different package for an already accepted logical chunk. AWS access
 uses the normal boto3 credential chain; no credential belongs in configuration.
+
+Before each S3 transfer/accept command, the CLI makes an unsigned HTTPS HEAD
+request to the configured S3 endpoint and bucket path, with a five-second socket
+timeout. Any HTTP response, including 403, counts as reachable. DNS failures,
+connection failures, and timeouts stop the command before its S3 operation.
+This checks connectivity only, not permissions or future availability; it does
+not run during local preparation, finalization, or the separate collector.
 
 Download every accepted chunk into `<chunks>/<chunk-id>` and finalize:
 

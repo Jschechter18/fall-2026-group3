@@ -4,6 +4,10 @@ inputs:
     version: REPLACE_WITH_PINNED_REVISION
     path: REPLACE_WITH_MUSIQUE_TRAIN_JSONL
     source_split: train
+  # No synthetic release is available yet. Remove this entire input entry for
+  # MuSiQue-only runs; these placeholders do not name an existing dataset.
+  # Confirm hop_field with the producer; it is extra input metadata, not a
+  # guaranteed field of the MuSiQue-compatible question schema.
   - source: synthetic
     version: REPLACE_WITH_SYNTHETIC_RELEASE
     path: REPLACE_WITH_SYNTHETIC_JSONL
@@ -11,13 +15,14 @@ inputs:
 
 partitioning:
   seed: 20261028
-  proportions: {train: 0.70, validation: 0.10, test: 0.10, intervention: 0.10}
+  proportions: { train: 0.70, validation: 0.10, test: 0.10, intervention: 0.10 }
   musique_validation_policy: validation
 
 work:
   run_id: REPLACE_WITH_IMMUTABLE_RUN_ID
-  chunk_size: 100
+  chunk_size: 10000
 
 s3:
-  bucket: REPLACE_WITH_SHARED_BUCKET
-  prefix: REPLACE_WITH_PROJECT_PREFIX
+  # Shared project location: s3://dats-capstone/shared/group3/data/
+  bucket: dats-capstone
+  prefix: shared/group3/data

@@ -1,6 +1,8 @@
 import io
 import json
 from pathlib import Path
+from types import SimpleNamespace
+from urllib.error import HTTPError, URLError
 
 import pytest
 import torch
@@ -14,12 +16,15 @@ from mas_sae.experiments import collection_progress
 from mas_sae.data.activation_store import ActivationStore
 from mas_sae.experiments.records import read_jsonl
 from mas_sae.experiments.artifacts import sha256_json
+from mas_sae.experiments.distributed_collection import core, cli
 
 
 PROPORTIONS = {"train": .5, "validation": .2, "test": .2, "intervention": .1}
 
 
 def inputs(tmp_path):
+    # These synthetic records are handcrafted fixtures, not a generated release.
+    # Passing these tests does not validate a future producer's data contract.
     musique = tmp_path/"m.jsonl"; synthetic = tmp_path/"s.jsonl"
     musique.write_text('\n'.join(json.dumps({"id": f"2hop__{i}_{i}", "question": "q", "paragraphs": [], "answer": "a"}) for i in range(4)))
     synthetic.write_text('\n'.join(json.dumps({"id": f"s{i}", "question": "q", "paragraphs": [], "answer": "a", "hop_group": "2hop",
@@ -73,6 +78,53 @@ class FakeS3:
         if IfNoneMatch == "*" and (Bucket,Key) in self.objects: raise RuntimeError("precondition")
         self.objects[(Bucket,Key)] = Body
     def get_object(self, Bucket, Key): return {"Body": io.BytesIO(self.objects[(Bucket,Key)])}
+
+
+@pytest.mark.parametrize("status", [200, 403, 503])
+def test_s3_reachability_accepts_http_responses(monkeypatch, status):
+    client = SimpleNamespace(meta=SimpleNamespace(endpoint_url="https://s3.us-east-2.amazonaws.com"))
+
+    def respond(request, timeout):
+        assert request.get_method() == "HEAD"
+        assert request.full_url == "https://s3.us-east-2.amazonaws.com/bucket"
+        assert timeout == 5.0
+        if status != 200:
+            raise HTTPError(request.full_url, status, "response", {}, io.BytesIO())
+        return io.BytesIO()
+
+    monkeypatch.setattr(core, "urlopen", respond)
+    S3Transport("bucket", "prefix", client).check_reachable()
+
+
+@pytest.mark.parametrize("failure", [URLError("DNS lookup failed"), TimeoutError("timed out")])
+def test_s3_reachability_reports_network_failure(monkeypatch, failure):
+    client = SimpleNamespace(meta=SimpleNamespace(endpoint_url="https://s3.us-east-2.amazonaws.com"))
+
+    def fail(*args, **kwargs):
+        raise failure
+
+    monkeypatch.setattr(core, "urlopen", fail)
+    with pytest.raises(ConnectionError, match="S3 endpoint is unreachable"):
+        S3Transport("bucket", "prefix", client).check_reachable()
+
+
+def test_cli_stops_before_upload_when_endpoint_is_unreachable(monkeypatch):
+    class UnreachableTransport:
+        def __init__(self, *args):
+            pass
+
+        def check_reachable(self):
+            raise ConnectionError("S3 endpoint is unreachable")
+
+        def upload_work_package(self, *args):
+            pytest.fail("Upload must not start after failed preflight")
+
+    monkeypatch.setattr("mas_sae.experiments.distributed_collection.S3Transport", UnreachableTransport)
+    monkeypatch.setattr("sys.argv", ["distributed_collection.py", "upload-work",
+        "--bucket", "bucket", "--prefix", "prefix", "--run-id", "run",
+        "--chunk-id", "train-000000", "--package", "unused.json"])
+    with pytest.raises(SystemExit, match="S3 endpoint is unreachable"):
+        cli.main()
 
 
 def test_transport_completion_retry_and_conflict(tmp_path):
@@ -133,3 +185,14 @@ def test_serial_and_multichunk_finalization_are_exactly_equal(tmp_path):
     assert [(r["attempt1_activation_index"], r["attempt2_activation_index"],
              r["sae_attempt1_index"], r["sae_attempt2_index"]) for r in multi_rows] \
         == [(0,0,0,3), (1,1,1,4), (2,2,2,5)]
+
+
+def test_finalization_rejects_empty_sites_before_writing(tmp_path):
+    with pytest.raises(ValueError, match="candidate_sites must not be empty"):
+        finalize_local_chunks(
+            plan={"chunks": []}, chunk_dirs={}, candidate_sites=[],
+            activation_root=tmp_path/"activations", result_root=tmp_path/"results",
+            run_name="final", resolved_config={},
+        )
+    assert not (tmp_path/"activations").exists()
+    assert not (tmp_path/"results").exists()
