@@ -83,3 +83,7 @@ results/causal_replay/*/per_row.jsonl
 /results/sae/**/baseline_counts.json
 /results/sae/**/post_intervention_counts.json
 /results/sae/**/feature_frequencies.json
+
+
+# Examples
+examples/claude/artifacts/
