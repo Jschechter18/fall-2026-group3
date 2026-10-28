@@ -3,6 +3,9 @@ from __future__ import annotations
 import argparse
 import logging
 from pathlib import Path
+import json
+import tempfile
+import shutil
 
 from mas_sae.agents.critic import Critic
 from mas_sae.agents.solver import Solver
@@ -57,6 +60,10 @@ def parse_args() -> argparse.Namespace:
         required=True,
         help="Path to a collection YAML config.",
     )
+    parser.add_argument("--work-package", type=Path,
+                        help="Collect exactly one prepared distributed chunk (no dataset sampling).")
+    parser.add_argument("--chunk-output", type=Path,
+                        help="Local completed chunk directory; required with --work-package.")
     parser.add_argument(
         "--resume",
         action="store_true",
@@ -68,6 +75,10 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     """Run one config-driven activation collection."""
     args = parse_args()
+    work_package = getattr(args, "work_package", None)
+    chunk_output = getattr(args, "chunk_output", None)
+    if bool(work_package) != bool(chunk_output):
+        raise SystemExit("--work-package and --chunk-output must be passed together")
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
@@ -77,7 +88,8 @@ def main() -> None:
     config = load_collection_config(args.config)
     role_specs = resolve_roles(config)
     model_id = role_specs["solver"]["id"]
-    source_split = config["dataset"]["source_split"]
+    package = json.loads(work_package.read_text()) if work_package else None
+    source_split = package["chunk"]["partition"] if package else config["dataset"]["source_split"]
     num_questions = config["dataset"]["num_questions"]
     layers = config["collection"]["layers"]
     seed = config["collection"]["seed"]
@@ -95,11 +107,16 @@ def main() -> None:
         )
     protocol = PROTOCOLS[protocol_version]
 
-    collection_progress.ensure_can_start(
-        resume=args.resume,
-        final_output_dir=RESULT_ROOT / run_name / source_split,
-        progress=progress,
-    )
+    if package:
+        if args.resume:
+            raise ValueError("portable chunks are retried as isolated attempts; do not pass --resume")
+        if chunk_output.exists():
+            raise FileExistsError(chunk_output)
+        chunk_output.parent.mkdir(parents=True, exist_ok=True)
+    else:
+        collection_progress.ensure_can_start(
+            resume=args.resume, final_output_dir=RESULT_ROOT / run_name / source_split,
+            progress=progress)
 
     logger.info(
         "Starting run=%s split=%s questions=%d protocol=%s",
@@ -133,9 +150,15 @@ def main() -> None:
         type_checked_target=protocol["type_checked_target"],
     )
     a2_presentations = config["collection"].get("a2_presentations", OMITTED)
-    selection = select_questions(
-        config["dataset"], default_seed=seed, a2_presentations=a2_presentations
-    )
+    if package:
+        selection = {"examples": package["examples"], "experiment_splits": None,
+                     "sampled_questions": None, "candidate_orders": None}
+        expected = package.get("compatibility", {})
+        if expected and expected != {k: resolved_config.get(k) for k in expected}:
+            raise RuntimeError("work-package experiment compatibility does not match the resolved config")
+    else:
+        selection = select_questions(
+            config["dataset"], default_seed=seed, a2_presentations=a2_presentations)
 
     if selection["sampled_questions"] is not None:
         logger.info(
@@ -154,6 +177,30 @@ def main() -> None:
         manifest_sha256=collection_progress.manifest_sha256(manifest),
     )
     question_ids = [str(example["id"]) for example in selection["examples"]]
+
+    if package:
+        if question_ids != package["chunk"]["question_ids"]:
+            raise ValueError("work-package examples do not match ordered chunk membership")
+        question_seeds = {r["question_id"]: r["collection_seed"]
+                          for r in package["chunk"]["questions"]}
+        result = collect_examples(
+            examples=selection["examples"], source_split=source_split, model=model,
+            solver=solver, critic=critic, validator=validator, candidate_sites=candidate_sites,
+            base_seed=seed, active_conditions=config["collection"].get("active_conditions", OMITTED),
+            type_checked_target=protocol["type_checked_target"], a2_presentations=a2_presentations,
+            question_seeds=question_seeds)
+        with tempfile.TemporaryDirectory(dir=chunk_output.parent) as temporary:
+            temp_progress = Path(temporary)
+            written = collection_progress.write_chunk(
+                temp_progress, start=package["chunk"]["partition_start"],
+                question_ids=question_ids, candidate_sites=candidate_sites, result=result,
+                metadata_extra={"chunk_id": package["chunk"]["chunk_id"],
+                                "run_id": package["run_id"], "plan_sha256": package["plan_sha256"],
+                                "membership_sha256": package["chunk"]["membership_sha256"],
+                                "candidate_sites": candidate_sites})
+            shutil.move(str(written), chunk_output)
+        logger.info("Completed portable chunk %s -> %s", package["chunk"]["chunk_id"], chunk_output)
+        return
 
     if args.resume:
         collection_progress.check_identity(progress, identity)

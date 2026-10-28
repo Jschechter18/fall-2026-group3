@@ -1,0 +1,23 @@
+# EXAMPLE ONLY: replace paths, versions, proportions, run identity, and S3 values.
+inputs:
+  - source: musique
+    version: REPLACE_WITH_PINNED_REVISION
+    path: REPLACE_WITH_MUSIQUE_TRAIN_JSONL
+    source_split: train
+  - source: synthetic
+    version: REPLACE_WITH_SYNTHETIC_RELEASE
+    path: REPLACE_WITH_SYNTHETIC_JSONL
+    hop_field: hop_group
+
+partitioning:
+  seed: 20261028
+  proportions: {train: 0.70, validation: 0.10, test: 0.10, intervention: 0.10}
+  musique_validation_policy: validation
+
+work:
+  run_id: REPLACE_WITH_IMMUTABLE_RUN_ID
+  chunk_size: 100
+
+s3:
+  bucket: REPLACE_WITH_SHARED_BUCKET
+  prefix: REPLACE_WITH_PROJECT_PREFIX
