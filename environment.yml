@@ -25,4 +25,5 @@ dependencies:
       - shap
       - lime
       - boto3>=1.35,<2
+      - python-dotenv>=1,<2
       - anthropic>=1.13  # only for scripts/ai_ml/anthropic_claude.py

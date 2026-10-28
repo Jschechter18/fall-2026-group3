@@ -70,6 +70,61 @@ conda env update -f environment.yml --prune
 
 This installs new dependencies and removes dependencies that are no longer specified in the environment file.
 
+### Set Up Claude Access Through Amazon Bedrock
+
+The Claude examples use AWS credentials for Amazon Bedrock, rather than an
+Anthropic API key. Install or update the Conda environment first; it includes
+`boto3` and `python-dotenv`.
+
+#### Get temporary AWS credentials
+
+1. Sign in to the school AWS access portal using the URL provided by the professor
+   or school administrator. Ask them for the URL if you do not have it.
+2. Expand your assigned AWS account and locate the role authorized to use Bedrock.
+3. Select **Access keys** (sometimes labeled **Command line or programmatic access**)
+   beside that role.
+4. In the manual credentials section, copy the **access key ID**, **secret access
+   key**, and **session token** from the same session.
+
+See the [AWS instructions for obtaining temporary credentials](https://docs.aws.amazon.com/singlesignon/latest/userguide/howtogetcredentials.html#how-to-get-temp-credentials-manual).
+If the required account or role is missing, contact the professor or school
+administrator. S3 access alone does not establish permission to invoke Bedrock.
+
+#### Create your local `.env` file
+
+Create a file named `.env` in the repository root, alongside `environment.yml`.
+If it already exists, add or update these entries without removing other settings:
+
+```dotenv
+aws_access_key_id=YOUR_ACCESS_KEY_ID
+aws_secret_access_key=YOUR_SECRET_ACCESS_KEY
+aws_session_token=YOUR_SESSION_TOKEN
+```
+
+Use these lowercase variable names exactly: the current example reads them with
+`os.getenv()`. Paste only the credential values, without shell `export` commands
+or a `[BedRock_LLM_API]` section header. No `CONFIG_FILE` setting is needed for
+this example. `load_dotenv()` reads the file; it does not create it.
+
+The file is ignored by Git. Keep real credentials out of tracked files, including
+`example.env`, and do not share them in messages or screenshots. Temporary
+credentials expire; obtain a fresh set and replace all three values when needed,
+then restart the script or notebook session.
+
+#### Run the example
+
+From the repository root with the `capstone` environment activated and the project
+installed, run:
+
+```bash
+python examples/claude/ask_claude_api.py
+```
+
+This makes a real, billable Bedrock request. An expired-token error means the
+temporary credentials need refreshing. An `AccessDenied` error may require the
+professor or administrator to grant the role access to the requested Bedrock
+model or inference profile.
+
 ## Project Structure
 
 ```text
