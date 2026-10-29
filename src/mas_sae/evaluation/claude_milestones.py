@@ -25,10 +25,12 @@ def combine_runs(run_dirs: list[Path]) -> tuple[list[dict[str, Any]], dict[str, 
 
     ``sources`` maps episode_id to the unmodified source record (read from each run's
     ``episodes_path`` after checking its sha256).  ``totals`` holds billed tokens and
-    wall-clock time over every row of every run, superseded rows included.
+    wall-clock time over every row of every run, superseded rows included.  All rows
+    must share one ``prompt_version``.
     """
     rows: dict[str, dict[str, Any]] = {}
     sources: dict[str, dict[str, Any]] = {}
+    versions: set[str] = set()
     totals = {"input_tokens": 0, "output_tokens": 0, "wall_clock_seconds": 0.0, "runs": []}
     for run_dir in map(Path, run_dirs):
         summary = json.loads((run_dir / "summary.json").read_text(encoding="utf-8"))
@@ -52,6 +54,10 @@ def combine_runs(run_dirs: list[Path]) -> tuple[list[dict[str, Any]], dict[str, 
                 replaced += 1
             rows[eid] = row
             sources[eid] = source[eid]
+            versions.add(row.get("prompt_version"))
+            if len(versions) > 1:
+                raise ValueError(f"runs mix prompt versions {sorted(map(str, versions))}; "
+                                 "a milestone must come from one prompt version")
             totals["input_tokens"] += row["input_tokens"]
             totals["output_tokens"] += row["output_tokens"]
         totals["wall_clock_seconds"] += summary.get("wall_clock_seconds") or 0.0

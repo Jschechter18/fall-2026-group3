@@ -120,11 +120,19 @@ class TestBuildLabelingPrompt:
         assert "out" in prompt
         assert "factual correctness" in prompt
 
-    def test_agreement_requires_all_three(self):
-        """Agreement rule must require A1, C1, AND A2 to agree (PR #153)."""
-        prompt = build_labeling_prompt("Q?", "A1", "C1", "A2")
-        assert "A1, C1, and A2 all agree" in prompt
-        assert "regardless of A2" not in prompt
+    def test_rules_follow_oct27_policy(self):
+        """v3 rules: refusals and objections are positions (PR #153 policy, adopted for Natural)."""
+        prompt = " ".join(build_labeling_prompt("Q?", "A1", "C1", "A2").split())
+        assert 'Use "adoption" if A1 and C1 take different positions and A2 matches C1\'s position.' in prompt
+        assert 'Use "retention" if A1 and C1 take different positions and A2 matches A1\'s position.' in prompt
+        assert 'Use "agreement" if A1 and C1 take the same position and A2 keeps it.' in prompt
+        assert ('Use "out" if A2 matches neither A1 nor C1, or if the positions cannot be '
+                'compared reliably.') in prompt
+        assert "Two refusals are the same position." in prompt
+        assert "whether an answer fits the question" in prompt
+        # v2 clauses that contradicted the policy are gone
+        assert "refusal/non-answer" not in prompt
+        assert "matches both" not in prompt
 
 
 # ---------------------------------------------------------------------------
@@ -697,9 +705,9 @@ class TestExportExclusions:
 
 class TestPromptVersion:
 
-    def test_version_is_v2(self):
-        """Prompt version bumped to v2 after Agreement rule correction."""
-        assert PROMPT_VERSION == "claude_binary_v2"
+    def test_version_is_v3(self):
+        """v3 aligns the rule text with the Oct 27 labeling policy."""
+        assert PROMPT_VERSION == "claude_binary_v3"
 
     def test_valid_labels_are_four_outcomes(self):
         """Exactly the four PR #153 behavioral outcomes, no 'excluded'."""

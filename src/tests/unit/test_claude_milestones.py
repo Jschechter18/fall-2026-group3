@@ -97,3 +97,11 @@ def test_unknown_hops_rejected_in_summary(tmp_path):
     rows, sources, _ = combine_runs([run])
     with pytest.raises(ValueError, match="no parseable hop group"):
         milestone_summary(rows, sources)
+
+
+def test_mixed_prompt_versions_rejected(tmp_path):
+    src = [_source("2hop__a"), _source("2hop__b")]
+    v2 = _run(tmp_path, "v2", src, [dict(_row("2hop__a", "adoption"), prompt_version="claude_binary_v2")])
+    v3 = _run(tmp_path, "v3", src, [dict(_row("2hop__b", "agreement"), prompt_version="claude_binary_v3")])
+    with pytest.raises(ValueError, match="mix prompt versions"):
+        combine_runs([v2, v3])
