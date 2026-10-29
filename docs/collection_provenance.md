@@ -2,7 +2,30 @@
 
 A collection run is identified by `output.run_name` in its config. Everything needed to reproduce it, or to refuse a resume that would silently change it, is written by `src/mas_sae/experiments/provenance.py` and `collection_artifacts.py`. This page lists the files, what each field means, and what is and is not recorded.
 
-## Files per run
+## Manifest-based distributed runs
+
+For current commands and paths, use the
+[distributed collection guide](distributed_collection.md). The shared
+`manifest.json` identifies the exact question pool, frozen intervention
+membership, seeds, candidate orders, and work chunks.
+
+Each work directory stores `provenance.json` with the manifest identity, actual
+resolved configuration, and experiment settings. Resumed worker configurations
+are retained when they differ. `complete.json` records the committed file hashes;
+merge verifies these before reading checkpoints. `merged/collection.json`
+retains worker provenance and checksums for the raw merged output.
+
+Manifest resume and merge compare scientific settings, including models,
+generation, prompts, presentation, and activation sites. Device placement, GPU
+names, Git cleanliness, and package versions are recorded rather than used as
+the legacy environment identity gate. Final export membership and row addresses
+are written separately from collection provenance.
+
+## Legacy collection files
+
+The paths and resume identity below describe existing single-machine MuSiQue
+runs, including `natural_4b_full`. Their recorded artifacts and resume behavior
+remain supported.
 
 | Path | Written by | Content |
 |---|---|---|
@@ -16,7 +39,7 @@ A collection run is identified by `output.run_name` in its config. Everything ne
 | `results/collection/<export run>/export_summary.json` | `scripts/export_partition_activations.py` | Commit, manifest and labels hashes, frozen-partition path and hash, layers, counts, file hashes of a partition export. |
 | `results/sae/musique/runs/layer_NN/<run id>/manifest.json` | `scripts/train_sae.py` | SAE training provenance, including sha256 of the activation files used. |
 
-## The identity record (`provenance.json`)
+## Legacy resume identity (`provenance.json`)
 
 Built by `build_collection_progress_provenance`. A resume compares every key in `IDENTITY_KEYS` (`collection_progress.py`) and refuses on any difference; `created_at_utc` and `hash_basis` are informational.
 
@@ -33,7 +56,7 @@ Built by `build_collection_progress_provenance`. A resume compares every key in 
 | `gpus` | Device names from `torch.cuda.get_device_name`. |
 | `hash_basis` | Plain-language description of how each hash above was computed. |
 
-## The `provenance:` block of `resolved_config.yaml`
+## Resolved configuration provenance (shared fields)
 
 Adds, per role, the full `role_metadata`: `model_id`, requested and resolved revision, `architecture`, `loader`, `dtype`, `device`, `device_map`, `requested_placement`, `quantization`, `generation`, `chat_template_kwargs`. Also `environment` (`git_dirty`, `cuda_version`, `gpus`), `protocol_version`, `capabilities` (`blind_then_compare`, `controlled_as_own_conclusion`, `type_checked_target`: the behaviours the protocol version selected), `prompt_versions` (the named prompt constants used by each role and condition), and the token budgets. When the config sets `a2_presentations`, the block also records them; with the candidates presentation, `prompt_versions.solver_candidates` is `CANDIDATE_PROMPT` and `prompt_sha256.solver_candidates` hashes that template together with its candidate labels.
 
@@ -74,9 +97,10 @@ The plain-English dictionary is `episode_record.md`. This table is the complete 
 | Field | Type | Set in | Definition |
 |---|---|---|---|
 | `episode_id` | str | P | `<question_id>__<critic_condition>`, plus `__<a2_presentation>` when the config sets `a2_presentations` |
-| `question_id`, `question`, `ground_truth`, `answer_aliases` | str, str, str, list | P from the MuSiQue example | aliases `[]` when absent |
+| `question_id`, `question`, `ground_truth`, `answer_aliases` | str, str, str, list | P from the source example | namespaced IDs in mixed runs; aliases `[]` when absent |
 | `seed` | int | `collection.py` | `collection.seed + question_index` |
-| `source_split` | str | `collection.py` | MuSiQue split |
+| `source_split` | str | collection/export | actual tensor and interaction folder; original MuSiQue split for legacy collection |
+| `dataset_source`, `original_id`, `original_source_split`, `hop_group` | str | master manifest/export | explicit identity and origin in mixed runs |
 | `experiment_split` | str | `collection.py` | role from `dataset.experiment_split` at collection time; absent when the config omits the block |
 | `solver_attempt_1` | str | P | `Solver.solve`, once per question |
 | `solver_attempt_1_correct` | bool | P | `answer_matches(A1, gold, aliases)` |
@@ -109,6 +133,7 @@ The plain-English dictionary is `episode_record.md`. This table is the complete 
 | `generation_telemetry` | dict | P, `agents/base.py` | `solver_a1`, `solver_a2`, `critic_blind`, `validator` entries and `critic_review` list; each `{generated_tokens, max_new_tokens, reached_token_budget, finish_reason}`; `finish_reason` always null |
 | `attempt1_activation_index`, `attempt2_activation_index` | int | `collection.py`, reassigned by `collection_progress.merge_chunks` | rows in `<split>_attempt1.pt` / `<split>_attempt2.pt` |
 | `sae_attempt1_index`, `sae_attempt2_index` | int | `collection_artifacts._add_sae_indices` | `attempt1_index`; `len(A1 rows) + attempt2_index` |
-| `partition`, `source_run`, `source_activation_index` | str, str, int | `production.export_partition_activations` | partition exports only; indices reset to the exported row position |
+| `partition`, `source_run`, `source_activation_index` | str, str, int | `production.export_partition_activations` | legacy partition exports; original row retained alongside reset attempt indices |
+| `partition`, `collection_activation_index` | str, int | distributed split/export | new exports: research role and original merged row; final manifest/attempt indices address final tensors |
 
 `exclusions.jsonl` rows: `question_id`, `question_index`, `seed`, `stage` (`critic_blind` or `controlled_target`), `error_type`, `reason`, `a1_exists` (true), `critic_exists`, `a2_exists` (false). The production run excluded 19 of 19,938 train and 4 of 2,417 validation questions, all at the blind step.

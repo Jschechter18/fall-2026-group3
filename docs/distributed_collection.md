@@ -8,6 +8,20 @@ after merging. Intervention results are exported under a separate run name.
 
 Use [the two-EC2 smoke run](distributed_collection_smoke_test.md) before scaling.
 
+```mermaid
+flowchart TD
+    A[MuSiQue and optional synthetic questions] --> B[Prepare one master manifest]
+    B --> C[Reserve intervention membership and freeze collection randomness]
+    C --> D[Assign work chunks to EC2 workers]
+    D --> E[Collect episodes and activations for everyone]
+    E --> F[Merge in master order and rebuild activation indices]
+    F --> G[Assign train / validation / test to the remaining pool]
+    G --> H[Export ordinary experimental inputs]
+    G --> I[Export intervention baselines and contexts separately]
+    H --> J[SAEs, probes, feature selection, and final test evaluation]
+    I --> K[Causal replay after models and features are fixed]
+```
+
 ## Prepare once, without loading models
 
 Start from [the example YAML](../configs/collection/distributed.yaml). It reuses
