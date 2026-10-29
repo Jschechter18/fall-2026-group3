@@ -51,12 +51,15 @@ Run the commands below in that shell so the variables/function are available.
 S3 operations use the selected profile. Local collection itself does not need
 an active SSO session; authenticate again before uploads if the session expires.
 
-## 2. Prepare — one machine only
+## 2. Prepare — one GPU worker only
 
 This creates a small input file and collection config. It uses the pinned
 MuSiQue revision and existing candidates model settings, captures only layer 8,
 and keeps the original generation budgets. Dataset/model downloads may be
-needed. No model inference happens in this preparation block.
+needed. Contract preparation loads the configured models to record their actual
+revisions, precision, and activation sites, then releases them when the command
+exits. It performs no inference or episode collection. Use a worker with enough
+GPU memory for the configured models; the other preparation commands need no GPU.
 
 ```bash
 python - <<'PY'
@@ -97,9 +100,15 @@ dc freeze --master "$SMOKE_DIR/control/master.json" \
   --config "$SMOKE_DIR/control/partition-config.yaml" \
   --output "$SMOKE_DIR/control/partitions.json"
 
+# Record the actual model identities and prompt hashes before freezing the plan.
+python scripts/collect_activations.py \
+  --config "$SMOKE_DIR/control/collection.yaml" \
+  --prepare-compatibility "$SMOKE_DIR/control/experiment-compatibility.json"
+
 dc plan --master "$SMOKE_DIR/control/master.json" \
   --partitions "$SMOKE_DIR/control/partitions.json" \
   --run-id "$SMOKE_RUN" --chunk-size 1 \
+  --compatibility "$SMOKE_DIR/control/experiment-compatibility.json" \
   --output "$SMOKE_DIR/control/plan.json" --packages "$SMOKE_DIR/packages"
 
 python - <<'PY'
@@ -226,8 +235,12 @@ Expected: final `train`, `validation`, and `test` records and manifests under
 `$SMOKE_DIR/final/results/$SMOKE_RUN`, and layer-8 tensors under
 `$SMOKE_DIR/final/activations/$SMOKE_RUN/layer_08` when those splits have
 successful questions. No intervention tensors should exist. Finalization is
-not overwriteable; if it fails during publication, inspect the outputs before
-retrying (recoverable final publication remains a separate task).
+not overwriteable. Ordinary failures while building staging are cleaned up, so
+rerun the same command after resolving their cause. For a killed build or a
+failure during publication, rerun the identical command with
+`--recover-publication`: it rebuilds matching unfinished staging or completes
+publication of ready outputs. It refuses unrelated output directories. Result,
+SAE, and probe readers reject distributed outputs without valid completion markers.
 
 ## 5. Verify merge contents and the actual activation loaders
 

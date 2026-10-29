@@ -33,7 +33,7 @@ def resolved_config(*, hardware="cpu", max_tokens=32):
                        "quantization": None, "generation": {"do_sample": False, "max_new_tokens": max_tokens},
                        "chat_template_kwargs": {}, "device": hardware, "device_map": {"": hardware}}
     return {"provenance": {"roles": roles, "generation": {"solver_max_new_tokens": max_tokens},
-            "prompt_versions": {"solver_solve": "V1"}, "prompt_sha256": {}, "protocol_version": "v2",
+            "prompt_versions": {"solver_solve": "V1"}, "prompt_sha256": {"solver_solve": "0" * 64}, "protocol_version": "v2",
             "capabilities": {"blind_then_compare": True}, "active_conditions": ["natural"],
             "a2_presentations": ["feedback"], "environment": {"gpus": [hardware]}}}
 
@@ -331,6 +331,48 @@ def test_upload_cli_existing_marker_prevents_attempt_upload(tmp_path, monkeypatc
         cli.main()
 
 
+def test_prepare_compatibility_loads_models_but_does_not_collect(tmp_path, monkeypatch):
+    import runpy
+    worker = runpy.run_path(str(Path(__file__).resolve().parents[3]/"scripts/collect_activations.py"))["main"]
+    output = tmp_path/"contract.json"
+    config = {"model": {"id": "fixture"}, "dataset": {"source_split": "train", "num_questions": 2},
+              "collection": {"layers": [8], "seed": 42}, "output": {"run_name": "fixture"}}
+    loaded = []
+    def load_models(_):
+        loaded.append(True)
+        return {role: (object(), object()) for role in ("solver", "critic", "validator")}
+    def must_not_collect(*args, **kwargs):
+        pytest.fail("contract preparation must not sample, collect, or initialize collection progress")
+    class Agent:
+        def __init__(self, *args, **kwargs): pass
+    replacements = {
+        "parse_args": lambda: SimpleNamespace(config=tmp_path/"unused.yaml", work_package=None,
+                    chunk_output=None, resume=False, prepare_compatibility=output),
+        "load_collection_config": lambda _: config, "load_role_models": load_models,
+        "Solver": Agent, "Critic": Agent, "Validator": Agent,
+        "configure_agent": lambda *args: None, "resolve_solver_sites": lambda *args: [SITE],
+        "build_resolved_config": lambda *args, **kwargs: RESOLVED,
+        "select_questions": must_not_collect, "collect_examples": must_not_collect,
+        "save_collection_artifacts": must_not_collect,
+    }
+    for name, value in replacements.items():
+        monkeypatch.setitem(worker.__globals__, name, value)
+    monkeypatch.setattr(collection_progress, "ensure_can_start", must_not_collect)
+    worker()
+    assert loaded == [True]
+    contract = json.loads(output.read_text())
+    assert contract == COMPATIBILITY
+    master = build_master_dataset(inputs(tmp_path))
+    frozen = freeze_partitions(master, proportions=PROPORTIONS, seed=7)
+    plan = plan_chunks(master, frozen, run_id="r", chunk_size=2, compatibility=contract)
+    write_work_packages(tmp_path/"packages", master, plan)
+    for path in (tmp_path/"packages").glob("*.json"):
+        core.validate_work_package(json.loads(path.read_text()))
+    with pytest.raises(FileExistsError):
+        worker()
+    assert loaded == [True], "Existing contract outputs must fail before model loading"
+
+
 def test_accept_rejects_cli_identity_remote_marker_and_unrelated_s3_failure(tmp_path, monkeypatch):
     marker_path = tmp_path/"marker.json"
     marker_path.write_text(json.dumps({"run_id": "other", "chunk_id": "c"}))
@@ -375,11 +417,76 @@ def test_interrupted_finalization_requires_scoped_recovery(tmp_path, monkeypatch
             activation_root=activation_root, result_root=result_root, run_name="final", resolved_config=RESOLVED)
     monkeypatch.setattr(Path, "replace", original)
     assert (activation_root/"final").is_dir() and not (result_root/"final").exists()
+    from mas_sae.sae.dataloader import create_sae_dataloader
+    from mas_sae.probe.behavior_data import load_tensor
+    with pytest.raises(RuntimeError, match="publication is incomplete"):
+        create_sae_dataloader(2, "train", 0, location=activation_root/"final/layer_08")
+    with pytest.raises(RuntimeError, match="publication is incomplete"):
+        load_tensor(activation_root/"final/layer_08/train.pt")
     finalize_local_chunks(plan=plan, chunk_dirs=locations, candidate_sites=[site],
         activation_root=activation_root, result_root=result_root, run_name="final",
         resolved_config=RESOLVED, recover_publication=True)
     assert (activation_root/"final/publication_complete.json").is_file()
     assert (result_root/"final/publication_complete.json").is_file()
+    assert len(create_sae_dataloader(2, "train", 0, location=activation_root/"final/layer_08").dataset) == 2
+
+
+@pytest.mark.parametrize("failed_file", ["artifacts", "distributed_summary.json", "publication_ready.json"])
+def test_failed_staging_build_can_be_retried(tmp_path, monkeypatch, failed_file):
+    plan, locations, site = _finalize_fixture(tmp_path, "build", [["q0"]], finalize=False)
+    kwargs = dict(plan=plan, chunk_dirs=locations, candidate_sites=[site],
+                  activation_root=tmp_path/"build/activations", result_root=tmp_path/"build/results",
+                  run_name="final", resolved_config=RESOLVED)
+    write_artifacts, write_json = core.save_collection_artifacts, core.write_json_atomic
+    def interrupt_artifacts(**args):
+        result = write_artifacts(**args)
+        if failed_file == "artifacts":
+            raise OSError("interrupted build")
+        return result
+    def interrupt_json(path, *args, **kw):
+        if path.name == failed_file:
+            raise OSError("interrupted build")
+        return write_json(path, *args, **kw)
+    with monkeypatch.context() as patch:
+        patch.setattr(core, "save_collection_artifacts", interrupt_artifacts)
+        patch.setattr(core, "write_json_atomic", interrupt_json)
+        with pytest.raises(OSError, match="interrupted build"):
+            finalize_local_chunks(**kwargs)
+    assert not list((tmp_path/"build").glob("*/.final.staging-*"))
+    finalize_local_chunks(**kwargs)
+    assert (tmp_path/"build/results/final/publication_complete.json").is_file()
+
+
+def test_killed_unready_build_is_rebuilt_by_scoped_recovery(tmp_path, monkeypatch):
+    class ProcessKilled(BaseException):
+        pass
+    plan, locations, site = _finalize_fixture(tmp_path, "kill", [["q0"]], finalize=False)
+    kwargs = dict(plan=plan, chunk_dirs=locations, candidate_sites=[site],
+                  activation_root=tmp_path/"kill/activations", result_root=tmp_path/"kill/results",
+                  run_name="final", resolved_config=RESOLVED)
+    original = core.save_collection_artifacts
+    def kill(**args):
+        original(**args)
+        raise ProcessKilled()
+    with monkeypatch.context() as patch:
+        patch.setattr(core, "save_collection_artifacts", kill)
+        with pytest.raises(ProcessKilled):
+            finalize_local_chunks(**kwargs)
+    staged = list((tmp_path/"kill").glob("*/.final.staging-*"))
+    assert len(staged) == 2
+    assert all((path/"publication.json").is_file() for path in staged)
+    assert all(not (path/"publication_ready.json").exists() for path in staged)
+    # Recovery must refuse to discard another run's staging, even when one of
+    # the two trees still has the expected identity.
+    identity_path = staged[1]/"publication.json"
+    identity = json.loads(identity_path.read_text())
+    identity_path.write_text(json.dumps({**identity, "run_id": "unrelated"}))
+    with pytest.raises(ValueError, match="does not belong"):
+        finalize_local_chunks(**kwargs, recover_publication=True)
+    assert all(path.is_dir() for path in staged)
+    identity_path.write_text(json.dumps(identity))
+    finalize_local_chunks(**kwargs, recover_publication=True)
+    assert (tmp_path/"kill/results/final/publication_complete.json").is_file()
 
 
 def test_candidate_orders_are_frozen_balanced_and_independent_of_chunks(tmp_path):

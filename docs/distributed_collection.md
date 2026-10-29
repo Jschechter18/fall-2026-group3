@@ -68,7 +68,26 @@ It fixes role model IDs and resolved revisions, generation and prompt identities
 protocol/capabilities, active conditions, A2 presentation, dtype/quantization,
 and activation sites. Missing model IDs or resolved revisions are rejected.
 Workers derive the same contract from what they loaded, and finalization checks
-every worker and its supplied resolved config against it.
+every worker and its supplied resolved config against it. Schema-v2 contracts
+require content hashes for every recorded solver, critic, and validator prompt,
+including candidate labels. Editing a template without renaming its constant
+therefore changes compatibility. Older contracts/plans/packages must be
+regenerated under a new run ID; old chunk metadata cannot supply the missing
+prompt fingerprints retrospectively.
+
+Generate the contract on a model-capable worker before planning:
+
+```bash
+PYTHONPATH=src python scripts/collect_activations.py \
+  --config REPLACE_COLLECTION.yaml \
+  --prepare-compatibility artifacts/experiment-compatibility.json
+```
+
+This reuses the collector's model loading, agent configuration, and activation
+site resolution, then exits without sampling or collecting episodes. It may
+download model weights and requires the same model access and memory as collection.
+It refuses an existing contract output and cannot be combined with collection
+or resume arguments.
 
 Checks retained for data correctness include matching master/partition IDs and
 payload references, chunk membership and seeds, complete coverage, tensor/index
@@ -171,15 +190,23 @@ indices, and writes each partition as `attempt1`, `attempt2`, then
 SAE and probe commands; point their activation/result paths at the final run and
 continue to select train/validation/test through the frozen manifest.
 
-Provenance, summaries, and publication identity are written into deterministic
-same-plan staging directories before either output tree is exposed. Completion
-markers are written only after both activation and result trees are published;
-partitioned readers reject runs without the result marker. If publication is
-interrupted, rerun the identical finalize command with `--recover-publication`.
-Recovery validates the run ID, run name, and plan digest and only moves matching
-staging directories; it never deletes or replaces unrelated outputs. Existing
-pre-marker distributed artifacts are rejected and should be re-finalized from
-their accepted chunks.
+Each deterministic same-plan staging directory records `publication.json`
+ownership before artifacts are built. Both trees receive `publication_ready.json`
+only after every partition, provenance file, and summary has been written.
+`publication_complete.json` markers are written after both trees are published.
+Result, SAE, and probe readers check completion against the owning identity;
+ordinary legacy activation stores remain readable.
+
+Ordinary build exceptions clean up their private staging so the same command can
+be retried. After a killed build or interrupted publication, rerun the identical
+finalize command with `--recover-publication`. Recovery checks all existing trees'
+run ID, run name, and plan digest before making changes. It discards and rebuilds
+only matching unready private staging, or finishes publishing ready trees. It
+never deletes or replaces unrelated outputs and never publishes an unready tree.
+Older interrupted outputs without readiness metadata must be moved aside and
+re-finalized from compatible accepted chunks. Existing completed publications
+with matching ownership/completion identities remain readable; pre-marker
+distributed results require re-finalization under a new output name.
 
 ## Layout and capacity
 

@@ -18,6 +18,7 @@ from mas_sae.experiments.collection import (
 )
 from mas_sae.experiments.collection_artifacts import save_collection_artifacts
 from mas_sae.experiments.collection_config import load_collection_config
+from mas_sae.experiments.artifacts import ensure_output_available, write_json_atomic
 from mas_sae.experiments.provenance import (
     build_collection_progress_provenance,
     build_resolved_config,
@@ -66,6 +67,8 @@ def parse_args() -> argparse.Namespace:
                         help="Collect exactly one prepared distributed chunk (no dataset sampling).")
     parser.add_argument("--chunk-output", type=Path,
                         help="Local completed chunk directory; required with --work-package.")
+    parser.add_argument("--prepare-compatibility", type=Path,
+                        help="Load configured models and write a new experiment contract, then exit without collecting episodes.")
     parser.add_argument(
         "--resume",
         action="store_true",
@@ -79,8 +82,13 @@ def main() -> None:
     args = parse_args()
     work_package = getattr(args, "work_package", None)
     chunk_output = getattr(args, "chunk_output", None)
+    prepare_compatibility = getattr(args, "prepare_compatibility", None)
     if bool(work_package) != bool(chunk_output):
         raise SystemExit("--work-package and --chunk-output must be passed together")
+    if prepare_compatibility:
+        if work_package or args.resume:
+            raise SystemExit("--prepare-compatibility cannot be combined with --work-package or --resume")
+        ensure_output_available(prepare_compatibility)
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
@@ -129,7 +137,7 @@ def main() -> None:
         if chunk_output.exists():
             raise FileExistsError(chunk_output)
         chunk_output.parent.mkdir(parents=True, exist_ok=True)
-    else:
+    elif not prepare_compatibility:
         collection_progress.ensure_can_start(
             resume=args.resume, final_output_dir=RESULT_ROOT / run_name / source_split,
             progress=progress)
@@ -165,6 +173,12 @@ def main() -> None:
         protocol_version=protocol_version,
         type_checked_target=protocol["type_checked_target"],
     )
+    if prepare_compatibility:
+        contract = experiment_compatibility(resolved_config, candidate_sites)
+        prepare_compatibility.parent.mkdir(parents=True, exist_ok=True)
+        write_json_atomic(prepare_compatibility, contract, overwrite=False)
+        logger.info("Wrote experiment compatibility contract to %s; no episodes collected", prepare_compatibility)
+        return
     a2_presentations = config["collection"].get("a2_presentations", OMITTED)
     if package:
         examples = [{**payload, "id": member["question_id"]}

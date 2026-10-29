@@ -22,6 +22,7 @@ from urllib.parse import quote
 from urllib.request import Request, urlopen
 
 from mas_sae.data.musique import SUPPORTED_PARTITIONS
+from mas_sae.data.publication import PUBLICATION_FILE, READY_FILE, COMPLETE_FILE, read_publication
 from mas_sae.experiments.artifacts import sha256_file, sha256_json, write_json_atomic
 from mas_sae.experiments import collection_progress
 from mas_sae.experiments.collection_artifacts import save_collection_artifacts
@@ -63,6 +64,7 @@ def validate_work_package(package: dict[str, Any]) -> tuple[dict[str, Any], list
         raise ValueError("work package frozen plan digest is invalid")
     if package.get("run_id") != plan.get("run_id"):
         raise ValueError("work package run identity differs from its frozen plan")
+    validate_experiment_compatibility(plan.get("compatibility"))
     chunk_id = package.get("chunk_id")
     matches = [chunk for chunk in plan.get("chunks", []) if chunk.get("chunk_id") == chunk_id]
     if len(matches) != 1:
@@ -602,6 +604,33 @@ def collection_report(frozen: dict[str, Any], records: Iterable[dict[str, Any]],
     return {"assigned": counts(lookup), "collected": counts(successful),
             "excluded": counts(excluded), "eligible": counts(eligible)}
 
+def _publish_run(staged_a: Path, staged_r: Path, final_a: Path, final_r: Path,
+                 publication: dict[str, Any]) -> dict[str, Any]:
+    """Publish only fully built, owned trees; retries can finish either rename."""
+    pairs = ((staged_a, final_a), (staged_r, final_r))
+    for staged, final in pairs:
+        if staged.exists() and final.exists():
+            raise ValueError(f"both {staged} and {final} exist; refusing ambiguous publication")
+        root = final if final.exists() else staged
+        if not root.is_dir() or read_publication(root) != publication:
+            raise ValueError(f"{root}: output does not belong to this run and frozen plan")
+        ready = root / READY_FILE
+        if not ready.is_file() or json.loads(ready.read_text()) != publication:
+            raise ValueError(f"{root}: publication build is not ready; refusing to expose incomplete outputs")
+    # Read the summary before setting completion markers, including on recovery.
+    result = final_r if final_r.exists() else staged_r
+    summary = json.loads((result / "distributed_summary.json").read_text())
+    if summary.get("plan_sha256") != publication["plan_sha256"]:
+        raise ValueError("publication summary belongs to another frozen plan")
+    partitions = summary["partitions"]
+    for staged, final in pairs:
+        if not final.exists():
+            staged.replace(final)
+    for _, final in pairs:
+        write_json_atomic(final / COMPLETE_FILE, publication)
+    return partitions
+
+
 def finalize_local_chunks(*, plan: dict[str, Any], chunk_dirs: dict[str, str | Path],
                           candidate_sites: list[str], activation_root: str | Path,
                           result_root: str | Path, run_name: str,
@@ -653,6 +682,8 @@ def finalize_local_chunks(*, plan: dict[str, Any], chunk_dirs: dict[str, str | P
     
     if not candidate_sites:
         raise ValueError("candidate_sites must not be empty.")
+    if not run_name or run_name in {".", ".."} or Path(run_name).name != run_name:
+        raise ValueError("run_name must be a single directory name")
     expected_compatibility = plan.get("compatibility")
     if not expected_compatibility:
         raise ValueError("work plan has no explicit experiment compatibility contract; regenerate it")
@@ -665,33 +696,28 @@ def finalize_local_chunks(*, plan: dict[str, Any], chunk_dirs: dict[str, str | P
         raise ValueError(f"chunk set mismatch; missing={sorted(missing)}, extra={sorted(extra)}")
     activation_root, result_root = Path(activation_root), Path(result_root)
     final_a, final_r = activation_root/run_name, result_root/run_name
+    if final_a.resolve() == final_r.resolve():
+        raise ValueError("activation and result output directories must differ")
     stage_name = f".{run_name}.staging-{plan['plan_sha256'][:12]}"
     staged_a, staged_r = activation_root/stage_name, result_root/stage_name
     publication = {"schema_version": 1, "run_id": plan["run_id"],
                    "run_name": run_name, "plan_sha256": plan["plan_sha256"]}
-    marker_name = "publication_complete.json"
     if recover_publication:
+        existing = []
         for path in (final_a, staged_a, final_r, staged_r):
             if path.exists():
-                identity = path/"publication.json"
-                if not identity.is_file() or json.loads(identity.read_text()) != publication:
+                if read_publication(path) != publication:
                     raise ValueError(f"{path}: output does not belong to this run and frozen plan")
-        candidates = [path for path in (final_r, staged_r) if path.is_dir()]
-        identity_path = next((path/"publication.json" for path in candidates
-                              if (path/"publication.json").is_file()), None)
-        if identity_path is None or json.loads(identity_path.read_text()) != publication:
+                existing.append(path)
+        if not existing:
             raise ValueError("no interrupted publication for this run and frozen plan can be recovered")
-        if not final_a.exists():
-            if not staged_a.exists():
-                raise FileNotFoundError("interrupted publication has no staged activation output")
-            staged_a.replace(final_a)
-        if not final_r.exists():
-            if not staged_r.exists():
-                raise FileNotFoundError("interrupted publication has no staged result output")
-            staged_r.replace(final_r)
-        write_json_atomic(final_a/marker_name, publication)
-        write_json_atomic(final_r/marker_name, publication)
-        return json.loads((final_r/"distributed_summary.json").read_text())["partitions"]
+        if (final_a.exists() or final_r.exists()
+                or all((path / READY_FILE).is_file() for path in (staged_a, staged_r))):
+            return _publish_run(staged_a, staged_r, final_a, final_r, publication)
+        # A killed build has ownership but has not committed readiness. Only
+        # its matching private staging can be discarded, then rebuilt below.
+        for path in existing:
+            shutil.rmtree(path)
     if final_a.exists() or final_r.exists() or staged_a.exists() or staged_r.exists():
         raise FileExistsError(
             "run output or same-plan staging exists; use --recover-publication only for an interrupted publication"
@@ -699,7 +725,13 @@ def finalize_local_chunks(*, plan: dict[str, Any], chunk_dirs: dict[str, str | P
     summaries = {}
     worker_provenance = []
     question_metadata = canonical_partitions(plan["questions"]) if "questions" in plan else {}
+    created = []
+    ready = False
     try:
+        for path in (staged_a, staged_r):
+            path.mkdir(parents=True)
+            created.append(path)
+            write_json_atomic(path / PUBLICATION_FILE, publication)
         with tempfile.TemporaryDirectory() as progress_parent:
             for partition in COLLECTABLE_PARTITIONS:
                 chunks = [c for c in plan["chunks"] if c["partition"] == partition]
@@ -787,14 +819,15 @@ def finalize_local_chunks(*, plan: dict[str, Any], chunk_dirs: dict[str, str | P
             write_distributed_tables(result_root/stage_name, plan["questions"], summaries)
         write_json_atomic(staged_r/"worker_provenance.json", {"workers": worker_provenance})
         write_json_atomic(staged_r/"distributed_summary.json", {"plan_sha256": plan["plan_sha256"], "partitions": summaries})
-        write_json_atomic(staged_r/"publication.json", publication)
-        write_json_atomic(staged_a/"publication.json", publication)
-        # Rename only after every partition has validated and been written.
-        if staged_a.exists(): staged_a.replace(final_a)
-        staged_r.replace(final_r)
-        write_json_atomic(final_a/marker_name, publication)
-        write_json_atomic(final_r/marker_name, publication)
-        return summaries
+        for path in (staged_a, staged_r):
+            write_json_atomic(path / READY_FILE, publication)
+        ready = True
+        return _publish_run(staged_a, staged_r, final_a, final_r, publication)
     except Exception:
-        # Preserve same-plan staging for explicit, identity-checked recovery.
+        # A normal build failure is retryable. Once readiness is committed,
+        # preserve both trees for explicit recovery of interrupted publication.
+        if not ready:
+            for path in created:
+                if path.exists():
+                    shutil.rmtree(path)
         raise

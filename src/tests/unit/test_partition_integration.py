@@ -40,7 +40,7 @@ def resolved_config():
                     "generation": {"do_sample": False, "max_new_tokens": 8}, "chat_template_kwargs": {}}
              for role in ("solver", "critic", "validator")}
     return {"provenance": {"roles": roles, "generation": {"do_sample": False},
-            "prompt_versions": {"solver_solve": "V1"}, "prompt_sha256": {}, "protocol_version": "v2",
+            "prompt_versions": {"solver_solve": "V1"}, "prompt_sha256": {"solver_solve": "0" * 64}, "protocol_version": "v2",
             "capabilities": {}, "active_conditions": ["natural"], "a2_presentations": ["candidates"]}}
 
 
@@ -274,6 +274,20 @@ def test_partitioned_reader_rejects_missing_publication_marker(collected):
     (results/'publication_complete.json').unlink()
     with pytest.raises(RuntimeError, match="publication is incomplete"):
         read_run_interactions(results, layout='partitioned')
+    with pytest.raises(RuntimeError, match="publication is incomplete"):
+        bd.build_episode_table(results, ['train'], [])
+
+
+def test_readers_reject_completion_marker_for_a_different_run(collected):
+    results, activations, _, _, _ = collected
+    for root in (results, activations):
+        marker_path = root/'publication_complete.json'
+        marker = json.loads(marker_path.read_text())
+        marker_path.write_text(json.dumps({**marker, 'run_id': 'another-run'}))
+    with pytest.raises(RuntimeError, match="completion identity does not match"):
+        read_run_interactions(results, layout='partitioned')
+    with pytest.raises(RuntimeError, match="completion identity does not match"):
+        create_sae_dataloader(2, 'train', 0, location=activations/'layer_08')
 
 
 def test_wrong_partition_record_is_rejected(collected):

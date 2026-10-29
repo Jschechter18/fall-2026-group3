@@ -4,6 +4,8 @@ from pathlib import Path
 
 import torch
 
+from mas_sae.data.publication import require_complete_publication
+
 
 class ActivationStore:
     """Persist and load 2-D activation matrices as <split>.pt files in a local directory."""
@@ -75,7 +77,13 @@ class ActivationStore:
     def load_activations(
         self,
         split: str,
+        *,
+        allow_unpublished: bool = False,
     ) -> torch.Tensor:
+        # Only the artifact writer's staged round-trip verification bypasses
+        # readiness. Downstream callers, including SAE, check it by default.
+        if not allow_unpublished:
+            require_complete_publication(self._local_path)
         path = self._split_path(split)
 
         if not path.is_file():

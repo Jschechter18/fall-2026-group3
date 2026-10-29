@@ -43,6 +43,7 @@ import re
 import torch
 
 from mas_sae.data.activation_store import ActivationStore
+from mas_sae.data.publication import require_complete_publication
 from mas_sae.data.musique import (
     SUPPORTED_EXPERIMENT_SPLITS,
     SUPPORTED_PARTITIONS,
@@ -108,11 +109,7 @@ def interaction_paths(results_dir, partitions=None, *, layout="legacy"):
                 f"{results_dir} declares a partitioned run; pass layout='partitioned' to avoid incomplete reads"
             )
     if layout == "partitioned":
-        if not (results_dir/"publication_complete.json").is_file():
-            raise RuntimeError(
-                f"{results_dir}: distributed run publication is incomplete or predates completion markers; "
-                "recover or re-finalize it before reading"
-            )
+        require_complete_publication(results_dir, required=True)
         descriptor = json.loads(descriptor_path.read_text())
         if descriptor.get("layout") != "partitioned":
             raise ValueError("Run metadata does not describe a partitioned layout")
@@ -480,9 +477,8 @@ def read_partitions(path, *, layout="legacy"):
     preserves exposure flags, and uses partition names as storage splits.
     """
     path = Path(path)
-    if layout == "partitioned" and (path.parent/"run_layout.json").is_file() \
-            and not (path.parent/"publication_complete.json").is_file():
-        raise RuntimeError(f"{path.parent}: distributed run publication is incomplete")
+    if layout == "partitioned" and (path.parent/"run_layout.json").is_file():
+        require_complete_publication(path.parent, required=True)
     with open(path, newline="") as f:
         reader = csv.DictReader(f)
         missing_columns = [field for field in PARTITION_FIELDS if field not in (reader.fieldnames or [])]

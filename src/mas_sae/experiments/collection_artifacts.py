@@ -61,7 +61,7 @@ def _save_and_verify(
 ) -> None:
     """Save one activation tensor and verify its local round trip."""
     store.save_activations(split, tensor)
-    loaded = store.load_activations(split)
+    loaded = store.load_activations(split, allow_unpublished=True)
 
     if not torch.equal(tensor.detach().cpu(), loaded):
         raise RuntimeError(

@@ -14,6 +14,9 @@ from typing import Any
 
 import torch
 
+from mas_sae.agents import critic as critic_prompts
+from mas_sae.agents.solver import Solver
+from mas_sae.agents.validator import Validator
 from mas_sae.data.musique import MUSIQUE_DATASET_ID
 from mas_sae.experiments import artifacts
 from mas_sae.experiments.conditions import (
@@ -25,20 +28,25 @@ from mas_sae.experiments.conditions import (
 from mas_sae.experiments.reproducibility import config_sha256
 
 
-COMPATIBILITY_VERSION = 1
+COMPATIBILITY_VERSION = 2
 
 
 def validate_experiment_compatibility(contract: Any) -> dict[str, Any]:
     """Validate the explicit, portable experiment compatibility contract."""
     if not isinstance(contract, dict) or contract.get("schema_version") != COMPATIBILITY_VERSION:
         raise ValueError("experiment compatibility contract is missing or has an unsupported schema version")
-    required = ("roles", "generation", "prompt_versions", "protocol_version", "capabilities",
+    required = ("roles", "generation", "prompt_versions", "prompt_sha256", "protocol_version", "capabilities",
                 "active_conditions", "a2_presentations", "activation_sites")
     missing = [field for field in required if contract.get(field) is None]
     if missing:
         raise ValueError(f"experiment compatibility contract is missing fields: {', '.join(missing)}")
     if not isinstance(contract["prompt_versions"], dict) or not contract["prompt_versions"]:
         raise ValueError("experiment compatibility requires prompt identities")
+    hashes = contract["prompt_sha256"]
+    if (not isinstance(hashes, dict) or set(hashes) != set(contract["prompt_versions"])
+            or any(not isinstance(digest, str) or len(digest) != 64
+                   or any(c not in "0123456789abcdef" for c in digest) for digest in hashes.values())):
+        raise ValueError("experiment compatibility requires SHA-256 hashes for every recorded prompt; regenerate it")
     roles = contract["roles"]
     if not isinstance(roles, dict) or set(roles) != {"solver", "critic", "validator"}:
         raise ValueError("experiment compatibility must identify solver, critic, and validator roles")
@@ -201,6 +209,28 @@ def _critic_prompt_names(
     return names
 
 
+def _prompt_hashes(names: dict[str, str], solver: Any, validator: Any) -> dict[str, str]:
+    """Fingerprint the runtime templates; critic templates live at module scope.
+
+    Default class templates also support lightweight agents used by provenance
+    callers. Instance overrides are used whenever the agent supplies them.
+    """
+    hashes = {}
+    for role, name in names.items():
+        if role.startswith("critic_"):
+            templates = [getattr(critic_prompts, part) for part in name.split("+")]
+            hashes[role] = artifacts.sha256_json(templates)
+        else:
+            agent, defaults = (validator, Validator) if role == "validator" else (solver, Solver)
+            template = getattr(agent, name, getattr(defaults, name))
+            if role == "solver_candidates":
+                # Preserve the established candidate-template-and-label digest.
+                labels = getattr(solver, "CANDIDATE_LABELS", Solver.CANDIDATE_LABELS)
+                template += json.dumps(labels, sort_keys=True)
+            hashes[role] = artifacts.sha256_text(template)
+    return hashes
+
+
 def build_resolved_config(
     config: dict[str, Any],
     model: Any,
@@ -239,12 +269,13 @@ def build_resolved_config(
     candidate_prompt = {}
     if A2Presentation.CANDIDATES in presentations:
         candidate_prompt = {"solver_candidates": "CANDIDATE_PROMPT"}
-        # Template and labels together, so a rebuilt prompt can be checked against the run.
-        presentation_record["prompt_sha256"] = {
-            "solver_candidates": artifacts.sha256_text(
-                solver.CANDIDATE_PROMPT + json.dumps(solver.CANDIDATE_LABELS, sort_keys=True)
-            ),
-        }
+    prompt_versions = {
+        "solver_solve": "SOLVE_PROMPT_V1",
+        "solver_revise": "REVISE_PROMPT_V1",
+        **candidate_prompt,
+        **_critic_prompt_names(critic, type_checked_target),
+        "validator": "VALIDATE_PROMPT",
+    }
 
     return {
         **config,
@@ -267,13 +298,8 @@ def build_resolved_config(
             },
             **label,
             "capabilities": capabilities,
-            "prompt_versions": {
-                "solver_solve": "SOLVE_PROMPT_V1",
-                "solver_revise": "REVISE_PROMPT_V1",
-                **candidate_prompt,
-                **_critic_prompt_names(critic, type_checked_target),
-                "validator": "VALIDATE_PROMPT",
-            },
+            "prompt_versions": prompt_versions,
+            "prompt_sha256": _prompt_hashes(prompt_versions, solver, validator),
             "generation": {
                 "do_sample": (False if "roles" not in config else None),
                 "solver_max_new_tokens": solver.max_new_tokens,
