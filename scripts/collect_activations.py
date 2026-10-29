@@ -21,7 +21,9 @@ from mas_sae.experiments.collection_config import load_collection_config
 from mas_sae.experiments.provenance import (
     build_collection_progress_provenance,
     build_resolved_config,
+    experiment_compatibility,
 )
+from mas_sae.experiments.distributed_collection.core import validate_work_package
 from mas_sae.models.roles import resolve_roles, load_role_models, configure_agent
 from mas_sae.activations.sites import resolve_solver_sites
 from mas_sae.experiments.conditions import OMITTED, A2Presentation, resolve_presentations
@@ -89,16 +91,21 @@ def main() -> None:
     role_specs = resolve_roles(config)
     model_id = role_specs["solver"]["id"]
     package = json.loads(work_package.read_text()) if work_package else None
+    package_chunk = package_payloads = None
+    if package:
+        # Authenticate frozen membership and untouched payload bytes before any
+        # model is loaded or collection work begins.
+        package_chunk, package_payloads = validate_work_package(package)
     candidate_orders = None
     if package and A2Presentation.CANDIDATES in resolve_presentations(
         config["collection"].get("a2_presentations", OMITTED)
     ):
-        candidate_orders = {r["question_id"]: r.get("candidate_order") for r in package["chunk"]["questions"]}
-        invalid = [qid for qid in package["chunk"]["question_ids"]
+        candidate_orders = {r["question_id"]: r.get("candidate_order") for r in package_chunk["questions"]}
+        invalid = [qid for qid in package_chunk["question_ids"]
                    if candidate_orders.get(qid) not in Solver.CANDIDATE_ORDERS]
         if invalid:
             raise ValueError("Missing or invalid frozen candidate orders; regenerate frozen partitions and work packages.")
-    source_split = package["chunk"]["partition"] if package else config["dataset"]["source_split"]
+    source_split = package_chunk["partition"] if package else config["dataset"]["source_split"]
     num_questions = config["dataset"]["num_questions"]
     layers = config["collection"]["layers"]
     seed = config["collection"]["seed"]
@@ -160,11 +167,16 @@ def main() -> None:
     )
     a2_presentations = config["collection"].get("a2_presentations", OMITTED)
     if package:
-        selection = {"examples": package["examples"], "experiment_splits": None,
+        examples = [{**payload, "id": member["question_id"]}
+                    for payload, member in zip(package_payloads, package_chunk["questions"])]
+        selection = {"examples": examples, "experiment_splits": None,
                      "sampled_questions": None, "candidate_orders": candidate_orders}
-        expected = package.get("compatibility", {})
-        if expected and expected != {k: resolved_config.get(k) for k in expected}:
-            raise RuntimeError("work-package experiment compatibility does not match the resolved config")
+        expected = package["plan"].get("compatibility")
+        if not expected:
+            raise ValueError("frozen plan has no explicit experiment compatibility contract; regenerate it")
+        actual_compatibility = experiment_compatibility(resolved_config, candidate_sites)
+        if expected != actual_compatibility:
+            raise RuntimeError("worker experiment compatibility does not match the frozen run contract")
     else:
         selection = select_questions(
             config["dataset"], default_seed=seed, a2_presentations=a2_presentations)
@@ -188,10 +200,10 @@ def main() -> None:
     question_ids = [str(example["id"]) for example in selection["examples"]]
 
     if package:
-        if question_ids != package["chunk"]["question_ids"]:
+        if question_ids != package_chunk["question_ids"]:
             raise ValueError("work-package examples do not match ordered chunk membership")
         question_seeds = {r["question_id"]: r["collection_seed"]
-                          for r in package["chunk"]["questions"]}
+                          for r in package_chunk["questions"]}
         result = collect_examples(
             examples=selection["examples"], source_split=source_split, model=model,
             solver=solver, critic=critic, validator=validator, candidate_sites=candidate_sites,
@@ -201,15 +213,16 @@ def main() -> None:
         with tempfile.TemporaryDirectory(dir=chunk_output.parent) as temporary:
             temp_progress = Path(temporary)
             written = collection_progress.write_chunk(
-                temp_progress, start=package["chunk"]["partition_start"],
+                temp_progress, start=package_chunk["partition_start"],
                 question_ids=question_ids, candidate_sites=candidate_sites, result=result,
-                metadata_extra={"chunk_id": package["chunk"]["chunk_id"],
-                                "run_id": package["run_id"], "plan_sha256": package["plan_sha256"],
-                                "membership_sha256": package["chunk"]["membership_sha256"],
+                metadata_extra={"chunk_id": package_chunk["chunk_id"],
+                                "run_id": package["run_id"], "plan_sha256": package["plan"]["plan_sha256"],
+                                "membership_sha256": package_chunk["membership_sha256"],
                                 "candidate_sites": candidate_sites,
+                                "experiment_compatibility": actual_compatibility,
                                 "provenance": identity, "resolved_config": resolved_config})
             shutil.move(str(written), chunk_output)
-        logger.info("Completed portable chunk %s -> %s", package["chunk"]["chunk_id"], chunk_output)
+        logger.info("Completed portable chunk %s -> %s", package_chunk["chunk_id"], chunk_output)
         return
 
     if args.resume:

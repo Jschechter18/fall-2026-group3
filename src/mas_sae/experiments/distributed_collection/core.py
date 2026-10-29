@@ -29,15 +29,59 @@ from mas_sae.experiments.records import read_jsonl
 from mas_sae.experiments.conditions import assign_candidate_orders
 from mas_sae.agents.solver import Solver
 from mas_sae.data.partition_adapter import canonical_partitions, write_distributed_tables
+from mas_sae.experiments.provenance import experiment_compatibility, validate_experiment_compatibility
 
 MASTER_VERSION = 1
 PLAN_VERSION = 1
+PACKAGE_VERSION = 2
 REQUIRED_CHUNK_FILES = ("metadata.json", "records.jsonl", "exclusions.jsonl", "activations.pt")
 COLLECTABLE_PARTITIONS = ("train", "validation", "test") # NOTE: WE MAY NEED TO THINK ABOUT THIS
 
 
 def _canonical_payload(value: Any) -> bytes:
     return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
+
+
+def _is_precondition_failed(error: Exception) -> bool:
+    response = getattr(error, "response", None)
+    if not isinstance(response, dict):
+        return False
+    details = response.get("Error", {})
+    status = response.get("ResponseMetadata", {}).get("HTTPStatusCode")
+    return status == 412 or details.get("Code") in {"PreconditionFailed", "412"}
+
+
+def validate_work_package(package: dict[str, Any]) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    """Verify a schema-v2 package and return its plan chunk and original payloads."""
+    if package.get("schema_version") != PACKAGE_VERSION:
+        raise ValueError("work package format is not verifiable; regenerate the plan and schema-v2 packages")
+    plan = package.get("plan")
+    if not isinstance(plan, dict) or not plan.get("plan_sha256"):
+        raise ValueError("work package is missing its frozen plan")
+    basis = {key: value for key, value in plan.items() if key != "plan_sha256"}
+    if sha256_json(basis) != plan["plan_sha256"]:
+        raise ValueError("work package frozen plan digest is invalid")
+    if package.get("run_id") != plan.get("run_id"):
+        raise ValueError("work package run identity differs from its frozen plan")
+    chunk_id = package.get("chunk_id")
+    matches = [chunk for chunk in plan.get("chunks", []) if chunk.get("chunk_id") == chunk_id]
+    if len(matches) != 1:
+        raise ValueError("work package chunk is not uniquely present in the frozen plan")
+    chunk = matches[0]
+    if sha256_json(chunk.get("questions")) != chunk.get("membership_sha256"):
+        raise ValueError("work package chunk membership digest is invalid")
+    if chunk.get("question_ids") != [member.get("question_id") for member in chunk.get("questions", [])]:
+        raise ValueError("work package ordered question IDs differ from frozen membership")
+    payloads = package.get("examples")
+    if not isinstance(payloads, list) or len(payloads) != len(chunk["questions"]):
+        raise ValueError("work package payload count differs from frozen membership")
+    for member, payload in zip(chunk["questions"], payloads):
+        if not isinstance(payload, dict):
+            raise ValueError(f"{member['question_id']}: work-package payload is not an object")
+        actual = hashlib.sha256(_canonical_payload(payload)).hexdigest()
+        if actual != member.get("payload_sha256"):
+            raise ValueError(f"{member['question_id']}: payload SHA-256 differs from frozen membership")
+    return chunk, payloads
 
 
 def _read_records(path: str | Path) -> list[dict[str, Any]]:
@@ -252,6 +296,7 @@ def plan_chunks(master: dict[str, Any], frozen: dict[str, Any], *, run_id: str,
         dict[str, Any]: A manifest describing the planned chunks.
     """
     if chunk_size < 1: raise ValueError("chunk_size must be positive")
+    compatibility = validate_experiment_compatibility(compatibility)
     if frozen["master_sha256"] != master["master_sha256"]:
         raise ValueError("partitions belong to a different master dataset")
     assignments = {r["question_id"]: r for r in frozen["questions"]}
@@ -282,7 +327,7 @@ def plan_chunks(master: dict[str, Any], frozen: dict[str, Any], *, run_id: str,
                          for r in frozen["questions"]]
     basis = {"schema_version": PLAN_VERSION, "run_id": run_id,
              "master_sha256": master["master_sha256"], "partitions_sha256": frozen["partitions_sha256"],
-             "compatibility": compatibility or {}, "chunks": chunks,
+             "compatibility": compatibility, "chunks": chunks,
              "questions": planned_questions}
     return {**basis, "plan_sha256": sha256_json(basis)}
 
@@ -309,12 +354,9 @@ def write_work_packages(root: str | Path, master: dict[str, Any], plan: dict[str
     root.mkdir(parents=True)
     by_id = {r["question_id"]: r for r in master["questions"]}
     for chunk in plan["chunks"]:
-        package = {"schema_version": 1, "run_id": plan["run_id"], "plan_sha256": plan["plan_sha256"],
-                   "compatibility": plan["compatibility"], "chunk": chunk,
-                   "examples": [{**by_id[qid]["payload"], "id": qid,
-                                  "original_id": by_id[qid]["original_id"],
-                                  "dataset_source": by_id[qid]["dataset_source"],
-                                  "hop_group": by_id[qid]["hop_group"]} for qid in chunk["question_ids"]]}
+        package = {"schema_version": PACKAGE_VERSION, "run_id": plan["run_id"],
+                   "chunk_id": chunk["chunk_id"], "plan": plan,
+                   "examples": [by_id[qid]["payload"] for qid in chunk["question_ids"]]}
         write_json_atomic(root / f"{chunk['chunk_id']}.json", package)
 
 
@@ -389,12 +431,20 @@ class S3Transport:
         """
         path = Path(path); body = path.read_bytes()
         package = json.loads(body)
-        if package.get("run_id") != run_id or package.get("chunk", {}).get("chunk_id") != chunk_id:
+        chunk, _ = validate_work_package(package)
+        if package.get("run_id") != run_id or chunk.get("chunk_id") != chunk_id:
             raise ValueError("work package identity does not match destination")
         key = self._key("inputs", run_id, f"{chunk_id}.json")
         digest = hashlib.sha256(body).hexdigest()
-        self.client.put_object(Bucket=self.bucket, Key=key, Body=body,
-                               ContentType="application/json", Metadata={"sha256": digest})
+        try:
+            self.client.put_object(Bucket=self.bucket, Key=key, Body=body, IfNoneMatch="*",
+                                   ContentType="application/json", Metadata={"sha256": digest})
+        except Exception as error:
+            if not _is_precondition_failed(error):
+                raise
+            current = self.client.get_object(Bucket=self.bucket, Key=key)["Body"].read()
+            if hashlib.sha256(current).hexdigest() != digest or current != body:
+                raise RuntimeError(f"conflicting immutable work package for {chunk_id}") from error
         head = self.client.head_object(Bucket=self.bucket, Key=key)
         if int(head["ContentLength"]) != len(body): raise RuntimeError("work-package upload size mismatch")
         return {"key": key, "sha256": digest, "size": len(body)}
@@ -432,7 +482,8 @@ class S3Transport:
         if expected and hashlib.sha256(body).hexdigest() != expected:
             raise RuntimeError("work-package checksum mismatch")
         package = json.loads(body)
-        if package.get("run_id") != run_id or package.get("chunk", {}).get("chunk_id") != chunk_id:
+        chunk, _ = validate_work_package(package)
+        if package.get("run_id") != run_id or chunk.get("chunk_id") != chunk_id:
             raise RuntimeError("downloaded work-package identity mismatch")
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_bytes(body)
@@ -482,17 +533,24 @@ class S3Transport:
 
     def accept_attempt(self, marker: dict[str, Any]) -> dict[str, Any]:
         """Accept once using an S3 conditional create; identical retries are idempotent."""
+        base = self._key("results", marker["run_id"], marker["chunk_id"], "attempts", marker["attempt_id"])
+        remote = json.loads(self.client.get_object(Bucket=self.bucket, Key=f"{base}/complete.json")["Body"].read())
+        for field in ("run_id", "chunk_id", "attempt_id", "package_sha256"):
+            if remote.get(field) != marker.get(field):
+                raise ValueError(f"remote attempt completion marker disagrees on {field}")
         key = self._key("results", marker["run_id"], marker["chunk_id"], "accepted.json")
         accepted = {k: marker[k] for k in ("run_id", "chunk_id", "attempt_id", "package_sha256")}
         try:
             self.client.put_object(Bucket=self.bucket, Key=key, Body=_canonical_payload(accepted),
                                    ContentType="application/json", IfNoneMatch="*")
             return accepted
-        except Exception:
-            try:
-                current = json.loads(self.client.get_object(Bucket=self.bucket, Key=key)["Body"].read())
-            except Exception: raise
-            if current["package_sha256"] != accepted["package_sha256"]:
+        except Exception as error:
+            if not _is_precondition_failed(error):
+                raise
+            current = json.loads(self.client.get_object(Bucket=self.bucket, Key=key)["Body"].read())
+            if (current.get("run_id") != accepted["run_id"]
+                    or current.get("chunk_id") != accepted["chunk_id"]
+                    or current.get("package_sha256") != accepted["package_sha256"]):
                 raise RuntimeError(f"conflicting completed attempts for chunk {marker['chunk_id']}")
             return current
 
@@ -547,7 +605,7 @@ def collection_report(frozen: dict[str, Any], records: Iterable[dict[str, Any]],
 def finalize_local_chunks(*, plan: dict[str, Any], chunk_dirs: dict[str, str | Path],
                           candidate_sites: list[str], activation_root: str | Path,
                           result_root: str | Path, run_name: str,
-                          resolved_config: dict[str, Any]) -> dict[str, Any]:
+                          resolved_config: dict[str, Any], recover_publication: bool = False) -> dict[str, Any]:
     """Validate and merge accepted chunks in frozen order, partition by partition.
 
     The existing merger reconstructs all four indices from saved successful row
@@ -595,14 +653,49 @@ def finalize_local_chunks(*, plan: dict[str, Any], chunk_dirs: dict[str, str | P
     
     if not candidate_sites:
         raise ValueError("candidate_sites must not be empty.")
+    expected_compatibility = plan.get("compatibility")
+    if not expected_compatibility:
+        raise ValueError("work plan has no explicit experiment compatibility contract; regenerate it")
+    final_compatibility = experiment_compatibility(resolved_config, candidate_sites)
+    if final_compatibility != expected_compatibility:
+        raise ValueError("final resolved configuration differs from the frozen run contract")
     expected = {c["chunk_id"]: c for c in plan["chunks"]}
     if set(chunk_dirs) != set(expected):
         missing, extra = set(expected)-set(chunk_dirs), set(chunk_dirs)-set(expected)
         raise ValueError(f"chunk set mismatch; missing={sorted(missing)}, extra={sorted(extra)}")
     activation_root, result_root = Path(activation_root), Path(result_root)
     final_a, final_r = activation_root/run_name, result_root/run_name
-    if final_a.exists() or final_r.exists(): raise FileExistsError("final run output already exists")
-    stage_name = f".{run_name}.staging-{uuid.uuid4()}"
+    stage_name = f".{run_name}.staging-{plan['plan_sha256'][:12]}"
+    staged_a, staged_r = activation_root/stage_name, result_root/stage_name
+    publication = {"schema_version": 1, "run_id": plan["run_id"],
+                   "run_name": run_name, "plan_sha256": plan["plan_sha256"]}
+    marker_name = "publication_complete.json"
+    if recover_publication:
+        for path in (final_a, staged_a, final_r, staged_r):
+            if path.exists():
+                identity = path/"publication.json"
+                if not identity.is_file() or json.loads(identity.read_text()) != publication:
+                    raise ValueError(f"{path}: output does not belong to this run and frozen plan")
+        candidates = [path for path in (final_r, staged_r) if path.is_dir()]
+        identity_path = next((path/"publication.json" for path in candidates
+                              if (path/"publication.json").is_file()), None)
+        if identity_path is None or json.loads(identity_path.read_text()) != publication:
+            raise ValueError("no interrupted publication for this run and frozen plan can be recovered")
+        if not final_a.exists():
+            if not staged_a.exists():
+                raise FileNotFoundError("interrupted publication has no staged activation output")
+            staged_a.replace(final_a)
+        if not final_r.exists():
+            if not staged_r.exists():
+                raise FileNotFoundError("interrupted publication has no staged result output")
+            staged_r.replace(final_r)
+        write_json_atomic(final_a/marker_name, publication)
+        write_json_atomic(final_r/marker_name, publication)
+        return json.loads((final_r/"distributed_summary.json").read_text())["partitions"]
+    if final_a.exists() or final_r.exists() or staged_a.exists() or staged_r.exists():
+        raise FileExistsError(
+            "run output or same-plan staging exists; use --recover-publication only for an interrupted publication"
+        )
     summaries = {}
     worker_provenance = []
     question_metadata = canonical_partitions(plan["questions"]) if "questions" in plan else {}
@@ -624,6 +717,14 @@ def finalize_local_chunks(*, plan: dict[str, Any], chunk_dirs: dict[str, str | P
                         raise ValueError(f"{chunk['chunk_id']}: metadata is incompatible with work plan")
                     if meta.get("candidate_sites") != candidate_sites:
                         raise ValueError(f"{chunk['chunk_id']}: activation sites differ")
+                    if meta.get("experiment_compatibility") != expected_compatibility:
+                        raise ValueError(f"{chunk['chunk_id']}: worker experiment compatibility differs from plan")
+                    try:
+                        worker_compatibility = experiment_compatibility(meta.get("resolved_config", {}), candidate_sites)
+                    except ValueError as error:
+                        raise ValueError(f"{chunk['chunk_id']}: invalid worker resolved config: {error}") from error
+                    if worker_compatibility != expected_compatibility:
+                        raise ValueError(f"{chunk['chunk_id']}: worker resolved config differs from plan")
                     actual = chunk_file_manifest(source)
                     receipt = source/"download_receipt.json"
                     if receipt.is_file():
@@ -684,14 +785,16 @@ def finalize_local_chunks(*, plan: dict[str, Any], chunk_dirs: dict[str, str | P
                 summaries[partition] = summary
         if question_metadata:
             write_distributed_tables(result_root/stage_name, plan["questions"], summaries)
-        staged_a, staged_r = activation_root/stage_name, result_root/stage_name
+        write_json_atomic(staged_r/"worker_provenance.json", {"workers": worker_provenance})
+        write_json_atomic(staged_r/"distributed_summary.json", {"plan_sha256": plan["plan_sha256"], "partitions": summaries})
+        write_json_atomic(staged_r/"publication.json", publication)
+        write_json_atomic(staged_a/"publication.json", publication)
         # Rename only after every partition has validated and been written.
         if staged_a.exists(): staged_a.replace(final_a)
         staged_r.replace(final_r)
-        write_json_atomic(final_r/"worker_provenance.json", {"workers": worker_provenance})
-        write_json_atomic(final_r/"distributed_summary.json", {"plan_sha256": plan["plan_sha256"], "partitions": summaries})
+        write_json_atomic(final_a/marker_name, publication)
+        write_json_atomic(final_r/marker_name, publication)
         return summaries
     except Exception:
-        for path in (activation_root/stage_name, result_root/stage_name):
-            if path.exists(): shutil.rmtree(path)
+        # Preserve same-plan staging for explicit, identity-checked recovery.
         raise

@@ -97,10 +97,23 @@ COVERAGE_MODES = ("complete", "subset")
 
 def interaction_paths(results_dir, partitions=None, *, layout="legacy"):
     """Interaction files for a layout; partitioned runs declare folders in run_layout.json."""
+    results_dir = Path(results_dir)
     if layout not in {"legacy", "partitioned"}:
         raise ValueError("layout must be legacy or partitioned")
+    descriptor_path = results_dir/"run_layout.json"
+    if layout == "legacy" and descriptor_path.is_file():
+        descriptor = json.loads(descriptor_path.read_text())
+        if descriptor.get("layout") == "partitioned":
+            raise ValueError(
+                f"{results_dir} declares a partitioned run; pass layout='partitioned' to avoid incomplete reads"
+            )
     if layout == "partitioned":
-        descriptor = json.loads((Path(results_dir)/"run_layout.json").read_text())
+        if not (results_dir/"publication_complete.json").is_file():
+            raise RuntimeError(
+                f"{results_dir}: distributed run publication is incomplete or predates completion markers; "
+                "recover or re-finalize it before reading"
+            )
+        descriptor = json.loads(descriptor_path.read_text())
         if descriptor.get("layout") != "partitioned":
             raise ValueError("Run metadata does not describe a partitioned layout")
         sources = descriptor["source_splits"]
@@ -109,12 +122,15 @@ def interaction_paths(results_dir, partitions=None, *, layout="legacy"):
         if partitions is not None:
             if not set(partitions) <= set(PARTITIONS):
                 raise ValueError("Unknown requested partitions")
-            sources = set(sources) & set(partitions)
+            unavailable = set(partitions) - set(sources)
+            if unavailable:
+                raise ValueError(f"Requested partitions are unavailable in this run: {sorted(unavailable)}")
+            sources = set(partitions)
     elif partitions is None:
         sources = SUPPORTED_SOURCE_SPLITS
     else:
         sources = {"train" if p in TRAIN_SOURCE_PARTITIONS else "validation" for p in partitions}
-    return [Path(results_dir) / source_split / "interactions.jsonl" for source_split in sorted(sources)]
+    return [results_dir / source_split / "interactions.jsonl" for source_split in sorted(sources)]
 
 
 def read_run_interactions(results_dir, *, layout="legacy"):
@@ -463,6 +479,10 @@ def read_partitions(path, *, layout="legacy"):
     ``layout="partitioned"`` reads explicit source/original-ID/hop metadata,
     preserves exposure flags, and uses partition names as storage splits.
     """
+    path = Path(path)
+    if layout == "partitioned" and (path.parent/"run_layout.json").is_file() \
+            and not (path.parent/"publication_complete.json").is_file():
+        raise RuntimeError(f"{path.parent}: distributed run publication is incomplete")
     with open(path, newline="") as f:
         reader = csv.DictReader(f)
         missing_columns = [field for field in PARTITION_FIELDS if field not in (reader.fieldnames or [])]

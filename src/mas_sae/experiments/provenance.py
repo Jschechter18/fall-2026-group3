@@ -25,6 +25,79 @@ from mas_sae.experiments.conditions import (
 from mas_sae.experiments.reproducibility import config_sha256
 
 
+COMPATIBILITY_VERSION = 1
+
+
+def validate_experiment_compatibility(contract: Any) -> dict[str, Any]:
+    """Validate the explicit, portable experiment compatibility contract."""
+    if not isinstance(contract, dict) or contract.get("schema_version") != COMPATIBILITY_VERSION:
+        raise ValueError("experiment compatibility contract is missing or has an unsupported schema version")
+    required = ("roles", "generation", "prompt_versions", "protocol_version", "capabilities",
+                "active_conditions", "a2_presentations", "activation_sites")
+    missing = [field for field in required if contract.get(field) is None]
+    if missing:
+        raise ValueError(f"experiment compatibility contract is missing fields: {', '.join(missing)}")
+    if not isinstance(contract["prompt_versions"], dict) or not contract["prompt_versions"]:
+        raise ValueError("experiment compatibility requires prompt identities")
+    roles = contract["roles"]
+    if not isinstance(roles, dict) or set(roles) != {"solver", "critic", "validator"}:
+        raise ValueError("experiment compatibility must identify solver, critic, and validator roles")
+    for role, metadata in roles.items():
+        if not isinstance(metadata, dict):
+            raise ValueError(f"experiment compatibility role {role!r} must be a mapping")
+        missing_identity = [field for field in ("model_id", "resolved_revision", "loader", "dtype", "generation")
+                            if not metadata.get(field)]
+        if missing_identity:
+            raise ValueError(f"experiment compatibility role {role!r} is missing: {', '.join(missing_identity)}")
+    if not isinstance(contract["generation"], dict) or not isinstance(contract["capabilities"], dict):
+        raise ValueError("experiment compatibility generation/capabilities must be mappings")
+    if not isinstance(contract["protocol_version"], str) or not contract["protocol_version"]:
+        raise ValueError("experiment compatibility requires a protocol identity")
+    if (not isinstance(contract["activation_sites"], list) or not contract["activation_sites"]
+            or any(not isinstance(site, str) or not site for site in contract["activation_sites"])):
+        raise ValueError("experiment compatibility requires activation sites")
+    return contract
+
+
+def experiment_compatibility(resolved_config: dict[str, Any], candidate_sites: list[str]) -> dict[str, Any]:
+    """Return the experiment-defining worker contract, excluding operational facts."""
+    provenance = resolved_config.get("provenance")
+    if not isinstance(provenance, dict):
+        raise ValueError("resolved config is missing provenance required for worker compatibility")
+    roles = provenance.get("roles")
+    if not isinstance(roles, dict) or set(roles) != {"solver", "critic", "validator"}:
+        raise ValueError("resolved config must identify solver, critic, and validator roles")
+    role_contract = {}
+    for role, metadata in roles.items():
+        if not isinstance(metadata, dict):
+            raise ValueError(f"resolved config role {role!r} must be a mapping")
+        missing = [field for field in ("model_id", "resolved_revision", "loader", "dtype", "generation")
+                   if not metadata.get(field)]
+        if missing:
+            raise ValueError(
+                f"resolved config role {role!r} is missing required identity fields: {', '.join(missing)}; "
+                "pin/load a revision that reports its resolved commit"
+            )
+        role_contract[role] = {key: metadata.get(key) for key in (
+            "model_id", "requested_revision", "resolved_revision", "loader", "architecture",
+            "dtype", "quantization", "generation", "chat_template_kwargs",
+        )}
+    if not candidate_sites or any(not isinstance(site, str) or not site for site in candidate_sites):
+        raise ValueError("worker compatibility requires non-empty activation sites")
+    return validate_experiment_compatibility({
+        "schema_version": COMPATIBILITY_VERSION,
+        "roles": role_contract,
+        "generation": provenance.get("generation"),
+        "prompt_versions": provenance.get("prompt_versions"),
+        "prompt_sha256": provenance.get("prompt_sha256", {}),
+        "protocol_version": provenance.get("protocol_version"),
+        "capabilities": provenance.get("capabilities"),
+        "active_conditions": provenance.get("active_conditions"),
+        "a2_presentations": provenance.get("a2_presentations", ["feedback"]),
+        "activation_sites": list(candidate_sites),
+    })
+
+
 def role_metadata(agent: Any) -> dict[str, Any]:
     """Model identity, revision, precision and placement of one role."""
     spec = getattr(agent, "model_spec", None)

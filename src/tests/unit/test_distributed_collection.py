@@ -16,10 +16,30 @@ from mas_sae.experiments import collection_progress
 from mas_sae.data.activation_store import ActivationStore
 from mas_sae.experiments.records import read_jsonl
 from mas_sae.experiments.artifacts import sha256_json
+from mas_sae.experiments.provenance import experiment_compatibility
 from mas_sae.experiments.distributed_collection import core, cli
 
 
 PROPORTIONS = {"train": .5, "validation": .2, "test": .2, "intervention": .1}
+SITE = "model.layers.8"
+
+
+def resolved_config(*, hardware="cpu", max_tokens=32):
+    roles = {}
+    for role in ("solver", "critic", "validator"):
+        roles[role] = {"model_id": f"fixture/{role}", "requested_revision": "main",
+                       "resolved_revision": f"{role}-commit", "loader": "qwen3",
+                       "architecture": ["Fixture"], "dtype": "torch.float32",
+                       "quantization": None, "generation": {"do_sample": False, "max_new_tokens": max_tokens},
+                       "chat_template_kwargs": {}, "device": hardware, "device_map": {"": hardware}}
+    return {"provenance": {"roles": roles, "generation": {"solver_max_new_tokens": max_tokens},
+            "prompt_versions": {"solver_solve": "V1"}, "prompt_sha256": {}, "protocol_version": "v2",
+            "capabilities": {"blind_then_compare": True}, "active_conditions": ["natural"],
+            "a2_presentations": ["feedback"], "environment": {"gpus": [hardware]}}}
+
+
+RESOLVED = resolved_config()
+COMPATIBILITY = experiment_compatibility(RESOLVED, [SITE])
 
 
 def inputs(tmp_path):
@@ -38,12 +58,14 @@ def test_master_namespaces_ids_preserves_payload_and_plans_no_intervention(tmp_p
     assert master["questions"][0]["question_id"].startswith("musique:")
     assert master["questions"][-1]["generation_provenance"] == {"generator": "fixture"}
     frozen = freeze_partitions(master, proportions=PROPORTIONS, seed=7)
-    plan = plan_chunks(master, frozen, run_id="r", chunk_size=2, compatibility={"collection": {"protocol_version": "v2"}})
+    plan = plan_chunks(master, frozen, run_id="r", chunk_size=2, compatibility=COMPATIBILITY)
     assert all(c["partition"] != "intervention" for c in plan["chunks"])
     packages = tmp_path/"packages"; write_work_packages(packages, master, plan)
     package = json.loads(next(packages.iterdir()).read_text())
-    assert package["examples"][0]["id"].count(":") == 1
-    assert package["chunk"]["membership_sha256"]
+    assert package["examples"][0]["id"].count(":") == 0  # original payload is untouched
+    chunk = next(c for c in package["plan"]["chunks"] if c["chunk_id"] == package["chunk_id"])
+    assert chunk["question_ids"][0].count(":") == 1
+    assert chunk["membership_sha256"]
 
 
 def test_frozen_extension_never_reshuffles_and_seeds_ignore_chunk_size(tmp_path):
@@ -56,8 +78,8 @@ def test_frozen_extension_never_reshuffles_and_seeds_ignore_chunk_size(tmp_path)
     second = freeze_partitions(extended, proportions=PROPORTIONS, seed=9, existing=old)
     now = {r["question_id"]: r for r in second["questions"]}
     assert all(now[q]["partition"] == r["partition"] and now[q]["collection_seed"] == r["collection_seed"] for q, r in old.items())
-    p1 = plan_chunks(extended, second, run_id="r", chunk_size=1, compatibility={})
-    p3 = plan_chunks(extended, second, run_id="r", chunk_size=3, compatibility={})
+    p1 = plan_chunks(extended, second, run_id="r", chunk_size=1, compatibility=COMPATIBILITY)
+    p3 = plan_chunks(extended, second, run_id="r", chunk_size=3, compatibility=COMPATIBILITY)
     seeds = lambda p: {q["question_id"]: q["collection_seed"] for c in p["chunks"] for q in c["questions"]}
     assert seeds(p1) == seeds(p3)
     assert all(now[q]["candidate_order"] == r["candidate_order"] for q, r in old.items())
@@ -76,7 +98,11 @@ class FakeS3:
     def download_file(self, bucket, key, path): Path(path).write_bytes(self.objects[(bucket,key)])
     def head_object(self, Bucket, Key): return {"ContentLength": len(self.objects[(Bucket,Key)])}
     def put_object(self, Bucket, Key, Body, IfNoneMatch=None, **kwargs):
-        if IfNoneMatch == "*" and (Bucket,Key) in self.objects: raise RuntimeError("precondition")
+        if IfNoneMatch == "*" and (Bucket,Key) in self.objects:
+            error = RuntimeError("precondition")
+            error.response = {"Error": {"Code": "PreconditionFailed"},
+                              "ResponseMetadata": {"HTTPStatusCode": 412}}
+            raise error
         self.objects[(Bucket,Key)] = Body
     def get_object(self, Bucket, Key): return {"Body": io.BytesIO(self.objects[(Bucket,Key)])}
 
@@ -141,8 +167,8 @@ def test_transport_completion_retry_and_conflict(tmp_path):
     with pytest.raises(RuntimeError, match="conflicting"): transport.accept_attempt(bad)
 
 
-def _finalize_fixture(tmp_path, name, groups, *, candidate_orders=None):
-    site = "model.layers.8"; chunks = []; locations = {}
+def _finalize_fixture(tmp_path, name, groups, *, candidate_orders=None, finalize=True):
+    site = SITE; chunks = []; locations = {}
     for number, ids in enumerate(groups):
         start = sum(len(g) for g in groups[:number]); chunk_id = f"train-{number:06d}"
         membership = [{"question_id": q, "collection_seed": i+10, "payload_sha256": q}
@@ -154,7 +180,7 @@ def _finalize_fixture(tmp_path, name, groups, *, candidate_orders=None):
                        "question_ids": ids, "membership_sha256": sha256_json(membership),
                        "questions": membership})
     basis = {"schema_version": 1, "run_id": "run", "master_sha256": "m",
-             "partitions_sha256": "p", "compatibility": {}, "chunks": chunks}
+             "partitions_sha256": "p", "compatibility": COMPATIBILITY, "chunks": chunks}
     plan = {**basis, "plan_sha256": sha256_json(basis)}
     for chunk in chunks:
         result = {"records": [], "exclusions": [],
@@ -173,11 +199,14 @@ def _finalize_fixture(tmp_path, name, groups, *, candidate_orders=None):
             question_ids=chunk["question_ids"], candidate_sites=[site], result=result,
             metadata_extra={"chunk_id": chunk["chunk_id"], "run_id": "run",
                 "plan_sha256": plan["plan_sha256"], "membership_sha256": chunk["membership_sha256"],
-                "candidate_sites": [site]})
+                "candidate_sites": [site], "experiment_compatibility": COMPATIBILITY,
+                "resolved_config": resolved_config(hardware=f"worker-{number}")})
         locations[chunk["chunk_id"]] = written
+    if not finalize:
+        return plan, locations, site
     finalize_local_chunks(plan=plan, chunk_dirs=locations, candidate_sites=[site],
         activation_root=tmp_path/name/"activations", result_root=tmp_path/name/"results",
-        run_name="final", resolved_config={})
+        run_name="final", resolved_config=RESOLVED)
     return (ActivationStore(tmp_path/name/"activations/final/layer_08"),
             read_jsonl(tmp_path/name/"results/final/train/interactions.jsonl"))
 
@@ -204,14 +233,14 @@ def test_finalization_rejects_empty_sites_before_writing(tmp_path):
     assert not (tmp_path/"results").exists()
 
 
-def test_planning_without_compatibility_and_rejecting_wrong_master(tmp_path):
+def test_planning_requires_compatibility_and_rejects_wrong_master(tmp_path):
     master = build_master_dataset(inputs(tmp_path))
     frozen = freeze_partitions(master, proportions=PROPORTIONS, seed=7)
-    plan = plan_chunks(master, frozen, run_id="r", chunk_size=2)
-    assert plan["compatibility"] == {}
+    with pytest.raises(ValueError, match="compatibility contract"):
+        plan_chunks(master, frozen, run_id="r", chunk_size=2)
     frozen["master_sha256"] = "another dataset"
     with pytest.raises(ValueError, match="different master"):
-        plan_chunks(master, frozen, run_id="r", chunk_size=2)
+        plan_chunks(master, frozen, run_id="r", chunk_size=2, compatibility=COMPATIBILITY)
 
 
 @pytest.mark.parametrize("change", ["seed", "downloaded_file"])
@@ -251,6 +280,108 @@ def test_worker_provenance_is_recorded_without_enforcing_versions(tmp_path, monk
     assert workers[0]["progress"]["git_commit"] == "different"
 
 
+def test_compatibility_allows_hardware_but_rejects_generation_and_missing_identity():
+    assert experiment_compatibility(resolved_config(hardware="cuda:1"), [SITE]) == COMPATIBILITY
+    assert experiment_compatibility(resolved_config(max_tokens=64), [SITE]) != COMPATIBILITY
+    broken = resolved_config()
+    broken["provenance"]["roles"]["solver"]["resolved_revision"] = None
+    with pytest.raises(ValueError, match="solver.*resolved_revision"):
+        experiment_compatibility(broken, [SITE])
+
+
+def test_work_package_payload_tampering_and_legacy_format_fail(tmp_path):
+    master = build_master_dataset(inputs(tmp_path))
+    frozen = freeze_partitions(master, proportions=PROPORTIONS, seed=7)
+    plan = plan_chunks(master, frozen, run_id="r", chunk_size=2, compatibility=COMPATIBILITY)
+    write_work_packages(tmp_path/"packages", master, plan)
+    package = json.loads(next((tmp_path/"packages").iterdir()).read_text())
+    package["examples"][0]["question"] = "tampered"
+    with pytest.raises(ValueError, match="payload SHA-256"):
+        core.validate_work_package(package)
+    with pytest.raises(ValueError, match="schema-v2"):
+        core.validate_work_package({"schema_version": 1})
+
+
+def test_work_package_upload_is_immutable_and_only_expected_conflict_is_idempotent(tmp_path):
+    master = build_master_dataset(inputs(tmp_path))
+    frozen = freeze_partitions(master, proportions=PROPORTIONS, seed=7)
+    plan = plan_chunks(master, frozen, run_id="r", chunk_size=2, compatibility=COMPATIBILITY)
+    write_work_packages(tmp_path/"packages", master, plan)
+    package_path = next((tmp_path/"packages").iterdir())
+    package = json.loads(package_path.read_text())
+    transport = S3Transport("bucket", "prefix", FakeS3())
+    first = transport.upload_work_package("r", package["chunk_id"], package_path)
+    assert transport.upload_work_package("r", package["chunk_id"], package_path) == first
+    key = ("bucket", first["key"])
+    transport.client.objects[key] = b"conflict"
+    with pytest.raises(RuntimeError, match="conflicting immutable"):
+        transport.upload_work_package("r", package["chunk_id"], package_path)
+
+
+def test_upload_cli_existing_marker_prevents_attempt_upload(tmp_path, monkeypatch):
+    marker = tmp_path/"marker.json"; marker.write_text("{}")
+    class Transport:
+        def __init__(self, *args): pass
+        def check_reachable(self): pass
+        def upload_attempt(self, *args): pytest.fail("upload must not start")
+    monkeypatch.setattr("mas_sae.experiments.distributed_collection.S3Transport", Transport)
+    monkeypatch.setattr("sys.argv", ["distributed_collection.py", "upload", "--bucket", "b", "--prefix", "p",
+        "--run-id", "r", "--chunk-id", "c", "--chunk-dir", str(tmp_path), "--marker", str(marker)])
+    with pytest.raises(FileExistsError):
+        cli.main()
+
+
+def test_accept_rejects_cli_identity_remote_marker_and_unrelated_s3_failure(tmp_path, monkeypatch):
+    marker_path = tmp_path/"marker.json"
+    marker_path.write_text(json.dumps({"run_id": "other", "chunk_id": "c"}))
+    class Transport:
+        def __init__(self, *args): pass
+        def check_reachable(self): pass
+        def accept_attempt(self, marker): pytest.fail("accept must not start")
+    monkeypatch.setattr("mas_sae.experiments.distributed_collection.S3Transport", Transport)
+    monkeypatch.setattr("sys.argv", ["distributed_collection.py", "accept", "--bucket", "b", "--prefix", "p",
+        "--run-id", "r", "--chunk-id", "c", "--marker", str(marker_path)])
+    with pytest.raises(ValueError, match="does not match"):
+        cli.main()
+
+    chunk = tmp_path/"chunk"; chunk.mkdir()
+    for name in core.REQUIRED_CHUNK_FILES: (chunk/name).write_text(name)
+    s3 = FakeS3(); transport = S3Transport("b", "p", s3)
+    uploaded = transport.upload_attempt("r", "c", chunk, "a")
+    changed = {**uploaded, "package_sha256": "wrong"}
+    with pytest.raises(ValueError, match="remote attempt"):
+        transport.accept_attempt(changed)
+    class Denied(FakeS3):
+        def put_object(self, *args, **kwargs):
+            error = RuntimeError("access denied")
+            error.response = {"Error": {"Code": "AccessDenied"}, "ResponseMetadata": {"HTTPStatusCode": 403}}
+            raise error
+    denied = Denied(); denied.objects = s3.objects.copy()
+    with pytest.raises(RuntimeError, match="access denied"):
+        S3Transport("b", "p", denied).accept_attempt(uploaded)
+
+
+def test_interrupted_finalization_requires_scoped_recovery(tmp_path, monkeypatch):
+    plan, locations, site = _finalize_fixture(tmp_path, "recover", [["q0"]], finalize=False)
+    activation_root = tmp_path/"recover/activations"; result_root = tmp_path/"recover/results"
+    original = Path.replace
+    def interrupt(path, target):
+        if path.parent == result_root and path.name.startswith(".final.staging"):
+            raise OSError("simulated interruption")
+        return original(path, target)
+    monkeypatch.setattr(Path, "replace", interrupt)
+    with pytest.raises(OSError, match="simulated"):
+        finalize_local_chunks(plan=plan, chunk_dirs=locations, candidate_sites=[site],
+            activation_root=activation_root, result_root=result_root, run_name="final", resolved_config=RESOLVED)
+    monkeypatch.setattr(Path, "replace", original)
+    assert (activation_root/"final").is_dir() and not (result_root/"final").exists()
+    finalize_local_chunks(plan=plan, chunk_dirs=locations, candidate_sites=[site],
+        activation_root=activation_root, result_root=result_root, run_name="final",
+        resolved_config=RESOLVED, recover_publication=True)
+    assert (activation_root/"final/publication_complete.json").is_file()
+    assert (result_root/"final/publication_complete.json").is_file()
+
+
 def test_candidate_orders_are_frozen_balanced_and_independent_of_chunks(tmp_path):
     from collections import Counter
     master = build_master_dataset(inputs(tmp_path))
@@ -263,11 +394,12 @@ def test_candidate_orders_are_frozen_balanced_and_independent_of_chunks(tmp_path
         counts = Counter(orders)
         assert abs(counts["a1_first"]-counts["critic_first"]) <= 1
     for size in (1, 3):
-        plan = plan_chunks(master, frozen, run_id="r", chunk_size=size)
+        plan = plan_chunks(master, frozen, run_id="r", chunk_size=size, compatibility=COMPATIBILITY)
         write_work_packages(tmp_path/f"packages-{size}", master, plan)
         for package_path in (tmp_path/f"packages-{size}").glob('*.json'):
             package = json.loads(package_path.read_text())
-            for row in package["chunk"]["questions"]:
+            chunk = next(c for c in package["plan"]["chunks"] if c["chunk_id"] == package["chunk_id"])
+            for row in chunk["questions"]:
                 assert row["candidate_order"] == expected[row["question_id"]]
 
 
@@ -290,12 +422,13 @@ def test_candidates_worker_receives_frozen_orders_before_collection(tmp_path, mo
     from mas_sae.agents.solver import Solver
     master = build_master_dataset(inputs(tmp_path))
     frozen = freeze_partitions(master, proportions=PROPORTIONS, seed=7)
-    plan = plan_chunks(master, frozen, run_id="r", chunk_size=2)
+    plan = plan_chunks(master, frozen, run_id="r", chunk_size=2, compatibility=COMPATIBILITY)
     write_work_packages(tmp_path/"packages", master, plan)
     package_path = next((tmp_path/"packages").glob("train-*.json"))
     package = json.loads(package_path.read_text())
+    chunk = next(c for c in package["plan"]["chunks"] if c["chunk_id"] == package["chunk_id"])
     if missing_order:
-        package["chunk"]["questions"][0].pop("candidate_order")
+        chunk["questions"][0].pop("candidate_order")
         package_path.write_text(json.dumps(package))
     output = tmp_path/"completed"
     config = {"model": {"id": "fixture"}, "dataset": {"source_split": "train", "num_questions": 2},
@@ -317,7 +450,7 @@ def test_candidates_worker_receives_frozen_orders_before_collection(tmp_path, mo
         "load_collection_config": lambda _: config, "load_role_models": load_models,
         "resolve_solver_sites": lambda *args: ["model.layers.8"],
         "Solver": Agent, "Critic": Agent, "Validator": Agent, "configure_agent": lambda *args: None,
-        "build_resolved_config": lambda *args, **kwargs: config,
+        "build_resolved_config": lambda *args, **kwargs: RESOLVED,
         "build_collection_progress_provenance": lambda *args, **kwargs: kwargs,
     }
     for key, value in replacements.items():
@@ -335,16 +468,17 @@ def test_candidates_worker_receives_frozen_orders_before_collection(tmp_path, mo
         }]}
     monkeypatch.setattr(collection, "run_question", run_question)
     if missing_order:
-        with pytest.raises(ValueError, match="regenerate frozen partitions"):
+        with pytest.raises(ValueError, match="frozen plan digest is invalid"):
             worker()
         assert not output.exists()
     else:
         worker()
-        expected = {r["question_id"]: r["candidate_order"] for r in package["chunk"]["questions"]}
+        expected = {r["question_id"]: r["candidate_order"] for r in chunk["questions"]}
         assert seen == expected
         assert {r["question_id"]: r["candidate_order"] for r in read_jsonl(output/"records.jsonl")} == expected
         metadata = json.loads((output/"metadata.json").read_text())
-        manifest = collection.describe_sampled_questions(package["examples"], None, expected)
+        examples = [{**payload, "id": member["question_id"]} for payload, member in zip(package["examples"], chunk["questions"])]
+        manifest = collection.describe_sampled_questions(examples, None, expected)
         assert metadata["provenance"]["manifest_sha256"] == collection_progress.manifest_sha256(manifest)
 
 

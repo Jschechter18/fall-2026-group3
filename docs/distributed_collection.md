@@ -56,12 +56,14 @@ orders before loading models rather than deciding presentation order locally.
 
 Use the same agreed collection YAML and prepared run ID across the team, assign
 non-overlapping chunk IDs, and upload each chunk under that run. Code and package
-versions are recorded as provenance, not enforced as compatibility gates. If
-prompts, generation, or activation capture change, decide explicitly whether to
-start a new experiment instead of mixing scientific treatments unknowingly.
-There is no identity-generation command or source-code fingerprinting step.
-The optional `plan --compatibility` mapping remains available for specific
-configuration checks, but is not required.
+versions, hardware, device placement, output paths, timestamps, and chunk facts
+are provenance rather than compatibility gates. The required compatibility file
+is the canonical output of `experiment_compatibility(resolved_config, sites)`.
+It fixes role model IDs and resolved revisions, generation and prompt identities,
+protocol/capabilities, active conditions, A2 presentation, dtype/quantization,
+and activation sites. Missing model IDs or resolved revisions are rejected.
+Workers derive the same contract from what they loaded, and finalization checks
+every worker and its supplied resolved config against it.
 
 Checks retained for data correctness include matching master/partition IDs and
 payload references, chunk membership and seeds, complete coverage, tensor/index
@@ -87,6 +89,7 @@ PYTHONPATH=src python scripts/distributed_collection.py freeze \
 PYTHONPATH=src python scripts/distributed_collection.py plan \
   --master artifacts/master-v1.json --partitions artifacts/partitions-v1.json \
   --run-id REPLACE_RUN_ID --chunk-size REPLACE_CHUNK_SIZE \
+  --compatibility artifacts/experiment-compatibility.json \
   --output artifacts/work-plan.json --packages artifacts/work-packages
 ```
 
@@ -122,9 +125,17 @@ PYTHONPATH=src python scripts/distributed_collection.py accept \
   --chunk-id REPLACE_CHUNK_ID --marker local-results/REPLACE_CHUNK_ID.marker.json
 ```
 
+Schema-v2 work packages contain original, unmodified question payloads and the
+complete frozen plan. A worker recomputes the plan, membership, and every
+original payload SHA-256 before loading models. Schema-v1 packages cannot prove
+that chain and are rejected with instructions to regenerate them. Work-package
+objects use S3 conditional creation; identical retries are accepted, conflicting
+bytes are rejected, and non-precondition S3 errors propagate.
+
 An interrupted local attempt is retried into a new local directory and uploaded
 with a new attempt ID. Acceptance is idempotent for byte-identical results and
-rejects a different package for an already accepted logical chunk. AWS access
+rejects a different package for an already accepted logical chunk. It also
+checks the CLI run/chunk identity and the remote attempt's `complete.json`. AWS access
 uses the normal boto3 credential chain; no credential belongs in configuration.
 
 Before each S3 transfer/accept command, the CLI makes an unsigned HTTPS HEAD
@@ -154,6 +165,16 @@ indices, and writes each partition as `attempt1`, `attempt2`, then
 `cat(attempt1, attempt2)`. The resulting layout is the one consumed by existing
 SAE and probe commands; point their activation/result paths at the final run and
 continue to select train/validation/test through the frozen manifest.
+
+Provenance, summaries, and publication identity are written into deterministic
+same-plan staging directories before either output tree is exposed. Completion
+markers are written only after both activation and result trees are published;
+partitioned readers reject runs without the result marker. If publication is
+interrupted, rerun the identical finalize command with `--recover-publication`.
+Recovery validates the run ID, run name, and plan digest and only moves matching
+staging directories; it never deletes or replaces unrelated outputs. Existing
+pre-marker distributed artifacts are rejected and should be re-finalized from
+their accepted chunks.
 
 ## Layout and capacity
 
@@ -215,7 +236,9 @@ and exposure flags are retained. Thus a question can originate in MuSiQue train,
 be assigned research test, and live at `test/interactions.jsonl` and
 `layer_NN/test_attempt2.pt` without losing its origin.
 
-Historical readers keep `layout="legacy"` by default. Use
+Historical readers keep `layout="legacy"` by default, but reject a directory
+whose `run_layout.json` declares `partitioned`; unavailable requested partitions
+also raise instead of silently disappearing. Use
 `read_run_interactions(..., layout="partitioned")`,
 `read_partitions(..., layout="partitioned")`, and
 `load_labeled_rows(..., layout="partitioned")` for the new results. The existing
@@ -251,7 +274,9 @@ The integrated row manifest assumes one condition and one A2 presentation per
 question, matching the current collection configuration. Multiple episodes per
 question require a separate episode-level manifest extension. Feedback audit
 and partition-selection commands also accept `--layout partitioned`. Selection
-returns namespaced master IDs; its `--exclude` inputs must be JSON lists of
-those IDs. These IDs are for master-dataset workflows, not direct input to the
+returns namespaced master IDs. Partitioned `--exclude` JSON lists are validated
+against the complete frozen pool, including other partitions. Exact namespaced
+IDs are accepted; an unambiguous legacy MuSiQue ID is normalized to
+`musique:<id>`, while unknown/ambiguous IDs report their source file. These IDs are for master-dataset workflows, not direct input to the
 legacy MuSiQue Hub `sampling.strategy: listed` loader. Reserved intervention IDs
 come from `intervention_question_ids.json`, not collected episode sampling.

@@ -25,11 +25,27 @@ from mas_sae.experiments.distributed_collection import (
 )
 from mas_sae.experiments.distributed_collection import cli
 from mas_sae.experiments.records import read_jsonl
+from mas_sae.experiments.provenance import experiment_compatibility
 from mas_sae.probe import behavior_data as bd, layer_selection as ls
 from mas_sae.sae.dataloader import create_sae_dataloader
 
 PROPORTIONS = {"train": .5, "validation": .2, "test": .2, "intervention": .1}
 SITE = "model.layers.8"
+
+
+def resolved_config():
+    roles = {role: {"model_id": f"fixture/{role}", "requested_revision": "main",
+                    "resolved_revision": f"{role}-commit", "loader": "qwen3",
+                    "architecture": ["Fixture"], "dtype": "torch.float32", "quantization": None,
+                    "generation": {"do_sample": False, "max_new_tokens": 8}, "chat_template_kwargs": {}}
+             for role in ("solver", "critic", "validator")}
+    return {"provenance": {"roles": roles, "generation": {"do_sample": False},
+            "prompt_versions": {"solver_solve": "V1"}, "prompt_sha256": {}, "protocol_version": "v2",
+            "capabilities": {}, "active_conditions": ["natural"], "a2_presentations": ["candidates"]}}
+
+
+RESOLVED = resolved_config()
+COMPATIBILITY = experiment_compatibility(RESOLVED, [SITE])
 
 
 def write_csv(path, rows):
@@ -106,7 +122,7 @@ def collected(inputs, tmp_path):
     master, path, exposure = inputs
     old = import_historical_partitions(master, path, exposure_manifest=exposure)
     frozen = freeze_partitions(master, proportions=PROPORTIONS, seed=42, existing=old)
-    plan = plan_chunks(master, frozen, run_id="integration", chunk_size=1)
+    plan = plan_chunks(master, frozen, run_id="integration", chunk_size=1, compatibility=COMPATIBILITY)
     numbers = {r["question_id"]: i+1 for i, r in enumerate(master["questions"])}
     excluded = "musique:2hop__4_4"
     locations = {}
@@ -135,9 +151,10 @@ def collected(inputs, tmp_path):
         locations[chunk["chunk_id"]] = collection_progress.write_chunk(progress, start=chunk["partition_start"],
             question_ids=chunk["question_ids"], candidate_sites=[SITE], result=result,
             metadata_extra={"chunk_id": chunk["chunk_id"], "run_id": plan["run_id"], "plan_sha256": plan["plan_sha256"],
-                            "membership_sha256": chunk["membership_sha256"], "candidate_sites": [SITE]})
+                            "membership_sha256": chunk["membership_sha256"], "candidate_sites": [SITE],
+                            "experiment_compatibility": COMPATIBILITY, "resolved_config": RESOLVED})
     finalize_local_chunks(plan=plan, chunk_dirs=locations, candidate_sites=[SITE], activation_root=tmp_path/"activations",
-                          result_root=tmp_path/"results", run_name="merged", resolved_config={})
+                          result_root=tmp_path/"results", run_name="merged", resolved_config=RESOLVED)
     return tmp_path/"results/merged", tmp_path/"activations/merged", numbers, frozen, excluded
 
 
@@ -241,6 +258,24 @@ def test_missing_test_folder_is_not_silently_ignored(collected):
         read_run_interactions(results, layout='partitioned')
 
 
+def test_partitioned_layout_rejects_legacy_mode_and_unavailable_partition(collected):
+    results, _, _, _, _ = collected
+    with pytest.raises(ValueError, match="declares a partitioned run"):
+        read_run_interactions(results)
+    descriptor = json.loads((results/'run_layout.json').read_text())
+    descriptor['source_splits'].remove('test')
+    (results/'run_layout.json').write_text(json.dumps(descriptor))
+    with pytest.raises(ValueError, match="unavailable.*test"):
+        interaction_paths(results, {'test'}, layout='partitioned')
+
+
+def test_partitioned_reader_rejects_missing_publication_marker(collected):
+    results, _, _, _, _ = collected
+    (results/'publication_complete.json').unlink()
+    with pytest.raises(RuntimeError, match="publication is incomplete"):
+        read_run_interactions(results, layout='partitioned')
+
+
 def test_wrong_partition_record_is_rejected(collected):
     results, _, _, _, _ = collected
     rows = read_run_interactions(results, layout='partitioned')
@@ -312,6 +347,25 @@ def test_partition_selection_cli_uses_new_ids_and_exclusions(collected, tmp_path
     exclusions.write_text(json.dumps(ids))
     monkeypatch.setattr('sys.argv', args[:-1]+[str(tmp_path/'second.json'), '--exclude', str(exclusions)])
     with pytest.raises(ValueError, match='eligible'):
+        runpy.run_path(script, run_name='__main__')
+
+
+def test_partition_selection_normalizes_legacy_ids_and_rejects_unknown_from_source(collected, tmp_path, monkeypatch):
+    results, _, _, _, _ = collected
+    script = str(Path(__file__).resolve().parents[3]/'scripts/select_partition_questions.py')
+    legacy = tmp_path/'legacy.json'; legacy.write_text(json.dumps(['2hop__2_2']))
+    output = tmp_path/'selected.json'
+    args = ['select_partition_questions.py', '--package', str(results), '--partition', 'test',
+        '--num-questions', '1', '--seed', '42', '--layout', 'partitioned',
+        '--frozen-partitions', str(results/'partitions.csv'), '--output', str(output), '--exclude', str(legacy)]
+    monkeypatch.setattr('sys.argv', args)
+    runpy.run_path(script, run_name='__main__')
+    assert 'musique:2hop__2_2' not in json.loads(output.read_text())
+    unknown = tmp_path/'unknown.json'; unknown.write_text(json.dumps(['2hop__999_999']))
+    output2 = tmp_path/'unknown-output.json'
+    unknown_args = [str(output2) if value == str(output) else value for value in args[:-1]] + [str(unknown)]
+    monkeypatch.setattr('sys.argv', unknown_args)
+    with pytest.raises(ValueError, match=f"{unknown}.*unknown exclusion ID"):
         runpy.run_path(script, run_name='__main__')
 
 

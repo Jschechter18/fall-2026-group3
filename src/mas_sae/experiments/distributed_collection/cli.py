@@ -50,8 +50,8 @@ def parser():
                    help="Run identifier embedded in the plan and packages; use the same value for their S3 transfers.")
     q.add_argument("--chunk-size", type=int, required=True,
                    help="Positive maximum number of questions assigned to each chunk, not the number of activation rows.")
-    q.add_argument("--compatibility", type=Path,
-                   help="Optional JSON/YAML mapping of expected top-level resolved-config fields. Omit to manage experiment settings through the team's shared collection YAML.")
+    q.add_argument("--compatibility", type=Path, required=True,
+                   help="JSON/YAML experiment compatibility contract derived from a resolved collection configuration; operational hardware/path fields are excluded.")
     q.add_argument("--output", type=Path, required=True,
                    help="New work-plan JSON file containing ordered chunk membership; must not already exist.")
     q.add_argument("--packages", type=Path, required=True,
@@ -72,6 +72,8 @@ def parser():
                    help="Local parent directory for <run-name>/<partition>/ records and summaries (default: results/collection).")
     q.add_argument("--run-name", required=True,
                    help="Final output directory name beneath both roots; those run directories must not already exist. Separate from the plan's run ID.")
+    q.add_argument("--recover-publication", action="store_true",
+                   help="Finish an interrupted publish only when staging/final identity matches this run and plan.")
 
     transfer_help = {
         "upload-work": "Upload a prepared question package to S3.",
@@ -147,14 +149,15 @@ def main():
             old = ({r["question_id"]: r for r in existing["questions"]} if existing else None)
         _write_new(a.output, freeze_partitions(master, proportions=c["proportions"], seed=c["seed"], existing=old, musique_validation_policy=c.get("musique_validation_policy", "validation"))); return
     if a.command == "plan":
-        master = _load(a.master); plan = plan_chunks(master, _load(a.partitions), run_id=a.run_id, chunk_size=a.chunk_size, compatibility=_load(a.compatibility) if a.compatibility else {})
+        master = _load(a.master); plan = plan_chunks(master, _load(a.partitions), run_id=a.run_id, chunk_size=a.chunk_size, compatibility=_load(a.compatibility))
         _write_new(a.output, plan); write_work_packages(a.packages, master, plan); return
     if a.command == "finalize":
         plan = _load(a.plan); chunk_dirs = {c["chunk_id"]: a.chunks/c["chunk_id"] for c in plan["chunks"]}
         summary = finalize_local_chunks(plan=plan, chunk_dirs=chunk_dirs,
             candidate_sites=[s.strip() for s in a.sites.split(",") if s.strip()],
             activation_root=a.activation_root, result_root=a.result_root,
-            run_name=a.run_name, resolved_config=_load(a.resolved_config))
+            run_name=a.run_name, resolved_config=_load(a.resolved_config),
+            recover_publication=a.recover_publication)
         print(json.dumps(summary, indent=2)); return
     transport = S3Transport(a.bucket, a.prefix)
     try:
@@ -163,7 +166,13 @@ def main():
         raise SystemExit(str(error)) from error
     if a.command == "upload-work": print(json.dumps(transport.upload_work_package(a.run_id, a.chunk_id, a.package), indent=2)); return
     if a.command == "download-work": transport.download_work_package(a.run_id, a.chunk_id, a.output); return
-    if a.command == "upload": _write_new(a.marker, transport.upload_attempt(a.run_id, a.chunk_id, a.chunk_dir, a.attempt_id)); return
-    if a.command == "accept": print(json.dumps(transport.accept_attempt(_load(a.marker)), indent=2)); return
+    if a.command == "upload":
+        ensure_output_available(a.marker)
+        _write_new(a.marker, transport.upload_attempt(a.run_id, a.chunk_id, a.chunk_dir, a.attempt_id)); return
+    if a.command == "accept":
+        marker = _load(a.marker)
+        if marker.get("run_id") != a.run_id or marker.get("chunk_id") != a.chunk_id:
+            raise ValueError("marker run/chunk identity does not match --run-id/--chunk-id")
+        print(json.dumps(transport.accept_attempt(marker), indent=2)); return
     transport.download_accepted(a.run_id, a.chunk_id, a.output)
 
