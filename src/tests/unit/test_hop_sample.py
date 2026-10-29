@@ -110,3 +110,9 @@ def test_stratified_top_up_is_deterministic():
     a, _ = stratified_top_up(rows, _hop, cohort, 60, seed=5)
     b, _ = stratified_top_up(list(reversed(rows)), _hop, cohort, 60, seed=5)
     assert a == b
+
+
+def test_namespaced_ids_fail_loudly_instead_of_collapsing():
+    rows = [{"question_id": f"musique:2hop__{i}"} for i in range(10)]
+    with pytest.raises(ValueError, match="no parseable hop group"):
+        proportional_hop_sample(rows, 5, seed=1)

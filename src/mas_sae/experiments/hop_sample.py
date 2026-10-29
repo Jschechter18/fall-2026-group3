@@ -17,6 +17,15 @@ from typing import Any, Callable
 from mas_sae.data.musique import hop_group
 
 
+def require_known_hops(rows: list[dict[str, Any]]) -> None:
+    """Raise if any question_id has no parseable hop group (e.g. namespaced ``musique:2hop__...``
+    IDs), which would otherwise collapse every stratum into ``unknown``."""
+    unknown = [r["question_id"] for r in rows if hop_group(r["question_id"]) == "unknown"]
+    if unknown:
+        raise ValueError(f"{len(unknown)} question id(s) have no parseable hop group "
+                         f"(e.g. {unknown[0]!r}); namespaced IDs need explicit hop support")
+
+
 def proportional_allocation(populations: dict[str, int], size: int) -> dict[str, int]:
     """Largest-remainder allocation of *size* across groups (ties broken by group name)."""
     total = sum(populations.values())
@@ -39,6 +48,7 @@ def proportional_hop_sample(
     its ``population`` (after exclusion) and ``selected`` count.  Rows are
     returned unmodified.
     """
+    require_known_hops(rows)
     groups: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for row in rows:
         if row["question_id"] not in exclude_ids:

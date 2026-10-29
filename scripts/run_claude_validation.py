@@ -80,6 +80,14 @@ SELECTION_FIELDS = (
 )
 
 
+def positive_int(text: str) -> int:
+    """argparse type for counts: a mistaken 0 or negative value must not select work."""
+    value = int(text)
+    if value < 1:
+        raise argparse.ArgumentTypeError(f"must be a positive integer, got {text}")
+    return value
+
+
 def parse_args(argv=None):
     parser = argparse.ArgumentParser(
         description="Claude behavioral validation for Solver-Critic episodes.",
@@ -93,7 +101,7 @@ def parse_args(argv=None):
         help="Output directory for labels, exclusions and summary.",
     )
     parser.add_argument(
-        "--limit", type=int, default=None,
+        "--limit", type=positive_int, default=None,
         help="Process only the first N complete episodes (for pilot runs).",
     )
     parser.add_argument(
@@ -105,7 +113,7 @@ def parse_args(argv=None):
         help=f"Bedrock model ID (default: {DEFAULT_MODEL_ID}).",
     )
     parser.add_argument(
-        "--max-attempts", type=int, default=DEFAULT_MAX_ATTEMPTS,
+        "--max-attempts", type=positive_int, default=DEFAULT_MAX_ATTEMPTS,
         help=f"Claude calls per episode when a response cannot be parsed (default: {DEFAULT_MAX_ATTEMPTS}).",
     )
     parser.add_argument(

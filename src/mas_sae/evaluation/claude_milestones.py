@@ -39,7 +39,13 @@ def combine_runs(run_dirs: list[Path]) -> tuple[list[dict[str, Any]], dict[str, 
         replaced = 0
         for row in read_jsonl(run_dir / "raw_results.jsonl"):
             eid = row["episode_id"]
+            if "behavior_label" not in row:
+                raise ValueError(f"{run_dir} predates behavior_label/label_source (validator before "
+                                 "b3ab41a); summarize it separately, do not pool it")
             if eid in rows:
+                if source[eid] != sources[eid]:
+                    raise ValueError(f"{eid}: {run_dir} holds a different interaction than the run "
+                                     "it would replace")
                 if not is_technical_error(rows[eid]):
                     raise ValueError(f"{eid} already has a result ({rows[eid]['exclusion_reason'] or rows[eid]['behavior_label']}); "
                                      f"{run_dir} would label it twice")
@@ -69,6 +75,10 @@ def critic_refusal(source: dict[str, Any]) -> bool:
 
 def milestone_summary(rows: list[dict[str, Any]], sources: dict[str, dict[str, Any]]) -> dict[str, Any]:
     """Four-label counts, Retention rate, technical errors and Critic metadata for combined rows."""
+    unknown = [r["question_id"] for r in rows if hop_group(r["question_id"]) == "unknown"]
+    if unknown:
+        raise ValueError(f"{len(unknown)} question id(s) have no parseable hop group "
+                         f"(e.g. {unknown[0]!r}); namespaced IDs need explicit hop support")
     counts = _counts(rows)
     eligible = counts["adoption"] + counts["retention"]
     refusal = {r["episode_id"] for r in rows if critic_refusal(sources[r["episode_id"]])}

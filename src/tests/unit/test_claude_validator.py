@@ -4,6 +4,7 @@ All tests use mocked ClaudeClient responses — no real Bedrock calls.
 """
 
 import csv
+import importlib.util
 import json
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -28,6 +29,18 @@ from mas_sae.evaluation.claude_validator import (
 )
 from mas_sae.experiments.records import write_jsonl
 from mas_sae.models.claude import ClaudeResult
+
+
+def _load_cli():
+    """scripts/ is not on the test path, so load the CLI by file like the other script tests."""
+    path = Path(__file__).resolve().parents[3] / "scripts" / "run_claude_validation.py"
+    spec = importlib.util.spec_from_file_location("run_claude_validation", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+CLI = _load_cli()
 
 
 # ---------------------------------------------------------------------------
@@ -700,7 +713,7 @@ class TestPromptVersion:
 class TestFilterByCondition:
 
     def test_keeps_only_matching_condition(self):
-        from run_claude_validation import filter_by_condition
+        filter_by_condition = CLI.filter_by_condition
 
         episodes = [
             {"question_id": "q1", "critic_condition": "natural"},
@@ -719,7 +732,7 @@ class TestFilterByCondition:
         }
 
     def test_missing_condition_counted(self):
-        from run_claude_validation import filter_by_condition
+        filter_by_condition = CLI.filter_by_condition
 
         episodes = [
             {"question_id": "q1", "critic_condition": "natural"},
@@ -731,7 +744,7 @@ class TestFilterByCondition:
         assert counts == {"natural": 1, "MISSING": 1}
 
     def test_empty_when_no_match(self):
-        from run_claude_validation import filter_by_condition
+        filter_by_condition = CLI.filter_by_condition
 
         episodes = [
             {"question_id": "q1", "critic_condition": "controlled_correct"},
@@ -742,7 +755,7 @@ class TestFilterByCondition:
         assert counts == {"controlled_correct": 1}
 
     def test_all_natural(self):
-        from run_claude_validation import filter_by_condition
+        filter_by_condition = CLI.filter_by_condition
 
         episodes = [
             {"question_id": f"q{i}", "critic_condition": "natural"}
@@ -896,7 +909,7 @@ class TestProbeLoaderCompatibility:
 class TestCliScope:
 
     def test_condition_option_removed(self):
-        from run_claude_validation import parse_args
+        parse_args = CLI.parse_args
 
         with pytest.raises(SystemExit):
             parse_args(["--episodes", "x", "--output", "y",
@@ -904,19 +917,19 @@ class TestCliScope:
 
     @pytest.mark.parametrize("partition", ["test", "intervention"])
     def test_sealed_partitions_refused(self, partition):
-        from run_claude_validation import parse_args
+        parse_args = CLI.parse_args
 
         with pytest.raises(SystemExit):
             parse_args(["--episodes", "x", "--output", "y", "--partition", partition])
 
     def test_unpartitioned_records_refused(self):
-        from run_claude_validation import filter_by_partition
+        filter_by_partition = CLI.filter_by_partition
 
         with pytest.raises(ValueError, match="no 'partition' field"):
             filter_by_partition([{"episode_id": "e1"}], "train")
 
     def test_partition_filter(self):
-        from run_claude_validation import filter_by_partition
+        filter_by_partition = CLI.filter_by_partition
 
         eps = [{"partition": "train"}, {"partition": "test"}, {"partition": "train"}]
         assert filter_by_partition(eps, "train") == [eps[0], eps[2]]
@@ -925,7 +938,7 @@ class TestCliScope:
 class TestSelectEpisodes:
 
     def test_limit_takes_first_complete_in_file_order(self):
-        from run_claude_validation import select_episodes
+        select_episodes = CLI.select_episodes
 
         eps = [_episode(question_id="q0", a2=""), _episode(question_id="q1"),
                _episode(question_id="q2", c1=None), _episode(question_id="q3"),
@@ -936,19 +949,19 @@ class TestSelectEpisodes:
         assert skipped == 2
 
     def test_no_limit_keeps_incomplete_for_exclusion_records(self):
-        from run_claude_validation import select_episodes
+        select_episodes = CLI.select_episodes
 
         eps = [_episode(question_id="q0", a2=""), _episode(question_id="q1")]
         assert select_episodes(eps, None) == (eps, 0)
 
     def test_repeated_question_id_refused(self):
-        from run_claude_validation import select_episodes
+        select_episodes = CLI.select_episodes
 
         with pytest.raises(ValueError, match="repeat"):
             select_episodes([_episode(question_id="q1"), _episode(question_id="q1")], 5)
 
     def test_selection_record_keeps_identity_and_indices(self):
-        from run_claude_validation import selection_record
+        selection_record = CLI.selection_record
 
         ep = _episode(extra={"source_activation_index": 7, "attempt2_activation_index": 3})
         assert selection_record([ep]) == [{
@@ -966,7 +979,7 @@ class TestCliOutputGuard:
         return path
 
     def test_existing_output_refused_before_any_work(self, tmp_path, monkeypatch):
-        import run_claude_validation as cli
+        cli = CLI
 
         out = tmp_path / "pilot"
         out.mkdir()
@@ -977,7 +990,7 @@ class TestCliOutputGuard:
 
     def test_rejected_credentials_stop_before_output_created(self, tmp_path, monkeypatch):
         from botocore.exceptions import ClientError
-        import run_claude_validation as cli
+        cli = CLI
 
         session = MagicMock()
         session.client.return_value.get_caller_identity.side_effect = ClientError(
@@ -996,7 +1009,7 @@ class TestCliOutputGuard:
         assert not out.exists()
 
     def test_dry_run_writes_nothing(self, tmp_path, capsys):
-        import run_claude_validation as cli
+        cli = CLI
 
         out = tmp_path / "pilot"
         cli.main(["--episodes", str(self._write_episodes(tmp_path)),
@@ -1016,7 +1029,7 @@ class TestRetryTechnicalErrorsFrom:
         return run
 
     def test_selects_only_technical_errors(self, tmp_path):
-        from run_claude_validation import technical_error_ids
+        technical_error_ids = CLI.technical_error_ids
 
         rows = [
             {"episode_id": "e1", "behavior_label": None, "exclusion_reason": "parse_error"},
@@ -1028,7 +1041,50 @@ class TestRetryTechnicalErrorsFrom:
         assert technical_error_ids(self._run_dir(tmp_path, "abc", rows), "abc") == {"e1", "e2"}
 
     def test_refuses_a_different_source_file(self, tmp_path):
-        from run_claude_validation import technical_error_ids
+        technical_error_ids = CLI.technical_error_ids
 
         with pytest.raises(ValueError, match="different episodes file"):
             technical_error_ids(self._run_dir(tmp_path, "abc", []), "xyz")
+
+
+class TestAuditFixes:
+
+    def test_max_attempts_below_one_rejected(self, tmp_path):
+        with pytest.raises(ValueError, match="max_attempts"):
+            validate_episode(_mock_client(), _episode(), max_attempts=0)
+        with pytest.raises(ValueError, match="max_attempts"):
+            validate_batch(_mock_client(), [_episode()], output_path=tmp_path / "o.jsonl", max_attempts=0)
+        assert not (tmp_path / "o.jsonl").exists()
+
+    @pytest.mark.parametrize("flag", ["--limit", "--max-attempts"])
+    @pytest.mark.parametrize("value", ["0", "-1"])
+    def test_cli_rejects_nonpositive_counts(self, flag, value):
+        with pytest.raises(SystemExit):
+            CLI.parse_args(["--episodes", "x", "--output", "y", flag, value])
+
+    def test_api_error_after_malformed_response_keeps_audit(self, tmp_path):
+        bad = ClaudeResult(text="not json", model="m", input_tokens=100, output_tokens=20,
+                           task="labeling", stop_reason="end_turn")
+        client = MagicMock(spec=["generate", "close"])
+        client.generate.side_effect = [bad, RuntimeError("connection reset")]
+
+        summary = validate_batch(client, [_episode()], output_path=tmp_path / "o.jsonl")
+        row = summary["results"][0]
+
+        assert row["exclusion_reason"] == "api_error"
+        assert row["claude_raw_responses"] == ["not json"]
+        assert row["claude_attempts"] == 2
+        assert (row["input_tokens"], row["output_tokens"]) == (100, 20)
+        assert summary["total_input_tokens"] == 100
+        assert summary["n_retried"] == 1
+
+    def test_credential_error_after_malformed_response_still_stops(self, tmp_path):
+        from botocore.exceptions import ClientError
+
+        bad = ClaudeResult(text="not json", model="m", input_tokens=1, output_tokens=1,
+                           task="labeling", stop_reason="end_turn")
+        client = MagicMock(spec=["generate", "close"])
+        client.generate.side_effect = [bad, ClientError(
+            {"Error": {"Code": "ExpiredTokenException", "Message": "x"}}, "InvokeModel")]
+        with pytest.raises(ClientError):
+            validate_batch(client, [_episode()], output_path=tmp_path / "o.jsonl")

@@ -75,3 +75,25 @@ def test_technical_and_data_errors_reported_separately(tmp_path):
     assert summary["data_errors"] == {"missing_field:solver_attempt_2": 1}
     assert summary["label_sources"] == {"rule:critic_noncommittal": 1}
     assert summary["critic_noncommittal"] == 1
+
+
+def test_legacy_schema_rejected_with_clear_message(tmp_path):
+    legacy = {k: v for k, v in _row("2hop__a", "adoption").items() if k not in ("behavior_label", "label_source")}
+    run = _run(tmp_path, "old", [_source("2hop__a")], [legacy])
+    with pytest.raises(ValueError, match="predates behavior_label"):
+        combine_runs([run])
+
+
+def test_retry_with_a_different_interaction_rejected(tmp_path):
+    first = _run(tmp_path, "first", [_source("2hop__a")], [_row("2hop__a", reason="parse_error")])
+    changed = dict(_source("2hop__a"), solver_attempt_2="something else")
+    retry = _run(tmp_path, "retry", [changed], [_row("2hop__a", "adoption")])
+    with pytest.raises(ValueError, match="different interaction"):
+        combine_runs([first, retry])
+
+
+def test_unknown_hops_rejected_in_summary(tmp_path):
+    run = _run(tmp_path, "r", [_source("musique:2hop__a")], [_row("musique:2hop__a", "adoption")])
+    rows, sources, _ = combine_runs([run])
+    with pytest.raises(ValueError, match="no parseable hop group"):
+        milestone_summary(rows, sources)

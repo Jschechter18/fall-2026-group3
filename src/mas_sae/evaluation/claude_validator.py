@@ -205,7 +205,8 @@ def _make_excluded(passthrough: dict[str, Any], reason: str,
                    model: str | None = None,
                    input_tokens: int = 0,
                    output_tokens: int = 0,
-                   raw_responses: list[str] | None = None) -> dict[str, Any]:
+                   raw_responses: list[str] | None = None,
+                   attempts: int | None = None) -> dict[str, Any]:
     """Build a result dict for an excluded episode."""
     result = dict(passthrough)
     result.update(
@@ -222,7 +223,8 @@ def _make_excluded(passthrough: dict[str, Any], reason: str,
         output_tokens=output_tokens,
     )
     if raw_responses is not None:
-        result.update(claude_raw_responses=raw_responses, claude_attempts=len(raw_responses))
+        result.update(claude_raw_responses=raw_responses,
+                      claude_attempts=len(raw_responses) if attempts is None else attempts)
     return result
 
 
@@ -242,10 +244,14 @@ def validate_episode(
     attempts.  An unparseable response is retried with the identical request
     up to *max_attempts* calls; if none parses, the episode is a ``parse_error``
     (a technical error, never a behavioral label).  Truncated responses are
-    not retried.
+    not retried.  ``claude_attempts`` counts requests made.
 
-    Does NOT catch API errors — the caller decides the retry policy.
+    An API error on the first request propagates (the caller decides).  One
+    after a completed response is recorded as ``api_error`` with the earlier
+    responses and tokens kept; credential errors always propagate.
     """
+    if max_attempts < 1:
+        raise ValueError(f"max_attempts must be at least 1, got {max_attempts}")
     passthrough = _extract_passthrough(episode)
 
     missing = missing_required_fields(episode)
@@ -267,13 +273,20 @@ def validate_episode(
     raw_responses: list[str] = []
     input_tokens = output_tokens = 0
     for _ in range(max_attempts):
-        api_result: ClaudeResult = client.generate(
-            prompt,
-            system=LABELING_SYSTEM,
-            task="labeling",
-            max_tokens=max_tokens,
-            temperature=temperature,
-        )
+        try:
+            api_result: ClaudeResult = client.generate(
+                prompt,
+                system=LABELING_SYSTEM,
+                task="labeling",
+                max_tokens=max_tokens,
+                temperature=temperature,
+            )
+        except Exception as exc:
+            if not raw_responses or is_fatal_api_error(exc):
+                raise
+            # Earlier responses were billed: keep them with the failure.
+            return _make_excluded(passthrough, reason="api_error", claude_reason=str(exc),
+                                  **dict(audit, attempts=len(raw_responses) + 1))
         raw_responses.append(api_result.text)
         input_tokens += api_result.input_tokens
         output_tokens += api_result.output_tokens
@@ -359,6 +372,8 @@ def validate_batch(
     is every row without one), label sources, error reasons, token usage and
     the full results list.
     """
+    if max_attempts < 1:
+        raise ValueError(f"max_attempts must be at least 1, got {max_attempts}")
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 

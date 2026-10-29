@@ -33,7 +33,7 @@ from pathlib import Path
 
 from mas_sae.experiments.adoption_experiment import stratum, training_natural_rows
 from mas_sae.experiments.artifacts import ensure_output_available, sha256_file
-from mas_sae.experiments.hop_sample import proportional_hop_sample, stratified_top_up
+from mas_sae.experiments.hop_sample import proportional_hop_sample, require_known_hops, stratified_top_up
 from mas_sae.experiments.records import read_jsonl, write_jsonl
 
 PROTOCOL = "claude_validation_natural_hop_proportional_v1"
@@ -66,6 +66,7 @@ def main(argv=None) -> None:
         raise SystemExit("A cohort question is also in an --exclude file.")
 
     if args.cohort:
+        require_known_hops(pool)  # stratum() would put unparseable hops in "unknown"
         selected, allocation = stratified_top_up(pool, stratum, cohort_ids, args.size, args.seed, exclude_ids)
         protocol = TOP_UP_PROTOCOL
         selection = ("cohort + new proportional across adoption_experiment.stratum "
