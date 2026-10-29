@@ -16,6 +16,7 @@ from mas_sae.evaluation.claude_validator import (
     PASSTHROUGH_FIELDS,
     PROMPT_VERSION,
     VALID_LABELS,
+    alignment_exclusions,
     build_labeling_prompt,
     export_binary_labels,
     export_exclusions,
@@ -23,6 +24,7 @@ from mas_sae.evaluation.claude_validator import (
     validate_batch,
     validate_episode,
 )
+from mas_sae.experiments.records import write_jsonl
 from mas_sae.models.claude import ClaudeResult
 
 
@@ -103,6 +105,12 @@ class TestBuildLabelingPrompt:
         assert "out" in prompt
         assert "factual correctness" in prompt
 
+    def test_agreement_requires_all_three(self):
+        """Agreement rule must require A1, C1, AND A2 to agree (PR #153)."""
+        prompt = build_labeling_prompt("Q?", "A1", "C1", "A2")
+        assert "A1, C1, and A2 all agree" in prompt
+        assert "regardless of A2" not in prompt
+
 
 # ---------------------------------------------------------------------------
 # parse_label_response
@@ -135,6 +143,12 @@ class TestParseLabelResponse:
 
     def test_invalid_label_raises(self):
         text = '{"label": "maybe", "reason": "unsure"}'
+        with pytest.raises(ValueError, match="Unexpected label"):
+            parse_label_response(text)
+
+    def test_excluded_is_not_a_valid_label(self):
+        """'excluded' is not a behavioral label (PR #153 four-outcome framework)."""
+        text = '{"label": "excluded", "reason": "A1 and C1 agree."}'
         with pytest.raises(ValueError, match="Unexpected label"):
             parse_label_response(text)
 
@@ -393,6 +407,59 @@ class TestValidateBatch:
         assert row["eligible_primary"] is False
         assert row["exclusion_reason"] == "api_error"
 
+    def test_refuses_to_overwrite_existing_results(self, tmp_path):
+        out = tmp_path / "raw_results.jsonl"
+        out.write_text('{"earlier": "result"}\n')
+        client = _mock_client()
+
+        with pytest.raises(FileExistsError):
+            validate_batch(client, [_episode()], output_path=out)
+
+        assert out.read_text() == '{"earlier": "result"}\n'
+        client.generate.assert_not_called()
+
+    def test_stops_on_expired_token(self, tmp_path):
+        from botocore.exceptions import ClientError
+
+        expired = ClientError(
+            {"Error": {"Code": "ExpiredTokenException", "Message": "token expired"}},
+            "InvokeModel",
+        )
+        ok = _mock_client().generate.return_value
+        client = MagicMock(spec=["generate", "close"])
+        client.generate.side_effect = [ok, expired, ok]
+        out = tmp_path / "out.jsonl"
+        episodes = [_episode(question_id=f"q:{i}") for i in range(3)]
+
+        with pytest.raises(ClientError):
+            validate_batch(client, episodes, output_path=out)
+
+        assert client.generate.call_count == 2
+        rows = [json.loads(line) for line in out.read_text().splitlines()]
+        assert [r["question_id"] for r in rows] == ["q:0"]
+
+    def test_stops_on_missing_credentials(self, tmp_path):
+        from botocore.exceptions import NoCredentialsError
+
+        client = MagicMock(spec=["generate", "close"])
+        client.generate.side_effect = NoCredentialsError()
+        with pytest.raises(NoCredentialsError):
+            validate_batch(client, [_episode()], output_path=tmp_path / "out.jsonl")
+
+    def test_throttling_recorded_not_fatal(self, tmp_path):
+        from botocore.exceptions import ClientError
+
+        client = MagicMock(spec=["generate", "close"])
+        client.generate.side_effect = ClientError(
+            {"Error": {"Code": "ThrottlingException", "Message": "slow down"}}, "InvokeModel",
+        )
+        summary = validate_batch(
+            client, [_episode(question_id="q:0"), _episode(question_id="q:1")],
+            output_path=tmp_path / "out.jsonl",
+        )
+        assert summary["label_counts"]["error"] == 2
+        assert {r["exclusion_reason"] for r in summary["results"]} == {"api_error"}
+
     def test_output_directory_created(self, tmp_path):
         client = _mock_client()
         out = tmp_path / "nested" / "dir" / "results.jsonl"
@@ -485,3 +552,292 @@ class TestExportExclusions:
 
         content = out.read_text().strip()
         assert content == ""
+
+
+# ---------------------------------------------------------------------------
+# Prompt version
+# ---------------------------------------------------------------------------
+
+class TestPromptVersion:
+
+    def test_version_is_v2(self):
+        """Prompt version bumped to v2 after Agreement rule correction."""
+        assert PROMPT_VERSION == "claude_binary_v2"
+
+    def test_valid_labels_are_four_outcomes(self):
+        """Exactly the four PR #153 behavioral outcomes, no 'excluded'."""
+        assert VALID_LABELS == ("adoption", "retention", "agreement", "out")
+
+
+# ---------------------------------------------------------------------------
+# filter_by_condition (CLI helper)
+# ---------------------------------------------------------------------------
+
+class TestFilterByCondition:
+
+    def test_keeps_only_matching_condition(self):
+        from run_claude_validation import filter_by_condition
+
+        episodes = [
+            {"question_id": "q1", "critic_condition": "natural"},
+            {"question_id": "q2", "critic_condition": "controlled_correct"},
+            {"question_id": "q3", "critic_condition": "natural"},
+            {"question_id": "q4", "critic_condition": "controlled_incorrect"},
+        ]
+        matching, counts = filter_by_condition(episodes, "natural")
+
+        assert len(matching) == 2
+        assert all(ep["critic_condition"] == "natural" for ep in matching)
+        assert counts == {
+            "natural": 2,
+            "controlled_correct": 1,
+            "controlled_incorrect": 1,
+        }
+
+    def test_missing_condition_counted(self):
+        from run_claude_validation import filter_by_condition
+
+        episodes = [
+            {"question_id": "q1", "critic_condition": "natural"},
+            {"question_id": "q2"},  # no critic_condition
+        ]
+        matching, counts = filter_by_condition(episodes, "natural")
+
+        assert len(matching) == 1
+        assert counts == {"natural": 1, "MISSING": 1}
+
+    def test_empty_when_no_match(self):
+        from run_claude_validation import filter_by_condition
+
+        episodes = [
+            {"question_id": "q1", "critic_condition": "controlled_correct"},
+        ]
+        matching, counts = filter_by_condition(episodes, "natural")
+
+        assert len(matching) == 0
+        assert counts == {"controlled_correct": 1}
+
+    def test_all_natural(self):
+        from run_claude_validation import filter_by_condition
+
+        episodes = [
+            {"question_id": f"q{i}", "critic_condition": "natural"}
+            for i in range(5)
+        ]
+        matching, counts = filter_by_condition(episodes, "natural")
+
+        assert len(matching) == 5
+        assert counts == {"natural": 5}
+
+
+# ---------------------------------------------------------------------------
+# alignment_exclusions
+# ---------------------------------------------------------------------------
+
+def _labelled_results(labels):
+    """Run validate_episode once per (question_id, label) with a mocked client."""
+    return [
+        validate_episode(
+            _mock_client(label=label),
+            _episode(question_id=qid, episode_id=f"{qid}__natural"),
+        )
+        for qid, label in labels
+    ]
+
+
+class TestAlignmentExclusions:
+
+    def test_maps_every_ineligible_result(self):
+        results = _labelled_results([
+            ("q1", "adoption"), ("q2", "retention"), ("q3", "agreement"), ("q4", "out"),
+        ])
+        results.append(validate_episode(_mock_client(), _episode(question_id="q5", a2="")))
+
+        assert alignment_exclusions(results) == {
+            "q3": "claude:agreement",
+            "q4": "claude:out",
+            "q5": "claude:missing_field:solver_attempt_2",
+        }
+
+    def test_missing_question_id_raises(self):
+        row = validate_episode(_mock_client(), _episode(question_id=""))
+        with pytest.raises(ValueError, match="no question_id"):
+            alignment_exclusions([row])
+
+    def test_duplicate_question_id_raises(self):
+        results = _labelled_results([("q1", "out"), ("q1", "agreement")])
+        with pytest.raises(ValueError, match="Duplicate"):
+            alignment_exclusions(results)
+
+
+class TestProbeLoaderCompatibility:
+    """binary_labels.csv + alignment_exclusions through Raye's unmodified loader."""
+
+    @pytest.fixture
+    def probe_inputs(self, tmp_path):
+        pd = pytest.importorskip("pandas")
+        pytest.importorskip("torch")
+        from mas_sae.probe import behavior_data as bd
+
+        labels = [("q0", "adoption"), ("q1", "retention"), ("q2", "agreement"),
+                  ("q3", "out"), ("q4", "adoption"), ("q5", "retention")]
+        interactions = [
+            dict(_episode(question_id=qid, episode_id=f"{qid}__natural",
+                          partition="train"),
+                 critic_condition="natural", attempt2_activation_index=i)
+            for i, (qid, _) in enumerate(labels)
+        ]
+        results_dir = tmp_path / "run"
+        write_jsonl(results_dir / "train" / "interactions.jsonl", interactions)
+        results = _labelled_results(labels)
+        export_binary_labels(results, tmp_path / "binary_labels.csv")
+
+        episodes = bd.build_episode_table(results_dir, ["train"], ["solver_attempt_2"])
+        manifest = pd.DataFrame({
+            "question_id": [qid for qid, _ in labels],
+            "partition": "train", "source_split": "train",
+            "full_index": range(len(labels)),
+        })
+        return bd, episodes, pd.read_csv(tmp_path / "binary_labels.csv"), manifest, results
+
+    def test_binary_labels_alone_fail_loudly(self, probe_inputs):
+        bd, episodes, labels, manifest, _ = probe_inputs
+        with pytest.raises(bd.AlignmentError, match="2 episode\\(s\\) have no row in labels.csv"):
+            bd.align_episodes(episodes, labels, manifest, bd.Columns(), "full_index")
+
+    def test_exclusions_account_for_every_episode(self, probe_inputs):
+        bd, episodes, labels, manifest, results = probe_inputs
+        cols = bd.Columns()
+
+        aligned, diag = bd.align_episodes(
+            episodes, labels, manifest, cols, "full_index",
+            excluded=alignment_exclusions(results),
+        )
+        selected, _ = bd.select_partitions(aligned, cols, ["train"])
+
+        assert diag["labels_join"] == "episode_id"
+        assert diag["excluded_episodes"] == {"q2": "claude:agreement", "q3": "claude:out"}
+        assert diag["n_joined"] + diag["n_excluded"] == diag["n_episodes"] == 6
+        assert dict(zip(selected["ep_question_id"], selected["primary_target"])) == {
+            "q0": 1, "q1": 0, "q4": 1, "q5": 0,
+        }
+        assert dict(zip(selected["ep_question_id"], selected["activation_row"])) == {
+            "q0": 0, "q1": 1, "q4": 4, "q5": 5,
+        }
+
+
+# ---------------------------------------------------------------------------
+# CLI scope, selection and overwrite guards
+# ---------------------------------------------------------------------------
+
+class TestCliScope:
+
+    def test_condition_option_removed(self):
+        from run_claude_validation import parse_args
+
+        with pytest.raises(SystemExit):
+            parse_args(["--episodes", "x", "--output", "y",
+                        "--condition", "controlled_correct"])
+
+    @pytest.mark.parametrize("partition", ["test", "intervention"])
+    def test_sealed_partitions_refused(self, partition):
+        from run_claude_validation import parse_args
+
+        with pytest.raises(SystemExit):
+            parse_args(["--episodes", "x", "--output", "y", "--partition", partition])
+
+    def test_unpartitioned_records_refused(self):
+        from run_claude_validation import filter_by_partition
+
+        with pytest.raises(ValueError, match="no 'partition' field"):
+            filter_by_partition([{"episode_id": "e1"}], "train")
+
+    def test_partition_filter(self):
+        from run_claude_validation import filter_by_partition
+
+        eps = [{"partition": "train"}, {"partition": "test"}, {"partition": "train"}]
+        assert filter_by_partition(eps, "train") == [eps[0], eps[2]]
+
+
+class TestSelectEpisodes:
+
+    def test_limit_takes_first_complete_in_file_order(self):
+        from run_claude_validation import select_episodes
+
+        eps = [_episode(question_id="q0", a2=""), _episode(question_id="q1"),
+               _episode(question_id="q2", c1=None), _episode(question_id="q3"),
+               _episode(question_id="q4")]
+        selected, skipped = select_episodes(eps, 2)
+
+        assert [ep["question_id"] for ep in selected] == ["q1", "q3"]
+        assert skipped == 2
+
+    def test_no_limit_keeps_incomplete_for_exclusion_records(self):
+        from run_claude_validation import select_episodes
+
+        eps = [_episode(question_id="q0", a2=""), _episode(question_id="q1")]
+        assert select_episodes(eps, None) == (eps, 0)
+
+    def test_repeated_question_id_refused(self):
+        from run_claude_validation import select_episodes
+
+        with pytest.raises(ValueError, match="repeat"):
+            select_episodes([_episode(question_id="q1"), _episode(question_id="q1")], 5)
+
+    def test_selection_record_keeps_identity_and_indices(self):
+        from run_claude_validation import selection_record
+
+        ep = _episode(extra={"source_activation_index": 7, "attempt2_activation_index": 3})
+        assert selection_record([ep]) == [{
+            "episode_id": ep["episode_id"], "question_id": ep["question_id"],
+            "partition": "train", "source_split": "train",
+            "source_activation_index": 7, "attempt2_activation_index": 3,
+        }]
+
+
+class TestCliOutputGuard:
+
+    def _write_episodes(self, tmp_path):
+        path = tmp_path / "interactions.jsonl"
+        write_jsonl(path, [dict(_episode(), critic_condition="natural")])
+        return path
+
+    def test_existing_output_refused_before_any_work(self, tmp_path, monkeypatch):
+        import run_claude_validation as cli
+
+        out = tmp_path / "pilot"
+        out.mkdir()
+        monkeypatch.setattr(cli, "ClaudeClient", MagicMock(side_effect=AssertionError))
+        with pytest.raises(FileExistsError):
+            cli.main(["--episodes", str(self._write_episodes(tmp_path)),
+                      "--output", str(out), "--limit", "1"])
+
+    def test_rejected_credentials_stop_before_output_created(self, tmp_path, monkeypatch):
+        from botocore.exceptions import ClientError
+        import run_claude_validation as cli
+
+        session = MagicMock()
+        session.client.return_value.get_caller_identity.side_effect = ClientError(
+            {"Error": {"Code": "ExpiredTokenException", "Message": "expired"}},
+            "GetCallerIdentity",
+        )
+        monkeypatch.setattr(cli, "load_dotenv", lambda: None)
+        monkeypatch.setattr(cli.boto3, "Session", MagicMock(return_value=session))
+        monkeypatch.setattr(cli, "ClaudeClient", MagicMock(side_effect=AssertionError))
+        out = tmp_path / "pilot"
+
+        with pytest.raises(SystemExit):
+            cli.main(["--episodes", str(self._write_episodes(tmp_path)),
+                      "--output", str(out), "--limit", "1"])
+
+        assert not out.exists()
+
+    def test_dry_run_writes_nothing(self, tmp_path, capsys):
+        import run_claude_validation as cli
+
+        out = tmp_path / "pilot"
+        cli.main(["--episodes", str(self._write_episodes(tmp_path)),
+                  "--output", str(out), "--limit", "1", "--dry-run"])
+
+        assert not out.exists()
+        assert "musique:2hop__test_1__natural__feedback" in capsys.readouterr().out

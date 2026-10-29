@@ -6,7 +6,7 @@ behavioral outcomes agreed in PR #153:
 
     adoption   — A2 follows C1's recommendation (differs from A1).
     retention  — A2 keeps A1's position (differs from C1).
-    agreement  — A1 and C1 already agree (no conflict to resolve).
+    agreement  — A1, C1 and A2 all agree (no conflict to resolve).
     out        — Ambiguous, missing or unclassifiable relationship.
 
 Only adoption (1) and retention (0) are eligible for binary probe training.
@@ -28,6 +28,8 @@ import re
 from pathlib import Path
 from typing import Any
 
+from botocore.exceptions import ClientError, NoCredentialsError
+
 from mas_sae.experiments.records import write_jsonl
 from mas_sae.models.claude import ClaudeClient, ClaudeResult
 
@@ -37,7 +39,7 @@ from mas_sae.models.claude import ClaudeClient, ClaudeResult
 
 VALID_LABELS = ("adoption", "retention", "agreement", "out")
 
-PROMPT_VERSION = "claude_binary_v1"
+PROMPT_VERSION = "claude_binary_v2"
 
 LABELING_SYSTEM = (
     "You classify the behavioral relationship between an initial answer (A1), "
@@ -53,7 +55,7 @@ _PROMPT_TEMPLATE = (
     "Rules:\n"
     '- Use "adoption" if A2 matches C1\'s position and differs from A1.\n'
     '- Use "retention" if A2 matches A1\'s position and differs from C1.\n'
-    '- Use "agreement" if A1 and C1 already agree (regardless of A2).\n'
+    '- Use "agreement" if A1, C1, and A2 all agree (no conflict to resolve).\n'
     '- Use "out" if A2 matches both or neither, if any required answer is '
     "missing or a refusal/non-answer, or if the relationship is ambiguous.\n\n"
     '"Matching" means semantically equivalent entities or values, not merely '
@@ -66,6 +68,12 @@ _PROMPT_TEMPLATE = (
     '"reason" (a brief explanation).\n\n'
 )
 
+# Bedrock error codes that every later call would hit too, so the batch stops.
+FATAL_ERROR_CODES = frozenset({
+    "ExpiredTokenException", "UnrecognizedClientException",
+    "InvalidSignatureException", "AccessDeniedException",
+})
+
 REQUIRED_FIELDS = (
     "question_id", "question", "solver_attempt_1",
     "critic_advocated_answer", "solver_attempt_2",
@@ -77,6 +85,7 @@ PASSTHROUGH_FIELDS = (
     "critic_condition", "a2_presentation", "candidate_order",
     "attempt1_activation_index", "attempt2_activation_index",
     "sae_attempt1_index", "sae_attempt2_index",
+    "source_run", "source_activation_index",
 )
 
 BINARY_LABEL_COLUMNS = [
@@ -88,6 +97,7 @@ BINARY_LABEL_COLUMNS = [
     "critic_condition", "a2_presentation", "candidate_order",
     "attempt1_activation_index", "attempt2_activation_index",
     "sae_attempt1_index", "sae_attempt2_index",
+    "source_run", "source_activation_index",
 ]
 
 
@@ -158,7 +168,7 @@ def _extract_passthrough(episode: dict[str, Any]) -> dict[str, Any]:
             if field in episode}
 
 
-def _check_required(episode: dict[str, Any]) -> str | None:
+def missing_required_field(episode: dict[str, Any]) -> str | None:
     """Return the first missing or empty required field, or None."""
     for field in REQUIRED_FIELDS:
         value = episode.get(field)
@@ -204,7 +214,7 @@ def validate_episode(
     """
     passthrough = _extract_passthrough(episode)
 
-    missing = _check_required(episode)
+    missing = missing_required_field(episode)
     if missing:
         return _make_excluded(passthrough, f"missing_field:{missing}")
 
@@ -278,6 +288,14 @@ def validate_episode(
 # Batch processing
 # ---------------------------------------------------------------------------
 
+def is_fatal_api_error(exc: BaseException) -> bool:
+    """True for credential and permission failures, which no retry or later episode can avoid."""
+    if isinstance(exc, NoCredentialsError):
+        return True
+    return (isinstance(exc, ClientError)
+            and exc.response.get("Error", {}).get("Code") in FATAL_ERROR_CODES)
+
+
 def validate_batch(
     client: ClaudeClient,
     episodes: list[dict[str, Any]],
@@ -286,7 +304,14 @@ def validate_batch(
     max_tokens: int = 512,
     temperature: float = 0.0,
 ) -> dict[str, Any]:
-    """Process episodes, appending each result to *output_path* for crash resilience.
+    """Process episodes, writing each result to *output_path* as soon as it is known.
+
+    *output_path* must not exist: earlier results are never overwritten.  A
+    crash leaves the completed rows on disk, but there is no resume; rerun
+    into a new output path.
+
+    Other API errors are recorded per episode as ``api_error``; credential and
+    permission errors (``is_fatal_api_error``) stop the batch and re-raise.
 
     Returns a summary dict with label counts, token usage and the full results list.
     """
@@ -300,7 +325,7 @@ def validate_batch(
         "adoption": 0, "retention": 0, "agreement": 0, "out": 0, "error": 0,
     }
 
-    with output_path.open("w", encoding="utf-8") as fh:
+    with output_path.open("x", encoding="utf-8") as fh:
         for episode in episodes:
             try:
                 row = validate_episode(
@@ -308,6 +333,8 @@ def validate_batch(
                     max_tokens=max_tokens, temperature=temperature,
                 )
             except Exception as exc:
+                if is_fatal_api_error(exc):
+                    raise
                 row = _make_excluded(
                     _extract_passthrough(episode),
                     reason="api_error",
@@ -362,3 +389,25 @@ def export_exclusions(results: list[dict[str, Any]], output_path: Path) -> None:
     """Write JSONL of excluded episodes with reasons."""
     excluded = [r for r in results if not r.get("eligible_primary")]
     write_jsonl(output_path, excluded)
+
+
+def alignment_exclusions(results: list[dict[str, Any]]) -> dict[str, str]:
+    """``{question_id: reason}`` for every ineligible result, in the form
+    ``mas_sae.probe.behavior_data.align_episodes`` takes as ``excluded``.
+
+    ``binary_labels.csv`` holds only Adoption/Retention rows, and
+    ``align_episodes`` raises for any episode without a label row unless it is
+    listed in ``excluded``.  This mapping accounts for Agreement, Out and
+    failed episodes so none of them is lost silently.
+    """
+    excluded: dict[str, str] = {}
+    for row in results:
+        if row.get("eligible_primary"):
+            continue
+        qid = row.get("question_id")
+        if not qid:
+            raise ValueError(f"Excluded result has no question_id: {row.get('episode_id')!r}")
+        if qid in excluded:
+            raise ValueError(f"Duplicate question_id in results: {qid!r}")
+        excluded[qid] = f"claude:{row.get('claude_label') or row.get('exclusion_reason')}"
+    return excluded
