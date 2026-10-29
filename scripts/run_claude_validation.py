@@ -44,15 +44,22 @@ from botocore.exceptions import ClientError, NoCredentialsError
 from dotenv import load_dotenv
 
 from mas_sae.evaluation.claude_validator import (
+    DEFAULT_MAX_ATTEMPTS,
     PROMPT_VERSION,
     alignment_exclusions,
+    is_technical_error,
     build_labeling_prompt,
     export_binary_labels,
     export_exclusions,
     missing_required_field,
     validate_batch,
 )
-from mas_sae.experiments.artifacts import ensure_output_available, sha256_file
+from mas_sae.experiments.artifacts import (
+    ensure_output_available,
+    get_git_commit,
+    get_git_diff_sha256,
+    sha256_file,
+)
 from mas_sae.experiments.records import read_jsonl
 from mas_sae.models.claude import ClaudeClient
 
@@ -96,6 +103,15 @@ def parse_args(argv=None):
     parser.add_argument(
         "--model-id", type=str, default=DEFAULT_MODEL_ID,
         help=f"Bedrock model ID (default: {DEFAULT_MODEL_ID}).",
+    )
+    parser.add_argument(
+        "--max-attempts", type=int, default=DEFAULT_MAX_ATTEMPTS,
+        help=f"Claude calls per episode when a response cannot be parsed (default: {DEFAULT_MAX_ATTEMPTS}).",
+    )
+    parser.add_argument(
+        "--retry-technical-errors-from", type=Path, default=None, metavar="RUN_DIR",
+        help="Process only episodes that ended in a technical error (API, parse, truncated) "
+             "in RUN_DIR, an earlier run over the same --episodes file.",
     )
     parser.add_argument(
         "--dry-run", action="store_true",
@@ -174,6 +190,15 @@ def selection_record(episodes: list[dict]) -> list[dict]:
     return [{f: ep[f] for f in SELECTION_FIELDS if f in ep} for ep in episodes]
 
 
+def technical_error_ids(run_dir: Path, episodes_sha256: str) -> set[str]:
+    """episode_ids that ended in a technical error in *run_dir*, which must have read the same source."""
+    summary = json.loads((run_dir / "summary.json").read_text(encoding="utf-8"))
+    if summary.get("episodes_sha256") != episodes_sha256:
+        raise ValueError(f"{run_dir} was run on a different episodes file "
+                         f"(sha256 {summary.get('episodes_sha256')}, now {episodes_sha256}).")
+    return {r["episode_id"] for r in read_jsonl(run_dir / "raw_results.jsonl") if is_technical_error(r)}
+
+
 def main(argv=None) -> None:
     args = parse_args(argv)
 
@@ -196,6 +221,11 @@ def main(argv=None) -> None:
         in_partition = filter_by_partition(natural, args.partition)
         print(f"Partition filter (partition={args.partition!r}): "
               f"{len(in_partition)} of {len(natural)} natural episode(s)")
+        if args.retry_technical_errors_from is not None:
+            retry_ids = technical_error_ids(args.retry_technical_errors_from, episodes_sha256)
+            in_partition = [ep for ep in in_partition if ep["episode_id"] in retry_ids]
+            print(f"Retry filter: {len(in_partition)} episode(s) with technical errors in "
+                  f"{args.retry_technical_errors_from}")
         episodes, n_skipped = select_episodes(in_partition, args.limit)
     except ValueError as exc:
         print(f"\nERROR: {exc}", file=sys.stderr)
@@ -257,6 +287,7 @@ def main(argv=None) -> None:
         summary = validate_batch(
             client, episodes,
             output_path=output_dir / "raw_results.jsonl",
+            max_attempts=args.max_attempts,
         )
     except (ClientError, NoCredentialsError) as exc:
         print(f"\nERROR: stopped on a credential/permission error ({exc}). Rows completed "
@@ -284,12 +315,22 @@ def main(argv=None) -> None:
     summary["limit"] = args.limit
     summary["n_incomplete_skipped"] = n_skipped
     summary["wall_clock_seconds"] = wall_clock_seconds
+    summary["retry_technical_errors_from"] = (str(args.retry_technical_errors_from)
+                                              if args.retry_technical_errors_from else None)
+    summary["git_commit"] = get_git_commit()
+    try:
+        summary["uncommitted_changes_sha256"] = get_git_diff_sha256()
+    except RuntimeError:
+        summary["uncommitted_changes_sha256"] = "unknown"
     (output_dir / "summary.json").write_text(
         json.dumps(summary, indent=2) + "\n", encoding="utf-8",
     )
 
     print(f"\nDone. {summary['n_episodes']} episodes processed.")
     print(f"Labels: {summary['label_counts']}")
+    print(f"Label sources: {summary['label_sources']}")
+    print(f"Errors by reason: {summary['error_reasons']} "
+          f"(technical: {summary['n_technical_errors']}, retried episodes: {summary['n_retried']})")
     print(f"Tokens: {summary['total_input_tokens']} in / {summary['total_output_tokens']} out")
     print(f"Wall clock: {wall_clock_seconds}s")
     print(f"Output: {output_dir}")

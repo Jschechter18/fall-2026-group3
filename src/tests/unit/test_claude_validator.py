@@ -15,9 +15,11 @@ from mas_sae.evaluation.claude_validator import (
     LABELING_SYSTEM,
     PASSTHROUGH_FIELDS,
     PROMPT_VERSION,
+    RULE_NONCOMMITTAL,
     VALID_LABELS,
     alignment_exclusions,
     build_labeling_prompt,
+    is_technical_error,
     export_binary_labels,
     export_exclusions,
     parse_label_response,
@@ -242,6 +244,55 @@ class TestValidateEpisode:
         assert "missing_field:solver_attempt_1" in result["exclusion_reason"]
         client.generate.assert_not_called()
 
+    def test_noncommittal_critic_is_rule_out(self):
+        client = _mock_client()
+        ep = _episode(c1=None, extra={"critic_noncommittal": True})
+        result = validate_episode(client, ep)
+
+        client.generate.assert_not_called()
+        assert result["behavior_label"] == "out"
+        assert result["label_source"] == RULE_NONCOMMITTAL
+        assert result["claude_label"] is None
+        assert result["claude_model"] is None
+        assert result["exclusion_reason"] == "missing_field:critic_advocated_answer"
+        assert result["eligible_primary"] is False
+        assert result["primary_target"] is None
+        assert result["critic_noncommittal"] is True
+
+    @pytest.mark.parametrize("ep_kwargs", [
+        {"c1": None},                                                 # flag absent
+        {"c1": None, "extra": {"critic_noncommittal": False}},        # flag false
+        {"c1": None, "a2": "", "extra": {"critic_noncommittal": True}},  # also missing A2
+    ])
+    def test_other_missing_c1_stays_error(self, ep_kwargs):
+        client = _mock_client()
+        result = validate_episode(client, _episode(**ep_kwargs))
+
+        client.generate.assert_not_called()
+        assert result["behavior_label"] is None
+        assert result["label_source"] is None
+        assert result["exclusion_reason"] == "missing_field:critic_advocated_answer"
+
+    def test_noncommittal_flag_with_c1_goes_to_claude(self):
+        client = _mock_client(label="adoption")
+        result = validate_episode(client, _episode(extra={"critic_noncommittal": True}))
+
+        client.generate.assert_called_once()
+        assert result["behavior_label"] == "adoption"
+        assert result["label_source"] == "claude"
+
+    def test_claude_labels_record_source(self):
+        result = validate_episode(_mock_client(label="agreement"), _episode())
+        assert result["behavior_label"] == result["claude_label"] == "agreement"
+        assert result["label_source"] == "claude"
+
+    def test_incomplete_response_not_retried(self):
+        client = _mock_client(stop_reason="max_tokens")
+        result = validate_episode(client, _episode())
+        assert client.generate.call_count == 1
+        assert result["exclusion_reason"] == "incomplete_response:max_tokens"
+        assert is_technical_error(result)
+
     def test_incomplete_response(self):
         client = _mock_client(stop_reason="max_tokens")
         result = validate_episode(client, _episode())
@@ -262,6 +313,45 @@ class TestValidateEpisode:
 
         assert result["eligible_primary"] is False
         assert result["exclusion_reason"] == "parse_error"
+        assert result["behavior_label"] is None
+        # Bounded retry: three identical requests, every raw response kept, tokens summed.
+        assert client.generate.call_count == 3
+        assert result["claude_raw_responses"] == ["Not JSON at all"] * 3
+        assert result["claude_attempts"] == 3
+        assert (result["input_tokens"], result["output_tokens"]) == (300, 150)
+        assert is_technical_error(result)
+
+    def test_parse_retry_succeeds(self):
+        bad = ClaudeResult(text='{"label": "adoption", "label_reason": "x"}', model="m",
+                           input_tokens=10, output_tokens=5, task="labeling", stop_reason="end_turn")
+        good = _mock_client(label="retention", reason="keeps A1").generate.return_value
+        client = MagicMock(spec=["generate", "close"])
+        client.generate.side_effect = [bad, good]
+
+        result = validate_episode(client, _episode())
+
+        assert client.generate.call_count == 2
+        prompts = [c.args[0] for c in client.generate.call_args_list]
+        assert prompts[0] == prompts[1]  # identical request; prompt v2 unchanged
+        assert result["behavior_label"] == "retention"
+        assert result["claude_raw_responses"] == [bad.text, good.text]
+        assert result["claude_attempts"] == 2
+        assert (result["input_tokens"], result["output_tokens"]) == (110, 55)
+
+    def test_max_attempts_one_disables_retry(self):
+        client = _mock_client()
+        client.generate.return_value = ClaudeResult(
+            text="nope", model="m", input_tokens=1, output_tokens=1,
+            task="labeling", stop_reason="end_turn")
+        result = validate_episode(client, _episode(), max_attempts=1)
+        assert client.generate.call_count == 1
+        assert result["exclusion_reason"] == "parse_error"
+
+    def test_success_keeps_raw_response(self):
+        client = _mock_client(label="adoption", reason="ok")
+        result = validate_episode(client, _episode())
+        assert result["claude_raw_responses"] == [client.generate.return_value.text]
+        assert result["claude_attempts"] == 1
 
     def test_passthrough_fields_preserved(self):
         client = _mock_client()
@@ -393,6 +483,40 @@ class TestValidateBatch:
         assert summary["label_counts"] == {
             "adoption": 1, "retention": 1, "agreement": 1, "out": 1, "error": 0,
         }
+
+    def test_rule_out_counted_as_out_not_error(self, tmp_path):
+        from botocore.exceptions import ClientError
+
+        responses = iter([
+            _mock_client(label="adoption").generate.return_value,
+            ClientError({"Error": {"Code": "ThrottlingException", "Message": "x"}}, "InvokeModel"),
+            _mock_client(label="out").generate.return_value,
+        ])
+        def fake_generate(prompt, **kwargs):
+            item = next(responses)
+            if isinstance(item, Exception):
+                raise item
+            return item
+        client = MagicMock(spec=["generate", "close"])
+        client.generate.side_effect = fake_generate
+        episodes = [
+            _episode(question_id="q:adopt"),
+            _episode(question_id="q:throttled"),
+            _episode(question_id="q:claude_out"),
+            _episode(question_id="q:noncommittal", c1=None, extra={"critic_noncommittal": True}),
+            _episode(question_id="q:corrupt", c1=None),
+        ]
+
+        summary = validate_batch(client, episodes, output_path=tmp_path / "out.jsonl")
+
+        assert summary["label_counts"] == {
+            "adoption": 1, "retention": 0, "agreement": 0, "out": 2, "error": 2,
+        }
+        assert summary["label_sources"] == {"claude": 2, RULE_NONCOMMITTAL: 1}
+        assert summary["error_reasons"] == {
+            "api_error": 1, "missing_field:critic_advocated_answer": 1,
+        }
+        assert client.generate.call_count == 3
 
     def test_api_error_caught(self, tmp_path):
         client = MagicMock(spec=["generate", "close"])
@@ -631,6 +755,38 @@ class TestFilterByCondition:
 
 
 # ---------------------------------------------------------------------------
+# technical vs. behavioral outcomes
+# ---------------------------------------------------------------------------
+
+class TestTechnicalErrors:
+
+    def test_classification(self):
+        rule_out = validate_episode(_mock_client(), _episode(c1=None, extra={"critic_noncommittal": True}))
+        claude_out = validate_episode(_mock_client(label="out"), _episode())
+        data_error = validate_episode(_mock_client(), _episode(a2=""))
+        assert not is_technical_error(rule_out)
+        assert not is_technical_error(claude_out)
+        assert not is_technical_error(data_error)
+        assert is_technical_error({"behavior_label": None, "exclusion_reason": "api_error"})
+
+    def test_batch_reports_retries_and_technical_errors(self, tmp_path):
+        bad = ClaudeResult(text="x", model="m", input_tokens=1, output_tokens=1,
+                           task="labeling", stop_reason="end_turn")
+        good = _mock_client(label="adoption").generate.return_value
+        client = MagicMock(spec=["generate", "close"])
+        client.generate.side_effect = [bad, good, bad, bad, bad]
+
+        summary = validate_batch(client, [_episode(question_id="q:1"), _episode(question_id="q:2")],
+                                 output_path=tmp_path / "out.jsonl")
+
+        assert summary["label_counts"]["adoption"] == 1
+        assert summary["error_reasons"] == {"parse_error": 1}
+        assert summary["n_technical_errors"] == 1
+        assert summary["n_retried"] == 2
+        assert summary["max_attempts"] == 3
+
+
+# ---------------------------------------------------------------------------
 # alignment_exclusions
 # ---------------------------------------------------------------------------
 
@@ -658,6 +814,13 @@ class TestAlignmentExclusions:
             "q4": "claude:out",
             "q5": "claude:missing_field:solver_attempt_2",
         }
+
+    def test_rule_out_reason_names_its_source(self):
+        row = validate_episode(
+            _mock_client(),
+            _episode(question_id="q9", c1=None, extra={"critic_noncommittal": True}),
+        )
+        assert alignment_exclusions([row]) == {"q9": f"{RULE_NONCOMMITTAL}:out"}
 
     def test_missing_question_id_raises(self):
         row = validate_episode(_mock_client(), _episode(question_id=""))
@@ -841,3 +1004,31 @@ class TestCliOutputGuard:
 
         assert not out.exists()
         assert "musique:2hop__test_1__natural__feedback" in capsys.readouterr().out
+
+
+class TestRetryTechnicalErrorsFrom:
+
+    def _run_dir(self, tmp_path, sha, rows):
+        run = tmp_path / "run"
+        run.mkdir()
+        (run / "summary.json").write_text(json.dumps({"episodes_sha256": sha}))
+        write_jsonl(run / "raw_results.jsonl", rows)
+        return run
+
+    def test_selects_only_technical_errors(self, tmp_path):
+        from run_claude_validation import technical_error_ids
+
+        rows = [
+            {"episode_id": "e1", "behavior_label": None, "exclusion_reason": "parse_error"},
+            {"episode_id": "e2", "behavior_label": None, "exclusion_reason": "api_error"},
+            {"episode_id": "e3", "behavior_label": "out", "exclusion_reason": "claude_unclassifiable"},
+            {"episode_id": "e4", "behavior_label": None, "exclusion_reason": "missing_field:solver_attempt_2"},
+            {"episode_id": "e5", "behavior_label": "adoption", "exclusion_reason": None},
+        ]
+        assert technical_error_ids(self._run_dir(tmp_path, "abc", rows), "abc") == {"e1", "e2"}
+
+    def test_refuses_a_different_source_file(self, tmp_path):
+        from run_claude_validation import technical_error_ids
+
+        with pytest.raises(ValueError, match="different episodes file"):
+            technical_error_ids(self._run_dir(tmp_path, "abc", []), "xyz")
