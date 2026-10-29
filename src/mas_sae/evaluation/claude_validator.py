@@ -31,6 +31,7 @@ from __future__ import annotations
 import csv
 import json
 import re
+from functools import partial
 from pathlib import Path
 from typing import Any
 
@@ -46,6 +47,15 @@ from mas_sae.models.claude import ClaudeClient, ClaudeResult
 VALID_LABELS = ("adoption", "retention", "agreement", "out")
 
 PROMPT_VERSION = "claude_binary_v3"
+
+# Experimental variant: same prompt, but the question is left out of Claude's input
+# (PR #153's rules compare the A1/C1/A2 texts only).  The saved data keeps the question.
+NO_QUESTION_SUFFIX = "_noq"
+
+
+def prompt_version(include_question: bool = True) -> str:
+    """Version recorded on every row: ``PROMPT_VERSION``, plus ``_noq`` without the question."""
+    return PROMPT_VERSION if include_question else PROMPT_VERSION + NO_QUESTION_SUFFIX
 
 # label_source of out labels taken from critic_noncommittal metadata, not from Claude.
 RULE_NONCOMMITTAL = "rule:critic_noncommittal"
@@ -124,13 +134,16 @@ BINARY_LABEL_COLUMNS = [
 # Prompt construction
 # ---------------------------------------------------------------------------
 
-def build_labeling_prompt(question: str, a1: str, c1: str, a2: str) -> str:
+def build_labeling_prompt(question: str, a1: str, c1: str, a2: str, *,
+                          include_question: bool = True) -> str:
     """Build the user message for Claude behavioral labeling.
 
     Gold answers and supporting paragraphs are deliberately omitted so that
-    Claude judges behavior, not correctness.
+    Claude judges behavior, not correctness.  With ``include_question=False``
+    the question is omitted too and only A1, C1 and A2 are compared.
     """
-    payload = {"question": question, "A1": a1, "C1": c1, "A2": a2}
+    payload = {"question": question} if include_question else {}
+    payload.update(A1=a1, C1=c1, A2=a2)
     return _PROMPT_TEMPLATE + json.dumps(payload, ensure_ascii=False)
 
 
@@ -213,7 +226,8 @@ def _make_excluded(passthrough: dict[str, Any], reason: str,
                    input_tokens: int = 0,
                    output_tokens: int = 0,
                    raw_responses: list[str] | None = None,
-                   attempts: int | None = None) -> dict[str, Any]:
+                   attempts: int | None = None,
+                   prompt_version: str = PROMPT_VERSION) -> dict[str, Any]:
     """Build a result dict for an excluded episode."""
     result = dict(passthrough)
     result.update(
@@ -225,7 +239,7 @@ def _make_excluded(passthrough: dict[str, Any], reason: str,
         claude_reason=claude_reason,
         exclusion_reason=reason,
         claude_model=model,
-        prompt_version=PROMPT_VERSION,
+        prompt_version=prompt_version,
         input_tokens=input_tokens,
         output_tokens=output_tokens,
     )
@@ -242,6 +256,7 @@ def validate_episode(
     max_tokens: int = 512,
     temperature: float = 0.0,
     max_attempts: int = DEFAULT_MAX_ATTEMPTS,
+    include_question: bool = True,
 ) -> dict[str, Any]:
     """Label one episode using Claude.
 
@@ -256,25 +271,31 @@ def validate_episode(
     An API error on the first request propagates (the caller decides).  One
     after a completed response is recorded as ``api_error`` with the earlier
     responses and tokens kept; credential errors always propagate.
+
+    ``include_question=False`` leaves the question out of Claude's input and
+    records ``prompt_version(False)`` on the row.
     """
     if max_attempts < 1:
         raise ValueError(f"max_attempts must be at least 1, got {max_attempts}")
+    version = prompt_version(include_question)
+    excluded = partial(_make_excluded, prompt_version=version)
     passthrough = _extract_passthrough(episode)
 
     missing = missing_required_fields(episode)
     if missing == ["critic_advocated_answer"] and episode.get("critic_noncommittal") is True:
         # Noncommittal Critic: no position to adopt or retain, so out by rule.
-        result = _make_excluded(passthrough, "missing_field:critic_advocated_answer")
+        result = excluded(passthrough, "missing_field:critic_advocated_answer")
         result.update(behavior_label="out", label_source=RULE_NONCOMMITTAL)
         return result
     if missing:
-        return _make_excluded(passthrough, f"missing_field:{missing[0]}")
+        return excluded(passthrough, f"missing_field:{missing[0]}")
 
     prompt = build_labeling_prompt(
         question=episode["question"],
         a1=episode["solver_attempt_1"],
         c1=episode["critic_advocated_answer"],
         a2=episode["solver_attempt_2"],
+        include_question=include_question,
     )
 
     raw_responses: list[str] = []
@@ -292,8 +313,8 @@ def validate_episode(
             if not raw_responses or is_fatal_api_error(exc):
                 raise
             # Earlier responses were billed: keep them with the failure.
-            return _make_excluded(passthrough, reason="api_error", claude_reason=str(exc),
-                                  **dict(audit, attempts=len(raw_responses) + 1))
+            return excluded(passthrough, reason="api_error", claude_reason=str(exc),
+                            **dict(audit, attempts=len(raw_responses) + 1))
         raw_responses.append(api_result.text)
         input_tokens += api_result.input_tokens
         output_tokens += api_result.output_tokens
@@ -301,7 +322,7 @@ def validate_episode(
                      output_tokens=output_tokens, raw_responses=raw_responses)
 
         if api_result.stop_reason != "end_turn":
-            return _make_excluded(
+            return excluded(
                 passthrough, reason=f"incomplete_response:{api_result.stop_reason}", **audit)
         try:
             parsed = parse_label_response(api_result.text)
@@ -309,7 +330,7 @@ def validate_episode(
         except ValueError as exc:
             parse_failure = str(exc)
     else:
-        return _make_excluded(passthrough, reason="parse_error", claude_reason=parse_failure, **audit)
+        return excluded(passthrough, reason="parse_error", claude_reason=parse_failure, **audit)
 
     label = parsed["label"]
     reason = parsed["reason"]
@@ -319,7 +340,7 @@ def validate_episode(
         behavior_label=label,
         label_source="claude",
         claude_model=api_result.model,
-        prompt_version=PROMPT_VERSION,
+        prompt_version=version,
         input_tokens=input_tokens,
         output_tokens=output_tokens,
         claude_raw_responses=raw_responses,
@@ -365,6 +386,7 @@ def validate_batch(
     max_tokens: int = 512,
     temperature: float = 0.0,
     max_attempts: int = DEFAULT_MAX_ATTEMPTS,
+    include_question: bool = True,
 ) -> dict[str, Any]:
     """Process episodes, writing each result to *output_path* as soon as it is known.
 
@@ -400,13 +422,14 @@ def validate_batch(
                 row = validate_episode(
                     client, episode,
                     max_tokens=max_tokens, temperature=temperature,
-                    max_attempts=max_attempts,
+                    max_attempts=max_attempts, include_question=include_question,
                 )
             except Exception as exc:
                 if is_fatal_api_error(exc):
                     raise
                 row = _make_excluded(
                     _extract_passthrough(episode),
+                    prompt_version=prompt_version(include_question),
                     reason="api_error",
                     claude_reason=str(exc),
                 )

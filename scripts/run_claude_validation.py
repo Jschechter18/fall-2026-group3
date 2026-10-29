@@ -45,13 +45,13 @@ from dotenv import load_dotenv
 
 from mas_sae.evaluation.claude_validator import (
     DEFAULT_MAX_ATTEMPTS,
-    PROMPT_VERSION,
     alignment_exclusions,
     is_technical_error,
     build_labeling_prompt,
     export_binary_labels,
     export_exclusions,
     missing_required_field,
+    prompt_version,
     validate_batch,
 )
 from mas_sae.experiments.artifacts import (
@@ -120,6 +120,11 @@ def parse_args(argv=None):
         "--retry-technical-errors-from", type=Path, default=None, metavar="RUN_DIR",
         help="Process only episodes that ended in a technical error (API, parse, truncated) "
              "in RUN_DIR, an earlier run over the same --episodes file.",
+    )
+    parser.add_argument(
+        "--no-question", action="store_true",
+        help="Leave the question out of Claude's input (experimental variant, recorded as "
+             "prompt_version <v>_noq). The saved data is unchanged.",
     )
     parser.add_argument(
         "--dry-run", action="store_true",
@@ -248,7 +253,7 @@ def main(argv=None) -> None:
     selection = selection_record(episodes)
 
     if args.dry_run:
-        print(f"\n--- DRY RUN (prompt_version={PROMPT_VERSION}) ---")
+        print(f"\n--- DRY RUN (prompt_version={prompt_version(not args.no_question)}) ---")
         print(f"Model: {args.model_id}")
         print(f"Condition: critic_condition={CONDITION!r}, partition={args.partition!r}")
         print(f"Episodes to process: {len(episodes)}")
@@ -260,6 +265,7 @@ def main(argv=None) -> None:
                 a1=ep.get("solver_attempt_1", ""),
                 c1=ep.get("critic_advocated_answer", ""),
                 a2=ep.get("solver_attempt_2", ""),
+                include_question=not args.no_question,
             )
             print(f"\n--- Episode {i} ({ep.get('question_id', '?')}) ---")
             print(f"Prompt length: {len(prompt)} chars")
@@ -296,6 +302,7 @@ def main(argv=None) -> None:
             client, episodes,
             output_path=output_dir / "raw_results.jsonl",
             max_attempts=args.max_attempts,
+            include_question=not args.no_question,
         )
     except (ClientError, NoCredentialsError) as exc:
         print(f"\nERROR: stopped on a credential/permission error ({exc}). Rows completed "
@@ -314,7 +321,7 @@ def main(argv=None) -> None:
     )
 
     summary["model_id"] = args.model_id
-    summary["prompt_version"] = PROMPT_VERSION
+    summary["prompt_version"] = prompt_version(not args.no_question)
     summary["episodes_path"] = str(episodes_path)
     summary["episodes_sha256"] = episodes_sha256
     summary["condition_filter"] = CONDITION

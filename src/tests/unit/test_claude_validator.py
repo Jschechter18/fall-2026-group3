@@ -1096,3 +1096,40 @@ class TestAuditFixes:
             {"Error": {"Code": "ExpiredTokenException", "Message": "x"}}, "InvokeModel")]
         with pytest.raises(ClientError):
             validate_batch(client, [_episode()], output_path=tmp_path / "o.jsonl")
+
+
+class TestQuestionFreeVariant:
+
+    def test_prompt_omits_only_the_question(self):
+        with_q = build_labeling_prompt("Who founded Paris?", "A1x", "C1x", "A2x")
+        no_q = build_labeling_prompt("Who founded Paris?", "A1x", "C1x", "A2x", include_question=False)
+        template = with_q[:with_q.index("{")]
+        assert no_q.startswith(template)  # instructions unchanged
+        payload = json.loads(no_q[len(template):])
+        assert payload == {"A1": "A1x", "C1": "C1x", "A2": "A2x"}
+        assert "Who founded Paris?" not in no_q
+
+    def test_rows_record_the_variant_version(self, tmp_path):
+        from mas_sae.evaluation.claude_validator import prompt_version
+
+        client = _mock_client(label="adoption")
+        row = validate_episode(client, _episode(), include_question=False)
+        assert row["prompt_version"] == prompt_version(False) == PROMPT_VERSION + "_noq"
+        assert _episode()["question"] not in client.generate.call_args.args[0]
+        rule = validate_episode(_mock_client(), _episode(c1=None, extra={"critic_noncommittal": True}),
+                                include_question=False)
+        assert rule["prompt_version"] == prompt_version(False)
+        failing = MagicMock(spec=["generate", "close"])
+        failing.generate.side_effect = RuntimeError("boom")
+        summary = validate_batch(failing, [_episode()], output_path=tmp_path / "o.jsonl", include_question=False)
+        assert summary["results"][0]["prompt_version"] == prompt_version(False)
+
+    def test_default_keeps_question_and_version(self):
+        client = _mock_client(label="adoption")
+        row = validate_episode(client, _episode())
+        assert row["prompt_version"] == PROMPT_VERSION
+        assert _episode()["question"] in client.generate.call_args.args[0]
+
+    def test_cli_flag(self):
+        assert CLI.parse_args(["--episodes", "x", "--output", "y", "--no-question"]).no_question
+        assert not CLI.parse_args(["--episodes", "x", "--output", "y"]).no_question
