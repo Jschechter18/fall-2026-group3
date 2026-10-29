@@ -1,5 +1,10 @@
 # Distributed episode collection
 
+For copy-and-paste commands on two EC2 workers, follow the
+[MuSiQue-only smoke test](distributed_collection_smoke_test.md). It includes
+school SSO setup, separate worker assignments, S3 transfer, finalization, and
+checks against the original activation chunks.
+
 The unit of work is a **question**, not an activation row. Preparation freezes
 the question payload, partition, seed, and ordered chunk membership before any
 model outcome is observed. A worker invocation loads its models, processes one
