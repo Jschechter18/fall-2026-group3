@@ -33,6 +33,7 @@ Usage:
 """
 
 import argparse
+import csv
 import json
 import os
 import sys
@@ -44,10 +45,12 @@ from botocore.exceptions import ClientError, NoCredentialsError
 from dotenv import load_dotenv
 
 from mas_sae.evaluation.claude_validator import (
+    CANDIDATE_SOURCES,
     DEFAULT_MAX_ATTEMPTS,
     alignment_exclusions,
     is_technical_error,
     build_labeling_prompt,
+    candidates_shown,
     export_binary_labels,
     export_exclusions,
     missing_required_field,
@@ -122,6 +125,11 @@ def parse_args(argv=None):
              "in RUN_DIR, an earlier run over the same --episodes file.",
     )
     parser.add_argument(
+        "--partitions", type=Path, default=None,
+        help="Frozen partitions.csv; attaches each episode's partition by question_id for runs whose "
+             "records carry none (e.g. the candidates run). Questions it lacks are reported, not labeled.",
+    )
+    parser.add_argument(
         "--no-question", action="store_true",
         help="Leave the question out of Claude's input (experimental variant, recorded as "
              "prompt_version <v>_noq). The saved data is unchanged.",
@@ -161,6 +169,35 @@ def filter_by_condition(
         if key == condition:
             matching.append(ep)
     return matching, counts
+
+
+def attach_partitions(episodes: list[dict], path: Path) -> tuple[list[dict], list[str]]:
+    """Copy each episode with its frozen partition; return (assigned, question_ids not in the file).
+
+    A record that already carries a different partition is refused rather than overwritten.
+    """
+    with path.open(newline="", encoding="utf-8") as fh:
+        frozen = {row["question_id"]: row["partition"] for row in csv.DictReader(fh)}
+    assigned, unpartitioned = [], []
+    for ep in episodes:
+        partition = frozen.get(ep.get("question_id"))
+        if partition is None:
+            unpartitioned.append(ep.get("question_id"))
+        elif ep.get("partition", partition) != partition:
+            raise ValueError(f"{ep.get('episode_id')}: record partition {ep['partition']!r} "
+                             f"differs from frozen {partition!r}")
+        else:
+            assigned.append({**ep, "partition": partition})
+    return assigned, unpartitioned
+
+
+def single_presentation(episodes: list[dict]) -> str | None:
+    """The one A2 presentation of the selected episodes; a mixed file is refused."""
+    presentations = {ep.get("a2_presentation") for ep in episodes}
+    if len(presentations) > 1:
+        raise ValueError(f"episodes mix A2 presentations {sorted(map(str, presentations))}; "
+                         "label each presentation in its own run")
+    return next(iter(presentations), None)
 
 
 def filter_by_partition(episodes: list[dict], partition: str) -> list[dict]:
@@ -231,6 +268,11 @@ def main(argv=None) -> None:
         print(f"  {cond}: {count}{marker}")
 
     try:
+        unpartitioned: list[str] = []
+        if args.partitions is not None:
+            natural, unpartitioned = attach_partitions(natural, args.partitions)
+            print(f"Frozen partitions attached from {args.partitions}: {len(natural)} assigned, "
+                  f"{len(unpartitioned)} not in the file (not labeled)")
         in_partition = filter_by_partition(natural, args.partition)
         print(f"Partition filter (partition={args.partition!r}): "
               f"{len(in_partition)} of {len(natural)} natural episode(s)")
@@ -240,6 +282,7 @@ def main(argv=None) -> None:
             print(f"Retry filter: {len(in_partition)} episode(s) with technical errors in "
                   f"{args.retry_technical_errors_from}")
         episodes, n_skipped = select_episodes(in_partition, args.limit)
+        presentation = single_presentation(episodes)
     except ValueError as exc:
         print(f"\nERROR: {exc}", file=sys.stderr)
         sys.exit(1)
@@ -253,19 +296,24 @@ def main(argv=None) -> None:
     selection = selection_record(episodes)
 
     if args.dry_run:
-        print(f"\n--- DRY RUN (prompt_version={prompt_version(not args.no_question)}) ---")
+        print(f"\n--- DRY RUN (prompt_version={prompt_version(not args.no_question, presentation)}) ---")
         print(f"Model: {args.model_id}")
-        print(f"Condition: critic_condition={CONDITION!r}, partition={args.partition!r}")
+        print(f"Condition: critic_condition={CONDITION!r}, partition={args.partition!r}, "
+              f"a2_presentation={presentation!r}")
         print(f"Episodes to process: {len(episodes)}")
         for item in selection:
             print(f"  {json.dumps(item)}")
         for i, ep in enumerate(episodes[:3]):
+            candidates = (candidates_shown(ep.get("solver_attempt_1", ""), ep.get("critic_advocated_answer", ""),
+                                           ep["candidate_order"])
+                          if presentation == "candidates" and ep.get("candidate_order") in CANDIDATE_SOURCES else None)
             prompt = build_labeling_prompt(
                 question=ep.get("question", ""),
                 a1=ep.get("solver_attempt_1", ""),
                 c1=ep.get("critic_advocated_answer", ""),
                 a2=ep.get("solver_attempt_2", ""),
                 include_question=not args.no_question,
+                candidates=candidates,
             )
             print(f"\n--- Episode {i} ({ep.get('question_id', '?')}) ---")
             print(f"Prompt length: {len(prompt)} chars")
@@ -321,7 +369,11 @@ def main(argv=None) -> None:
     )
 
     summary["model_id"] = args.model_id
-    summary["prompt_version"] = prompt_version(not args.no_question)
+    summary["prompt_version"] = prompt_version(not args.no_question, presentation)
+    summary["a2_presentation"] = presentation
+    summary["partitions_path"] = str(args.partitions) if args.partitions else None
+    summary["partitions_sha256"] = sha256_file(args.partitions) if args.partitions else None
+    summary["n_unpartitioned"] = len(unpartitioned)
     summary["episodes_path"] = str(episodes_path)
     summary["episodes_sha256"] = episodes_sha256
     summary["condition_filter"] = CONDITION

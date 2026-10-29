@@ -1133,3 +1133,114 @@ class TestQuestionFreeVariant:
     def test_cli_flag(self):
         assert CLI.parse_args(["--episodes", "x", "--output", "y", "--no-question"]).no_question
         assert not CLI.parse_args(["--episodes", "x", "--output", "y"]).no_question
+
+
+# ---------------------------------------------------------------------------
+# candidates presentation (natural_4b_full9_candidates)
+# ---------------------------------------------------------------------------
+
+def _candidate_episode(order="critic_first", **kw):
+    return _episode(a1="Paris", c1="Lyon", a2=kw.pop("a2", "Candidate A"),
+                    extra={"a2_presentation": "candidates", "candidate_order": order,
+                           "critic_condition": "natural",
+                           # record fields Claude must never see
+                           "solver_behavior": "adopted_critic", "pr153_label": "adoption",
+                           "ground_truth": "GOLD-ANSWER", **kw})
+
+
+class TestCandidatesPresentation:
+
+    def test_mapping_matches_repository_letter_sources(self):
+        pytest.importorskip("torch")  # behavior_labels imports the agents
+        from mas_sae.evaluation.behavior_labels import LETTER_SOURCES
+        from mas_sae.evaluation.claude_validator import CANDIDATE_SOURCES
+        rename = {"a1": "A1", "critic": "C1"}
+        assert CANDIDATE_SOURCES == {order: {k: rename[v] for k, v in m.items()} for order, m in LETTER_SOURCES.items()}
+
+    @pytest.mark.parametrize("order, shown", [
+        ("a1_first", {"Candidate A": "Paris", "Candidate B": "Lyon"}),
+        ("critic_first", {"Candidate A": "Lyon", "Candidate B": "Paris"}),
+    ])
+    def test_candidates_shown(self, order, shown):
+        from mas_sae.evaluation.claude_validator import candidates_shown
+        assert candidates_shown("Paris", "Lyon", order) == shown
+
+    def test_prompt_adds_display_but_keeps_rules(self):
+        from mas_sae.evaluation.claude_validator import candidates_shown
+        plain = build_labeling_prompt("Q?", "Paris", "Lyon", "Candidate A")
+        cand = build_labeling_prompt("Q?", "Paris", "Lyon", "Candidate A",
+                                     candidates=candidates_shown("Paris", "Lyon", "critic_first"))
+        rules = plain[:plain.index("{")]
+        assert cand.startswith(rules)  # the four label rules are unchanged
+        payload = json.loads(cand[cand.index("{"):])
+        assert payload["candidates_shown_to_solver"] == {"Candidate A": "Lyon", "Candidate B": "Paris"}
+        assert "name a candidate by its letter" in cand
+
+    def test_validate_candidates_episode(self):
+        client = _mock_client(label="adoption")
+        row = validate_episode(client, _candidate_episode())
+        prompt = client.generate.call_args.args[0]
+        payload = json.loads(prompt[prompt.index("{"):])
+        assert payload["candidates_shown_to_solver"]["Candidate A"] == "Lyon"
+        assert row["prompt_version"] == PROMPT_VERSION + "_candidates"
+        assert (row["a2_presentation"], row["candidate_order"]) == ("candidates", "critic_first")
+
+    def test_claude_never_sees_reference_labels_or_gold(self):
+        client = _mock_client(label="adoption")
+        validate_episode(client, _candidate_episode())
+        prompt = client.generate.call_args.args[0]
+        for hidden in ("pr153_label", "solver_behavior", "adopted_critic", "GOLD-ANSWER", "ground_truth"):
+            assert hidden not in prompt
+
+    @pytest.mark.parametrize("order", [None, "bogus"])
+    def test_missing_candidate_order_is_a_data_error(self, order):
+        client = _mock_client()
+        row = validate_episode(client, _candidate_episode(order=order))
+        client.generate.assert_not_called()
+        assert row["exclusion_reason"] == "missing_field:candidate_order"
+        assert row["behavior_label"] is None and not is_technical_error(row)
+
+    def test_feedback_episodes_unchanged(self):
+        client = _mock_client(label="adoption")
+        row = validate_episode(client, _episode(extra={"a2_presentation": "feedback"}))
+        assert "candidates_shown_to_solver" not in client.generate.call_args.args[0]
+        assert row["prompt_version"] == PROMPT_VERSION
+
+
+class TestCliPartitionsAndPresentation:
+
+    def _partitions(self, tmp_path, rows):
+        path = tmp_path / "partitions.csv"
+        with path.open("w", newline="") as fh:
+            w = csv.writer(fh); w.writerow(["question_id", "source_split", "partition", "hop_group"])
+            w.writerows(rows)
+        return path
+
+    def test_attach_partitions(self, tmp_path):
+        path = self._partitions(tmp_path, [["q1", "train", "train", "2hop"], ["q2", "train", "test", "2hop"]])
+        eps = [{"question_id": "q1", "episode_id": "e1"}, {"question_id": "q2", "episode_id": "e2"},
+               {"question_id": "q3", "episode_id": "e3"}]
+        assigned, unpartitioned = CLI.attach_partitions(eps, path)
+        assert [(e["question_id"], e["partition"]) for e in assigned] == [("q1", "train"), ("q2", "test")]
+        assert unpartitioned == ["q3"]
+        assert "partition" not in eps[0]  # source records untouched
+
+    def test_attach_partitions_refuses_conflict(self, tmp_path):
+        path = self._partitions(tmp_path, [["q1", "train", "train", "2hop"]])
+        with pytest.raises(ValueError, match="differs from frozen"):
+            CLI.attach_partitions([{"question_id": "q1", "episode_id": "e1", "partition": "test"}], path)
+
+    def test_mixed_presentations_refused(self):
+        with pytest.raises(ValueError, match="mix A2 presentations"):
+            CLI.single_presentation([{"a2_presentation": "candidates"}, {"a2_presentation": "feedback"}])
+        assert CLI.single_presentation([{"a2_presentation": "candidates"}] * 2) == "candidates"
+
+    def test_dry_run_on_candidates_with_partitions(self, tmp_path, capsys):
+        path = self._partitions(tmp_path, [["musique:2hop__test_1", "train", "train", "2hop"]])
+        episodes = tmp_path / "interactions.jsonl"
+        ep = _candidate_episode(); ep.pop("partition")
+        write_jsonl(episodes, [ep])
+        CLI.main(["--episodes", str(episodes), "--output", str(tmp_path / "out"), "--partitions", str(path), "--dry-run"])
+        out = capsys.readouterr().out
+        assert "a2_presentation='candidates'" in out and PROMPT_VERSION + "_candidates" in out
+        assert not (tmp_path / "out").exists()

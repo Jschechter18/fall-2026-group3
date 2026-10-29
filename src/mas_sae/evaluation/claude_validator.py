@@ -52,10 +52,22 @@ PROMPT_VERSION = "claude_binary_v3"
 # (PR #153's rules compare the A1/C1/A2 texts only).  The saved data keeps the question.
 NO_QUESTION_SUFFIX = "_noq"
 
+# Candidates presentation: A2 was produced after the Solver saw A1 and C1 as labelled
+# candidates, so Claude also gets that display (rules unchanged, prompt input extended).
+CANDIDATES_SUFFIX = "_candidates"
 
-def prompt_version(include_question: bool = True) -> str:
-    """Version recorded on every row: ``PROMPT_VERSION``, plus ``_noq`` without the question."""
-    return PROMPT_VERSION if include_question else PROMPT_VERSION + NO_QUESTION_SUFFIX
+# Which text the Solver saw as "Candidate A"/"Candidate B" for each candidate_order.
+# Mirrors behavior_labels.LETTER_SOURCES (a test keeps them equal); not imported because
+# that module pulls in torch.
+CANDIDATE_SOURCES = {"a1_first": {"A": "A1", "B": "C1"},
+                     "critic_first": {"A": "C1", "B": "A1"}}
+
+
+def prompt_version(include_question: bool = True, presentation: str | None = None) -> str:
+    """Version recorded on every row: ``PROMPT_VERSION`` plus ``_noq`` without the question
+    and ``_candidates`` for candidates-presentation episodes."""
+    return (PROMPT_VERSION + ("" if include_question else NO_QUESTION_SUFFIX)
+            + (CANDIDATES_SUFFIX if presentation == "candidates" else ""))
 
 # label_source of out labels taken from critic_noncommittal metadata, not from Claude.
 RULE_NONCOMMITTAL = "rule:critic_noncommittal"
@@ -134,17 +146,37 @@ BINARY_LABEL_COLUMNS = [
 # Prompt construction
 # ---------------------------------------------------------------------------
 
+_CANDIDATES_NOTE = (
+    "In this episode the Solver was shown A1 and C1 as two labelled candidates, "
+    "listed under candidates_shown_to_solver. A2 may name a candidate by its letter; "
+    "treat such a reply as the candidate it names.\n\n"
+)
+
+
+def candidates_shown(a1: str, c1: str, candidate_order: str) -> dict[str, str]:
+    """``{"Candidate A": text, "Candidate B": text}`` exactly as the Solver saw them."""
+    texts = {"A1": a1, "C1": c1}
+    return {f"Candidate {letter}": texts[source]
+            for letter, source in CANDIDATE_SOURCES[candidate_order].items()}
+
+
 def build_labeling_prompt(question: str, a1: str, c1: str, a2: str, *,
-                          include_question: bool = True) -> str:
+                          include_question: bool = True,
+                          candidates: dict[str, str] | None = None) -> str:
     """Build the user message for Claude behavioral labeling.
 
     Gold answers and supporting paragraphs are deliberately omitted so that
     Claude judges behavior, not correctness.  With ``include_question=False``
-    the question is omitted too and only A1, C1 and A2 are compared.
+    the question is omitted too and only A1, C1 and A2 are compared.  With
+    ``candidates`` (candidates presentation) the labelled display the Solver saw
+    is added, so a reply such as "Candidate B" can be resolved.
     """
     payload = {"question": question} if include_question else {}
     payload.update(A1=a1, C1=c1, A2=a2)
-    return _PROMPT_TEMPLATE + json.dumps(payload, ensure_ascii=False)
+    if candidates is not None:
+        payload["candidates_shown_to_solver"] = candidates
+    note = _CANDIDATES_NOTE if candidates is not None else ""
+    return _PROMPT_TEMPLATE + note + json.dumps(payload, ensure_ascii=False)
 
 
 # ---------------------------------------------------------------------------
@@ -277,7 +309,8 @@ def validate_episode(
     """
     if max_attempts < 1:
         raise ValueError(f"max_attempts must be at least 1, got {max_attempts}")
-    version = prompt_version(include_question)
+    presentation = episode.get("a2_presentation")
+    version = prompt_version(include_question, presentation)
     excluded = partial(_make_excluded, prompt_version=version)
     passthrough = _extract_passthrough(episode)
 
@@ -289,6 +322,12 @@ def validate_episode(
         return result
     if missing:
         return excluded(passthrough, f"missing_field:{missing[0]}")
+    candidates = None
+    if presentation == "candidates":
+        if episode.get("candidate_order") not in CANDIDATE_SOURCES:
+            return excluded(passthrough, "missing_field:candidate_order")
+        candidates = candidates_shown(episode["solver_attempt_1"], episode["critic_advocated_answer"],
+                                      episode["candidate_order"])
 
     prompt = build_labeling_prompt(
         question=episode["question"],
@@ -296,6 +335,7 @@ def validate_episode(
         c1=episode["critic_advocated_answer"],
         a2=episode["solver_attempt_2"],
         include_question=include_question,
+        candidates=candidates,
     )
 
     raw_responses: list[str] = []
@@ -429,7 +469,7 @@ def validate_batch(
                     raise
                 row = _make_excluded(
                     _extract_passthrough(episode),
-                    prompt_version=prompt_version(include_question),
+                    prompt_version=prompt_version(include_question, episode.get("a2_presentation")),
                     reason="api_error",
                     claude_reason=str(exc),
                 )
