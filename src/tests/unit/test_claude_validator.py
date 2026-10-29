@@ -1244,3 +1244,22 @@ class TestCliPartitionsAndPresentation:
         out = capsys.readouterr().out
         assert "a2_presentation='candidates'" in out and PROMPT_VERSION + "_candidates" in out
         assert not (tmp_path / "out").exists()
+
+
+class TestGenerationSettings:
+
+    def test_claude5_uses_adaptive_client_without_temperature(self):
+        from mas_sae.evaluation.claude_adaptive_client import AdaptiveThinkingClaudeClient
+        g = CLI.generation_settings("us.anthropic.claude-opus-5-5", "medium", None)
+        assert g["client"] is AdaptiveThinkingClaudeClient and g["temperature"] is None
+        assert g["max_tokens"] == 8000 and g["client_kwargs"] == {"effort": "medium"}
+
+    def test_older_models_keep_shared_client(self):
+        from mas_sae.models.claude import ClaudeClient
+        g = CLI.generation_settings("us.anthropic.claude-sonnet-4-5-20250929-v1:0", "medium", None)
+        assert g["client"] is ClaudeClient and g["temperature"] == 0.0 and g["max_tokens"] == 512
+        assert g["effort"] is None
+
+    def test_cli_rejects_unknown_effort(self):
+        with pytest.raises(SystemExit):
+            CLI.parse_args(["--episodes", "x", "--output", "y", "--effort", "extreme"])

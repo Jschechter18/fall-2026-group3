@@ -64,6 +64,11 @@ from mas_sae.experiments.artifacts import (
     sha256_file,
 )
 from mas_sae.experiments.records import read_jsonl
+from mas_sae.evaluation.claude_adaptive_client import (
+    EFFORTS,
+    AdaptiveThinkingClaudeClient,
+    uses_adaptive_thinking,
+)
 from mas_sae.models.claude import ClaudeClient
 
 DEFAULT_MODEL_ID = "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
@@ -114,6 +119,14 @@ def parse_args(argv=None):
     parser.add_argument(
         "--model-id", type=str, default=DEFAULT_MODEL_ID,
         help=f"Bedrock model ID (default: {DEFAULT_MODEL_ID}).",
+    )
+    parser.add_argument(
+        "--effort", choices=EFFORTS, default="medium",
+        help="Claude 5.x only: output_config.effort (thinking depth; default medium).",
+    )
+    parser.add_argument(
+        "--max-tokens", type=positive_int, default=None,
+        help="Per-call output cap (default 512, or 8000 for Claude 5.x where thinking also counts).",
     )
     parser.add_argument(
         "--max-attempts", type=positive_int, default=DEFAULT_MAX_ATTEMPTS,
@@ -249,6 +262,15 @@ def technical_error_ids(run_dir: Path, episodes_sha256: str) -> set[str]:
     return {r["episode_id"] for r in read_jsonl(run_dir / "raw_results.jsonl") if is_technical_error(r)}
 
 
+def generation_settings(model_id: str, effort: str, max_tokens: int | None) -> dict:
+    """Client class and per-call settings for a model: Claude 5.x rejects temperature and always thinks."""
+    if uses_adaptive_thinking(model_id):
+        return {"client": AdaptiveThinkingClaudeClient, "client_kwargs": {"effort": effort},
+                "temperature": None, "max_tokens": max_tokens or 8000, "effort": effort}
+    return {"client": ClaudeClient, "client_kwargs": {}, "temperature": 0.0,
+            "max_tokens": max_tokens or 512, "effort": None}
+
+
 def main(argv=None) -> None:
     args = parse_args(argv)
 
@@ -297,7 +319,9 @@ def main(argv=None) -> None:
 
     if args.dry_run:
         print(f"\n--- DRY RUN (prompt_version={prompt_version(not args.no_question, presentation)}) ---")
-        print(f"Model: {args.model_id}")
+        dry = generation_settings(args.model_id, args.effort, args.max_tokens)
+        print(f"Model: {args.model_id} | client {dry['client'].__name__} | effort {dry['effort']} | "
+              f"max_tokens {dry['max_tokens']} | temperature {dry['temperature']}")
         print(f"Condition: critic_condition={CONDITION!r}, partition={args.partition!r}, "
               f"a2_presentation={presentation!r}")
         print(f"Episodes to process: {len(episodes)}")
@@ -336,7 +360,8 @@ def main(argv=None) -> None:
         print(f"\nERROR: AWS credentials rejected ({exc}). Refresh them in .env and rerun.",
               file=sys.stderr)
         sys.exit(1)
-    client = ClaudeClient(session=session, model_id=args.model_id)
+    settings = generation_settings(args.model_id, args.effort, args.max_tokens)
+    client = settings["client"](session=session, model_id=args.model_id, **settings["client_kwargs"])
 
     output_dir = Path(args.output)
     output_dir.mkdir(parents=True)
@@ -351,6 +376,8 @@ def main(argv=None) -> None:
             output_path=output_dir / "raw_results.jsonl",
             max_attempts=args.max_attempts,
             include_question=not args.no_question,
+            max_tokens=settings["max_tokens"],
+            temperature=settings["temperature"],
         )
     except (ClientError, NoCredentialsError) as exc:
         print(f"\nERROR: stopped on a credential/permission error ({exc}). Rows completed "
@@ -369,6 +396,11 @@ def main(argv=None) -> None:
     )
 
     summary["model_id"] = args.model_id
+    summary["client"] = settings["client"].__name__
+    summary["effort"] = settings["effort"]
+    summary["max_tokens"] = settings["max_tokens"]
+    summary["temperature"] = settings["temperature"]
+    summary["models_returned"] = sorted({r["claude_model"] for r in results if r.get("claude_model")})
     summary["prompt_version"] = prompt_version(not args.no_question, presentation)
     summary["a2_presentation"] = presentation
     summary["partitions_path"] = str(args.partitions) if args.partitions else None

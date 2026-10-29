@@ -286,7 +286,7 @@ def validate_episode(
     episode: dict[str, Any],
     *,
     max_tokens: int = 512,
-    temperature: float = 0.0,
+    temperature: float | None = 0.0,
     max_attempts: int = DEFAULT_MAX_ATTEMPTS,
     include_question: bool = True,
 ) -> dict[str, Any]:
@@ -347,7 +347,8 @@ def validate_episode(
                 system=LABELING_SYSTEM,
                 task="labeling",
                 max_tokens=max_tokens,
-                temperature=temperature,
+                # None for Claude 5.x models, which reject sampling parameters
+                **({} if temperature is None else {"temperature": temperature}),
             )
         except Exception as exc:
             if not raw_responses or is_fatal_api_error(exc):
@@ -424,7 +425,7 @@ def validate_batch(
     *,
     output_path: Path,
     max_tokens: int = 512,
-    temperature: float = 0.0,
+    temperature: float | None = 0.0,
     max_attempts: int = DEFAULT_MAX_ATTEMPTS,
     include_question: bool = True,
 ) -> dict[str, Any]:
