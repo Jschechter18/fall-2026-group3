@@ -1,1 +1,1 @@
-# LaTeX source for the final research paper
+# LaTeX literature review / report
