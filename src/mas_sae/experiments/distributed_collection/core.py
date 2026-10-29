@@ -13,10 +13,14 @@ from mas_sae.experiments.collection_artifacts import save_collection_artifacts
 from mas_sae.experiments.conditions import OMITTED
 from mas_sae.experiments.provenance import experiment_compatibility
 from mas_sae.experiments.records import read_jsonl, write_jsonl
-from .dataset import assign_families, collection_settings, read_manifest
+from .dataset import assign_families, collection_settings, read_manifest, split_settings
 
 
 def check_config(manifest, config):
+    if "split" not in manifest:
+        raise ValueError("Prepared manifest has no frozen split settings; prepare a new run")
+    if split_settings(config) != manifest["split"]:
+        raise ValueError("Split settings differ from the prepared manifest")
     if collection_settings(config) != manifest["settings"]:
         raise ValueError("Collection settings differ from the prepared manifest")
     if config["output"]["run_name"] != manifest["run_name"]:
@@ -191,9 +195,9 @@ def split_run(manifest_path, config):
     info = json.loads((merged/"collection.json").read_text())
     if info["manifest_sha256"] != manifest["manifest_sha256"] or info["files"] != _file_facts(merged):
         raise ValueError("Merged run identity or files changed")
-    split = config["dataset"]["split"]
+    split = manifest["split"]
     assignment = assign_families([r for r in manifest["questions"] if r["partition"] != "intervention"],
-        split["proportions"], split.get("seed", config["collection"]["seed"]), candidate_strata=True)
+        split["proportions"], split["seed"], candidate_strata=True)
     questions = [{**r, "partition": "intervention" if r["partition"] == "intervention"
                   else assignment[r["question_id"]]} for r in manifest["questions"]]
     raw_fixed = canonical_partitions(questions, storage_split="all")

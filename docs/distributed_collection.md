@@ -70,6 +70,11 @@ to the selected questions' complete families. Prepared membership never changes
 when work is retried. Per-question seeds and candidate orders are frozen before
 chunking and are independent of chunk count or worker assignment.
 
+Preparation also freezes `dataset.split` proportions and the effective split seed
+(defaulting to the collection seed). Collection and export reject changes to these
+settings; partition membership is still assigned during export. Manifests created
+before split settings were frozen must be prepared again.
+
 ## Collect on each EC2 worker
 
 Copy the same manifest and collection YAML to each worker. Original dataset

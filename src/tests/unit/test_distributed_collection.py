@@ -110,6 +110,39 @@ def test_prepare_is_chunk_independent_and_does_not_assign_research_splits(tmp_pa
         load_collection_config(path)
 
 
+@pytest.mark.parametrize("changed", ["seed", "proportions"])
+def test_export_rejects_split_changes_after_collection(tmp_path, monkeypatch, changed):
+    config = make_config(tmp_path, count=10)
+    path, manifest = prepare(tmp_path/"run", config, 2)
+    monkeypatch.setattr(core, "collect_examples", fixture_collector(manifest))
+    collect(path, manifest, config)
+    core.merge_run(path)
+    altered = copy.deepcopy(config)
+    altered["dataset"]["split"][changed] = (99 if changed == "seed" else
+        {"train": .8, "validation": .1, "test": .1})
+    with pytest.raises(ValueError, match="Split settings differ"):
+        core.split_run(path, altered)
+    assert not (path.parent/"prepared").exists()
+    core.split_run(path, config)
+    assert json.loads((path.parent/"prepared/split.json").read_text())["split"] == manifest["split"]
+
+
+def test_preparation_freezes_effective_split_settings(tmp_path):
+    config = make_config(tmp_path)
+    del config["dataset"]["split"]["seed"]
+    manifest = dataset.prepare_manifest(config, num_chunks=2)
+    assert manifest["split"]["seed"] == config["collection"]["seed"]
+    # An explicit default has the same meaning as an omitted seed.
+    config["dataset"]["split"]["seed"] = config["collection"]["seed"]
+    core.check_config(manifest, config)
+    config["dataset"]["split"]["proportions"]["train"] = .5
+    assert manifest["split"]["proportions"]["train"] == .6
+    assert dataset.prepare_manifest(config, num_chunks=2)["manifest_sha256"] != manifest["manifest_sha256"]
+    del manifest["split"]
+    with pytest.raises(ValueError, match="no frozen split settings; prepare a new run"):
+        core.check_config(manifest, config)
+
+
 def test_explicit_intervention_list_reserves_related_family(tmp_path):
     config = make_config(tmp_path)
     path = tmp_path/"ids.json"

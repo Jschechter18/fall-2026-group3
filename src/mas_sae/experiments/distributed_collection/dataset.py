@@ -120,6 +120,13 @@ def collection_settings(config):
     return {"roles": roles, "collection": collection}
 
 
+def split_settings(config):
+    """Resolve export settings now so later config edits cannot reshuffle a run."""
+    split = config["dataset"]["split"]
+    return {"proportions": dict(split["proportions"]),
+            "seed": split.get("seed", config["collection"]["seed"])}
+
+
 def assign_families(questions, proportions, seed, *, candidate_strata=False):
     """Allocate explicit families using the established shuffle and rounding rules."""
     families = defaultdict(list)
@@ -180,7 +187,7 @@ def prepare_manifest(config, *, num_chunks):
         chunks.append({"chunk_id": chunk_id, "start": start, "end": end})
         start = end
     basis = {"run_name": run_name, "inputs": master["inputs"], "questions": questions,
-             "settings": settings, "chunks": chunks}
+             "settings": settings, "split": split_settings(config), "chunks": chunks}
     return {**basis, "manifest_sha256": sha256_json(basis)}
 
 
