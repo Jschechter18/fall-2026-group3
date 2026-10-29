@@ -8,8 +8,8 @@ No model API calls are made here.
 ## Generator contract
 
 Produce a JSON object matching `SyntheticCandidate` in `contracts.py`, including
-`question_decomposition`. The existing Claude example script omits this field and
-will need to be adapted by the generation owner.
+`question_decomposition`. `generation.py` (below) does this; the older
+`examples/claude/claude_for_data_gen.py` omits this field.
 
 - IDs: one of `2hop`, `3hop1`, `3hop2`, `4hop1`, `4hop2`, `4hop3`, followed by
   `__` and a unique suffix (for example, a UUID). The generator owns ID uniqueness;
@@ -62,6 +62,32 @@ Punctuation is retained. Rewordings and punctuation-only variations can therefor
 pass: this is normalized exact matching, not semantic novelty detection. Importing
 originals is idempotent; the first stored match supplies the reported ID/source.
 A malformed import rolls back that file's additions.
+
+## Generating a batch
+
+`generation.py` asks Claude (via `mas_sae.models.claude.ClaudeClient` on Bedrock)
+for one record per call: question, answer, decomposition, one supporting paragraph
+per hop and three hard distractors. Each prompt fixes the step dependency shape of
+the hop type (for example `4hop3`: 1 → 2, 3 independent, 2 + 3 → 4). The remaining
+paragraphs up to 20 come from original MuSiQue records (`--original`), skipping
+titles already used and paragraphs that mention the answer. Code, not the model,
+shuffles paragraphs and assigns `idx`, `is_supporting`, step IDs and the record ID.
+Each response is pre-checked with `validate_candidate`; a failed parse, truncation
+or pre-check triggers one retry, and records that still fail are not written.
+
+```bash
+PYTHONPATH=src python scripts/generate_synthetic_musique.py --n 6 --seed 0
+```
+
+This makes paid API calls (one per record, two on retry) using the credentials in
+`.env`. Hop types cycle round-robin (`--hop-types` to restrict). Outputs go to
+`data/MuSiQue/synthetic/runs/<run-id>/generation/`: `candidates.jsonl`,
+`provenance.jsonl` (prompt version, topic, raw responses, tokens and errors, keyed
+by record ID) and `summary.json`. Then check the batch as below, passing
+`--output-dir` as the sibling `validation/` directory.
+
+Filler paragraphs are real text while supporting paragraphs may be invented, so a
+filler can occasionally conflict with an invented fact; check this in manual review.
 
 ## Checking a saved batch
 
