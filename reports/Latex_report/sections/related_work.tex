@@ -1,1 +1,78 @@
+\section{Related Work}
+\label{sec:related-work}
 
+\subsection{Multi-agent critique and model revision}
+
+Multi-agent LLM methods use interaction among model instances to improve a
+final response. Multi-agent debate, for example, allows agents to exchange
+arguments and revise their answers over several rounds, producing gains on
+some factual and reasoning tasks \cite{du2024debate}. A Solver--Critic system
+is a simpler instance of the same idea: one model proposes an answer and a
+second model evaluates it before revision. These approaches are motivated by
+the possibility that one agent can expose errors missed by another.
+
+Revision is not automatically equivalent to correction. Huang et
+al.\ show that LLMs can struggle to improve reasoning through intrinsic
+self-correction without reliable external feedback
+\cite{huang2024selfcorrect}. Conversely, models may accept external signals
+for reasons unrelated to their correctness. Work on sycophancy documents cases
+in which models adapt responses to a user's stated view even when doing so
+reduces truthfulness \cite{sharma2024sycophancy}. Together, these findings
+motivate separating three questions: whether feedback is correct, whether the
+Solver adopts it, and whether adoption improves the final answer. Our primary
+behavioral target concerns adoption rather than correctness, while correctness
+is retained for stratified analysis.
+
+\subsection{Sparse autoencoders for language-model representations}
+
+Transformer residual streams are high-dimensional and superposed: a single
+dimension need not correspond to a single human-interpretable concept. SAEs
+learn an overcomplete dictionary that reconstructs dense activations from a
+sparse set of latent features. Cunningham et al.\ demonstrated that SAE
+features can be substantially more interpretable than raw neuron activations
+\cite{cunningham2023sparse}. Subsequent work studied how SAE design and scale
+affect sparsity, reconstruction quality, and downstream interpretability
+\cite{gao2025scaling}.
+
+SAE features remain learned model components rather than guaranteed semantic
+units. Reconstruction error, inactive features, correlated latents, and
+feature splitting can all complicate interpretation. For that reason, this
+study compares multiple SAE variants and measures both reconstruction behavior
+and downstream predictive utility. A general pretrained SAE tests whether
+broadly learned features transfer to feedback processing, whereas
+interaction-trained SAEs test whether training on the experiment's activation
+distribution better captures the relevant structure.
+
+\subsection{Probing and causal validation}
+
+Linear probes test whether information can be decoded from an intermediate
+representation \cite{alain2016probes}. Their simplicity makes coefficients
+useful for ranking candidate features, but probe performance alone does not
+show that the model uses those features to produce its behavior. Probes may
+exploit correlated information or properties of the dataset rather than a
+causal mechanism. Control tasks, held-out evaluation, and careful capacity
+selection are therefore necessary when interpreting probe results
+\cite{hewitt2019control}.
+
+Feature intervention provides a stronger test. Work on sparse feature
+circuits demonstrates how sparse features can support both circuit discovery
+and targeted model editing \cite{marks2025circuits}. Following this general
+principle, our analysis uses probe coefficients only to nominate candidate SAE
+features. We then replay held-out Solver interactions while ablating selected
+features and compare the resulting adoption rate with no-intervention and
+random-feature controls. This progression from decoding to intervention is
+intended to distinguish features that merely describe feedback uptake from
+features that help produce it.
+
+\subsection{Multi-hop question answering as an experimental setting}
+
+MuSiQue constructs multi-hop questions by composing connected single-hop
+questions and filtering shortcuts that allow models to bypass the intended
+reasoning chain \cite{trivedi2022musique}. It is useful for the present study
+because it supplies question identifiers, supporting passages, known answers,
+and answer aliases at sufficient scale for repeated Solver--Critic
+interactions. Its range of two- to four-hop questions also creates variation
+in difficulty. At the same time, exact or normalized string matching cannot
+resolve every semantic equivalence. Our labeling procedure therefore uses
+question-local aliases and conservative text rules, and excludes cases whose
+adoption status cannot be determined reliably.

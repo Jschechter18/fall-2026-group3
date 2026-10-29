@@ -1,1 +1,104 @@
+\section{Exploratory Data Analysis}
+\label{sec:eda}
 
+\subsection{Dataset construction}
+
+The current candidate-presentation collection contains 22,355 sampled MuSiQue
+questions. Each episode follows the same sequence: the Solver produces an
+initial answer (A1), the Critic independently reviews that answer and supplies
+a recommendation (C1), and the Solver produces a second answer (A2) after both
+candidates are presented in randomized order. Generation is deterministic for
+the recorded run. Solver activations are captured at decoder layers 4, 8, 17,
+25, 29, 30, 31, 32, and 33 so that later analyses can compare where
+feedback-related behavior is most decodable.
+
+Questions are assigned to frozen train, validation, test, and intervention
+partitions by question identifier. All records associated with one question
+remain in the same partition. The training partition is used to fit SAEs and
+probes, validation supports model and feature selection, test is reserved for
+final predictive evaluation, and the intervention partition is reserved for
+causal experiments. This question-level separation prevents related
+interactions from appearing on both sides of an evaluation boundary.
+
+\subsection{Behavior-label distribution}
+
+The labeling policy compares A1, C1, and A2 using normalized text,
+question-specific answer aliases, and conservative rules for refusals and
+ambiguous responses. Each episode receives one of four mutually exclusive
+labels:
+
+\begin{itemize}
+    \item \textbf{Adoption}: A1 and C1 differ, and A2 follows the Critic.
+    \item \textbf{Retention}: A1 and C1 differ, and A2 retains A1.
+    \item \textbf{Agreement}: A1 and C1 agree, and A2 preserves that answer.
+    \item \textbf{Out}: the behavior cannot be compared reliably or the
+    episode fails an inclusion rule.
+\end{itemize}
+
+\begin{table}[htbp]
+    \centering
+    \caption{Behavior labels in the candidate-presentation collection.}
+    \label{tab:eda-label-counts}
+    \begin{tabular}{lrr}
+        \toprule
+        Label & Episodes & Share \\
+        \midrule
+        Adoption  & 5,834 & 26.1\% \\
+        Retention & 4,810 & 21.5\% \\
+        Agreement & 8,451 & 37.8\% \\
+        Out       & 3,260 & 14.6\% \\
+        \midrule
+        Total     & 22,355 & 100.0\% \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+Adoption and retention together form the primary binary cohort of 10,644
+episodes, or 47.6\% of the full collection. Within this cohort, adoption
+accounts for 54.8\% and retention for 45.2\%. This is substantially more
+balanced than an earlier free-form-feedback labeling approach, which was
+dominated by adoption. Nevertheless, class-aware metrics such as balanced
+accuracy, per-class precision and recall, F1 score, and area under the ROC
+curve remain preferable to raw accuracy.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Behavior labels by frozen experimental partition.}
+    \label{tab:eda-partitions}
+    \begin{tabular}{lrrrr}
+        \toprule
+        Partition & Adoption & Retention & Agreement & Out \\
+        \midrule
+        Train        & 4,146 & 3,465 & 6,063 & 2,262 \\
+        Validation   &   625 &   491 &   901 &   396 \\
+        Test         &   529 &   416 &   755 &   292 \\
+        Intervention &   534 &   438 &   732 &   287 \\
+        Unassigned   &     0 &     0 &     0 &    23 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+The label proportions are broadly similar across the four frozen partitions,
+which reduces the risk that an observed evaluation difference is driven only
+by a major shift in the outcome distribution. The 23 unassigned questions are
+quarantined as \emph{Out} and are not used for model fitting or evaluation.
+
+\subsection{Data-quality observations}
+
+Several response patterns require special handling. The collection includes
+1,060 episodes in which both A1 and the Critic refuse or reject the premise;
+these are generally agreements rather than adoption events. Other ambiguous
+patterns include letter-only candidate selections, citation-only replies,
+hyphenation differences, hybrid answers that combine both candidates, and
+Critic responses that repeat A1 while nominally disagreeing. The final rules
+retain explicit flags for these cases and exclude uncertain comparisons from
+the primary binary target.
+
+These observations constrain the interpretation of downstream probes. A probe
+could learn answer length, refusal style, candidate position, or Critic
+correctness instead of an internal tendency to accept feedback. Downstream
+analysis should therefore include text-only and majority-class baselines,
+report results by relevant behavioral flags, and verify that candidate order
+is not predictive of the label. Probe-selected features should be interpreted
+as correlates until targeted intervention demonstrates an effect beyond
+random-feature and reconstruction controls.
