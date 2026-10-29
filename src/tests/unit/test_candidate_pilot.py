@@ -71,3 +71,86 @@ def test_refuses_unapproved_labels(tmp_path):
         PILOT.main(["--run", str(tmp_path), "--partitions", str(tmp_path / "p.csv"), "--labels", str(labels),
                     "--counts", str(counts), "--output", str(tmp_path / "out")])
     assert hashlib.sha256(labels.read_bytes()).hexdigest() != "0" * 64
+
+
+# ---------------------------------------------------------------------------
+# review fixes: frozen partitions are enforced, comparison is tied to the sampled file
+# ---------------------------------------------------------------------------
+
+def _write_partitions(path, rows):
+    with path.open("w", newline="") as fh:
+        fh.write("question_id,source_split,partition,hop_group\n")
+        for qid, partition in rows:
+            fh.write(f"{qid},train,{partition},2hop\n")
+
+
+def _fixture(tmp_path, *, frozen_override=None):
+    labels = _labels()
+    frozen = [(r["question_id"], r["partition"]) for r in labels if r["partition"] is not None]
+    if frozen_override:
+        frozen = [(q, frozen_override.get(q, p)) for q, p in frozen]
+    _write_partitions(tmp_path / "partitions.csv", frozen)
+    labels_path = tmp_path / "final_labels.jsonl"
+    write_jsonl(labels_path, labels)
+    counts = tmp_path / "counts.json"
+    counts.write_text(json.dumps({"labels_sha256": hashlib.sha256(labels_path.read_bytes()).hexdigest(),
+                                  "policy_version": "fixture"}))
+    run = tmp_path / "run"
+    write_jsonl(run / "train" / "interactions.jsonl",
+                [{"question_id": r["question_id"], "episode_id": r["question_id"] + "__natural__candidates",
+                  "candidate_order": "a1_first"} for r in labels if r["collected"]])
+    write_jsonl(run / "validation" / "interactions.jsonl", [])
+    return ["--run", str(run), "--partitions", str(tmp_path / "partitions.csv"), "--labels", str(labels_path),
+            "--counts", str(counts), "--output", str(tmp_path / "out")]
+
+
+def test_frozen_partitions_file_is_validated(tmp_path):
+    _write_partitions(tmp_path / "dup.csv", [("q1", "train"), ("q1", "test")])
+    with pytest.raises(ValueError, match="more than once"):
+        PILOT.read_frozen_partitions(tmp_path / "dup.csv")
+    _write_partitions(tmp_path / "bad.csv", [("q1", "holdout")])
+    with pytest.raises(ValueError, match="unknown partition"):
+        PILOT.read_frozen_partitions(tmp_path / "bad.csv")
+
+
+def test_labels_disagreeing_with_frozen_partitions_are_refused(tmp_path):
+    argv = _fixture(tmp_path, frozen_override={"2hop__3": "test", "2hop__90": "intervention"})
+    with pytest.raises(ValueError, match="disagree with the frozen partitions"):
+        PILOT.main(argv)
+    assert not (tmp_path / "out").exists()
+
+
+def test_end_to_end_selection_is_frozen_train_and_hashed(tmp_path):
+    argv = _fixture(tmp_path)
+    PILOT.main(argv)
+    out = tmp_path / "out"
+    selection = json.loads((out / "selection.json").read_text())
+    frozen = PILOT.read_frozen_partitions(tmp_path / "partitions.csv")
+    assert len(selection["episodes"]) == 250
+    assert all(frozen[e["question_id"]] == "train" for e in selection["episodes"])
+    assert selection["sampled_episodes_sha256"] == hashlib.sha256((out / "sampled_episodes.jsonl").read_bytes()).hexdigest()
+
+
+def _load_compare():
+    path = Path(__file__).resolve().parents[3] / "scripts" / "compare_claude_pr153.py"
+    spec = importlib.util.spec_from_file_location("compare_claude_pr153", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_comparison_refuses_runs_not_over_the_sampled_file(tmp_path):
+    compare = _load_compare()
+    sampled = tmp_path / "sampled_episodes.jsonl"
+    sampled.write_text('{"episode_id": "e1"}\n')
+    sha = hashlib.sha256(sampled.read_bytes()).hexdigest()
+    selection = {"sampled_episodes_sha256": sha}
+    compare.check_run_matches_selection({"episodes_sha256": sha, "episodes_path": str(sampled)}, selection)
+
+    with pytest.raises(SystemExit, match="differs from the sampled"):
+        compare.check_run_matches_selection({"episodes_sha256": "0" * 64, "episodes_path": str(sampled)}, selection)
+    with pytest.raises(SystemExit, match="no sampled_episodes_sha256"):
+        compare.check_run_matches_selection({"episodes_sha256": sha, "episodes_path": str(sampled)}, {})
+    sampled.write_text('{"episode_id": "e1", "solver_attempt_2": "edited"}\n')
+    with pytest.raises(SystemExit, match="has changed since it was sampled"):
+        compare.check_run_matches_selection({"episodes_sha256": sha, "episodes_path": str(sampled)}, selection)

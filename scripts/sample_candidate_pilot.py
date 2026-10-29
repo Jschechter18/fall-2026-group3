@@ -10,9 +10,11 @@ From the frozen *train* partition of the candidates run (natural_4b_full9_candid
 
 Writes ``sampled_episodes.jsonl`` (the unmodified source records in a seeded shuffled order,
 the only file the labeling run reads, so Claude never sees PR #153 labels, flags or team
-decisions) and ``selection.json`` (set membership, PR #153 label/flags/team label, seed and
-input hashes, for the comparison only). Refuses labels whose checksum differs from the
-approved PR #153 ``counts.json``.
+decisions) and ``selection.json`` (set membership, PR #153 label/flags/team label, seed,
+input hashes and the sampled file's own sha256, for the comparison only). Refuses labels
+whose checksum differs from the approved PR #153 ``counts.json``, and labels whose
+partitions disagree with the frozen ``--partitions`` file, which is the authority for
+membership; every selected question is re-checked to be frozen ``train``.
 
 Usage:
     PYTHONPATH=src python scripts/sample_candidate_pilot.py \\
@@ -23,6 +25,7 @@ Usage:
 """
 
 import argparse
+import csv
 import hashlib
 import json
 import random
@@ -34,6 +37,7 @@ from mas_sae.experiments.records import read_jsonl, write_jsonl
 
 APPROVED_COUNTS = Path("results/experiments/candidate_final_labels_20261027/counts.json")
 CLASSES = ("adoption", "retention", "agreement", "out")
+PARTITIONS = ("train", "validation", "test", "intervention")
 PER_CLASS = 50
 DIFFICULT_FLAGS = ("letter_reply", "citation_only", "critic_mentions_a1", "potential_hybrid")
 
@@ -86,6 +90,29 @@ def select_pilot(labels: list[dict], seed: int) -> dict[str, list[dict]]:
                                 **{r["question_id"]: f"difficult:{f}" for r, f in zip(difficult, DIFFICULT_FLAGS)}}}
 
 
+def read_frozen_partitions(path: Path) -> dict[str, str]:
+    """``{question_id: partition}`` from a frozen partitions.csv; duplicates and unknown partitions raise."""
+    frozen: dict[str, str] = {}
+    with path.open(newline="", encoding="utf-8") as fh:
+        for row in csv.DictReader(fh):
+            qid, partition = row["question_id"], row["partition"]
+            if qid in frozen:
+                raise ValueError(f"{path}: question {qid} appears more than once")
+            if partition not in PARTITIONS:
+                raise ValueError(f"{path}: question {qid} has unknown partition {partition!r}")
+            frozen[qid] = partition
+    return frozen
+
+
+def check_label_partitions(labels: list[dict], frozen: dict[str, str]) -> None:
+    """Every label's partition must equal the frozen one (``None`` = absent from the frozen file)."""
+    bad = [(r["question_id"], r["partition"], frozen.get(r["question_id"])) for r in labels
+           if r["partition"] != frozen.get(r["question_id"])]
+    if bad:
+        raise ValueError(f"{len(bad)} label partition(s) disagree with the frozen partitions, "
+                         f"e.g. {bad[:3]} (question, labels file, frozen)")
+
+
 def main(argv=None) -> None:
     args = parse_args(argv)
     ensure_output_available(args.output)
@@ -96,7 +123,13 @@ def main(argv=None) -> None:
         raise SystemExit(f"{args.labels} sha256 {labels_sha[:12]}… is not the approved PR #153 labels "
                          f"({approved['labels_sha256'][:12]}…)")
     labels = read_jsonl(args.labels)
+    frozen = read_frozen_partitions(args.partitions)
+    check_label_partitions(labels, frozen)
     picked = select_pilot(labels, args.seed)
+    outside = [r["question_id"] for r in picked["evaluation"] + picked["challenge"]
+               if frozen.get(r["question_id"]) != "train"]
+    if outside:
+        raise ValueError(f"{len(outside)} selected question(s) are not frozen train: {outside[:3]}")
 
     source = {}
     for split in ("train", "validation"):
@@ -133,6 +166,8 @@ def main(argv=None) -> None:
     }
     args.output.mkdir(parents=True)
     write_jsonl(args.output / "sampled_episodes.jsonl", episodes)
+    # the comparison refuses any run whose input file does not have exactly this hash
+    packet["sampled_episodes_sha256"] = sha256_file(args.output / "sampled_episodes.jsonl")
     (args.output / "selection.json").write_text(json.dumps(packet, indent=2) + "\n", encoding="utf-8")
     print(json.dumps({k: packet[k] for k in ("set_sizes", "evaluation_label_counts", "challenge_kind_counts")}, indent=2))
     print(f"Wrote {len(episodes)} episodes to {args.output}")

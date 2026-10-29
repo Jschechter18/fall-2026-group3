@@ -1,6 +1,7 @@
 """Compare a Claude validation run on the candidates pilot with the approved PR #153 labels.
 
-Reports the 200-episode evaluation set and the 50-episode challenge set separately:
+Refuses a run whose input file is not byte-identical to the sampled episodes (sha256 recorded
+in selection.json). Reports the 200-episode evaluation set and the 50-episode challenge set separately:
 confusion matrix, per-class precision/recall/F1, Cohen's kappa, adoption-vs-retention side
 agreement, and (evaluation only) accuracy re-weighted to the train population, because the
 sample is class-stratified. Team-reviewed challenge cases are also compared with the team's
@@ -27,7 +28,7 @@ from mas_sae.evaluation.claude_agreement import (
     per_class,
     weighted_accuracy,
 )
-from mas_sae.experiments.artifacts import ensure_output_available
+from mas_sae.experiments.artifacts import ensure_output_available, sha256_file
 from mas_sae.experiments.records import read_jsonl
 
 
@@ -40,6 +41,18 @@ def parse_args(argv=None):
                         help="USD per million input tokens (current Bedrock price); omit to skip cost")
     parser.add_argument("--price-output-per-mtok", type=float, default=None)
     return parser.parse_args(argv)
+
+
+def check_run_matches_selection(summary: dict, selection: dict) -> None:
+    """The run must have labeled exactly the sampled file: same sha256 then and now."""
+    expected = selection.get("sampled_episodes_sha256")
+    if not expected:
+        raise SystemExit("selection.json has no sampled_episodes_sha256; regenerate it with sample_candidate_pilot.py")
+    if summary.get("episodes_sha256") != expected:
+        raise SystemExit(f"run input sha256 {str(summary.get('episodes_sha256'))[:12]}… differs from the "
+                         f"sampled episodes {expected[:12]}…")
+    if sha256_file(Path(summary["episodes_path"])) != expected:
+        raise SystemExit(f"{summary['episodes_path']} has changed since it was sampled")
 
 
 def report(pairs, population=None):
@@ -59,6 +72,7 @@ def main(argv=None) -> None:
     rows = {r["episode_id"]: r for r in read_jsonl(args.run / "raw_results.jsonl")}
     summary = json.loads((args.run / "summary.json").read_text())
     episodes = selection["episodes"]
+    check_run_matches_selection(summary, selection)
     if {e["episode_id"] for e in episodes} != set(rows):
         raise SystemExit("run results and selection cover different episodes")
 
