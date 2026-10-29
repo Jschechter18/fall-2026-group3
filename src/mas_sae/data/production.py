@@ -43,7 +43,6 @@ import re
 import torch
 
 from mas_sae.data.activation_store import ActivationStore
-from mas_sae.data.publication import require_complete_publication
 from mas_sae.data.musique import (
     SUPPORTED_EXPERIMENT_SPLITS,
     SUPPORTED_PARTITIONS,
@@ -109,13 +108,13 @@ def interaction_paths(results_dir, partitions=None, *, layout="legacy"):
                 f"{results_dir} declares a partitioned run; pass layout='partitioned' to avoid incomplete reads"
             )
     if layout == "partitioned":
-        require_complete_publication(results_dir, required=True)
         descriptor = json.loads(descriptor_path.read_text())
         if descriptor.get("layout") != "partitioned":
             raise ValueError("Run metadata does not describe a partitioned layout")
         sources = descriptor["source_splits"]
-        if len(set(sources)) != len(sources) or not set(sources) <= set(EXPORT_PARTITIONS):
-            raise ValueError("Invalid ordinary collection split directories")
+        if (not sources or len(set(sources)) != len(sources)
+                or not (set(sources) <= set(EXPORT_PARTITIONS) or sources == ["intervention"])):
+            raise ValueError("Expected ordinary split directories or a separate intervention run")
         if partitions is not None:
             if not set(partitions) <= set(PARTITIONS):
                 raise ValueError("Unknown requested partitions")
@@ -203,8 +202,8 @@ def build_partition_manifest(full_rows, scan_rows=(), qc100_ids=(), *, proportio
     not collected raises too; ``coverage="subset"`` allows it, for runs that
     deliberately cover part of the question set such as the layer scan.
     ``layout="partitioned"`` instead consumes explicit source/hop metadata and
-    frozen research partitions. Reserved intervention and explicit exclusions
-    are accounted for separately from missing collectible questions.
+    frozen research partitions, including separately collected intervention
+    baselines. Explicit exclusions are accounted for separately from missing questions.
     """
     if layout == "partitioned":
         if frozen is None or proportions is not None or seed is not None or scan_rows:
@@ -455,9 +454,8 @@ def write_package_tables(output_dir, manifest, frozen=None, *, layout="legacy", 
     write_partitions(output_dir / PARTITIONS_FILE, frozen, layout=layout)
     if layout == "partitioned":
         excluded = {r["question_id"] for r in exclusions}
-        reserved = {q for q, r in frozen.items() if r["partition"] == "intervention"}
-        coverage = partition_coverage(manifest, {q: r for q, r in frozen.items() if q not in excluded | reserved})
-        coverage.update(excluded=len(excluded), reserved=len(reserved))
+        coverage = partition_coverage(manifest, {q: r for q, r in frozen.items() if q not in excluded})
+        coverage.update(excluded=len(excluded))
     else:
         coverage = partition_coverage(manifest, frozen)
     if coverage["missing"]:
@@ -477,8 +475,6 @@ def read_partitions(path, *, layout="legacy"):
     preserves exposure flags, and uses partition names as storage splits.
     """
     path = Path(path)
-    if layout == "partitioned" and (path.parent/"run_layout.json").is_file():
-        require_complete_publication(path.parent, required=True)
     with open(path, newline="") as f:
         reader = csv.DictReader(f)
         missing_columns = [field for field in PARTITION_FIELDS if field not in (reader.fieldnames or [])]

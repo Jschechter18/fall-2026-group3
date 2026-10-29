@@ -1,35 +1,6 @@
-"""Distributed episode collection preparation, transport, and finalization. This module is 
-primarily intended for ensuring our data can be reliably collected, transported, and finalized across distributed environments.
+"""Mixed-dataset collection with deterministic work chunks and post-collection splits."""
+from .dataset import build_master_dataset, prepare_manifest, read_manifest, select_chunks
+from .core import collect_manifest_chunks, merge_run, split_run
 
-Public exports preserve imports from ``mas_sae.experiments.distributed_collection``.
-Command-line parsing and dispatch live in :mod:`.cli`.
-"""
-from .core import (
-    COLLECTABLE_PARTITIONS,
-    MASTER_VERSION,
-    PLAN_VERSION,
-    REQUIRED_CHUNK_FILES,
-    S3Transport,
-    build_master_dataset,
-    chunk_file_manifest,
-    collection_report,
-    finalize_local_chunks,
-    freeze_partitions,
-    plan_chunks,
-    write_work_packages,
-)
-
-__all__ = [
-    "COLLECTABLE_PARTITIONS",
-    "MASTER_VERSION",
-    "PLAN_VERSION",
-    "REQUIRED_CHUNK_FILES",
-    "S3Transport",
-    "build_master_dataset",
-    "chunk_file_manifest",
-    "collection_report",
-    "finalize_local_chunks",
-    "freeze_partitions",
-    "plan_chunks",
-    "write_work_packages",
-]
+__all__ = ["build_master_dataset", "prepare_manifest", "read_manifest", "select_chunks",
+           "collect_manifest_chunks", "merge_run", "split_run"]

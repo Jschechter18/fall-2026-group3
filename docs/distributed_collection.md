@@ -1,314 +1,214 @@
-# Distributed episode collection
+# Distributed episode and activation collection
 
-For copy-and-paste commands on two EC2 workers, follow the
-[MuSiQue-only smoke test](distributed_collection_smoke_test.md). It includes
-school SSO setup, separate worker assignments, S3 transfer, finalization, and
-checks against the original activation chunks.
+The workflow is **prepare → collect → merge → split**. Work chunks distribute
+compute; research partitions control permitted use. Intervention membership is
+frozen before collection, and its baseline episodes/activations are collected
+alongside everyone else's. Ordinary train/validation/test membership is assigned
+after merging. Intervention results are exported under a separate run name.
 
-The unit of work is a **question**, not an activation row. Preparation freezes
-the question payload, partition, seed, and ordered chunk membership before any
-model outcome is observed. A worker invocation loads its models, processes one
-explicitly assigned package, writes the existing local chunk format, and
-uploads that directory as an isolated S3 attempt. S3 is transport only;
-`ActivationStore` remains local.
+Use [the two-EC2 smoke run](distributed_collection_smoke_test.md) before scaling.
 
-Implementation lives in `src/mas_sae/experiments/distributed_collection/`:
-`core.py` holds preparation, S3 transport, and finalization; `cli.py` holds
-argument parsing and command dispatch. `__init__.py` re-exports the public
-functions to preserve existing imports. `scripts/distributed_collection.py`
-remains the command-line entry point.
+## Prepare once, without loading models
 
-Synthetic data is not available yet. The synthetic example paths and hop field
-are a proposed producer contract, and unit tests use handcrafted records only.
-For current MuSiQue-only preparation, omit the synthetic input entry entirely.
-Before adding a real synthetic release, verify its schema, deduplication, hop
-metadata, and generation provenance with the producer.
-
-## Policies and compatibility
-
-- Global IDs are `<dataset_source>:<original_id>`. Original IDs and complete
-  payloads remain in the master manifest. Hop metadata is persisted explicitly,
-  so downstream code never has to parse a namespaced ID.
-- The default `musique_validation_policy: validation` preserves the historical
-  rule: every MuSiQue validation-source question is tuning data. This means its
-  source composition is not controlled by the general four-way proportions.
-  `stratify` deliberately changes that rule; `error` forces an explicit choice.
-- Existing assignments are copied and checked; only new questions are assigned.
-  This preserves prior development exposure metadata and never reshuffles an
-  old question. Seeds are per-question hashes and do not depend on chunking or
-  scheduling. They improve reproducibility but do **not** promise bitwise
-  equality across GPU types, kernels, or library builds.
-- `intervention` is present in the frozen manifest but absent from ordinary
-  work plans and final SAE/probe outputs. It remains reserved for causal work.
-- Collection success and disagreement eligibility are separate. Exclusions
-  describe collection failures; existing label policies remain the authority
-  for consumer-specific eligibility.
-- `freeze` assigns `candidate_order` (`a1_first` or `critic_first`) before any
-  chunking, using the partition configuration's seed and explicit hop metadata.
-  Orders are balanced within each partition/hop group and are retained when
-  extending a frozen manifest. Only newly added or previously missing orders
-  are assigned; chunk sizes and worker assignments do not change them.
-  Work packages carry the orders to the collector, and finalization checks
-  candidates records against them. Feedback-only collection does not need them.
-
-For an older frozen manifest without candidate orders, rerun `freeze` with
-`--existing OLD_PARTITIONS.json` and a new output path, then rerun `plan` with
-new output/package paths. This preserves old partition assignments and seeds
-while adding the missing orders. Candidates workers reject missing/invalid
-orders before loading models rather than deciding presentation order locally.
-
-## Example commands
-
-Use the same agreed collection YAML and prepared run ID across the team, assign
-non-overlapping chunk IDs, and upload each chunk under that run. Code and package
-versions, hardware, device placement, output paths, timestamps, and chunk facts
-are provenance rather than compatibility gates. The required compatibility file
-is the canonical output of `experiment_compatibility(resolved_config, sites)`.
-It fixes role model IDs and resolved revisions, generation and prompt identities,
-protocol/capabilities, active conditions, A2 presentation, dtype/quantization,
-and activation sites. Missing model IDs or resolved revisions are rejected.
-Workers derive the same contract from what they loaded, and finalization checks
-every worker and its supplied resolved config against it. Schema-v2 contracts
-require content hashes for every recorded solver, critic, and validator prompt,
-including candidate labels. Editing a template without renaming its constant
-therefore changes compatibility. Older contracts/plans/packages must be
-regenerated under a new run ID; old chunk metadata cannot supply the missing
-prompt fingerprints retrospectively.
-
-Generate the contract on a model-capable worker before planning:
+Start from [the example YAML](../configs/collection/distributed.yaml). It reuses
+the existing role/model, protocol, and activation settings. Review the run name,
+intervention reservation, and split proportions for your experiment. Fractions
+in the example are starting values, not a new agreed research protocol.
 
 ```bash
-PYTHONPATH=src python scripts/collect_activations.py \
-  --config REPLACE_COLLECTION.yaml \
-  --prepare-compatibility artifacts/experiment-compatibility.json
+export PYTHONPATH=src
+python scripts/distributed_collection.py prepare \
+  --config configs/collection/distributed.yaml --num-chunks 8 \
+  --output artifacts/collection/mixed_collection/manifest.json
 ```
 
-This reuses the collector's model loading, agent configuration, and activation
-site resolution, then exits without sampling or collecting episodes. It may
-download model weights and requires the same model access and memory as collection.
-It refuses an existing contract output and cannot be combined with collection
-or resume arguments.
+Each input names `source`, `version`, and a JSON/JSONL `path`; optional
+`source_split`, `id_field`, `hop_field`, and `group_field` describe its records.
+MuSiQue input IDs can supply hop metadata. Synthetic inputs require an explicit
+hop field or input-level `hop`. Every record needs `id`, `question`, `paragraphs`,
+and `answer`; aliases are retained. Source names may not contain a colon.
 
-Checks retained for data correctness include matching master/partition IDs and
-payload references, chunk membership and seeds, complete coverage, tensor/index
-alignment, and S3 download checksums. Download receipts are retained so changed
-local files are detected again during finalization. Actual worker provenance is
-saved in chunk metadata and retained in the final `worker_provenance.json`;
-it does not block execution based on Git commit, GPU, or package versions.
+For example, append a real synthetic release to `dataset.inputs`:
 
-All `REPLACE_*` values below are placeholders, not project decisions. First
-split `configs/distributed_collection.example.yaml` into the small inputs and
-partition JSON/YAML files expected by the commands (or generate them from your
-experiment configuration).
+```yaml
+- source: synthetic
+  version: RELEASE_ID
+  path: data/synthetic/questions.jsonl
+  hop_field: hop_group
+  # group_field: parent_question_id
+```
+
+Synthetic data is optional. No real synthetic release has been validated in this
+repository; fixtures establish the adapter behavior, not producer data quality.
+Paragraph records must have the same structure used by the existing collector.
+
+Global IDs are `source:original_id`; original IDs/splits, payloads, source hashes,
+known exposure flags, and generation provenance are retained. If variants are
+related, supply the same **globally qualified** `split_group_id` (or `group_field`
+value) for every family member, including its original question. Families stay
+together in intervention reservation and later splitting. Family proportions
+are approximate at question level; final counts report actual membership.
+There is no automatic semantic deduplication.
+
+`dataset.intervention` takes either `fraction` plus an optional `seed`, or
+`question_ids_file` containing unique namespaced IDs. An explicit list expands
+to the selected questions' complete families. Prepared membership never changes
+when work is retried. Per-question seeds and candidate orders are frozen before
+chunking and are independent of chunk count or worker assignment.
+
+## Collect on each EC2 worker
+
+Copy the same manifest and collection YAML to each worker. Original dataset
+files are unnecessary: the manifest contains the exact question payloads.
+Assign non-overlapping work chunk IDs manually.
 
 ```bash
-PYTHONPATH=src python scripts/distributed_collection.py master \
-  --inputs REPLACE_INPUT_SPECS.yaml --output artifacts/master-v1.json
-
-PYTHONPATH=src python scripts/distributed_collection.py freeze \
-  --master artifacts/master-v1.json --config REPLACE_PARTITION_CONFIG.yaml \
-  --output artifacts/partitions-v1.json
-
-# On an extension, add --existing artifacts/partitions-v1.json and choose a new output.
-PYTHONPATH=src python scripts/distributed_collection.py plan \
-  --master artifacts/master-v1.json --partitions artifacts/partitions-v1.json \
-  --run-id REPLACE_RUN_ID --chunk-size REPLACE_CHUNK_SIZE \
-  --compatibility artifacts/experiment-compatibility.json \
-  --output artifacts/work-plan.json --packages artifacts/work-packages
+python scripts/collect_activations.py \
+  --config configs/collection/distributed.yaml \
+  --manifest artifacts/collection/mixed_collection/manifest.json \
+  --chunk 0 1 2 3
 ```
 
-Upload immutable packages, then explicitly assign chunk IDs to the two workers
-(for example, worker 1 gets 0–9 and worker 2 gets 10–19):
+The other worker can take `--chunk 4 5 6 7`. Omit `--chunk` to process every
+prepared chunk on one machine. Models load once per invocation. Add `--resume`
+to finish an interrupted assignment or skip matching completed chunks.
+
+`--num-chunks` sets distribution. `output.chunk_size` controls how many questions
+are committed per checkpoint inside a work chunk. A killed process repeats only
+the unfinished checkpoint batch. Unexpected model/infrastructure errors stop
+collection; the collector's existing scientific exclusions retain their reasons.
+The initial manifest path, not `output.run_name` alone, determines the local
+output root. Keep the run directory on durable storage when replacing instances.
+
+The new production path requires one critic condition and one A2 presentation
+per question, matching existing production manifest semantics. Legacy sampling
+and the general multi-episode collector remain available without `--manifest`.
+
+## Transfer and merge
+
+Use AWS CLI with your normal AWS profile; no Python transport or S3 acceptance
+registry is involved. Each chunk directory has checkpoint files, provenance, and
+`complete.json`. Upload completion last, for example:
 
 ```bash
-PYTHONPATH=src python scripts/distributed_collection.py upload-work \
-  --bucket REPLACE_BUCKET --prefix REPLACE_PREFIX --run-id REPLACE_RUN_ID \
-  --chunk-id REPLACE_CHUNK_ID --package artifacts/work-packages/REPLACE_CHUNK_ID.json
-
-# Run this on the assigned worker.
-PYTHONPATH=src python scripts/distributed_collection.py download-work \
-  --bucket REPLACE_BUCKET --prefix REPLACE_PREFIX --run-id REPLACE_RUN_ID \
-  --chunk-id REPLACE_CHUNK_ID --output work/REPLACE_CHUNK_ID.json
+aws s3 sync artifacts/collection/mixed_collection/chunks/000000/ \
+  s3://YOUR_BUCKET/YOUR_PREFIX/mixed_collection/chunks/000000/ --exclude complete.json
+aws s3 cp artifacts/collection/mixed_collection/chunks/000000/complete.json \
+  s3://YOUR_BUCKET/YOUR_PREFIX/mixed_collection/chunks/000000/complete.json
 ```
 
-For each assigned package:
+Upload only your assigned chunks. Stop an old worker before reassigning its
+chunk. Conflicting competing attempts are unsupported; merge rejects duplicate
+or foreign chunk directories instead of choosing a result.
+
+Download all completed chunks beside the manifest, preserving directory names:
 
 ```bash
-PYTHONPATH=src python scripts/collect_activations.py \
-  --config REPLACE_COLLECTION_CONFIG.yaml \
-  --work-package artifacts/work-packages/REPLACE_CHUNK_ID.json \
-  --chunk-output local-results/REPLACE_CHUNK_ID
-
-PYTHONPATH=src python scripts/distributed_collection.py upload \
-  --bucket REPLACE_BUCKET --prefix REPLACE_PREFIX --run-id REPLACE_RUN_ID \
-  --chunk-id REPLACE_CHUNK_ID --chunk-dir local-results/REPLACE_CHUNK_ID \
-  --marker local-results/REPLACE_CHUNK_ID.marker.json
-
-PYTHONPATH=src python scripts/distributed_collection.py accept \
-  --bucket REPLACE_BUCKET --prefix REPLACE_PREFIX --run-id REPLACE_RUN_ID \
-  --chunk-id REPLACE_CHUNK_ID --marker local-results/REPLACE_CHUNK_ID.marker.json
+python scripts/distributed_collection.py merge \
+  --manifest artifacts/collection/mixed_collection/manifest.json
 ```
 
-Schema-v2 work packages contain original, unmodified question payloads and the
-complete frozen plan. A worker recomputes the plan, membership, and every
-original payload SHA-256 before loading models. Schema-v1 packages cannot prove
-that chain and are rejected with instructions to regenerate them. Work-package
-objects use S3 conditional creation; identical retries are accepted, conflicting
-bytes are rejected, and non-precondition S3 errors propagate.
+Merge checks completion hashes, membership, coverage, seeds, candidate orders,
+record/tensor alignment, and scientific settings. Hardware and package metadata
+are recorded rather than used as compatibility gates. Different GPU numerics
+can still produce different generations. Missing resolved model revisions are
+recorded as unknown; requested revisions remain in provenance.
 
-An interrupted local attempt is retried into a new local directory and uploaded
-with a new attempt ID. Acceptance is idempotent for byte-identical results and
-rejects a different package for an already accepted logical chunk. It also
-checks the CLI run/chunk identity and the remote attempt's `complete.json`. AWS access
-uses the normal boto3 credential chain; no credential belongs in configuration.
+Records are merged in master order. A1 and A2 stay separate until producing
+`cat(all_A1, all_A2)`. One captured layer is materialized at a time; memory still
+needs roughly one layer's merged A1+A2 plus a loaded checkpoint and concatenation
+copies. Disk must hold checkpoints, raw merged tensors, and partitioned exports.
 
-Before each S3 transfer/accept command, the CLI makes an unsigned HTTPS HEAD
-request to the configured S3 endpoint and bucket path, with a five-second socket
-timeout. Any HTTP response, including 403, counts as reachable. DNS failures,
-connection failures, and timeouts stop the command before its S3 operation.
-This checks connectivity only, not permissions or future availability; it does
-not run during local preparation, finalization, or the separate collector.
+`merged/` contains internal `activations/raw/layer_NN/all*.pt`,
+`results/raw/all/interactions.jsonl`, coverage, and worker provenance. It is not
+an SAE training run. Checksums detect changes between merge and split.
 
-Download every accepted chunk into `<chunks>/<chunk-id>` and finalize:
+## Freeze later partitions and export
 
 ```bash
-PYTHONPATH=src python scripts/distributed_collection.py download \
-  --bucket REPLACE_BUCKET --prefix REPLACE_PREFIX --run-id REPLACE_RUN_ID \
-  --chunk-id REPLACE_CHUNK_ID --output accepted/REPLACE_CHUNK_ID
-
-PYTHONPATH=src python scripts/distributed_collection.py finalize \
-  --plan artifacts/work-plan.json --chunks accepted \
-  --sites REPLACE_FULL_MODULE_SITE_1,REPLACE_FULL_MODULE_SITE_2 \
-  --resolved-config REPLACE_RESOLVED_CONFIG.yaml --run-name REPLACE_FINAL_RUN
+python scripts/distributed_collection.py split \
+  --manifest artifacts/collection/mixed_collection/manifest.json \
+  --config configs/collection/distributed.yaml
 ```
 
-Finalization rejects missing/extra chunks, plan or membership mismatches,
-corruption, site mismatches, gaps/overlaps, and bad record/tensor alignment. It
-uses saved successful counts for exclusions, rebuilds all activation and SAE
-indices, and writes each partition as `attempt1`, `attempt2`, then
-`cat(attempt1, attempt2)`. The resulting layout is the one consumed by existing
-SAE and probe commands; point their activation/result paths at the final run and
-continue to select train/validation/test through the frozen manifest.
+Splitting uses all non-intervention master questions, including collection
+exclusions. It stratifies by source/hop and candidate order while respecting
+explicit families. It does not use outcomes, labels, or activation values.
+Freeze before training/tuning or using held-out results to make decisions.
+An existing output is never overwritten; re-collection must retain the exported
+membership rather than redefining an evaluation after development has begun.
 
-Each deterministic same-plan staging directory records `publication.json`
-ownership before artifacts are built. Both trees receive `publication_ready.json`
-only after every partition, provenance file, and summary has been written.
-`publication_complete.json` markers are written after both trees are published.
-Result, SAE, and probe readers check completion against the owning identity;
-ordinary legacy activation stores remain readable.
+The atomically published `prepared/` bundle holds:
 
-Ordinary build exceptions clean up their private staging so the same command can
-be retried. After a killed build or interrupted publication, rerun the identical
-finalize command with `--recover-publication`. Recovery checks all existing trees'
-run ID, run name, and plan digest before making changes. It discards and rebuilds
-only matching unready private staging, or finishes publishing ready trees. It
-never deletes or replaces unrelated outputs and never publishes an unready tree.
-Older interrupted outputs without readiness metadata must be moved aside and
-re-finalized from compatible accepted chunks. Existing completed publications
-with matching ownership/completion identities remain readable; pre-marker
-distributed results require re-finalization under a new output name.
+```text
+partitions.csv                          # all master questions, including exclusions
+split.json                              # manifest identity and split settings
+activations/mixed_collection/layer_NN/{train,validation,test}*.pt
+results/mixed_collection/{train,validation,test}/interactions.jsonl
+results/mixed_collection/{partitions.csv,split_manifest.csv,counts.json,run_layout.json,collection_status.json}
+activations/mixed_collection_intervention/layer_NN/intervention*.pt
+results/mixed_collection_intervention/intervention/interactions.jsonl
+results/mixed_collection_intervention/contexts.jsonl
+```
 
-## Layout and capacity
+Each run's membership file covers its own permitted questions, including its
+exclusions; the bundle-level `partitions.csv` is the complete master mapping.
+Empty splits have empty interaction files and explicit status, without fabricated
+activation rows. They cannot be used as usable train/evaluation data.
 
-S3 attempts live under
-`<prefix>/results/<run>/<chunk>/attempts/<attempt>/`; `complete.json` appears
-only after every required object passes a size check. `accepted.json` is the
-single logical-chunk decision. Locally, final files retain
-`layer_NN/<partition>[_attempt1|_attempt2].pt` and
-`results/<run>/<partition>/interactions.jsonl`.
+Final `source_split` is the actual folder; `original_source_split` retains origin.
+`full_index` and attempt indices address the **final split's** tensors. Combined
+SAE indices address A1 followed by A2. `collection_activation_index` records the
+original raw row. New outputs deliberately omit the legacy
+`source_activation_index` override; historical exports retain their old semantics.
 
-Each completed chunk stores A1 and A2 once. During finalization, sites are
-merged and written one at a time; allow roughly one partition-layer's A1+A2
-tensor bytes, one loaded chunk container, plus PyTorch concatenation overhead,
-and enough disk for chunks plus staged and final files
-(approximately three copies at the rename boundary). If that estimate is too
-large for the selected instance, use smaller partitions or provision a larger
-local volume; do not merge by concatenating already-combined chunk tensors.
+Both merge and export build under one temporary parent, then rename the complete
+bundle. A failed build exposes no final destination; retry from preserved chunks.
+Killed-process staging directories can be removed after confirming the process
+has stopped. No reader hooks or multi-tree publication recovery are required.
 
-## Historical partitions and downstream loading
+## Labels and downstream experiments
 
-Historical MuSiQue assignments can be imported directly when freezing the master
-question pool. Keep the original CSV unchanged:
+Generate labels against each final run, retaining existing label rules:
 
 ```bash
-PYTHONPATH=src python scripts/distributed_collection.py freeze \
-  --master artifacts/master-v1.json --config REPLACE_PARTITION_CONFIG.yaml \
-  --existing REPLACE_HISTORICAL_PARTITIONS.csv \
-  --exposure-manifest REPLACE_HISTORICAL_SPLIT_MANIFEST.csv \
-  --output artifacts/partitions-v1.json
+python scripts/prepare_behavior_v01.py \
+  --full-results artifacts/collection/mixed_collection/prepared/results/mixed_collection \
+  --layout partitioned --label-policy v0.2.0-candidate \
+  --output artifacts/collection/mixed_collection/labels
+
+python scripts/prepare_behavior_v01.py \
+  --full-results artifacts/collection/mixed_collection/prepared/results/mixed_collection_intervention \
+  --layout partitioned --label-policy v0.2.0-candidate \
+  --output artifacts/collection/mixed_collection/intervention-labels
 ```
 
-`--exposure-manifest` is optional when the input CSV already includes
-`in_qc100`/`in_development_data`. With partitions alone, unavailable development
-history stays unknown and is reported; it is not evidence that a question is
-untouched. The existing partition sampler does not select unknown-history rows
-as unexposed data. Import matches `(musique, original_id)` to the master ID,
-preserves membership, and rejects missing IDs or conflicting origin/hop metadata.
-Synthetic questions with the same original ID do not inherit MuSiQue assignments.
-Only questions absent from the imported mapping receive new partitions. For a
-later master expansion, use the previous frozen JSON as `--existing`.
+Use the matching feedback label policy for a feedback collection. Historical
+labels must not be attached to newly generated answers. Source hashes are taken
+from final interaction files. Labels are post-processing, not worker-side judging.
 
-New work plans carry question metadata for finalization. Final results include:
+Point SAE loaders at `prepared/activations/mixed_collection/layer_NN`. For probes,
+point `results_dir` and `activations_dir` at that same ordinary run and
+`labels_csv`/`manifest_csv` at its new behavior package. Use `index_column:
+full_index`, `source_splits: [train, validation]`, and, for candidate behavioral
+selection, `target_column: strict_target`, `eligible_column: eligible_strict`.
+Feature-selection configs accept those target/eligibility settings as well.
+Existing test/intervention authorization remains in effect.
 
-- `partitions.csv`: permanent membership for **all** questions, including the
-  reserved intervention pool and collection exclusions.
-- `split_manifest.csv`: collected questions only, with actual per-split
-  `full_index` activation addresses and available episode IDs.
-- `run_layout.json`: the directories readers must open, including `test` when
-  assigned. A missing expected file raises rather than silently dropping data.
-- `collection_status.json`: collected, excluded (with reasons), reserved, and
-  unknown-exposure IDs. Expected intervention/exclusions are not missing runs.
-- `counts.json`: source-file hashes and collected counts by partition/source;
-  this contains no behavioral labels.
+For causal replay, retain the chosen SAE and feature-selection settings, then
+point its data inputs at the separate intervention run/package:
 
-For run records/manifests, `source_split` identifies the tensor and interaction
-folder. `original_source_split` retains the original dataset split; `partition`
-controls permitted use. `dataset_source`, `original_id`, explicit hop metadata,
-and exposure flags are retained. Thus a question can originate in MuSiQue train,
-be assigned research test, and live at `test/interactions.jsonl` and
-`layer_NN/test_attempt2.pt` without losing its origin.
-
-Historical readers keep `layout="legacy"` by default, but reject a directory
-whose `run_layout.json` declares `partitioned`; unavailable requested partitions
-also raise instead of silently disappearing. Use
-`read_run_interactions(..., layout="partitioned")`,
-`read_partitions(..., layout="partitioned")`, and
-`load_labeled_rows(..., layout="partitioned")` for the new results. The existing
-activation loader uses those manifests directly. SAE dataloaders already read
-`train.pt`, `validation.pt`, and `test.pt`; intervention tensors are not produced.
-Probe configurations point `manifest_csv` at the new `split_manifest.csv`, use
-`index_column: full_index`, and name their input folders in `source_splits`.
-Fitting/tuning uses `[train, validation]`; final test evaluation must explicitly
-select test using the existing sealed-partition controls.
-
-Labels remain a separate post-processing product. Existing behavioral labeling
-can be exercised without changing its rules:
-
-```bash
-PYTHONPATH=src python scripts/prepare_behavior_v01.py \
-  --full-results results/collection/REPLACE_FINAL_RUN --layout partitioned \
-  --label-policy v0.2.0-candidate --output REPLACE_NEW_LABEL_PACKAGE
+```yaml
+interactions_jsonl: artifacts/collection/mixed_collection/prepared/results/mixed_collection_intervention/intervention/interactions.jsonl
+contexts_jsonl: artifacts/collection/mixed_collection/prepared/results/mixed_collection_intervention/contexts.jsonl
+labels_csv: artifacts/collection/mixed_collection/intervention-labels/labels.csv
+partition: intervention
+label_policy: v0.2.0-candidate
 ```
 
-This reads frozen membership from the run's `partitions.csv` by default, opens
-all recorded split folders, and accounts for reserved/excluded questions. The
-historical source-run/layer-scan merge stays on the legacy path. The activation
-export script also accepts `--layout partitioned` with the new frozen CSV.
-Claude labeling is outside this change: a future label adapter can use stable
-question/episode IDs without changing membership or tensors. Labels from an
-older collection must not be blindly reused for newly generated answers.
-
-Older work plans without embedded question metadata retain their prior merge
-behavior but do not produce these integrated downstream tables. Regenerate the
-plan/packages from the same frozen assignments to use this workflow.
-
-The integrated row manifest assumes one condition and one A2 presentation per
-question, matching the current collection configuration. Multiple episodes per
-question require a separate episode-level manifest extension. Feedback audit
-and partition-selection commands also accept `--layout partitioned`. Selection
-returns namespaced master IDs. Partitioned `--exclude` JSON lists are validated
-against the complete frozen pool, including other partitions. Exact namespaced
-IDs are accepted; an unambiguous legacy MuSiQue ID is normalized to
-`musique:<id>`, while unknown/ambiguous IDs report their source file. These IDs are for master-dataset workflows, not direct input to the
-legacy MuSiQue Hub `sampling.strategy: listed` loader. Reserved intervention IDs
-come from `intervention_question_ids.json`, not collected episode sampling.
+Replay uses the saved context and candidate order, calls `Solver.choose` for
+candidates, and uses the matching existing label policy. Candidate baseline
+cohorts use `eligible_strict`/`strict_target`; post-intervention third answers
+remain reported outcomes. Legacy feedback configs retain their original label
+policy, prompt, and MuSiQue lookup. The unchanged no-intervention replay check
+must pass before feature interventions execute.

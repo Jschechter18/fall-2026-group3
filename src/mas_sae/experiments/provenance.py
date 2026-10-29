@@ -28,82 +28,18 @@ from mas_sae.experiments.conditions import (
 from mas_sae.experiments.reproducibility import config_sha256
 
 
-COMPATIBILITY_VERSION = 2
-
-
-def validate_experiment_compatibility(contract: Any) -> dict[str, Any]:
-    """Validate the explicit, portable experiment compatibility contract."""
-    if not isinstance(contract, dict) or contract.get("schema_version") != COMPATIBILITY_VERSION:
-        raise ValueError("experiment compatibility contract is missing or has an unsupported schema version")
-    required = ("roles", "generation", "prompt_versions", "prompt_sha256", "protocol_version", "capabilities",
-                "active_conditions", "a2_presentations", "activation_sites")
-    missing = [field for field in required if contract.get(field) is None]
-    if missing:
-        raise ValueError(f"experiment compatibility contract is missing fields: {', '.join(missing)}")
-    if not isinstance(contract["prompt_versions"], dict) or not contract["prompt_versions"]:
-        raise ValueError("experiment compatibility requires prompt identities")
-    hashes = contract["prompt_sha256"]
-    if (not isinstance(hashes, dict) or set(hashes) != set(contract["prompt_versions"])
-            or any(not isinstance(digest, str) or len(digest) != 64
-                   or any(c not in "0123456789abcdef" for c in digest) for digest in hashes.values())):
-        raise ValueError("experiment compatibility requires SHA-256 hashes for every recorded prompt; regenerate it")
-    roles = contract["roles"]
-    if not isinstance(roles, dict) or set(roles) != {"solver", "critic", "validator"}:
-        raise ValueError("experiment compatibility must identify solver, critic, and validator roles")
-    for role, metadata in roles.items():
-        if not isinstance(metadata, dict):
-            raise ValueError(f"experiment compatibility role {role!r} must be a mapping")
-        missing_identity = [field for field in ("model_id", "resolved_revision", "loader", "dtype", "generation")
-                            if not metadata.get(field)]
-        if missing_identity:
-            raise ValueError(f"experiment compatibility role {role!r} is missing: {', '.join(missing_identity)}")
-    if not isinstance(contract["generation"], dict) or not isinstance(contract["capabilities"], dict):
-        raise ValueError("experiment compatibility generation/capabilities must be mappings")
-    if not isinstance(contract["protocol_version"], str) or not contract["protocol_version"]:
-        raise ValueError("experiment compatibility requires a protocol identity")
-    if (not isinstance(contract["activation_sites"], list) or not contract["activation_sites"]
-            or any(not isinstance(site, str) or not site for site in contract["activation_sites"])):
-        raise ValueError("experiment compatibility requires activation sites")
-    return contract
-
-
 def experiment_compatibility(resolved_config: dict[str, Any], candidate_sites: list[str]) -> dict[str, Any]:
-    """Return the experiment-defining worker contract, excluding operational facts."""
-    provenance = resolved_config.get("provenance")
-    if not isinstance(provenance, dict):
-        raise ValueError("resolved config is missing provenance required for worker compatibility")
-    roles = provenance.get("roles")
-    if not isinstance(roles, dict) or set(roles) != {"solver", "critic", "validator"}:
-        raise ValueError("resolved config must identify solver, critic, and validator roles")
-    role_contract = {}
-    for role, metadata in roles.items():
-        if not isinstance(metadata, dict):
-            raise ValueError(f"resolved config role {role!r} must be a mapping")
-        missing = [field for field in ("model_id", "resolved_revision", "loader", "dtype", "generation")
-                   if not metadata.get(field)]
-        if missing:
-            raise ValueError(
-                f"resolved config role {role!r} is missing required identity fields: {', '.join(missing)}; "
-                "pin/load a revision that reports its resolved commit"
-            )
-        role_contract[role] = {key: metadata.get(key) for key in (
-            "model_id", "requested_revision", "resolved_revision", "loader", "architecture",
-            "dtype", "quantization", "generation", "chat_template_kwargs",
-        )}
-    if not candidate_sites or any(not isinstance(site, str) or not site for site in candidate_sites):
-        raise ValueError("worker compatibility requires non-empty activation sites")
-    return validate_experiment_compatibility({
-        "schema_version": COMPATIBILITY_VERSION,
-        "roles": role_contract,
-        "generation": provenance.get("generation"),
-        "prompt_versions": provenance.get("prompt_versions"),
-        "prompt_sha256": provenance.get("prompt_sha256", {}),
-        "protocol_version": provenance.get("protocol_version"),
-        "capabilities": provenance.get("capabilities"),
-        "active_conditions": provenance.get("active_conditions"),
+    """Compare recorded experiment settings while allowing different worker hardware."""
+    provenance = resolved_config["provenance"]
+    return {
+        "roles": {role: {k: metadata.get(k) for k in (
+            "model_id", "requested_revision", "resolved_revision", "loader", "dtype",
+            "quantization", "generation", "chat_template_kwargs")}
+            for role, metadata in provenance["roles"].items()},
+        **{k: provenance.get(k) for k in ("protocol_version", "capabilities", "active_conditions", "prompt_versions", "prompt_sha256")},
         "a2_presentations": provenance.get("a2_presentations", ["feedback"]),
-        "activation_sites": list(candidate_sites),
-    })
+        "activation_sites": candidate_sites,
+    }
 
 
 def role_metadata(agent: Any) -> dict[str, Any]:
@@ -285,7 +221,7 @@ def build_resolved_config(
             "model_revision": (
                 getattr(model.config, "_commit_hash", None) or "unknown"
             ),
-            "dataset_id": MUSIQUE_DATASET_ID,
+            "dataset_id": "mixed-manifest" if "inputs" in config.get("dataset", {}) else MUSIQUE_DATASET_ID,
             "roles": {name: role_metadata(agent) for name, agent in
                       (("solver", solver), ("critic", critic), ("validator", validator))},
             "environment": environment_metadata(),

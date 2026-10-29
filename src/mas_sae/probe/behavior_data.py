@@ -26,7 +26,6 @@ import numpy as np
 import pandas as pd
 
 from mas_sae.data.production import PARTITIONS, PURPOSE_PARTITION
-from mas_sae.data.publication import require_complete_publication
 
 # The partition rules live in mas_sae.data.production; sealed = what only `evaluate`/`intervene` may read.
 SEALED_PARTITIONS = frozenset({PURPOSE_PARTITION["evaluate"], PURPOSE_PARTITION["intervene"]})
@@ -56,7 +55,6 @@ def load_tensor(path: Path) -> np.ndarray:
     """Load a saved activation tensor as a float32 numpy array (rows x dim)."""
     import torch
 
-    require_complete_publication(path)
     obj = torch.load(path, map_location="cpu", weights_only=False)
     arr = obj.numpy() if hasattr(obj, "numpy") else np.asarray(obj)
     return arr.astype(np.float32, copy=False)
@@ -108,7 +106,6 @@ def build_episode_table(
     results_dir: Path, source_splits: list[str], text_fields: list[str]
 ) -> pd.DataFrame:
     """One row per episode. ``source_split`` is the folder the episode (and its tensor) lives in."""
-    require_complete_publication(results_dir)
     rows = []
     for split in source_splits:
         records = read_jsonl(Path(results_dir) / split / "interactions.jsonl")

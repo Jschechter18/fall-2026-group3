@@ -56,21 +56,10 @@ def main():
             ids = json.loads(path.read_text())
             if not isinstance(ids, list) or any(not isinstance(qid, str) for qid in ids):
                 raise ValueError("Partitioned exclusion files must be JSON lists of namespaced question IDs")
-            original_to_global = {}
-            for qid in frozen:
-                if qid.startswith("musique:"):
-                    original_to_global.setdefault(qid.split(":", 1)[1], []).append(qid)
-            for raw_id in ids:
-                if raw_id in frozen:
-                    excluded.add(raw_id)
-                    continue
-                matches = original_to_global.get(raw_id, [])
-                if len(matches) == 1:
-                    excluded.add(matches[0])
-                elif len(matches) > 1:
-                    raise ValueError(f"{path}: ambiguous legacy MuSiQue exclusion ID {raw_id!r}")
-                else:
-                    raise ValueError(f"{path}: unknown exclusion ID {raw_id!r} in frozen question pool")
+            unknown = set(ids) - set(frozen)
+            if unknown:
+                raise ValueError(f"{path}: unknown namespaced IDs: {sorted(unknown)[:5]}")
+            excluded.update(ids)
         else:
             excluded.update(question_ids_in(path))
     ids = sample_partition_questions(manifest, partition=args.partition,

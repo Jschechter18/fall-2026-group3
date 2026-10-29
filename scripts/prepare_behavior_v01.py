@@ -155,6 +155,8 @@ def main():
 
     # 1. Read the run(s) and give each question its partition.
     full_rows = read_run_interactions(full_dir, layout=args.layout)
+    if not full_rows:
+        parser.error("No collected episodes to label; inspect collection_status.json for exclusions")
     scan_rows = read_run_interactions(scan_dir) if scan_dir is not None else []
     if scan_rows:
         check_scan_repeats_full_run(full_rows, scan_rows, policy.input_fields)

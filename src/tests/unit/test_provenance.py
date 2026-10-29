@@ -267,6 +267,3 @@ def test_prompt_content_changes_compatibility_without_renaming(monkeypatch, targ
     assert before["prompt_versions"] == after["prompt_versions"]
     assert before["prompt_sha256"] != after["prompt_sha256"]
     assert before != after
-    after["prompt_sha256"].pop("solver_solve")
-    with pytest.raises(ValueError, match="hashes for every recorded prompt"):
-        provenance.validate_experiment_compatibility(after)

@@ -1,399 +1,162 @@
-"""Historical membership through distributed merging and real downstream loaders.
-
-Synthetic inputs are handcrafted schema fixtures, not a generated release.
-Models and Claude are not called; activation vectors encode question identity.
-"""
-import csv
+"""Exercise the actual consumers of exported rows, tensors, labels, and contexts."""
 import json
-from pathlib import Path
 import runpy
+from pathlib import Path
 
 import pandas as pd
 import pytest
-import torch
 
-from mas_sae.data.partition_adapter import import_historical_partitions
-from mas_sae.data.production import (
-    authorize_rows, build_partition_manifest, interaction_paths, load_labeled_rows,
-    load_production_activations, read_manifest, read_partitions, read_run_interactions,
-)
-from mas_sae.evaluation.behavior import classify_behavior
-from mas_sae.evaluation.behavior_labels import classify_candidate, write_labels, V020_CANDIDATE
-from mas_sae.experiments import collection_progress
-from mas_sae.experiments.distributed_collection import (
-    build_master_dataset, freeze_partitions, plan_chunks, finalize_local_chunks,
-)
-from mas_sae.experiments.distributed_collection import cli
+from mas_sae.causal import replay
+from mas_sae.data import production
+from mas_sae.experiments.distributed_collection import core
 from mas_sae.experiments.records import read_jsonl
-from mas_sae.experiments.provenance import experiment_compatibility
-from mas_sae.probe import behavior_data as bd, layer_selection as ls
+from mas_sae.probe import behavior_data as bd
 from mas_sae.sae.dataloader import create_sae_dataloader
-
-PROPORTIONS = {"train": .5, "validation": .2, "test": .2, "intervention": .1}
-SITE = "model.layers.8"
-
-
-def resolved_config():
-    roles = {role: {"model_id": f"fixture/{role}", "requested_revision": "main",
-                    "resolved_revision": f"{role}-commit", "loader": "qwen3",
-                    "architecture": ["Fixture"], "dtype": "torch.float32", "quantization": None,
-                    "generation": {"do_sample": False, "max_new_tokens": 8}, "chat_template_kwargs": {}}
-             for role in ("solver", "critic", "validator")}
-    return {"provenance": {"roles": roles, "generation": {"do_sample": False},
-            "prompt_versions": {"solver_solve": "V1"}, "prompt_sha256": {"solver_solve": "0" * 64}, "protocol_version": "v2",
-            "capabilities": {}, "active_conditions": ["natural"], "a2_presentations": ["candidates"]}}
-
-
-RESOLVED = resolved_config()
-COMPATIBILITY = experiment_compatibility(RESOLVED, [SITE])
-
-
-def write_csv(path, rows):
-    with path.open('w', newline='') as file:
-        writer = csv.DictWriter(file, fieldnames=list(rows[0]))
-        writer.writeheader()
-        writer.writerows(rows)
+from test_distributed_collection import make_config, prepare, collect, fixture_collector
 
 
 @pytest.fixture
-def inputs(tmp_path):
-    def question(qid):
-        return {"id": qid, "question": "Where?", "paragraphs": [], "answer": "Paris"}
-    train = [question(f"2hop__{i}_{i}") for i in range(1, 5)]
-    val = [question("3hop__5_5")]
-    synthetic = [{**question(qid), "hop_group": "2hop"} for qid in ("2hop__1_1", "new")]
-    specs = []
-    for name, source, split, rows in (("train", "musique", "train", train),
-                                      ("val", "musique", "validation", val),
-                                      ("synthetic", "synthetic", "", synthetic)):
-        path = tmp_path/f"{name}.json"
-        path.write_text(json.dumps(rows))
-        specs.append({"source": source, "version": "fixture", "source_split": split,
-                      "path": str(path), **({"hop_field": "hop_group"} if source == "synthetic" else {})})
-    master = build_master_dataset(specs)
-    historical = [{"question_id": row["id"], "source_split": "train", "partition": partition, "hop_group": "2hop"}
-                  for row, partition in zip(train, ("train", "test", "intervention", "train"))]
-    historical.append({"question_id": val[0]["id"], "source_split": "validation", "partition": "validation", "hop_group": "3hop"})
-    path = tmp_path/"historical.csv"
-    write_csv(path, historical)
-    history = [{**r, "in_qc100": i == 0, "in_development_data": i == 0} for i, r in enumerate(historical)]
-    exposure = tmp_path/"exposure.csv"
-    write_csv(exposure, history)
-    return master, path, exposure
+def exported(tmp_path, monkeypatch):
+    config = make_config(tmp_path)
+    path, manifest = prepare(tmp_path/"run", config, 7)
+    excluded = [manifest["questions"][i]["question_id"] for i in (3, 43, 79)]
+    monkeypatch.setattr(core, "collect_examples", fixture_collector(manifest, excluded=excluded))
+    collect(path, manifest, config)
+    core.merge_run(path)
+    prepared = core.split_run(path, config)
+    return config, path, manifest, prepared, excluded
 
 
-def test_historical_import_preserves_membership_and_exposure(inputs):
-    master, path, exposure = inputs
-    unknown = import_historical_partitions(master, path)
-    assert unknown["musique:2hop__1_1"]["in_development_data"] is None
-    imported = import_historical_partitions(master, path, exposure_manifest=exposure)
-    assert imported["musique:2hop__1_1"]["in_qc100"] is True
-    assert imported["musique:2hop__1_1"]["in_development_data"] is True
-    assert "synthetic:2hop__1_1" not in imported
-    frozen = freeze_partitions(master, proportions=PROPORTIONS, seed=42, existing=imported)
-    by_id = {r["question_id"]: r for r in frozen["questions"]}
-    assert all(by_id[q]["partition"] == r["partition"] for q, r in imported.items())
-    assert by_id["musique:2hop__2_2"]["partition"] == "test"
-    assert by_id["musique:2hop__3_3"]["partition"] == "intervention"
+def label_run(results, output, monkeypatch):
+    monkeypatch.setattr("sys.argv", ["prepare_behavior_v01.py", "--full-results", str(results),
+        "--layout", "partitioned", "--label-policy", "v0.2.0-candidate", "--output", str(output)])
+    runpy.run_path(str(Path(__file__).resolve().parents[3]/"scripts/prepare_behavior_v01.py"), run_name="__main__")
 
 
-def test_historical_unknown_ids_and_origin_mismatches_fail(inputs):
-    master, path, _ = inputs
-    master["questions"] = [r for r in master["questions"] if r["question_id"] != "musique:2hop__1_1"]
-    with pytest.raises(ValueError, match="missing from master"):
-        import_historical_partitions(master, path)
+def test_exported_tensors_and_all_index_fields_match_actual_questions(exported):
+    config, path, master, prepared, excluded = exported
+    numbers = {r["question_id"]: r["master_index"]+1 for r in master["questions"]}
+    raw = read_jsonl(path.parent/"merged/results/raw/all/interactions.jsonl")
+    raw_indices = {r["question_id"]: r["attempt2_activation_index"] for r in raw}
+    any_reindex = False
+    all_seen = set()
+    for name, partitions in (("fixture", ["train", "validation", "test"]), ("fixture_intervention", ["intervention"])):
+        results, acts = prepared/"results"/name, prepared/"activations"/name
+        manifest = production.read_manifest(results/"split_manifest.csv")
+        fixed = production.read_partitions(results/"partitions.csv", layout="partitioned")
+        rows = production.read_run_interactions(results, layout="partitioned")
+        for split in partitions:
+            group = [r for r in rows if r["partition"] == split]
+            assert group
+            purpose = production.PARTITION_PURPOSE[split]
+            for i, row in enumerate(group):
+                qid = row["question_id"]
+                assert row["source_split"] == split
+                assert row["original_source_split"] == "train"
+                assert manifest[qid]["full_index"] == row["attempt1_activation_index"] == row["attempt2_activation_index"] == i
+                assert row["sae_attempt1_index"] == i
+                assert row["sae_attempt2_index"] == len(group)+i
+                assert row["collection_activation_index"] == raw_indices[qid]
+                assert "source_activation_index" not in row
+                any_reindex |= i != raw_indices[qid]
+            for layer, site_offset in ((8, 0), (17, 1000)):
+                for attempt, offset in ((1, 0), (2, 100)):
+                    tensor = production.load_production_activations(group, manifest, acts, purpose=purpose, layer=layer, attempt=attempt)
+                    assert tensor[:, 0].tolist() == [numbers[r["question_id"]]+site_offset+offset for r in group]
+                combined = next(iter(create_sae_dataloader(200, split, 0, location=acts/f"layer_{layer:02d}")))
+                values = [numbers[r["question_id"]]+site_offset for r in group]
+                assert combined[:, 0].tolist() == values+[v+100 for v in values]
+            all_seen.update(r["question_id"] for r in group)
+        assert set(fixed) == set(manifest) | (set(excluded) & set(fixed))
+        assert not set(excluded) & set(manifest)
+        reserved = json.loads((results/"intervention_question_ids.json").read_text())
+        assert set(reserved) == {r["question_id"] for r in master["questions"] if r["partition"] == "intervention"}
+    assert any_reindex
+    assert all_seen | set(excluded) == set(numbers)
+    assert not list((prepared/"activations/fixture").glob("*/intervention*.pt"))
+    assert not list((prepared/"activations/fixture_intervention").glob("*/train*.pt"))
 
 
-def test_freeze_cli_accepts_historical_csv(inputs, tmp_path, monkeypatch):
-    master, path, exposure = inputs
-    (tmp_path/"master.json").write_text(json.dumps(master))
-    (tmp_path/"config.json").write_text(json.dumps({"seed": 42, "proportions": PROPORTIONS}))
-    output = tmp_path/"frozen.json"
-    monkeypatch.setattr('sys.argv', ['distributed_collection.py', 'freeze', '--master', str(tmp_path/'master.json'),
-        '--config', str(tmp_path/'config.json'), '--existing', str(path), '--exposure-manifest', str(exposure), '--output', str(output)])
-    cli.main()
-    rows = {r['question_id']: r for r in json.loads(output.read_text())['questions']}
-    assert rows['musique:2hop__2_2']['partition'] == 'test'
-    assert rows['musique:2hop__1_1']['in_development_data'] is True
-
-
-@pytest.fixture
-def collected(inputs, tmp_path):
-    master, path, exposure = inputs
-    old = import_historical_partitions(master, path, exposure_manifest=exposure)
-    frozen = freeze_partitions(master, proportions=PROPORTIONS, seed=42, existing=old)
-    plan = plan_chunks(master, frozen, run_id="integration", chunk_size=1, compatibility=COMPATIBILITY)
-    numbers = {r["question_id"]: i+1 for i, r in enumerate(master["questions"])}
-    excluded = "musique:2hop__4_4"
-    locations = {}
-    for chunk in plan["chunks"]:
-        result = {"records": [], "exclusions": [], "attempt1_by_site": {SITE: []}, "attempt2_by_site": {SITE: []}}
-        for assignment in chunk["questions"]:
-            qid = assignment["question_id"]
-            if qid == excluded:
-                result["exclusions"].append({"question_id": qid, "seed": assignment["collection_seed"], "reason": "fixture exclusion"})
-                continue
-            value = numbers[qid]
-            result["records"].append({"question_id": qid, "episode_id": qid+"__natural__candidates",
-                "source_split": chunk["partition"], "seed": assignment["collection_seed"],
-                "solver_accepted_feedback": True, "critic_condition": "natural", "a2_presentation": "candidates",
-                "candidate_order": assignment["candidate_order"], "solver_attempt_1": "London",
-                "critic_advocated_answer": "Paris", "solver_attempt_2": "Paris", "critic_noncommittal": False,
-                "ground_truth": "Paris", "answer_aliases": [],
-                "solver_attempt_1_correct": False, "critic_feedback_correct": True,
-                "candidate_first_token_ids": {"a1": 1, "critic": 2},
-                "decision_token_distinct": True, "solver_a2_first_token_id": 2,
-                **classify_behavior("London", "Paris", "Paris", usable=True)})
-            result["attempt1_by_site"][SITE].append(torch.tensor([[float(value), 1.]]))
-            result["attempt2_by_site"][SITE].append(torch.tensor([[float(value+100), 2.]]))
-        progress = tmp_path/"chunks"/chunk["chunk_id"]
-        progress.mkdir(parents=True)
-        locations[chunk["chunk_id"]] = collection_progress.write_chunk(progress, start=chunk["partition_start"],
-            question_ids=chunk["question_ids"], candidate_sites=[SITE], result=result,
-            metadata_extra={"chunk_id": chunk["chunk_id"], "run_id": plan["run_id"], "plan_sha256": plan["plan_sha256"],
-                            "membership_sha256": chunk["membership_sha256"], "candidate_sites": [SITE],
-                            "experiment_compatibility": COMPATIBILITY, "resolved_config": RESOLVED})
-    finalize_local_chunks(plan=plan, chunk_dirs=locations, candidate_sites=[SITE], activation_root=tmp_path/"activations",
-                          result_root=tmp_path/"results", run_name="merged", resolved_config=RESOLVED)
-    return tmp_path/"results/merged", tmp_path/"activations/merged", numbers, frozen, excluded
-
-
-def test_final_manifest_preserves_origin_membership_and_coverage(collected):
-    results, activations, numbers, frozen, excluded = collected
-    manifest = read_manifest(results/"split_manifest.csv")
-    fixed = read_partitions(results/"partitions.csv", layout="partitioned")
-    expected = {r["question_id"]: r["partition"] for r in frozen["questions"]}
-    assert {q: r["partition"] for q, r in fixed.items()} == expected
-    assert excluded not in manifest
-    assert not (results/"intervention").exists()
-    assert not list(activations.glob('*/intervention*.pt'))
-    for qid, row in manifest.items():
-        assert row["source_split"] == row["partition"] == expected[qid]
-        assert row["hop_group"] in {"2hop", "3hop"}
-        assert row["episode_id"] == qid+"__natural__candidates"
-    assert manifest["musique:2hop__2_2"]["original_source_split"] == "train"
-    assert manifest["musique:2hop__2_2"]["source_split"] == "test"
-    assert manifest["musique:2hop__1_1"]["in_development_data"] is True
-    assert fixed["musique:2hop__3_3"]["partition"] == "intervention"
-    status = json.loads((results/"collection_status.json").read_text())
-    assert status['reserved'] == ['musique:2hop__3_3']
-    assert [r['question_id'] for r in status['excluded']] == [excluded]
-    assert len(status['collected'])+len(status['excluded'])+len(status['reserved']) == len(expected)
-
-
-def test_real_sae_and_production_activation_loaders(collected):
-    results, activations, numbers, _, _ = collected
-    manifest = read_manifest(results/"split_manifest.csv")
-    rows = read_run_interactions(results, layout="partitioned")
-    assert {r['source_split'] for r in rows} == {'train', 'validation', 'test'}
-    for split, purpose in (("train", "fit"), ("validation", "tune"), ("test", "evaluate")):
-        group = [r for r in rows if r['source_split'] == split]
-        for attempt, offset in ((1, 0), (2, 100)):
-            matrix = load_production_activations(group, manifest, activations, purpose=purpose, layer=8, attempt=attempt)
-            assert matrix[:, 0].tolist() == [numbers[r['question_id']]+offset for r in group]
-        combined = next(iter(create_sae_dataloader(100, split, 0, location=activations/'layer_08')))
-        expected = [numbers[r['question_id']] for r in group]
-        assert combined[:, 0].tolist() == expected+[v+100 for v in expected]
-    with pytest.raises(ValueError, match="requires train"):
-        authorize_rows([r for r in rows if r['source_split'] == 'test'], manifest, purpose='fit')
-    with pytest.raises(ValueError, match="requires validation"):
-        authorize_rows([r for r in rows if r['source_split'] == 'train'], manifest, purpose='tune')
-
-
-def attach_fixture_labels(results):
-    rows = read_run_interactions(results, layout='partitioned')
-    for row in rows:
-        row['label'] = classify_candidate(row, V020_CANDIDATE)
-    write_labels(results/'labels.csv', rows)
-    table = pd.read_csv(results/'labels.csv')
-    episode_ids = {r['question_id']: r['episode_id'] for r in rows}
-    table['episode_id'] = table.question_id.map(episode_ids)
-    table.to_csv(results/'labels.csv', index=False)
-    return rows
-
-
-def test_label_join_and_real_probe_loaders(collected):
-    results, activations, numbers, _, _ = collected
-    attach_fixture_labels(results)
-    rows, manifest = load_labeled_rows(results, results, layout='partitioned')
-    assert {r['partition'] for r in rows} == {'train', 'validation', 'test'}
-    selected, _ = load_labeled_rows(results, results, partitions={'test'}, layout='partitioned')
-    assert all(r['partition'] == 'test' for r in selected)
-    cols = bd.Columns()
-    episodes = bd.build_episode_table(results, ['train', 'validation', 'test'], [])
-    aligned, diagnostics = bd.align_episodes(episodes, pd.read_csv(results/'labels.csv'),
-        pd.read_csv(results/'split_manifest.csv'), cols, 'full_index')
-    assert diagnostics['labels_join'] == 'episode_id'
+def test_real_behavior_packages_probe_alignment_and_causal_inputs(exported, monkeypatch):
+    _, path, master, prepared, _ = exported
+    ordinary = prepared/"results/fixture"
+    package = path.parent/"labels"
+    label_run(ordinary, package, monkeypatch)
+    rows, manifest = production.load_labeled_rows(ordinary, package, layout="partitioned")
+    episodes = bd.build_episode_table(ordinary, ["train", "validation", "test"], ["solver_attempt_1"])
+    labels, table = pd.read_csv(package/"labels.csv"), pd.read_csv(package/"split_manifest.csv")
+    aligned, diag = bd.align_episodes(episodes, labels, table, bd.Columns(target="strict_target", eligible="eligible_strict"), "full_index")
+    assert diag["index_verified_rows"] == len(rows)
+    selected, _ = bd.select_partitions(aligned, bd.Columns(target="strict_target", eligible="eligible_strict"), ["train", "validation"])
+    assert set(selected.partition) == {"train", "validation"}
     with pytest.raises(PermissionError):
-        bd.select_partitions(aligned, cols, ['test'])
-    test_rows, _ = bd.select_partitions(aligned, cols, ['test'], allow_sealed=True)
-    matrix = bd.load_layer_matrix(test_rows, activations/'layer_08')
-    assert matrix[:, 0].tolist() == [numbers[q]+100 for q in test_rows['ep_question_id']]
-    config = ls.LayerSelectionConfig(capstone_data_root=Path('.'), results_dir=str(results),
-        activations_dir=str(activations), labels_csv=str(results/'labels.csv'),
-        manifest_csv=str(results/'split_manifest.csv'), source_splits=['train', 'validation'], text_fields=[])
-    dev, _, _ = ls.load_inputs(config)
-    assert set(dev['partition']) == {'train', 'validation'}
+        bd.select_partitions(aligned, bd.Columns(), ["test"])
+    for partition in ("test", "validation"):
+        with pytest.raises(ValueError, match="requires train"):
+            production.authorize_rows([r for r in rows if r["partition"] == partition], manifest, purpose="fit")
+
+    intervention = prepared/"results/fixture_intervention"
+    intervention_package = path.parent/"intervention-labels"
+    label_run(intervention, intervention_package, monkeypatch)
+    cfg = replay.ReplayConfig(capstone_data_root=path.parent, interactions_jsonl=str(intervention/"intervention/interactions.jsonl"),
+        labels_csv=str(intervention_package/"labels.csv"), contexts_jsonl=str(intervention/"contexts.jsonl"),
+        label_policy="v0.2.0-candidate", feature_selection_summary="unused.json", layer=8)
+    episodes = replay.load_episodes(cfg)
+    paragraphs = replay.load_paragraphs(episodes, None, Path(cfg.contexts_jsonl))
+    by_id = {r["question_id"]: r for r in master["questions"]}
+    assert set(episodes.question_id) == set(paragraphs)
+    assert any(q.startswith("synthetic:") for q in paragraphs)
+    for qid, context in paragraphs.items():
+        assert context == by_id[qid]["payload"]["paragraphs"]
+    intervention_manifest = production.read_manifest(intervention/"split_manifest.csv")
+    intervention_rows = production.read_run_interactions(intervention, layout="partitioned")
+    with pytest.raises(ValueError, match="requires train"):
+        production.authorize_rows(intervention_rows, intervention_manifest, purpose="fit")
 
 
-def test_existing_label_package_cli_supports_distributed_layout(collected, tmp_path, monkeypatch):
-    results, activations, _, _, _ = collected
-    package = tmp_path/'behavior-package'
-    monkeypatch.setattr('sys.argv', ['prepare_behavior_v01.py', '--full-results', str(results),
-        '--layout', 'partitioned', '--label-policy', 'v0.2.0-candidate', '--output', str(package)])
-    runpy.run_path(str(Path(__file__).resolve().parents[3]/'scripts/prepare_behavior_v01.py'), run_name='__main__')
-    rows, manifest = load_labeled_rows(results, package, layout='partitioned')
-    assert set(r['partition'] for r in rows) == {'train', 'validation', 'test'}
-    counts = json.loads((package/'counts.json').read_text())
-    assert counts['partition']['questions']['missing'] == 0
-    assert 'test' in counts['by_storage_split']
-    assert not (package/'missing_question_ids.json').exists()
-    assert read_partitions(package/'partitions.csv', layout='partitioned')['musique:2hop__3_3']['partition'] == 'intervention'
+def test_export_failure_never_publishes_partial_bundle(exported, monkeypatch):
+    config, path, _, prepared, _ = exported
+    import shutil
+    shutil.rmtree(prepared)
+    original = core.export_partition_activations
+    calls = []
+    def fail(*args, **kwargs):
+        calls.append(1)
+        if len(calls) == 2:
+            raise RuntimeError("export interrupted")
+        return original(*args, **kwargs)
+    monkeypatch.setattr(core, "export_partition_activations", fail)
+    with pytest.raises(RuntimeError, match="interrupted"):
+        core.split_run(path, config)
+    assert not prepared.exists()
+    monkeypatch.setattr(core, "export_partition_activations", original)
+    assert core.split_run(path, config) == prepared
 
 
-def test_missing_test_folder_is_not_silently_ignored(collected):
-    results, _, _, _, _ = collected
-    (results/'test/interactions.jsonl').unlink()
-    with pytest.raises(FileNotFoundError):
-        read_run_interactions(results, layout='partitioned')
+def test_all_excluded_checkpoint_and_partition_are_reported(tmp_path, monkeypatch):
+    config = make_config(tmp_path, count=8)
+    path, master = prepare(tmp_path/"run", config, 4)
+    ids = [r["question_id"] for r in master["questions"]]
+    monkeypatch.setattr(core, "collect_examples", fixture_collector(master, excluded=ids))
+    collect(path, master, config)
+    core.merge_run(path)
+    prepared = core.split_run(path, config)
+    ordinary = prepared/"results/fixture"
+    status = json.loads((ordinary/"collection_status.json").read_text())
+    assert set(status["empty_partitions"]) == {"train", "validation", "test"}
+    assert not status["collected"]
+    assert not production.read_manifest(ordinary/"split_manifest.csv")
+    with pytest.raises(SystemExit):
+        label_run(ordinary, path.parent/"empty-labels", monkeypatch)
 
 
-def test_partitioned_layout_rejects_legacy_mode_and_unavailable_partition(collected):
-    results, _, _, _, _ = collected
-    with pytest.raises(ValueError, match="declares a partitioned run"):
-        read_run_interactions(results)
-    descriptor = json.loads((results/'run_layout.json').read_text())
-    descriptor['source_splits'].remove('test')
-    (results/'run_layout.json').write_text(json.dumps(descriptor))
-    with pytest.raises(ValueError, match="unavailable.*test"):
-        interaction_paths(results, {'test'}, layout='partitioned')
-
-
-def test_partitioned_reader_rejects_missing_publication_marker(collected):
-    results, _, _, _, _ = collected
-    (results/'publication_complete.json').unlink()
-    with pytest.raises(RuntimeError, match="publication is incomplete"):
-        read_run_interactions(results, layout='partitioned')
-    with pytest.raises(RuntimeError, match="publication is incomplete"):
-        bd.build_episode_table(results, ['train'], [])
-
-
-def test_readers_reject_completion_marker_for_a_different_run(collected):
-    results, activations, _, _, _ = collected
-    for root in (results, activations):
-        marker_path = root/'publication_complete.json'
-        marker = json.loads(marker_path.read_text())
-        marker_path.write_text(json.dumps({**marker, 'run_id': 'another-run'}))
-    with pytest.raises(RuntimeError, match="completion identity does not match"):
-        read_run_interactions(results, layout='partitioned')
-    with pytest.raises(RuntimeError, match="completion identity does not match"):
-        create_sae_dataloader(2, 'train', 0, location=activations/'layer_08')
-
-
-def test_wrong_partition_record_is_rejected(collected):
-    results, _, _, _, _ = collected
-    rows = read_run_interactions(results, layout='partitioned')
-    frozen = read_partitions(results/'partitions.csv', layout='partitioned')
-    rows[0]['source_split'] = 'validation' if rows[0]['source_split'] == 'test' else 'test'
-    with pytest.raises(ValueError):
-        build_partition_manifest(rows, frozen=frozen, layout='partitioned')
-
-
-def test_export_cli_keeps_distributed_layout_usable(collected, tmp_path, monkeypatch):
-    results, activations, numbers, _, _ = collected
-    attach_fixture_labels(results)
-    out_a, out_r = tmp_path/'export-a', tmp_path/'export-r'
-    monkeypatch.setattr('sys.argv', ['export_partition_activations.py', '--package', str(results),
-        '--source-results', str(results), '--source-activations', str(activations), '--run', 'full',
-        '--layers', '8', '--layout', 'partitioned', '--frozen-partitions', str(results/'partitions.csv'),
-        '--export-run-name', 'copy', '--export-activation-root', str(out_a), '--export-result-root', str(out_r)])
-    runpy.run_path(str(Path(__file__).resolve().parents[3]/'scripts/export_partition_activations.py'), run_name='__main__')
-    assert (out_a/'copy/layer_08/test.pt').is_file()
-    assert not (out_a/'copy/layer_08/intervention.pt').exists()
-    test_rows = read_jsonl(out_r/'copy/test/interactions.jsonl')
-    matrix = torch.load(out_a/'copy/layer_08/test_attempt2.pt', weights_only=True)
-    assert matrix[:, 0].tolist() == [numbers[r['question_id']]+100 for r in test_rows]
-
-
-def test_unknown_exposure_is_reported_and_not_sampled_as_untouched(inputs, tmp_path):
-    from mas_sae.data.partition_adapter import canonical_partitions
-    from mas_sae.data.production import sample_partition_questions
-    master, historical, _ = inputs
-    imported = import_historical_partitions(master, historical)
-    frozen = freeze_partitions(master, proportions=PROPORTIONS, seed=42, existing=imported)
-    fixed = canonical_partitions(frozen['questions'])
-    unknown_test = fixed['musique:2hop__2_2']
-    assert unknown_test['in_development_data'] is None
-    assert unknown_test['exposure_history_known'] is False
-    with pytest.raises(ValueError, match='eligible'):
-        sample_partition_questions({unknown_test['question_id']: unknown_test}, partition='test', num_questions=1, seed=1)
-
-
-def test_explicit_wrong_label_episode_is_rejected(collected):
-    results, _, _, _, _ = collected
-    attach_fixture_labels(results)
-    labels = pd.read_csv(results/'labels.csv')
-    labels.loc[0, 'episode_id'] = 'another-episode'
-    labels.to_csv(results/'labels.csv', index=False)
-    with pytest.raises(ValueError, match='label episode_id'):
-        load_labeled_rows(results, results, layout='partitioned')
-
-
-def test_intervention_cannot_be_loaded_for_sae_fitting(collected):
-    _, activations, _, _, _ = collected
-    with pytest.raises(FileNotFoundError):
-        create_sae_dataloader(8, 'intervention', 0, location=activations/'layer_08')
-
-
-def test_partition_selection_cli_uses_new_ids_and_exclusions(collected, tmp_path, monkeypatch):
-    results, _, _, _, _ = collected
-    output = tmp_path/'selected.json'
-    args = ['select_partition_questions.py', '--package', str(results), '--partition', 'train',
-        '--num-questions', '1', '--seed', '42', '--layout', 'partitioned',
-        '--frozen-partitions', str(results/'partitions.csv'), '--output', str(output)]
-    monkeypatch.setattr('sys.argv', args)
-    script = str(Path(__file__).resolve().parents[3]/'scripts/select_partition_questions.py')
-    runpy.run_path(script, run_name='__main__')
-    ids = json.loads(output.read_text())
-    assert len(ids) == 1 and ids[0].startswith('synthetic:')
-    # A namespaced synthetic exclusion must not be lost by a MuSiQue-only regex.
-    exclusions = tmp_path/'excluded.json'
-    exclusions.write_text(json.dumps(ids))
-    monkeypatch.setattr('sys.argv', args[:-1]+[str(tmp_path/'second.json'), '--exclude', str(exclusions)])
-    with pytest.raises(ValueError, match='eligible'):
-        runpy.run_path(script, run_name='__main__')
-
-
-def test_partition_selection_normalizes_legacy_ids_and_rejects_unknown_from_source(collected, tmp_path, monkeypatch):
-    results, _, _, _, _ = collected
-    script = str(Path(__file__).resolve().parents[3]/'scripts/select_partition_questions.py')
-    legacy = tmp_path/'legacy.json'; legacy.write_text(json.dumps(['2hop__2_2']))
-    output = tmp_path/'selected.json'
-    args = ['select_partition_questions.py', '--package', str(results), '--partition', 'test',
-        '--num-questions', '1', '--seed', '42', '--layout', 'partitioned',
-        '--frozen-partitions', str(results/'partitions.csv'), '--output', str(output), '--exclude', str(legacy)]
-    monkeypatch.setattr('sys.argv', args)
-    runpy.run_path(script, run_name='__main__')
-    assert 'musique:2hop__2_2' not in json.loads(output.read_text())
-    unknown = tmp_path/'unknown.json'; unknown.write_text(json.dumps(['2hop__999_999']))
-    output2 = tmp_path/'unknown-output.json'
-    unknown_args = [str(output2) if value == str(output) else value for value in args[:-1]] + [str(unknown)]
-    monkeypatch.setattr('sys.argv', unknown_args)
-    with pytest.raises(ValueError, match=f"{unknown}.*unknown exclusion ID"):
-        runpy.run_path(script, run_name='__main__')
-
-
-def test_later_historical_qc_flags_map_to_musique_only(collected, tmp_path, monkeypatch):
-    results, _, _, _, _ = collected
-    qc = tmp_path/'qc.json'
-    qc.write_text(json.dumps({'samples': [{'question_id': '2hop__2_2'}, {'question_id': '2hop__3_3'}]}))
-    package = tmp_path/'qc-package'
-    monkeypatch.setattr('sys.argv', ['prepare_behavior_v01.py', '--full-results', str(results),
-        '--layout', 'partitioned', '--label-policy', 'v0.2.0-candidate', '--first-qc-sample', str(qc), '--output', str(package)])
-    runpy.run_path(str(Path(__file__).resolve().parents[3]/'scripts/prepare_behavior_v01.py'), run_name='__main__')
-    manifest = read_manifest(package/'split_manifest.csv')
-    assert manifest['musique:2hop__2_2']['in_development_data'] is True
-    assert manifest['synthetic:2hop__1_1']['in_development_data'] is False
-    fixed = read_partitions(package/'partitions.csv', layout='partitioned')
-    assert fixed['musique:2hop__3_3']['in_qc100'] is True
-    assert fixed['musique:2hop__3_3']['partition'] == 'intervention'
+def test_incorrect_final_manifest_index_is_rejected_by_real_probe_loader(exported, monkeypatch):
+    _, path, _, prepared, _ = exported
+    results = prepared/"results/fixture"
+    package = path.parent/"labels"
+    label_run(results, package, monkeypatch)
+    episodes = bd.build_episode_table(results, ["train", "validation"], [])
+    manifest = pd.read_csv(package/"split_manifest.csv")
+    manifest.loc[manifest.partition == "train", "full_index"] += 1
+    with pytest.raises(bd.AlignmentError, match="disagrees"):
+        bd.align_episodes(episodes, pd.read_csv(package/"labels.csv"), manifest, bd.Columns(), "full_index")

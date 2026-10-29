@@ -1,833 +1,232 @@
-"""Frozen dataset, work-plan, and object transport for distributed collection.
-
-Workers exchange immutable question packages and completed instances of the
-existing :mod:`collection_progress` chunk format.  ActivationStore deliberately
-remains local-only.
-"""
-from __future__ import annotations
-
-from collections import Counter, defaultdict
-from dataclasses import dataclass
-import hashlib
+"""Local collection, merge, and export. AWS CLI handles file transport."""
+from contextlib import contextmanager
 import json
-import os
 from pathlib import Path
-import random
-import shutil
 import tempfile
-from typing import Any, Iterable
-import uuid
-from urllib.error import HTTPError
-from urllib.parse import quote
-from urllib.request import Request, urlopen
 
-from mas_sae.data.musique import SUPPORTED_PARTITIONS
-from mas_sae.data.publication import PUBLICATION_FILE, READY_FILE, COMPLETE_FILE, read_publication
-from mas_sae.experiments.artifacts import sha256_file, sha256_json, write_json_atomic
-from mas_sae.experiments import collection_progress
+from mas_sae.data.partition_adapter import canonical_partitions, build_collected_manifest, write_run_tables
+from mas_sae.data.production import export_partition_activations, write_partitions
+from mas_sae.experiments import collection_progress as progress
+from mas_sae.experiments.artifacts import ensure_output_available, sha256_file, write_json_atomic
+from mas_sae.experiments.collection import collect_examples
 from mas_sae.experiments.collection_artifacts import save_collection_artifacts
-from mas_sae.experiments.records import read_jsonl
-from mas_sae.experiments.conditions import assign_candidate_orders
-from mas_sae.agents.solver import Solver
-from mas_sae.data.partition_adapter import canonical_partitions, write_distributed_tables
-from mas_sae.experiments.provenance import experiment_compatibility, validate_experiment_compatibility
-
-MASTER_VERSION = 1
-PLAN_VERSION = 1
-PACKAGE_VERSION = 2
-REQUIRED_CHUNK_FILES = ("metadata.json", "records.jsonl", "exclusions.jsonl", "activations.pt")
-COLLECTABLE_PARTITIONS = ("train", "validation", "test") # NOTE: WE MAY NEED TO THINK ABOUT THIS
+from mas_sae.experiments.conditions import OMITTED
+from mas_sae.experiments.provenance import experiment_compatibility
+from mas_sae.experiments.records import read_jsonl, write_jsonl
+from .dataset import assign_families, collection_settings, read_manifest
 
 
-def _canonical_payload(value: Any) -> bytes:
-    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
+def check_config(manifest, config):
+    if collection_settings(config) != manifest["settings"]:
+        raise ValueError("Collection settings differ from the prepared manifest")
+    if config["output"]["run_name"] != manifest["run_name"]:
+        raise ValueError("Run name differs from the prepared manifest")
 
 
-def _is_precondition_failed(error: Exception) -> bool:
-    response = getattr(error, "response", None)
-    if not isinstance(response, dict):
-        return False
-    details = response.get("Error", {})
-    status = response.get("ResponseMetadata", {}).get("HTTPStatusCode")
-    return status == 412 or details.get("Code") in {"PreconditionFailed", "412"}
+def chunk_directory(manifest_path, chunk):
+    return Path(manifest_path).parent / "chunks" / f"{chunk['chunk_id']:06d}"
 
 
-def validate_work_package(package: dict[str, Any]) -> tuple[dict[str, Any], list[dict[str, Any]]]:
-    """Verify a schema-v2 package and return its plan chunk and original payloads."""
-    if package.get("schema_version") != PACKAGE_VERSION:
-        raise ValueError("work package format is not verifiable; regenerate the plan and schema-v2 packages")
-    plan = package.get("plan")
-    if not isinstance(plan, dict) or not plan.get("plan_sha256"):
-        raise ValueError("work package is missing its frozen plan")
-    basis = {key: value for key, value in plan.items() if key != "plan_sha256"}
-    if sha256_json(basis) != plan["plan_sha256"]:
-        raise ValueError("work package frozen plan digest is invalid")
-    if package.get("run_id") != plan.get("run_id"):
-        raise ValueError("work package run identity differs from its frozen plan")
-    validate_experiment_compatibility(plan.get("compatibility"))
-    chunk_id = package.get("chunk_id")
-    matches = [chunk for chunk in plan.get("chunks", []) if chunk.get("chunk_id") == chunk_id]
-    if len(matches) != 1:
-        raise ValueError("work package chunk is not uniquely present in the frozen plan")
-    chunk = matches[0]
-    if sha256_json(chunk.get("questions")) != chunk.get("membership_sha256"):
-        raise ValueError("work package chunk membership digest is invalid")
-    if chunk.get("question_ids") != [member.get("question_id") for member in chunk.get("questions", [])]:
-        raise ValueError("work package ordered question IDs differ from frozen membership")
-    payloads = package.get("examples")
-    if not isinstance(payloads, list) or len(payloads) != len(chunk["questions"]):
-        raise ValueError("work package payload count differs from frozen membership")
-    for member, payload in zip(chunk["questions"], payloads):
-        if not isinstance(payload, dict):
-            raise ValueError(f"{member['question_id']}: work-package payload is not an object")
-        actual = hashlib.sha256(_canonical_payload(payload)).hexdigest()
-        if actual != member.get("payload_sha256"):
-            raise ValueError(f"{member['question_id']}: payload SHA-256 differs from frozen membership")
-    return chunk, payloads
+def _file_facts(root):
+    return {str(p.relative_to(root)): {"size": p.stat().st_size, "sha256": sha256_file(p)}
+            for p in sorted(root.rglob("*")) if p.is_file() and p.name not in {"complete.json", "collection.json"}
+            and not any(part.endswith(".tmp") for part in p.relative_to(root).parts)}
 
 
-def _read_records(path: str | Path) -> list[dict[str, Any]]:
-    path = Path(path)
-    if path.suffix == ".jsonl":
-        return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
-    value = json.loads(path.read_text())
-    if isinstance(value, dict):
-        value = value.get("data", value.get("questions"))
-    if not isinstance(value, list):
-        raise ValueError(f"{path}: expected a JSON list or JSONL records")
-    return value
+def _check_completed(root, manifest, chunk):
+    complete = json.loads((root/"complete.json").read_text())
+    if (complete.get("manifest_sha256") != manifest["manifest_sha256"]
+            or complete.get("chunk_id") != chunk["chunk_id"]
+            or complete.get("files") != _file_facts(root)):
+        raise ValueError(f"{root}: completed chunk identity or files changed")
+    return complete
 
 
-def build_master_dataset(inputs: list[dict[str, Any]]) -> dict[str, Any]:
-    """Combine versioned inputs without changing their question payloads.
-
-    Each input names ``source``, ``version``, and ``path``. Optional
-    ``source_split``, ``id_field`` and ``hop_field`` describe, rather than
-    transform, the supplied data. Global ids are ``source:original_id``.
-
-    Synthetic-input contract (not yet verified against a real release): the
-    producer supplies schema-validated, deduplicated MuSiQue-compatible records.
-    This importer checks identity/metadata, not schema or question quality.
-    Synthetic input is optional; a MuSiQue-only input list is supported today.
-    """
-    rows: list[dict[str, Any]] = []
-    seen_global: set[str] = set()
-    seen_source_ids: set[tuple[str, str]] = set()
-    input_records = []
-    
-    for spec in inputs:
-        source, version = str(spec["source"]), str(spec["version"])
-        if not source or ":" in source or not version:
-            raise ValueError("input source/version must be non-empty and source may not contain ':'")
-        
-        path = Path(spec["path"])
-        raw = path.read_bytes()
-        records = _read_records(path)
-        input_records.append({"source": source, "version": version, "path": str(path),
-                              "sha256": hashlib.sha256(raw).hexdigest(), "count": len(records)})
-        id_field = spec.get("id_field", "id")
-        
-        for source_index, payload in enumerate(records):
-            if not isinstance(payload, dict):
-                raise ValueError(f"{path}: record {source_index} is not an object")
-            original_id = str(payload.get(id_field, ""))
-            if not original_id:
-                raise ValueError(f"{path}: record {source_index} has no {id_field!r}")
-            key, global_id = (source, original_id), f"{source}:{original_id}"
-            if key in seen_source_ids or global_id in seen_global:
-                raise ValueError(f"duplicate input id {global_id!r}")
-            seen_source_ids.add(key); seen_global.add(global_id)
-            hop_field = spec.get("hop_field")
-            # No real synthetic release exists yet. MuSiQue-compatible schema
-            # alone does not promise a hop_group field: agree on hop metadata
-            # with the producer before enabling synthetic inputs.
-            hop = payload.get(hop_field) if hop_field else spec.get("hop")
-            if hop is None and source == "musique":
-                # Parse before namespacing and persist the result; consumers never parse global ids.
-                from mas_sae.data.musique import hop_group
-                hop = hop_group(original_id)
-            if hop is None:
-                raise ValueError(f"{global_id}: explicit hop metadata is required")
-            generation = payload.get("generation_provenance", spec.get("generation_provenance"))
-            row = {"question_id": global_id, "original_id": original_id,
-                   "dataset_source": source, "dataset_version": version,
-                   "source_split": str(payload.get("source_split", spec.get("source_split", ""))),
-                   "hop_group": str(hop), "source_index": source_index,
-                   "payload_sha256": hashlib.sha256(_canonical_payload(payload)).hexdigest(),
-                   "payload": payload}
-            if generation is not None:
-                row["generation_provenance"] = generation
-            rows.append(row)
-    rows.sort(key=lambda r: (r["dataset_source"], r["dataset_version"],
-                             r["source_split"], r["original_id"]))
-    for i, row in enumerate(rows): row["master_index"] = i
-    basis = {"schema_version": MASTER_VERSION, "inputs": input_records, "questions": rows}
-    # Local filenames are audit metadata, not dataset identity: moving identical versioned inputs to another machine must preserve the master digest.
-    hash_basis = {**basis, "inputs": [{k: v for k, v in item.items() if k != "path"}
-                                      for item in input_records]}
-    return {**basis, "master_sha256": sha256_json(hash_basis)}
+def collect_manifest_chunks(manifest_path, manifest, chunks, *, config, resolved_config,
+                            model, solver, critic, validator, candidate_sites, type_checked_target,
+                            resume=False):
+    """One model load can process several work chunks, with durable batch checkpoints."""
+    check_config(manifest, config)
+    experiment = experiment_compatibility(resolved_config, candidate_sites)
+    for chunk in chunks:
+        root = chunk_directory(manifest_path, chunk)
+        questions = manifest["questions"][chunk["start"]:chunk["end"]]
+        ids = [r["question_id"] for r in questions]
+        identity = {"manifest_sha256": manifest["manifest_sha256"], "chunk_id": chunk["chunk_id"],
+                    "experiment": experiment, "resolved_config": resolved_config}
+        if (root/"complete.json").exists():
+            if not resume:
+                raise FileExistsError(f"{root}: already complete; use --resume to skip")
+            saved = _check_completed(root, manifest, chunk)
+            if saved["experiment"] != experiment:
+                raise ValueError("Completed chunk experiment differs from this worker")
+            continue
+        if root.exists():
+            if not resume:
+                raise FileExistsError(f"{root}: use --resume to continue")
+            saved = json.loads((root/"provenance.json").read_text())
+            if any(saved.get(k) != identity[k] for k in ("manifest_sha256", "chunk_id", "experiment")):
+                raise ValueError("Cannot resume: manifest or experiment changed")
+            if saved["resolved_config"] != resolved_config:
+                saved.setdefault("resumed_workers", []).append(resolved_config)
+                write_json_atomic(root/"provenance.json", saved)
+        else:
+            progress.initialize(root, identity)
+        position = progress.resume_position(root, ids)
+        batch_size = config["output"].get("chunk_size", 250)
+        for start in range(position, len(ids), batch_size):
+            batch = questions[start:start+batch_size]
+            result = collect_examples(
+                examples=[{**r["payload"], "id": r["question_id"]} for r in batch], source_split="all",
+                model=model, solver=solver, critic=critic, validator=validator,
+                candidate_sites=candidate_sites, base_seed=config["collection"]["seed"],
+                question_offset=chunk["start"]+start,
+                question_seeds={r["question_id"]: r["collection_seed"] for r in batch},
+                candidate_orders={r["question_id"]: r["candidate_order"] for r in batch if "candidate_order" in r},
+                active_conditions=config["collection"].get("active_conditions", OMITTED),
+                a2_presentations=config["collection"].get("a2_presentations", OMITTED),
+                type_checked_target=type_checked_target)
+            progress.write_chunk(root, start=start, question_ids=ids[start:start+batch_size],
+                                 candidate_sites=candidate_sites, result=result)
+        if progress.resume_position(root, ids) != len(ids):
+            raise ValueError("Work chunk is incomplete")
+        write_json_atomic(root/"complete.json", {"manifest_sha256": manifest["manifest_sha256"],
+            "chunk_id": chunk["chunk_id"], "experiment": experiment, "files": _file_facts(root)}, overwrite=False)
 
 
-def _weighted_assignment(rows: list[dict[str, Any]], proportions: dict[str, float], seed: int) -> dict[str, str]:
-    if set(proportions) != set(SUPPORTED_PARTITIONS) or abs(sum(proportions.values()) - 1) > 1e-9:
-        raise ValueError(f"proportions must name {list(SUPPORTED_PARTITIONS)} and sum to 1")
-    groups: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
-    for row in rows: groups[(row["dataset_source"], row["hop_group"])].append(row)
-    result = {}
-    for group, members in sorted(groups.items()):
-        ordered = sorted(members, key=lambda r: r["question_id"])
-        random.Random(f"{seed}:{group[0]}:{group[1]}").shuffle(ordered)
-        cumulative, previous = 0.0, 0
-        for p_index, partition in enumerate(SUPPORTED_PARTITIONS):
-            cumulative += proportions[partition]
-            end = len(ordered) if p_index == len(SUPPORTED_PARTITIONS)-1 else round(len(ordered)*cumulative)
-            for row in ordered[previous:end]: result[row["question_id"]] = partition
-            previous = end
-    return result
-
-def freeze_partitions(master: dict[str, Any], *, proportions: dict[str, float], seed: int,
-                      existing: dict[str, dict[str, Any]] | None = None,
-                      musique_validation_policy: str = "validation") -> dict[str, Any]:
-    """Keep old assignments and deterministically assign only new questions.
-
-    Historical policy ``validation`` reserves every MuSiQue validation-source
-    item for validation. ``stratify`` deliberately includes it in the general
-    allocation; ``error`` forces callers to preprocess it explicitly.
-
-    Parameters
-    ----------
-    master : dict[str, Any]
-        The master dataset containing all questions and their metadata.
-    proportions : dict[str, float]
-        The desired proportions for each partition (train, validation, test, intervention).
-    seed : int
-        The random seed used for deterministic assignment of new questions.
-    existing : dict[str, dict[str, Any]] | None, optional
-        Previously existing assignments, by question ID, to be preserved. If None, no existing assignments are considered.
-    musique_validation_policy : str, optional
-        Policy for handling MuSiQue validation-source items. Can be "validation", "stratify", or "error". Defaults to "validation".
-
-    Returns
-    -------
-    dict[str, Any]
-        The updated master dataset with frozen and newly assigned partitions.
-
-    Raises
-    ------
-    ValueError
-        Raised if the musique_validation_policy is invalid.
-    ValueError
-        Raised if existing assignments contain unknown question IDs.
-    ValueError
-        Raised if a frozen question's metadata has changed.
-    ValueError
-        Raised if there is an inconsistency in the assignment process.
-    """
-    
-    if musique_validation_policy not in {"validation", "stratify", "error"}:
-        raise ValueError("musique_validation_policy must be validation, stratify, or error")
-    existing = existing or {}
-    by_id = {r["question_id"]: r for r in master["questions"]}
-    unknown = set(existing) - set(by_id)
-    if unknown: raise ValueError(f"existing assignments contain unknown ids: {sorted(unknown)[:3]}")
-    frozen = {}
-    new = []
-    for row in master["questions"]:
-        old = existing.get(row["question_id"])
-        if old:
-            for field in ("dataset_source", "dataset_version", "source_split", "hop_group", "payload_sha256"):
-                if field in old and old[field] != row[field]:
-                    raise ValueError(f"{row['question_id']}: frozen {field} changed")
-            frozen[row["question_id"]] = {**old, **{k: row[k] for k in
-                ("question_id", "dataset_source", "dataset_version", "source_split", "hop_group", "payload_sha256")}}
-            frozen[row["question_id"]].setdefault(
-                "collection_seed", int.from_bytes(hashlib.sha256(
-                    f"{seed}:{row['question_id']}".encode()).digest()[:8], "big") % (2**31))
-            frozen[row["question_id"]].setdefault("prior_development_exposure", False)
-        else: new.append(row)
-    forced, allocatable = [], []
-    for row in new:
-        is_mv = row["dataset_source"] == "musique" and row["source_split"] == "validation"
-        if is_mv and musique_validation_policy == "error":
-            raise ValueError("MuSiQue validation-source rows require an explicit policy")
-        (forced if is_mv and musique_validation_policy == "validation" else allocatable).append(row)
-    assigned = _weighted_assignment(allocatable, proportions, seed) if allocatable else {}
-    for row in new:
-        partition = "validation" if row in forced else assigned[row["question_id"]]
-        prior = row["payload"].get("prior_development_exposure", False)
-        frozen[row["question_id"]] = {k: row[k] for k in
-            ("question_id", "dataset_source", "dataset_version", "source_split", "hop_group", "payload_sha256")}
-        frozen[row["question_id"]].update(partition=partition,
-            collection_seed=int.from_bytes(hashlib.sha256(f"{seed}:{row['question_id']}".encode()).digest()[:8], "big") % (2**31),
-            prior_development_exposure=prior)
-    for question in master["questions"]:
-        record = frozen[question["question_id"]]
-        record["original_id"] = question["original_id"]
-        record["original_source_split"] = question["source_split"]
-    ordered = [frozen[r["question_id"]] for r in master["questions"]]
-    # Freeze presentation order once, independently of worker/chunk boundaries.
-    # On extension, preserve existing orders and assign only missing ones.
-    missing_orders = [r for r in ordered if "candidate_order" not in r]
-    candidate_orders = assign_candidate_orders(
-        [r["question_id"] for r in missing_orders], seed=seed,
-        hop_groups={r["question_id"]: f"{r['partition']}:{r['hop_group']}" for r in missing_orders},
-    )
-    for row in ordered:
-        if "candidate_order" not in row:
-            row["candidate_order"] = candidate_orders[row["question_id"]]
-        if row["candidate_order"] not in Solver.CANDIDATE_ORDERS:
-            raise ValueError(f"{row['question_id']}: invalid frozen candidate_order")
-    basis = {"schema_version": 1, "master_sha256": master["master_sha256"], "seed": seed,
-             "proportions": proportions, "musique_validation_policy": musique_validation_policy,
-             "questions": ordered}
-    return {**basis, "partitions_sha256": sha256_json(basis)}
+@contextmanager
+def staged_output(destination):
+    """Publish activations and records together by renaming their single parent."""
+    destination = Path(destination)
+    ensure_output_available(destination)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix=f".{destination.name}-", dir=destination.parent) as tmp:
+        root = Path(tmp)/"bundle"
+        root.mkdir()
+        yield root
+        ensure_output_available(destination)
+        root.rename(destination)
 
 
-def plan_chunks(master: dict[str, Any], frozen: dict[str, Any], *, run_id: str,
-                chunk_size: int, compatibility: dict[str, Any] | None = None) -> dict[str, Any]:
-    """Plan chunks for distributed processing based on the frozen partitions and master dataset. Done in manifest order; intervention is never planned
-
-    Args:
-        master (dict[str, Any]): The master dataset containing all questions.
-        frozen (dict[str, Any]): The frozen partitions of the dataset.
-        run_id (str): The unique identifier for this run.
-        chunk_size (int): The desired size of each chunk.
-        compatibility (dict[str, Any]): Compatibility constraints for the chunks.
-
-    Returns:
-        dict[str, Any]: A manifest describing the planned chunks.
-    """
-    if chunk_size < 1: raise ValueError("chunk_size must be positive")
-    compatibility = validate_experiment_compatibility(compatibility)
-    if frozen["master_sha256"] != master["master_sha256"]:
-        raise ValueError("partitions belong to a different master dataset")
-    assignments = {r["question_id"]: r for r in frozen["questions"]}
-    if len(assignments) != len(frozen["questions"]) or set(assignments) != {r["question_id"] for r in master["questions"]}:
-        raise ValueError("partition question membership differs from master")
-    for row in master["questions"]:
-        if assignments[row["question_id"]]["payload_sha256"] != row["payload_sha256"]:
-            raise ValueError(f"{row['question_id']}: partition payload differs from master")
-    chunks = []
-    for partition in COLLECTABLE_PARTITIONS:
-        # Plan chunks for the current partition (train, val, test)
-        members = [r for r in master["questions"] if assignments[r["question_id"]]["partition"] == partition]
-        for start in range(0, len(members), chunk_size):
-            group = members[start:start+chunk_size]
-            chunk_id = f"{partition}-{start//chunk_size:06d}"
-            membership = [{"question_id": r["question_id"], "collection_seed": assignments[r["question_id"]]["collection_seed"],
-                           "payload_sha256": r["payload_sha256"]} for r in group]
-            for member in membership:
-                order = assignments[member["question_id"]].get("candidate_order")
-                if order is not None:
-                    member["candidate_order"] = order
-            chunks.append({"chunk_id": chunk_id, "partition": partition, "partition_start": start,
-                           "question_ids": [r["question_id"] for r in group],
-                           "membership_sha256": sha256_json(membership), "questions": membership})
-    by_id = {r["question_id"]: r for r in master["questions"]}
-    planned_questions = [{**r, "original_id": by_id[r["question_id"]]["original_id"],
-                          "original_source_split": by_id[r["question_id"]]["source_split"]}
-                         for r in frozen["questions"]]
-    basis = {"schema_version": PLAN_VERSION, "run_id": run_id,
-             "master_sha256": master["master_sha256"], "partitions_sha256": frozen["partitions_sha256"],
-             "compatibility": compatibility, "chunks": chunks,
-             "questions": planned_questions}
-    return {**basis, "plan_sha256": sha256_json(basis)}
-
-
-def write_work_packages(root: str | Path, master: dict[str, Any], plan: dict[str, Any]) -> None:
-    """Write work packages for distributed collection based on the master dataset and plan.
-
-    Parameters
-    ----------
-    root : str | Path
-        The root directory where the work packages will be written.
-    master : dict[str, Any]
-        The master dataset containing all questions.
-    plan : dict[str, Any]
-        The plan describing how the dataset should be chunked.
-
-    Raises
-    ------
-    FileExistsError
-        Raised if the root directory already exists.
-    """
-    root = Path(root)
-    if root.exists(): raise FileExistsError(root)
-    root.mkdir(parents=True)
-    by_id = {r["question_id"]: r for r in master["questions"]}
-    for chunk in plan["chunks"]:
-        package = {"schema_version": PACKAGE_VERSION, "run_id": plan["run_id"],
-                   "chunk_id": chunk["chunk_id"], "plan": plan,
-                   "examples": [by_id[qid]["payload"] for qid in chunk["question_ids"]]}
-        write_json_atomic(root / f"{chunk['chunk_id']}.json", package)
+def merge_run(manifest_path):
+    manifest_path = Path(manifest_path)
+    manifest = read_manifest(manifest_path)
+    expected = {f"{c['chunk_id']:06d}" for c in manifest["chunks"]}
+    chunks_root = manifest_path.parent/"chunks"
+    actual = {p.name for p in chunks_root.iterdir() if p.is_dir()} if chunks_root.exists() else set()
+    if expected != actual:
+        raise ValueError(f"Chunk set mismatch; missing={sorted(expected-actual)}, extra={sorted(actual-expected)}")
+    checkpoints, workers = [], []
+    experiment = None
+    by_id = {r["question_id"]: r for r in manifest["questions"]}
+    for chunk in manifest["chunks"]:
+        root = chunk_directory(manifest_path, chunk)
+        completed = _check_completed(root, manifest, chunk)
+        worker = json.loads((root/"provenance.json").read_text())
+        current = experiment_compatibility(worker["resolved_config"], completed["experiment"]["activation_sites"])
+        if worker.get("manifest_sha256") != manifest["manifest_sha256"] or worker.get("chunk_id") != chunk["chunk_id"]:
+            raise ValueError("Worker belongs to another manifest or chunk")
+        if worker["experiment"] != current or current != completed["experiment"]:
+            raise ValueError("Worker experiment metadata disagrees")
+        check_config(manifest, worker["resolved_config"])
+        if experiment is not None and experiment != current:
+            raise ValueError("Workers used different experiment settings")
+        experiment = current
+        workers.append(worker)
+        ids = [r["question_id"] for r in manifest["questions"][chunk["start"]:chunk["end"]]]
+        paths, position = progress._committed_prefix(root, ids)
+        if position != len(ids):
+            raise ValueError(f"{root}: incomplete checkpoint coverage")
+        for path in paths:
+            for name in ("records.jsonl", "exclusions.jsonl"):
+                for row in read_jsonl(path/name):
+                    fixed = by_id.get(row.get("question_id"))
+                    if fixed is None or type(row.get("seed")) is not int or row["seed"] != fixed["collection_seed"]:
+                        raise ValueError("Collected question seed differs from manifest")
+                    if name == "records.jsonl" and (row.get("question") != fixed["payload"]["question"]
+                            or row.get("source_split") != "all"):
+                        raise ValueError("Collected question or storage differs from manifest")
+                    if name == "records.jsonl" and fixed.get("candidate_order") != row.get("candidate_order"):
+                        raise ValueError("Collected candidate order differs from manifest")
+        checkpoints.extend(paths)
+    destination = manifest_path.parent/"merged"
+    ids = list(by_id)
+    sites = experiment["activation_sites"]
+    if not sites or len(set(sites)) != len(sites):
+        raise ValueError("Worker activation sites must be nonempty and unique")
+    with staged_output(destination) as stage:
+        reference = None
+        shapes = {}
+        for site in sites:
+            merged = progress.merge_checkpoint_paths(checkpoints, question_ids=ids, candidate_sites=[site])
+            rows, exclusions = merged["records"], merged["exclusions"]
+            if len({r["episode_id"] for r in rows}) != len(rows) or len({r["question_id"] for r in rows}) != len(rows):
+                raise ValueError("Manifest collection requires exactly one unique episode per successful question")
+            for row in rows:
+                fixed = by_id[row["question_id"]]
+                row.update({k: v for k, v in fixed.items() if k not in {"payload", "master_index", "source_index"}})
+            if reference is not None and reference != (rows, exclusions):
+                raise ValueError("Records changed between activation sites")
+            reference = (rows, exclusions)
+            summary = save_collection_artifacts(
+                activation_root=stage/"activations", result_root=stage/"results", run_name="raw", source_split="all",
+                candidate_sites=[site], records=rows, exclusions=exclusions, resolved_config=workers[0]["resolved_config"],
+                sampled_questions=[{k: v for k, v in r.items() if k != "payload"} for r in manifest["questions"]],
+                attempt1_by_site=merged["attempt1_by_site"], attempt2_by_site=merged["attempt2_by_site"])
+            shapes.update(summary["site_shapes"])
+            del merged
+        summary["site_shapes"] = shapes
+        write_json_atomic(stage/"results/raw/all/summary.json", summary)
+        write_json_atomic(stage/"collection.json", {"manifest_sha256": manifest["manifest_sha256"],
+            "sites": sites, "files": _file_facts(stage), "collected": [r["question_id"] for r in rows], "excluded": exclusions,
+            "workers": workers})
+    return destination
 
 
-def chunk_file_manifest(chunk_dir: str | Path) -> dict[str, Any]:
-    root = Path(chunk_dir)
-    missing = [name for name in REQUIRED_CHUNK_FILES if not (root/name).is_file()]
-    if missing: raise ValueError(f"chunk is missing required files: {missing}")
-    files = {name: {"sha256": sha256_file(root/name), "size": (root/name).stat().st_size}
-             for name in REQUIRED_CHUNK_FILES}
-    return {"files": files, "package_sha256": sha256_json(files)}
-
-
-@dataclass
-class S3Transport:
-    """Transport class for handling S3 interactions for distributed collection work packages."""
-    bucket: str
-    prefix: str
-    client: Any = None
-
-    def __post_init__(self):
-        if not self.bucket: raise ValueError("bucket is required")
-        self.prefix = self.prefix.strip("/")
-        if self.client is None:
-            import boto3  # optional: normal AWS credential chain
-            self.client = boto3.client("s3")
-
-    def _key(self, *parts: str) -> str:
-        return "/".join(p.strip("/") for p in (self.prefix, *parts) if p.strip("/"))
-
-    def check_reachable(self, *, timeout: float = 5.0) -> None:
-        """Check HTTPS reachability without testing credentials or writing objects.
-
-        Use the SDK's configured endpoint, including its region or custom URL.
-        HTTP errors such as 403 still prove that the endpoint responded.
-        """
-        endpoint = self.client.meta.endpoint_url.rstrip("/")
-        url = f"{endpoint}/{quote(self.bucket, safe='')}"
-        try:
-            with urlopen(Request(url, method="HEAD"), timeout=timeout):
-                pass
-        except HTTPError as error:
-            error.close()
-        except OSError as error:
-            raise ConnectionError(
-                f"S3 endpoint is unreachable at {url}: {error}. "
-                "Check DNS/network connectivity and retry; local results are unchanged."
-            ) from error
-
-    def upload_work_package(self, run_id: str, chunk_id: str, path: str | Path) -> dict[str, Any]:
-        """Upload a work package to the remote S3 storage.
-
-        Parameters
-        ----------
-        run_id : str
-            The unique identifier for the current run.
-        chunk_id : str
-            The unique identifier for the chunk being uploaded.
-        path : str | Path
-            The local path to the work package file to be uploaded.
-
-        Returns
-        -------
-        dict[str, Any]
-            A dictionary containing the S3 key, SHA-256 digest, and size of the uploaded work package.
-
-        Raises
-        ------
-        ValueError
-            Raised if the work package identity does not match the destination.
-        RuntimeError
-            Raised if there is a mismatch between the expected and actual upload size.
-        """
-        path = Path(path); body = path.read_bytes()
-        package = json.loads(body)
-        chunk, _ = validate_work_package(package)
-        if package.get("run_id") != run_id or chunk.get("chunk_id") != chunk_id:
-            raise ValueError("work package identity does not match destination")
-        key = self._key("inputs", run_id, f"{chunk_id}.json")
-        digest = hashlib.sha256(body).hexdigest()
-        try:
-            self.client.put_object(Bucket=self.bucket, Key=key, Body=body, IfNoneMatch="*",
-                                   ContentType="application/json", Metadata={"sha256": digest})
-        except Exception as error:
-            if not _is_precondition_failed(error):
-                raise
-            current = self.client.get_object(Bucket=self.bucket, Key=key)["Body"].read()
-            if hashlib.sha256(current).hexdigest() != digest or current != body:
-                raise RuntimeError(f"conflicting immutable work package for {chunk_id}") from error
-        head = self.client.head_object(Bucket=self.bucket, Key=key)
-        if int(head["ContentLength"]) != len(body): raise RuntimeError("work-package upload size mismatch")
-        return {"key": key, "sha256": digest, "size": len(body)}
-
-    def download_work_package(self, run_id: str, chunk_id: str, destination: str | Path) -> Path:
-        """Download a work package from the remote storage to a local destination.
-
-        Parameters
-        ----------
-        run_id : str
-            The unique identifier for the current run.
-        chunk_id : str
-            The unique identifier for the chunk being downloaded.
-        destination : str | Path
-            The local path where the downloaded work package should be saved.
-
-        Returns
-        -------
-        Path
-            The path to the downloaded work package file.
-
-        Raises
-        ------
-        FileExistsError
-            Raised if the destination file already exists.
-        RuntimeError
-            Raised if there is a mismatch between the expected and actual work package identity or checksum.
-        """
-        destination = Path(destination)
-        if destination.exists(): raise FileExistsError(destination)
-        key = self._key("inputs", run_id, f"{chunk_id}.json")
-        response = self.client.get_object(Bucket=self.bucket, Key=key)
-        body = response["Body"].read()
-        expected = (response.get("Metadata") or {}).get("sha256")
-        if expected and hashlib.sha256(body).hexdigest() != expected:
-            raise RuntimeError("work-package checksum mismatch")
-        package = json.loads(body)
-        chunk, _ = validate_work_package(package)
-        if package.get("run_id") != run_id or chunk.get("chunk_id") != chunk_id:
-            raise RuntimeError("downloaded work-package identity mismatch")
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        destination.write_bytes(body)
-        return destination
-
-    def upload_attempt(self, run_id: str, chunk_id: str, chunk_dir: str | Path,
-                       attempt_id: str | None = None, hardware: dict[str, Any] | None = None) -> dict[str, Any]:
-        """Upload an attempt for a specific chunk to the remote storage.
-
-        Parameters
-        ----------
-        run_id : str
-            The unique identifier for the current run.
-        chunk_id : str
-            The unique identifier for the chunk being uploaded.
-        chunk_dir : str | Path
-            The local directory containing the chunk files to be uploaded.
-        attempt_id : str | None, optional
-            The unique identifier for the attempt. If not provided, a new UUID will be generated, by default None.
-        hardware : dict[str, Any] | None, optional
-            Information about the hardware used for the attempt, by default None.
-
-        Returns
-        -------
-        dict[str, Any]
-            Metadata about the uploaded attempt, including run_id, chunk_id, attempt_id, and hardware information.
-
-        Raises
-        ------
-        RuntimeError
-            Raised if there is a mismatch between the expected and actual uploaded file sizes.
-        """
-
-        attempt_id = attempt_id or str(uuid.uuid4())
-        manifest = chunk_file_manifest(chunk_dir)
-        base = self._key("results", run_id, chunk_id, "attempts", attempt_id)
-        for name, expected in manifest["files"].items():
-            self.client.upload_file(str(Path(chunk_dir)/name), self.bucket, f"{base}/{name}")
-            head = self.client.head_object(Bucket=self.bucket, Key=f"{base}/{name}")
-            if int(head["ContentLength"]) != expected["size"]:
-                raise RuntimeError(f"uploaded size mismatch for {name}")
-        marker = {**manifest, "run_id": run_id, "chunk_id": chunk_id, "attempt_id": attempt_id,
-                  "hardware": hardware or {}}
-        self.client.put_object(Bucket=self.bucket, Key=f"{base}/complete.json",
-                               Body=_canonical_payload(marker), ContentType="application/json")
-        return marker
-
-    def accept_attempt(self, marker: dict[str, Any]) -> dict[str, Any]:
-        """Accept once using an S3 conditional create; identical retries are idempotent."""
-        base = self._key("results", marker["run_id"], marker["chunk_id"], "attempts", marker["attempt_id"])
-        remote = json.loads(self.client.get_object(Bucket=self.bucket, Key=f"{base}/complete.json")["Body"].read())
-        for field in ("run_id", "chunk_id", "attempt_id", "package_sha256"):
-            if remote.get(field) != marker.get(field):
-                raise ValueError(f"remote attempt completion marker disagrees on {field}")
-        key = self._key("results", marker["run_id"], marker["chunk_id"], "accepted.json")
-        accepted = {k: marker[k] for k in ("run_id", "chunk_id", "attempt_id", "package_sha256")}
-        try:
-            self.client.put_object(Bucket=self.bucket, Key=key, Body=_canonical_payload(accepted),
-                                   ContentType="application/json", IfNoneMatch="*")
-            return accepted
-        except Exception as error:
-            if not _is_precondition_failed(error):
-                raise
-            current = json.loads(self.client.get_object(Bucket=self.bucket, Key=key)["Body"].read())
-            if (current.get("run_id") != accepted["run_id"]
-                    or current.get("chunk_id") != accepted["chunk_id"]
-                    or current.get("package_sha256") != accepted["package_sha256"]):
-                raise RuntimeError(f"conflicting completed attempts for chunk {marker['chunk_id']}")
-            return current
-
-    def download_accepted(self, run_id: str, chunk_id: str, destination: str | Path) -> Path:
-        """Download the accepted attempt for a specific chunk to a local destination.
-
-        Parameters
-        ----------
-        run_id : str
-            The unique identifier for the current run.
-        chunk_id : str
-            The unique identifier for the chunk to be downloaded.
-        destination : str | Path
-            The local directory where the accepted chunk files will be downloaded.
-
-        Returns
-        -------
-        Path
-            The local path to the downloaded chunk directory.
-
-        Raises
-        ------
-        RuntimeError
-            Raised if the downloaded chunk's package hash does not match the accepted package hash.
-        """
-        accepted_key = self._key("results", run_id, chunk_id, "accepted.json")
-        accepted = json.loads(self.client.get_object(Bucket=self.bucket, Key=accepted_key)["Body"].read())
-        base = self._key("results", run_id, chunk_id, "attempts", accepted["attempt_id"])
-        destination = Path(destination)
-        destination.mkdir(parents=True, exist_ok=False)
-        for name in REQUIRED_CHUNK_FILES:
-            self.client.download_file(self.bucket, f"{base}/{name}", str(destination/name))
-        actual = chunk_file_manifest(destination)
-        if actual["package_sha256"] != accepted["package_sha256"]:
-            raise RuntimeError(f"corrupt accepted package for {chunk_id}")
-        write_json_atomic(destination/"download_receipt.json", accepted)
-        return destination
-
-
-def collection_report(frozen: dict[str, Any], records: Iterable[dict[str, Any]],
-                      exclusions: Iterable[dict[str, Any]], eligible_ids: Iterable[str] = ()) -> dict[str, Any]:
-    """Collection success and consumer eligibility are intentionally separate."""
-    lookup = {r["question_id"]: r for r in frozen["questions"]}
-    successful = {str(r["question_id"]) for r in records}
-    excluded = {str(r["question_id"]) for r in exclusions}
-    eligible = set(map(str, eligible_ids))
-    def counts(ids):
-        return dict(sorted(Counter(f"{lookup[q]['partition']} / {lookup[q]['dataset_source']}" for q in ids).items()))
-    return {"assigned": counts(lookup), "collected": counts(successful),
-            "excluded": counts(excluded), "eligible": counts(eligible)}
-
-def _publish_run(staged_a: Path, staged_r: Path, final_a: Path, final_r: Path,
-                 publication: dict[str, Any]) -> dict[str, Any]:
-    """Publish only fully built, owned trees; retries can finish either rename."""
-    pairs = ((staged_a, final_a), (staged_r, final_r))
-    for staged, final in pairs:
-        if staged.exists() and final.exists():
-            raise ValueError(f"both {staged} and {final} exist; refusing ambiguous publication")
-        root = final if final.exists() else staged
-        if not root.is_dir() or read_publication(root) != publication:
-            raise ValueError(f"{root}: output does not belong to this run and frozen plan")
-        ready = root / READY_FILE
-        if not ready.is_file() or json.loads(ready.read_text()) != publication:
-            raise ValueError(f"{root}: publication build is not ready; refusing to expose incomplete outputs")
-    # Read the summary before setting completion markers, including on recovery.
-    result = final_r if final_r.exists() else staged_r
-    summary = json.loads((result / "distributed_summary.json").read_text())
-    if summary.get("plan_sha256") != publication["plan_sha256"]:
-        raise ValueError("publication summary belongs to another frozen plan")
-    partitions = summary["partitions"]
-    for staged, final in pairs:
-        if not final.exists():
-            staged.replace(final)
-    for _, final in pairs:
-        write_json_atomic(final / COMPLETE_FILE, publication)
-    return partitions
-
-
-def finalize_local_chunks(*, plan: dict[str, Any], chunk_dirs: dict[str, str | Path],
-                          candidate_sites: list[str], activation_root: str | Path,
-                          result_root: str | Path, run_name: str,
-                          resolved_config: dict[str, Any], recover_publication: bool = False) -> dict[str, Any]:
-    """Validate and merge accepted chunks in frozen order, partition by partition.
-
-    The existing merger reconstructs all four indices from saved successful row
-    counts. The existing artifact writer then creates ``A1``, ``A2`` and
-    ``cat(A1, A2)`` separately for every site; combined per-chunk SAE tensors
-    are never consumed.
-
-    Parameters
-    ----------
-    plan : dict[str, Any]
-        Mapping from chunk IDs to their corresponding local directories containing chunk files.
-    chunk_dirs : dict[str, str  |  Path]
-        Mapping from chunk IDs to their corresponding local directories containing chunk files.
-    candidate_sites : list[str]
-        List of candidate sites for the collection process.
-    activation_root : str | Path
-        Root directory for activation files.
-    result_root : str | Path
-        Root directory for result files.
-    run_name : str
-        Name of the current run.
-    resolved_config : dict[str, Any]
-        Resolved configuration for the collection process.
-
-    Returns
-    -------
-    dict[str, Any]
-        Summary of the finalized local chunks, typically including status and any relevant metadata.
-
-    Raises
-    ------
-    ValueError
-        Raised if candidate_sites is empty.
-    ValueError
-        Raised if there is a mismatch between the expected and provided chunk directories.
-    FileExistsError
-        Raised if the final run output already exists.
-    ValueError
-        Raised if there is an issue with the chunk validation or merging process.
-    ValueError
-        Raised if there is an issue with the resolved configuration.
-    RuntimeError
-        Raised if there is a corruption detected in the accepted chunks.
-    """
-    
-    if not candidate_sites:
-        raise ValueError("candidate_sites must not be empty.")
-    if not run_name or run_name in {".", ".."} or Path(run_name).name != run_name:
-        raise ValueError("run_name must be a single directory name")
-    expected_compatibility = plan.get("compatibility")
-    if not expected_compatibility:
-        raise ValueError("work plan has no explicit experiment compatibility contract; regenerate it")
-    final_compatibility = experiment_compatibility(resolved_config, candidate_sites)
-    if final_compatibility != expected_compatibility:
-        raise ValueError("final resolved configuration differs from the frozen run contract")
-    expected = {c["chunk_id"]: c for c in plan["chunks"]}
-    if set(chunk_dirs) != set(expected):
-        missing, extra = set(expected)-set(chunk_dirs), set(chunk_dirs)-set(expected)
-        raise ValueError(f"chunk set mismatch; missing={sorted(missing)}, extra={sorted(extra)}")
-    activation_root, result_root = Path(activation_root), Path(result_root)
-    final_a, final_r = activation_root/run_name, result_root/run_name
-    if final_a.resolve() == final_r.resolve():
-        raise ValueError("activation and result output directories must differ")
-    stage_name = f".{run_name}.staging-{plan['plan_sha256'][:12]}"
-    staged_a, staged_r = activation_root/stage_name, result_root/stage_name
-    publication = {"schema_version": 1, "run_id": plan["run_id"],
-                   "run_name": run_name, "plan_sha256": plan["plan_sha256"]}
-    if recover_publication:
-        existing = []
-        for path in (final_a, staged_a, final_r, staged_r):
-            if path.exists():
-                if read_publication(path) != publication:
-                    raise ValueError(f"{path}: output does not belong to this run and frozen plan")
-                existing.append(path)
-        if not existing:
-            raise ValueError("no interrupted publication for this run and frozen plan can be recovered")
-        if (final_a.exists() or final_r.exists()
-                or all((path / READY_FILE).is_file() for path in (staged_a, staged_r))):
-            return _publish_run(staged_a, staged_r, final_a, final_r, publication)
-        # A killed build has ownership but has not committed readiness. Only
-        # its matching private staging can be discarded, then rebuilt below.
-        for path in existing:
-            shutil.rmtree(path)
-    if final_a.exists() or final_r.exists() or staged_a.exists() or staged_r.exists():
-        raise FileExistsError(
-            "run output or same-plan staging exists; use --recover-publication only for an interrupted publication"
-        )
-    summaries = {}
-    worker_provenance = []
-    question_metadata = canonical_partitions(plan["questions"]) if "questions" in plan else {}
-    created = []
-    ready = False
-    try:
-        for path in (staged_a, staged_r):
-            path.mkdir(parents=True)
-            created.append(path)
-            write_json_atomic(path / PUBLICATION_FILE, publication)
-        with tempfile.TemporaryDirectory() as progress_parent:
-            for partition in COLLECTABLE_PARTITIONS:
-                chunks = [c for c in plan["chunks"] if c["partition"] == partition]
-                if not chunks: continue
-                progress = Path(progress_parent)/partition; progress.mkdir()
-                question_ids = []
-                for chunk in chunks:
-                    source = Path(chunk_dirs[chunk["chunk_id"]])
-                    meta = json.loads((source/"metadata.json").read_text())
-                    required = {"chunk_id": chunk["chunk_id"], "run_id": plan["run_id"],
-                                "plan_sha256": plan["plan_sha256"],
-                                "membership_sha256": chunk["membership_sha256"],
-                                "question_ids": chunk["question_ids"], "start": chunk["partition_start"]}
-                    if any(meta.get(k) != v for k, v in required.items()):
-                        raise ValueError(f"{chunk['chunk_id']}: metadata is incompatible with work plan")
-                    if meta.get("candidate_sites") != candidate_sites:
-                        raise ValueError(f"{chunk['chunk_id']}: activation sites differ")
-                    if meta.get("experiment_compatibility") != expected_compatibility:
-                        raise ValueError(f"{chunk['chunk_id']}: worker experiment compatibility differs from plan")
-                    try:
-                        worker_compatibility = experiment_compatibility(meta.get("resolved_config", {}), candidate_sites)
-                    except ValueError as error:
-                        raise ValueError(f"{chunk['chunk_id']}: invalid worker resolved config: {error}") from error
-                    if worker_compatibility != expected_compatibility:
-                        raise ValueError(f"{chunk['chunk_id']}: worker resolved config differs from plan")
-                    actual = chunk_file_manifest(source)
-                    receipt = source/"download_receipt.json"
-                    if receipt.is_file():
-                        downloaded = json.loads(receipt.read_text())
-                        if (downloaded.get("run_id") != plan["run_id"]
-                                or downloaded.get("chunk_id") != chunk["chunk_id"]
-                                or downloaded.get("package_sha256") != actual["package_sha256"]):
-                            raise ValueError(f"{chunk['chunk_id']}: downloaded files changed")
-                    seeds = {r["question_id"]: r["collection_seed"] for r in chunk["questions"]}
-                    orders = {r["question_id"]: r.get("candidate_order") for r in chunk["questions"]}
-                    for name in ("records.jsonl", "exclusions.jsonl"):
-                        for row in read_jsonl(source/name):
-                            qid = row.get("question_id")
-                            if qid not in seeds or type(row.get("seed")) is not int or row["seed"] != seeds[qid]:
-                                raise ValueError(f"{chunk['chunk_id']}: question seed differs from plan")
-                            if row.get("a2_presentation") == "candidates":
-                                if orders[qid] not in Solver.CANDIDATE_ORDERS or row.get("candidate_order") != orders[qid]:
-                                    raise ValueError(f"{chunk['chunk_id']}: candidate order differs from plan")
-                    worker_provenance.append({"chunk_id": chunk["chunk_id"],
-                        "progress": meta.get("provenance"), "resolved_config": meta.get("resolved_config")})
-                    shutil.copytree(source, progress/f"chunk_{chunk['partition_start']:08d}")
-                    question_ids.extend(chunk["question_ids"])
-                # Merge/write one captured site at a time. Chunk files contain
-                # all sites, but tensors from earlier sites are released before
-                # the next site is materialized, bounding peak tensor memory to
-                # roughly one partition-layer plus one chunk container.
-                reference_records = reference_exclusions = None
-                summary: dict[str, Any] = {}
-                site_shapes = {}
-                for site in candidate_sites:
-                    merged = collection_progress.merge_chunks(
-                        progress, question_ids=question_ids, candidate_sites=[site])
-                    if question_metadata:
-                        for record in merged["records"]:
-                            fixed = question_metadata[record["question_id"]]
-                            for field in ("dataset_source", "original_id", "original_source_split", "partition",
-                                          "hop_group", "in_qc100", "in_development_data", "exposure_history_known"):
-                                record[field] = fixed[field]
-                    if reference_records is None:
-                        reference_records, reference_exclusions = merged["records"], merged["exclusions"]
-                    elif (merged["records"] != reference_records
-                          or merged["exclusions"] != reference_exclusions):
-                        raise RuntimeError("record metadata changed while streaming activation sites")
-                    current = save_collection_artifacts(
-                        activation_root=activation_root, result_root=result_root,
-                        run_name=stage_name, source_split=partition, candidate_sites=[site],
-                        attempt1_by_site=merged["attempt1_by_site"], attempt2_by_site=merged["attempt2_by_site"],
-                        records=merged["records"], exclusions=merged["exclusions"],
-                        resolved_config=resolved_config,
-                        sampled_questions=[question_metadata[q] if question_metadata else
-                                           {"question_id": q, "hop_group": "explicit"} for q in question_ids])
-                    site_shapes.update(current["site_shapes"])
-                    summary = current
-                    del merged
-                summary["site_shapes"] = site_shapes
-                summary["run_name"] = run_name
-                write_json_atomic(result_root/stage_name/partition/"summary.json", summary)
-                summaries[partition] = summary
-        if question_metadata:
-            write_distributed_tables(result_root/stage_name, plan["questions"], summaries)
-        write_json_atomic(staged_r/"worker_provenance.json", {"workers": worker_provenance})
-        write_json_atomic(staged_r/"distributed_summary.json", {"plan_sha256": plan["plan_sha256"], "partitions": summaries})
-        for path in (staged_a, staged_r):
-            write_json_atomic(path / READY_FILE, publication)
-        ready = True
-        return _publish_run(staged_a, staged_r, final_a, final_r, publication)
-    except Exception:
-        # A normal build failure is retryable. Once readiness is committed,
-        # preserve both trees for explicit recovery of interrupted publication.
-        if not ready:
-            for path in created:
-                if path.exists():
-                    shutil.rmtree(path)
-        raise
+def split_run(manifest_path, config):
+    manifest_path = Path(manifest_path)
+    manifest = read_manifest(manifest_path)
+    check_config(manifest, config)
+    merged = manifest_path.parent/"merged"
+    info = json.loads((merged/"collection.json").read_text())
+    if info["manifest_sha256"] != manifest["manifest_sha256"] or info["files"] != _file_facts(merged):
+        raise ValueError("Merged run identity or files changed")
+    split = config["dataset"]["split"]
+    assignment = assign_families([r for r in manifest["questions"] if r["partition"] != "intervention"],
+        split["proportions"], split.get("seed", config["collection"]["seed"]), candidate_strata=True)
+    questions = [{**r, "partition": "intervention" if r["partition"] == "intervention"
+                  else assignment[r["question_id"]]} for r in manifest["questions"]]
+    raw_fixed = canonical_partitions(questions, storage_split="all")
+    rows = read_jsonl(merged/"results/raw/all/interactions.jsonl")
+    raw_manifest = build_collected_manifest(rows, raw_fixed, exclusions=info["excluded"])
+    layers = config["collection"]["layers"]
+    destination = manifest_path.parent/"prepared"
+    with staged_output(destination) as stage:
+        fixed = canonical_partitions(questions)
+        write_partitions(stage/"partitions.csv", fixed, layout="partitioned")
+        write_json_atomic(stage/"split.json", {"manifest_sha256": manifest["manifest_sha256"], "split": split})
+        for suffix, partitions in (("", ["train", "validation", "test"]), ("_intervention", ["intervention"])):
+            run_name = manifest["run_name"]+suffix
+            group_fixed = {q: r for q, r in fixed.items() if r["partition"] in partitions}
+            exclusions = [r for r in info["excluded"] if r["question_id"] in group_fixed]
+            present = [p for p in partitions if any(raw_manifest[r["question_id"]]["partition"] == p for r in rows)]
+            export_partition_activations(rows, raw_manifest, merged/"activations/raw", run="full", layers=layers,
+                export_activation_root=stage/"activations", export_result_root=stage/"results", export_run_name=run_name,
+                partitions=present)
+            result_root = stage/"results"/run_name
+            for partition in partitions:
+                path = result_root/partition/"interactions.jsonl"
+                exported = read_jsonl(path) if path.exists() else []
+                for record in exported:
+                    record["collection_activation_index"] = record.pop("source_activation_index")
+                    record["source_split"] = partition
+                write_jsonl(path, exported)
+                write_jsonl(result_root/partition/"exclusions.jsonl", [r for r in exclusions if fixed[r["question_id"]]["partition"] == partition])
+            write_run_tables(result_root, group_fixed, partitions, exclusions)
+            reserved_ids = sorted(q for q, r in fixed.items() if r["partition"] == "intervention")
+            (result_root/"intervention_question_ids.json").write_text(json.dumps(reserved_ids, indent=2)+"\n")
+            if suffix:
+                write_jsonl(result_root/"contexts.jsonl", [
+                    {"question_id": r["question_id"], "payload": r["payload"]}
+                    for r in questions if r["partition"] == "intervention"])
+    return destination

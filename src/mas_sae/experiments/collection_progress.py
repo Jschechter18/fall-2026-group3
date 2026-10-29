@@ -166,7 +166,6 @@ def write_chunk(
     question_ids: list[str],
     candidate_sites: list[str],
     result: CollectionResult,
-    metadata_extra: dict[str, Any] | None = None,
 ) -> Path:
     """Commit one chunk atomically: files, fsync, rename, fsync the parent."""
     records = [
@@ -193,11 +192,6 @@ def write_chunk(
     temporary.mkdir()
 
     metadata = {"start": start, "end": start + len(question_ids), "question_ids": list(question_ids)}
-    if metadata_extra:
-        overlap = set(metadata) & set(metadata_extra)
-        if overlap:
-            raise ValueError(f"metadata_extra may not replace {sorted(overlap)}")
-        metadata.update(metadata_extra)
     write_json_atomic(temporary / "metadata.json", metadata)
     write_jsonl(temporary / "records.jsonl", records)
     write_jsonl(temporary / "exclusions.jsonl", exclusions)
@@ -256,6 +250,14 @@ def merge_chunks(
             f"Cannot finalise: committed chunks cover {position}/{len(question_ids)} questions."
         )
 
+    return merge_checkpoint_paths(paths, question_ids=question_ids, candidate_sites=candidate_sites)
+
+
+def merge_checkpoint_paths(paths, *, question_ids, candidate_sites):
+    """Merge ordered checkpoints across workers using the same index reconstruction."""
+    membership = [qid for path in paths for qid in json.loads((path / "metadata.json").read_text())["question_ids"]]
+    if membership != question_ids or len(set(question_ids)) != len(question_ids):
+        raise ValueError("Checkpoint membership does not cover the ordered questions exactly once")
     records: list[dict[str, Any]] = []
     exclusions: list[dict[str, Any]] = []
     attempt1: dict[str, list[torch.Tensor]] = {site: [] for site in candidate_sites}
