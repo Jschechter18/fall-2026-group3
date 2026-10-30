@@ -1,0 +1,61 @@
+\section{Introduction}
+\label{sec:introduction}
+
+Large language models (LLMs) are increasingly deployed as components of
+multi-agent systems in which models critique, debate, verify, or revise one
+another's outputs. These systems can improve factuality and reasoning by
+combining multiple model responses \cite{du2024debate}. Their success,
+however, depends on more than whether a Critic can produce useful feedback. A
+Solver must also decide whether that feedback should change its answer. Blind
+deference can propagate incorrect recommendations, while indiscriminate
+resistance can prevent useful correction. Prior work on self-correction and
+sycophancy shows that externally prompted revision does not necessarily imply
+reliable error correction \cite{huang2024selfcorrect,sharma2024sycophancy}.
+
+Behavioral evaluation can reveal whether a Solver changed its answer, but it
+cannot by itself identify the internal computations responsible for that
+decision. A representation may correlate with feedback adoption because it
+encodes disagreement, answer content, Critic quality, or a downstream
+consequence of the decision. Establishing a mechanism therefore requires two
+steps: finding internal features that predict behavior on held-out data and
+intervening on those features to test whether they influence behavior.
+
+Sparse autoencoders (SAEs) offer a practical representation for this analysis.
+They decompose dense neural activations into a larger set of sparsely active
+features, some of which can be more interpretable than individual model
+dimensions \cite{cunningham2023sparse,gao2025scaling}. We use SAEs to encode
+the Solver's hidden states while it processes Critic feedback. Regularized
+linear probes then test whether the resulting feature activations predict
+whether the Solver adopts the Critic's recommendation or retains its original
+answer. Finally, selected features are ablated or modified during a replayed
+forward pass, allowing us to compare targeted interventions with random-feature
+controls.
+
+Our experiments use MuSiQue, a benchmark designed to require composition over
+multiple reasoning steps \cite{trivedi2022musique}. For each question, a
+Gemma 3 4B instruction-tuned Solver produces an initial answer and a Qwen3 4B
+instruction-tuned Critic independently produces a review and recommendation.
+The Solver is subsequently shown its prior answer and the Critic's candidate
+answer in randomized order. This candidate-presentation protocol makes
+adoption and retention more directly observable than unconstrained free-form
+revision while preserving agreement and unresolved cases as separate outcomes.
+
+This project addresses three primary research questions:
+
+\begin{enumerate}
+    \item Which internal Solver representations predict adoption versus
+    retention of Critic feedback?
+    \item Do interaction-trained SAEs isolate feedback-related structure more
+    effectively than a general pretrained SAE?
+    \item Do targeted interventions on probe-selected SAE features causally
+    change feedback-uptake behavior relative to appropriate controls?
+\end{enumerate}
+
+The main contribution is an end-to-end, reproducible workflow connecting
+behavioral data collection, leakage-aware partitioning, sparse representation
+learning, predictive probing, and causal intervention. The workflow also
+retains agreement, refusal, ambiguous, and malformed responses rather than
+forcing every interaction into a binary target. This distinction is important:
+a model cannot meaningfully adopt a Critic's answer when both agents already
+agree, and uncertain text matches should not be treated as ground-truth
+behavior labels.

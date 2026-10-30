@@ -1,0 +1,18 @@
+Multi-agent large language model systems often rely on one model to critique
+another, but a revised answer alone does not reveal how the receiving model
+internally processes that feedback. We study feedback uptake in a
+Solver--Critic system using MuSiQue, a multi-hop question-answering benchmark
+with known answers. A Gemma 3 4B instruction-tuned Solver first answers each
+question, a Qwen3 4B instruction-tuned Critic independently reviews that
+answer, and the Solver then chooses between its original response and the
+Critic's recommendation. We capture Solver residual-stream activations across
+nine transformer layers and use sparse autoencoders (SAEs) to represent those
+activations as sparse features. Linear probes identify features associated
+with adoption versus retention, while held-out causal interventions test
+whether altering selected features changes the Solver's decision. The
+collected candidate-presentation dataset contains 22,355 sampled questions;
+the current labeling policy identifies 5,834 adoptions, 4,810 retentions,
+8,451 agreements, and 3,260 episodes excluded from the primary behavioral
+analysis. This design separates predictive association from causal evidence
+and provides a reproducible framework for investigating when language models
+defer to, resist, or agree with another model's feedback.

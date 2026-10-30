@@ -1,11 +1,10 @@
 """Build the behavior label package from the finished production run.
 
-Writes four things into a new folder:
+Writes three things into a new folder:
 
     labels.csv           one row per question: the new labels next to lexical_v2
     split_manifest.csv   one row per question: which partition it belongs to
-    counts.json          label counts and the split audit
-    qc/                  blind annotation packet for the human check
+    counts.json          label counts, the split audit and the source file hashes
 
 The collection run folders are only read, never changed.
 
@@ -39,20 +38,17 @@ first rule set, v0.1.1, until the team adopts another under issue #108. The
 policy's version and the hash of its full definition go into counts.json, so a
 package always says which rules produced it.
 
-The QC packet is sampled from the train partition only. Pass --reuse-qc only
-for a packet that was itself sampled under the same partition rule; a packet
-issued under an earlier split is refused because it would show annotators
-test or intervention questions.
+Human QC is finished: no policy writes an annotation packet. The packets that
+were issued, and their annotations, stay unchanged in the packages they came
+from.
 """
 import argparse
 import json
 from pathlib import Path
-import shutil
-
-import yaml
 
 from mas_sae.data.production import (
     COVERAGE_MODES,
+    interaction_paths,
     build_partition_manifest,
     check_scan_repeats_full_run,
     read_partitions,
@@ -60,14 +56,7 @@ from mas_sae.data.production import (
     split_audit,
     write_package_tables,
 )
-from mas_sae.evaluation.behavior_qc import (
-    check_qc_packet,
-    choose_qc_rows,
-    reuse_qc_packet,
-    source_paragraphs,
-    write_annotator_files,
-)
-from mas_sae.evaluation import behavior, behavior_labels, scoring
+from mas_sae.evaluation import behavior, behavior_labels, feedback_coherence, scoring
 from mas_sae.evaluation.behavior_labels import (
     DEFAULT_POLICY_NAME,
     POLICIES,
@@ -88,10 +77,11 @@ from mas_sae.experiments.artifacts import (
 FULL_RESULTS = "natural_4b_full/results"
 SCAN_RESULTS = "issue69_natural_4b_layer_scan/results/collection/natural_4b_layer_scan"
 FIRST_QC_SAMPLE = "issue55_human_qc/sample_manifest.json"
-QC_GUIDE = Path(__file__).resolve().parents[1] / "docs" / "qc_guide.md"
 
 # The modules whose code decides the labels; their hashes go into counts.json.
+# Candidate rules also write the feedback-coherence diagnostic.
 RULE_MODULES = (behavior_labels, behavior, scoring)
+CANDIDATE_RULE_MODULES = (feedback_coherence,)
 
 
 def main():
@@ -111,10 +101,6 @@ def main():
                              f"(default: <artifacts>/{FIRST_QC_SAMPLE} when that file exists)")
     parser.add_argument("--output", type=Path, required=True,
                         help="new folder for the package")
-    parser.add_argument("--reuse-qc", type=Path,
-                        help="qc/ folder of an issued packet to keep unchanged")
-    parser.add_argument("--seed", type=int, default=42,
-                        help="used only when a new QC packet is sampled")
     parser.add_argument("--frozen-partitions", type=Path,
                         help="partitions.csv to take every question's partition from, never recomputing "
                              "membership; use this for every run after the first")
@@ -132,7 +118,13 @@ def main():
                         help="first derivation only: share reserved for the causal experiment")
     parser.add_argument("--split-seed", type=int,
                         help="first derivation only: seed of the hop-stratified cut")
+    parser.add_argument("--layout", choices=("legacy", "partitioned"), default="legacy",
+                        help="Input directory layout; partitioned uses the distributed finalizer's manifests and test folder.")
     args = parser.parse_args()
+    if args.layout == "partitioned" and args.frozen_partitions is None:
+        if args.full_results is None:
+            parser.error("--layout partitioned requires --full-results")
+        args.frozen_partitions = args.full_results / "partitions.csv"
 
     deriving = args.frozen_partitions is None
     derivation = (args.train_proportion, args.test_proportion, args.intervention_proportion, args.split_seed)
@@ -155,16 +147,19 @@ def main():
     ensure_output_available(args.output)
 
     # Remember the input files' hashes so we can confirm they were not changed.
-    input_files = [run_dir / source_split / "interactions.jsonl"
-                   for run_dir in (full_dir, scan_dir) if run_dir is not None
-                   for source_split in ("train", "validation")]
+    if args.layout == "partitioned" and scan_dir is not None:
+        parser.error("Partitioned full runs do not use the historical scan-merge path")
+    input_files = [path for run_dir in (full_dir, scan_dir) if run_dir is not None
+                   for path in interaction_paths(run_dir, layout=args.layout)]
     hashes_before = {str(path): sha256_file(path) for path in input_files}
 
     # 1. Read the run(s) and give each question its partition.
-    full_rows = read_run_interactions(full_dir)
+    full_rows = read_run_interactions(full_dir, layout=args.layout)
+    if not full_rows:
+        parser.error("No collected episodes to label; inspect collection_status.json for exclusions")
     scan_rows = read_run_interactions(scan_dir) if scan_dir is not None else []
     if scan_rows:
-        check_scan_repeats_full_run(full_rows, scan_rows)
+        check_scan_repeats_full_run(full_rows, scan_rows, policy.input_fields)
     qc100_ids = []
     if qc_sample is not None:
         qc100_ids = [sample["question_id"] for sample in json.loads(qc_sample.read_text())["samples"]]
@@ -176,9 +171,21 @@ def main():
         manifest = build_partition_manifest(full_rows, scan_rows, qc100_ids,
                                             proportions=proportions, seed=args.split_seed)
     else:
-        frozen = read_partitions(args.frozen_partitions)
+        frozen = read_partitions(args.frozen_partitions, layout=args.layout)
+        if args.layout == "partitioned":
+            # Historical QC files use original MuSiQue IDs; only that source
+            # inherits their exposure, even if synthetic IDs share the suffix.
+            musique_ids = {r["original_id"]: q for q, r in frozen.items() if r["dataset_source"] == "musique"}
+            for original_id in qc100_ids:
+                qid = original_id if original_id in frozen else musique_ids.get(original_id)
+                if qid is not None:
+                    frozen[qid].update(in_qc100=True, in_development_data=True,
+                                       prior_development_exposure=True, exposure_history_known=True)
+        exclusions = (json.loads((full_dir/"collection_status.json").read_text())["excluded"]
+                      if args.layout == "partitioned" else [])
         manifest = build_partition_manifest(full_rows, scan_rows, qc100_ids,
-                                            frozen=frozen, coverage=args.coverage)
+                                            frozen=frozen, coverage=args.coverage,
+                                            layout=args.layout, exclusions=exclusions)
 
     # 2. Label every episode of the full run.
     for row in full_rows:
@@ -189,7 +196,8 @@ def main():
     #    in full whenever one is in use, however much of it this run covers.
     args.output.mkdir(parents=True)
     write_labels(args.output / "labels.csv", full_rows)
-    coverage = write_package_tables(args.output, manifest, frozen)
+    coverage = write_package_tables(args.output, manifest, frozen, layout=args.layout,
+                                    exclusions=exclusions if not deriving else ())
     if deriving:
         partition_record = {"proportions_of_source_train": proportions, "seed": args.split_seed,
                             "rule": "MuSiQue-validation -> validation; MuSiQue-train cut by sorted "
@@ -213,12 +221,15 @@ def main():
             "overrides": {"premise": list(policy.premise_overrides),
                           "refusal": list(policy.refusal_overrides),
                           "a2_nonanswer": list(policy.a2_nonanswer_overrides)},
+            "candidate_rules": (None if policy.candidate_rules is None
+                                else policy.candidate_rules.definition()),
         },
         "code": {
             "git_commit": get_git_commit(),
             "uncommitted_changes_sha256": get_git_diff_sha256(),
             "rule_files_sha256": {Path(module.__file__).name: sha256_file(module.__file__)
-                                  for module in RULE_MODULES},
+                                  for module in RULE_MODULES + (
+                                      CANDIDATE_RULE_MODULES if policy.candidate_rules else ())},
         },
         "source_files_sha256": hashes_before,
         "inputs": {"full_results": str(full_dir),
@@ -228,37 +239,14 @@ def main():
         "all": label_counts(full_rows),
         "source_train": label_counts(train_rows),
         "source_validation": label_counts(validation_rows),
+        "by_storage_split": {split: label_counts([r for r in full_rows if r["source_split"] == split])
+                             for split in sorted({r["source_split"] for r in full_rows})},
+        "layout": args.layout,
         "split_audit": split_audit(manifest),
     }
     write_json_atomic(args.output / "counts.json", counts)
 
-    # 4. The blind QC packet: reuse the issued one, or sample a new one.
-    qc_dir = args.output / "qc"
-    qc_dir.mkdir()
-    if args.reuse_qc:
-        key, sampling = reuse_qc_packet(args.reuse_qc, qc_dir)
-    else:
-        run_config = yaml.safe_load((full_dir / "train" / "resolved_config.yaml").read_text())
-        chosen, key, sampling = choose_qc_rows(full_rows, args.seed)
-        paragraphs = source_paragraphs([row["question_id"] for row in chosen],
-                                       run_config["dataset"]["revision"])
-        write_annotator_files(qc_dir, chosen, key, paragraphs)
-
-    rows_by_question = {row["question_id"]: row for row in full_rows}
-    check_qc_packet(qc_dir, key, rows_by_question)
-
-    # The private key also holds our own labels, to score the annotations later.
-    for entry in key:
-        row = rows_by_question[entry["question_id"]]
-        entry["lexical_v2_label"] = row["solver_behavior"]
-        entry["feedback_type"] = row["label"]["feedback_type"]
-        entry["solver_response"] = row["label"]["solver_response"]
-        entry["eligible_primary"] = row["label"]["eligible_primary"]
-    (qc_dir / "private_key.json").write_text(json.dumps(key, indent=2) + "\n")
-    write_json_atomic(qc_dir / "sampling.json", sampling)
-    shutil.copyfile(QC_GUIDE, qc_dir / "INSTRUCTIONS.md")
-
-    # 5. Confirm the inputs are untouched and print a short summary.
+    # 4. Confirm the inputs are untouched and print a short summary.
     if {str(path): sha256_file(path) for path in input_files} != hashes_before:
         raise RuntimeError("A source file changed while the package was being built")
     summary = {
@@ -266,6 +254,9 @@ def main():
         "primary_target_by_split": counts["all"]["primary_target_by_split"],
         "split_audit": counts["split_audit"],
     }
+    if policy.candidate_rules is not None:
+        for name in ("strict_target_by_split", "first_token_target_by_split"):
+            summary[name] = counts["all"].get(name, {})
     print(json.dumps(summary, indent=2))
 
 

@@ -50,6 +50,8 @@ class FeatureSelectionConfig:
     labels_csv: str
     manifest_csv: str
     index_column: str = "full_index"
+    target_column: str = "primary_target"
+    eligible_column: str = "eligible_primary"
     layer: int = 33
     activation_file: str = "{split}_attempt2.pt"
     fit_partition: str = "train"
@@ -89,6 +91,7 @@ class FeatureSelectionConfig:
             capstone_data_root=self.capstone_data_root, activations_dir=self.activations_dir,
             results_dir=self.results_dir, labels_csv=self.labels_csv, manifest_csv=self.manifest_csv,
             index_column=self.index_column, layers=[self.layer], activation_file=self.activation_file,
+            target_column=self.target_column, eligible_column=self.eligible_column,
             protocol="holdout", fit_partition=self.fit_partition, eval_partition=self.eval_partition,
             text_fields=[], seed=self.seed)
 

@@ -394,6 +394,7 @@ def assign_experiment_splits(
     proportions: dict[str, float],
     seed: int,
     supported_splits: tuple[str, ...] = SUPPORTED_EXPERIMENT_SPLITS,
+    hop_groups: dict[str, str] | None = None,
 ) -> dict[str, str]:
     """Assign every question id to exactly one split.
 
@@ -416,6 +417,9 @@ def assign_experiment_splits(
         The split names the caller allows. Collection uses the default
         ``SUPPORTED_EXPERIMENT_SPLITS``; the frozen research partitions pass
         their own names.
+    hop_groups
+        Optional explicit group per question, for namespaced or synthetic IDs.
+        Omission preserves MuSiQue ID parsing and historical assignments.
 
     Returns
     -------
@@ -433,7 +437,10 @@ def assign_experiment_splits(
 
     by_group: dict[str, list[str]] = {}
     for question_id in ids:
-        by_group.setdefault(hop_group(question_id), []).append(question_id)
+        if hop_groups is not None and question_id not in hop_groups:
+            raise ValueError(f"hop_groups is missing question id {question_id!r}")
+        group = hop_groups[question_id] if hop_groups is not None else hop_group(question_id)
+        by_group.setdefault(group, []).append(question_id)
 
     rng = random.Random(seed)
     assignment: dict[str, str] = {}
@@ -456,8 +463,13 @@ def assign_experiment_splits(
 def describe_sampled_questions(
     examples: list[MuSiQueExample],
     experiment_splits: dict[str, str] | None = None,
+    candidate_orders: dict[str, str] | None = None,
 ) -> list[dict[str, Any]]:
-    """Build the reproducibility manifest of sampled questions in order."""
+    """Build the reproducibility manifest of sampled questions in order.
+
+    ``candidate_orders`` (question id to the order the two A2 candidates are
+    shown in) is recorded per question when given.
+    """
     manifest: list[dict[str, Any]] = []
 
     for position, example in enumerate(examples):
@@ -471,6 +483,9 @@ def describe_sampled_questions(
 
         if experiment_splits is not None:
             entry["experiment_split"] = experiment_splits[question_id]
+
+        if candidate_orders is not None:
+            entry["candidate_order"] = candidate_orders[question_id]
 
         manifest.append(entry)
 

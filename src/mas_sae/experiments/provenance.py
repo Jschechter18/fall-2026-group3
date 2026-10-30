@@ -8,15 +8,38 @@ does not own generic run utilities such as git/package lookups
 """
 from __future__ import annotations
 
+import json
 import subprocess
 from typing import Any
 
 import torch
 
+from mas_sae.agents import critic as critic_prompts
+from mas_sae.agents.solver import Solver
+from mas_sae.agents.validator import Validator
 from mas_sae.data.musique import MUSIQUE_DATASET_ID
 from mas_sae.experiments import artifacts
-from mas_sae.experiments.conditions import OMITTED, resolve_conditions
+from mas_sae.experiments.conditions import (
+    OMITTED,
+    A2Presentation,
+    resolve_conditions,
+    resolve_presentations,
+)
 from mas_sae.experiments.reproducibility import config_sha256
+
+
+def experiment_compatibility(resolved_config: dict[str, Any], candidate_sites: list[str]) -> dict[str, Any]:
+    """Compare recorded experiment settings while allowing different worker hardware."""
+    provenance = resolved_config["provenance"]
+    return {
+        "roles": {role: {k: metadata.get(k) for k in (
+            "model_id", "requested_revision", "resolved_revision", "loader", "dtype",
+            "quantization", "generation", "chat_template_kwargs")}
+            for role, metadata in provenance["roles"].items()},
+        **{k: provenance.get(k) for k in ("protocol_version", "capabilities", "active_conditions", "prompt_versions", "prompt_sha256")},
+        "a2_presentations": provenance.get("a2_presentations", ["feedback"]),
+        "activation_sites": candidate_sites,
+    }
 
 
 def role_metadata(agent: Any) -> dict[str, Any]:
@@ -91,7 +114,7 @@ def build_collection_progress_provenance(
         "gpus": resolved["environment"]["gpus"],
         "hash_basis": {
             "config_sha256": "canonical JSON of the collection config without its output section",
-            "manifest_sha256": "canonical JSON of ordered {question_id, experiment_split, hop_group}",
+            "manifest_sha256": "canonical JSON of ordered {question_id, experiment_split, hop_group[, candidate_order]}",
             "git_diff_sha256": "sha256 of `git diff --binary HEAD` (tracked files only)",
             "untracked_code_sha256": "sha256 of names and bytes of untracked, non-ignored files under src/ and scripts/",
         },
@@ -120,6 +143,28 @@ def _critic_prompt_names(
         names["critic_distractor"] = "DISTRACTOR_PROMPT"
 
     return names
+
+
+def _prompt_hashes(names: dict[str, str], solver: Any, validator: Any) -> dict[str, str]:
+    """Fingerprint the runtime templates; critic templates live at module scope.
+
+    Default class templates also support lightweight agents used by provenance
+    callers. Instance overrides are used whenever the agent supplies them.
+    """
+    hashes = {}
+    for role, name in names.items():
+        if role.startswith("critic_"):
+            templates = [getattr(critic_prompts, part) for part in name.split("+")]
+            hashes[role] = artifacts.sha256_json(templates)
+        else:
+            agent, defaults = (validator, Validator) if role == "validator" else (solver, Solver)
+            template = getattr(agent, name, getattr(defaults, name))
+            if role == "solver_candidates":
+                # Preserve the established candidate-template-and-label digest.
+                labels = getattr(solver, "CANDIDATE_LABELS", Solver.CANDIDATE_LABELS)
+                template += json.dumps(labels, sort_keys=True)
+            hashes[role] = artifacts.sha256_text(template)
+    return hashes
 
 
 def build_resolved_config(
@@ -152,6 +197,21 @@ def build_resolved_config(
         {} if protocol_version is None
         else {"protocol_version": protocol_version}
     )
+    a2_presentations = config.get("collection", {}).get("a2_presentations", OMITTED)
+    presentations = resolve_presentations(a2_presentations)
+    presentation_record = {}
+    if a2_presentations is not OMITTED:
+        presentation_record["a2_presentations"] = [p.value for p in presentations]
+    candidate_prompt = {}
+    if A2Presentation.CANDIDATES in presentations:
+        candidate_prompt = {"solver_candidates": "CANDIDATE_PROMPT"}
+    prompt_versions = {
+        "solver_solve": "SOLVE_PROMPT_V1",
+        "solver_revise": "REVISE_PROMPT_V1",
+        **candidate_prompt,
+        **_critic_prompt_names(critic, type_checked_target),
+        "validator": "VALIDATE_PROMPT",
+    }
 
     return {
         **config,
@@ -161,11 +221,12 @@ def build_resolved_config(
             "model_revision": (
                 getattr(model.config, "_commit_hash", None) or "unknown"
             ),
-            "dataset_id": MUSIQUE_DATASET_ID,
+            "dataset_id": "mixed-manifest" if "inputs" in config.get("dataset", {}) else MUSIQUE_DATASET_ID,
             "roles": {name: role_metadata(agent) for name, agent in
                       (("solver", solver), ("critic", critic), ("validator", validator))},
             "environment": environment_metadata(),
             "active_conditions": [c.value for c in resolve_conditions(config.get("collection", {}).get("active_conditions", OMITTED))],
+            **presentation_record,
             "package_versions": {
                 "torch": artifacts.get_package_version("torch"),
                 "transformers": artifacts.get_package_version("transformers"),
@@ -173,12 +234,8 @@ def build_resolved_config(
             },
             **label,
             "capabilities": capabilities,
-            "prompt_versions": {
-                "solver_solve": "SOLVE_PROMPT_V1",
-                "solver_revise": "REVISE_PROMPT_V1",
-                **_critic_prompt_names(critic, type_checked_target),
-                "validator": "VALIDATE_PROMPT",
-            },
+            "prompt_versions": prompt_versions,
+            "prompt_sha256": _prompt_hashes(prompt_versions, solver, validator),
             "generation": {
                 "do_sample": (False if "roles" not in config else None),
                 "solver_max_new_tokens": solver.max_new_tokens,

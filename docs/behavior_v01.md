@@ -1,6 +1,12 @@
 # Behavior v0.1: labelling how the Solver responds to Critic feedback
 
-Status: rule version `behavior_v0.1.1_candidate`. Human QC is complete: the labels were checked by human annotators between 2026-10-06 and 2026-10-11 (see "Human check"). No production label freeze has been approved. An experimental overlay, `behavior_v0.1.2_qc_candidate`, exists on branch `issue55-v012-qc` and is not a production label.
+The named runs, allocation rules, and original status notes below document the
+historical MuSiQue experiments. Label-policy definitions also apply to new
+compatible episodes. For new mixed-dataset collection and its separate
+intervention export, use the [distributed workflow](distributed_collection.md);
+it reserves intervention first and assigns train/validation/test after merging.
+
+Historical v0.1.1 status: rule version `behavior_v0.1.1_candidate`. Human QC is complete: the labels were checked by human annotators between 2026-10-06 and 2026-10-11 (see "Human check"). No production label freeze has been approved. An experimental overlay, `behavior_v0.1.2_qc_candidate`, exists on branch `issue55-v012-qc` and is not a production label.
 
 ## The problem this solves
 
@@ -120,7 +126,7 @@ The collection run stores tensors by MuSiQue source split (`train.pt`, `validati
 <export root>/results/collection/<export run>/export_summary.json             # commit, manifest hash, proportions, seed, layers, counts, file hashes
 ```
 
-Only the partitions named on the command line are written; no `intervention.pt` is produced, because the causal stage re-runs the Solver live and needs only the reserved ids and the stored episodes. The destination must not exist, so an export can never overwrite or leave stale files. Loaders that take a run name and a split name (the SAE trainer, the layer-selection probe) point at the exported run and read `train` and `validation`; `test` is scored once on the frozen checkpoint.
+By default one export run holds `train`, `validation` and `test` in the same `layer_NN/` folders (for the full nine-layer run: `natural_4b_full9_partitioned`). The `intervention` partition is reserved for the causal experiment and is exported only on its own, under its own run name (`--partitions intervention`, e.g. `natural_4b_full9_intervention_partitioned`); asking for it together with another partition is refused. The destination must not exist, so an export can never overwrite or leave stale files. Loaders take a run name and read only the partitions they name: the SAE trainer reads `train` and `validation` and, when `test.pt` is in the same folder, reports reconstruction on it for comparing finished SAE versions; the layer- and feature-selection probes read `train` and `validation` only.
 
 ## Human check
 
@@ -161,7 +167,42 @@ PYTHONPATH=src python scripts/prepare_behavior_v01.py \
     --split-seed 42
 ```
 
-This writes `labels.csv`, `split_manifest.csv`, `partitions.csv`, `counts.json` and the `qc/` packet. `counts.json` also records the Git commit, the hashes of the rule files that produced the labels, the partition proportions and seed, and the partition audit. The collection run folders are read and never changed. Activation tensors stay outside Git.
+This writes `labels.csv`, `split_manifest.csv`, `partitions.csv` and `counts.json`. Human QC is finished, so no policy writes a `qc/` annotation packet any more; the packets that were issued stay unchanged in their packages. `load_labeled_rows` (used by the export) refuses any interaction file whose SHA-256 is not among the source hashes in the package's `counts.json`, so labels cannot be attached to a changed or different run, and the label and manifest readers refuse a repeated question id. `counts.json` also records the Git commit, the hashes of the rule files that produced the labels, the partition proportions and seed, and the partition audit. The collection run folders are read and never changed. Activation tensors stay outside Git.
+
+## Labels for the labeled-candidates presentation (`v0.2.0-candidate`)
+
+The candidate policy labels complete A2 responses from the existing candidates collection. It uses deterministic text rules, the question's recorded aliases and saved candidate order. It does not change the collection prompt, generation, activation capture or historical labels, and it uses no new judge or human annotations.
+
+1. **Answer-shaped texts.** A1, the recommendation and A2 pass the existing non-answer checks and v0.1.2 overlay, and contain at most 14 words (the longest train gold answer). Long recommendations are unresolved; non-answers and uncertain responses cannot supply a binary label.
+2. **Question-local equivalence.** Normalized exact matches are equivalent. The saved `ground_truth` and `answer_aliases` form one documented equivalence group for that question; two members are also equivalent. Apply the same comparison to A1/recommendation, A2/A1 and A2/recommendation. Thus "CFL" and "Canadian Football League" are no conflict when both are in that question's alias group. An alias match takes precedence over containment. Correctness booleans never decide adoption or retention, and alias groups are never shared across questions.
+3. **Uncertain equivalence is excluded.** Without documented equivalence, containment remains ambiguous. Possible acronyms matching expansion initials and ordered omissions in multiword names are `ambiguous_alias`, not asserted synonyms or conflicts. Overlap with another answer's documented aliases is also ambiguous. There are no hand-coded exceptions for pilot questions, fuzzy equivalence scores, or external alias lookups. These conservative checks do not identify every paraphrase: remaining differences are still *lexical candidate conflicts*, not proven semantic disagreement.
+4. **Complete-answer behavior.** An exact or documented-alias A2 match to A1 is retention; a match to the recommendation is adoption. A bare "Candidate A/B" maps through the saved order. Missing/invalid order is unresolved. Third answers, ambiguous equivalences, non-answers and unresolved cases never enter the strict binary target.
+
+**Two eligibility flags describe the same episode, not two independent label sets:**
+
+| Field | Meaning |
+|---|---|
+| `eligible_behavior` / `eligible_strict` | Identical flags for usable adoption-versus-retention behavior, independent of token metadata |
+| `strict_target` | Adopted recommendation = 1; retained A1 = 0; otherwise blank |
+| `eligible_first_token` | Behavioral eligibility plus valid, distinct candidate first tokens and A2's first token matching the selected candidate's first token |
+| `decision_token_distinct` | Computed from the two recorded candidate token IDs, or blank if unavailable |
+| `decision_at_first_token` | Operational first-token match to the selected candidate, or blank if unavailable/unresolved; it does not prove when an internal decision occurred |
+| `behavior_exclusion_reasons` | All reasons a row is outside the behavioral binary task, including third answers |
+| `first_token_exclusion_reasons` | Behavioral exclusions plus token-specific exclusions |
+
+Missing, malformed or inconsistent token metadata excludes only the first-token subset. Token IDs must be non-negative integers (not strings or booleans), and the recorded distinctness flag must agree with the IDs. A valid alias or letter response can remain a behavioral example even when its first token differs. Shared first tokens likewise do not invalidate behavior. Token-specific causes include `shared_first_token`, `decision_not_at_first_token`, `first_token_metadata_unavailable`, `first_token_distinctness_unavailable`, `first_token_alignment_unavailable` and `first_token_metadata_inconsistent`.
+
+Use `strict_target` and `eligible_strict` for behavioral probes. The historical `primary_target` also includes third answers as 0, so it is not the adoption-versus-retention target. Raye's first-token-specific analyses additionally select `eligible_first_token`. A baseline cohort should stay fixed across causal interventions; a changed or malformed post-intervention answer is an outcome to report, not a reason to silently remove the question.
+
+Every relation records its basis (`exact`, `question_alias`, `text_rule` or `letter`). `resolved_candidate` and `resolved_via` identify which candidate matched and how. `feedback_coherence` remains diagnostic and does not decide eligibility. Candidate policy provenance explicitly includes the equivalence method, alias fields, ambiguity rules and first-token subset definition. `counts.json` records strict and first-token class counts by partition/correctness, both exclusion summaries, interaction hashes and rule-file hashes. Earlier v0.1.1/v0.1.2 policy definitions, hashes and outputs are unchanged. Existing QC evidence is preserved; it is not new validation of this prompt's labels.
+
+```bash
+PYTHONPATH=src python scripts/prepare_behavior_v01.py --full-results <run results> \
+    --frozen-partitions <approved partitions.csv> \
+    --label-policy v0.2.0-candidate --output <artifacts>/<new folder>
+```
+
+`classify_candidate` refuses any episode without `a2_presentation: candidates` under this policy (a feedback run, or one that never recorded its presentation, cannot receive candidate labels), and the v0.1.x policies refuse candidates episodes, so the builder stops before writing anything; it also refuses a run with more than one episode per question. When a layer scan is passed, it must repeat the full run on every field the policy reads (`LabelPolicy.input_fields`), including the candidate order, recorded answers and token metadata. Values are compared with their JSON types, so `true` is not `1` and `2` is not `2.0`; a field missing from one run reads as null, as it does for the labeler. The package writes one row per question; label the frozen two-arm pilot per episode with `classify_candidate`. Frozen-partition coverage checks remain in force, and collection exclusions must be reconciled explicitly. No label package or downstream training should be finalized before this revision is verified and reviewed. The removed `--judgments` argument is no longer accepted.
 
 ## Re-running the collection without moving a single question
 
@@ -186,7 +227,7 @@ What this guarantees:
 
 `partitions.csv` fields: `question_id`; `source_split`, the MuSiQue split the question came from; `partition`, the only column anyone reads to choose data; `hop_group`, what the stratification used. Everything else in `split_manifest.csv` (`collection_split`, `scan_split`, the development flags, the two index columns) describes one run and is rebuilt per run.
 
-For a future collection use `configs/collection/v2/natural_4b_rerun_*.yaml`: the same models, budgets, layers and seed as the recorded run, a new run name, and no collection-time `experiment_split`. The historical configs are left as they were, because the resumable collection checks them.
+The nine-layer collection `natural_4b_full9` (`configs/collection/v2/natural_4b_full9_{train,validation}.yaml`) is the first run built this way: the same models, budgets and seed as the recorded four-layer run, layers 4, 8, 17, 25, 29, 30, 31, 32 and 33, a new run name, and no collection-time `experiment_split`. Its 30-question smoke config (`natural_4b_full9_smoke_30q.yaml`) doubles as a drift check against the recorded run, which covered every train question. The historical configs are left as they were, because the resumable collection checks them.
 
 ```python
 from mas_sae.data.production import load_labeled_rows, load_production_activations

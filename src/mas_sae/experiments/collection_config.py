@@ -10,12 +10,16 @@ from mas_sae.data.musique import (
     validate_experiment_split_proportions,
     validate_proportions,
 )
-from mas_sae.experiments.conditions import OMITTED, resolve_conditions
+from mas_sae.experiments.conditions import (
+    OMITTED,
+    resolve_conditions,
+    resolve_presentations,
+)
 from mas_sae.experiments.reproducibility import validate_commit_revision
 from mas_sae.models.roles import resolve_roles
 
 
-SUPPORTED_SAMPLING_STRATEGIES = ("first_n", "random", "stratified")
+SUPPORTED_SAMPLING_STRATEGIES = ("first_n", "random", "stratified", "listed")
 
 
 class ModelConfig(TypedDict):
@@ -28,12 +32,15 @@ class SamplingConfig(TypedDict):
     ``first_n`` is the original behaviour (dataset order). ``random`` draws
     a seeded uniform sample. ``stratified`` draws a seeded sample with the
     given ``hop_proportions`` over hop groups (``2hop``, ``3hop``, ``4hop``).
+    ``listed`` collects the questions in ``question_ids_file`` (a JSON list
+    of ids), in that order.
     ``seed`` defaults to ``collection.seed`` when omitted.
     """
 
     strategy: str
     seed: NotRequired[int]
     hop_proportions: NotRequired[dict[str, float]]
+    question_ids_file: NotRequired[str]
 
 
 class ExperimentSplitConfig(TypedDict):
@@ -56,6 +63,12 @@ class DatasetConfig(TypedDict):
     experiment_split: NotRequired[ExperimentSplitConfig]
 
 
+class ManifestDatasetConfig(TypedDict):
+    inputs: list[dict[str, Any]]
+    intervention: dict[str, Any]
+    split: dict[str, Any]
+
+
 class CollectionSettings(TypedDict):
     """Activation layers, seed, and an optional protocol label.
 
@@ -69,6 +82,7 @@ class CollectionSettings(TypedDict):
     seed: int
     protocol_version: NotRequired[str]
     active_conditions: NotRequired[list[str]]
+    a2_presentations: NotRequired[list[str]]
 
 
 class OutputConfig(TypedDict):
@@ -85,7 +99,7 @@ class OutputConfig(TypedDict):
 class CollectionConfig(TypedDict):
     model: NotRequired[ModelConfig]
     roles: NotRequired[dict[str, Any]]
-    dataset: DatasetConfig
+    dataset: DatasetConfig | ManifestDatasetConfig
     collection: CollectionSettings
     output: OutputConfig
 
@@ -117,31 +131,35 @@ def load_collection_config(path: str | Path) -> CollectionConfig:
     # section (including ``model.id``), and ``active_conditions``.
     resolve_roles(raw)
     resolve_conditions(raw["collection"].get("active_conditions", OMITTED))
+    resolve_presentations(raw["collection"].get("a2_presentations", OMITTED))
     dataset = raw["dataset"]
     collection = raw["collection"]
     output = raw["output"]
 
-    source_split = dataset.get("source_split")
-    if source_split not in SUPPORTED_SOURCE_SPLITS:
-        raise ValueError(
-            "dataset.source_split must be one of "
-            f"{sorted(SUPPORTED_SOURCE_SPLITS)}."
-        )
+    if "inputs" in dataset:
+        _validate_manifest_dataset(dataset)
+    else:
+        source_split = dataset.get("source_split")
+        if source_split not in SUPPORTED_SOURCE_SPLITS:
+            raise ValueError(
+                "dataset.source_split must be one of "
+                f"{sorted(SUPPORTED_SOURCE_SPLITS)}."
+            )
 
-    if "revision" in dataset:
-        validate_commit_revision(dataset["revision"], "dataset")
+        if "revision" in dataset:
+            validate_commit_revision(dataset["revision"], "dataset")
 
-    num_questions = dataset.get("num_questions")
-    if type(num_questions) is not int or num_questions <= 0:
-        raise ValueError(
-            "dataset.num_questions must be a positive integer."
-        )
+        num_questions = dataset.get("num_questions")
+        if type(num_questions) is not int or num_questions <= 0:
+            raise ValueError(
+                "dataset.num_questions must be a positive integer."
+            )
 
-    if "sampling" in dataset:
-        _validate_sampling(dataset["sampling"])
+        if "sampling" in dataset:
+            _validate_sampling(dataset["sampling"])
 
-    if "experiment_split" in dataset:
-        _validate_experiment_split(dataset["experiment_split"])
+        if "experiment_split" in dataset:
+            _validate_experiment_split(dataset["experiment_split"])
 
     layers = collection.get("layers")
     if (
@@ -217,6 +235,23 @@ def _validate_sampling(sampling: Any) -> None:
             "strategy is 'stratified'."
         )
 
+    has_ids_file = "question_ids_file" in sampling
+
+    if strategy == "listed" and (
+        not isinstance(sampling.get("question_ids_file"), str)
+        or not sampling["question_ids_file"].strip()
+    ):
+        raise ValueError(
+            "dataset.sampling.question_ids_file is required when "
+            "strategy is 'listed'."
+        )
+
+    if strategy != "listed" and has_ids_file:
+        raise ValueError(
+            "dataset.sampling.question_ids_file is only allowed when "
+            "strategy is 'listed'."
+        )
+
     if has_proportions:
         proportions = sampling["hop_proportions"]
         validate_proportions(
@@ -247,3 +282,26 @@ def _validate_experiment_split(experiment_split: Any) -> None:
     )
 
     _validate_optional_seed(experiment_split, "dataset.experiment_split")
+
+
+def _validate_manifest_dataset(dataset):
+    """Manifest inputs replace MuSiQue sampling; research splits are assigned later."""
+    if set(dataset) & {"source_split", "num_questions", "sampling", "experiment_split", "revision"}:
+        raise ValueError("dataset.inputs cannot be combined with legacy MuSiQue sampling fields")
+    if not isinstance(dataset["inputs"], list) or not dataset["inputs"]:
+        raise ValueError("dataset.inputs must be a nonempty list")
+    reservation = dataset.get("intervention")
+    if not isinstance(reservation, dict) or (("fraction" in reservation) == ("question_ids_file" in reservation)):
+        raise ValueError("dataset.intervention requires either fraction or question_ids_file")
+    if "fraction" in reservation:
+        fraction = reservation["fraction"]
+        if type(fraction) not in (int, float) or not 0 <= fraction < 1:
+            raise ValueError("intervention fraction must be in [0, 1)")
+    elif not isinstance(reservation["question_ids_file"], str) or not reservation["question_ids_file"]:
+        raise ValueError("intervention question_ids_file must be a path")
+    _validate_optional_seed(reservation, "dataset.intervention")
+    split = dataset.get("split")
+    if not isinstance(split, dict) or set(split.get("proportions", {})) != {"train", "validation", "test"}:
+        raise ValueError("dataset.split.proportions must name train, validation, test")
+    validate_experiment_split_proportions(split["proportions"], supported_splits=("train", "validation", "test"))
+    _validate_optional_seed(split, "dataset.split")

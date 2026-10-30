@@ -1107,3 +1107,27 @@ def test_config_checks_the_random_direction_settings(tmp_path):
             replay.ReplayConfig.from_yaml(p)
     p.write_text(base + "random_directions: 2\nedit_norms: [0.1]\n")
     assert replay.ReplayConfig.from_yaml(p).random_directions == 2
+
+
+def test_candidates_replay_uses_exact_candidate_prompt_and_reports_third_answers(tmp_path, monkeypatch):
+    cfg, episodes, comp = _smoke(tmp_path, layer=0, n_layers=1)
+    comp.info["label_policy_name"] = "v0.2.0-candidate"
+    ep = episodes.iloc[0].to_dict()
+    ep.update(a2_presentation="candidates", candidate_order="critic_first", ground_truth="Lyon",
+              answer_aliases=[], candidate_first_token_ids={"a1": 80, "critic": 76},
+              decision_token_distinct=True, solver_a2_first_token_id=76)
+    prompts = []
+    def generate(prompt):
+        prompts.append(prompt)
+        # Real model forward triggers replay's real first-token hook.
+        comp.model(input_ids=torch.tensor([[70, 71, 72]]))
+        comp.solver.last_generated_token_ids = [76]
+        comp.solver.last_prompt = {"input_ids_sha256": "fixture"}
+        return "Marseille"
+    monkeypatch.setattr(comp.solver, "_generate", generate)
+    condition = next(c for c in replay.conditions(comp.features) if c["features"] is None)
+    row = replay.generate(comp, ep, condition)
+    expected = comp.solver.build_candidate_prompt(ep["question"], comp.paragraphs[ep["question_id"]],
+        ep["solver_attempt_1"], ep["critic_advocated_answer"], "critic_first")
+    assert prompts == [expected]
+    assert row["solver_response"] == "third_answer" and row["adopted"] == 0

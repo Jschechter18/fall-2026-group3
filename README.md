@@ -2,6 +2,9 @@
 
 Master's Data Science Capstone project.
 
+Distributed collection: [workflow guide](docs/distributed_collection.md) and
+[two-EC2 smoke-test commands](docs/distributed_collection_smoke_test.md).
+
 ## Messages for Professor/AI Reviewer:
 
 # Instructor Review 3 Response:
@@ -70,6 +73,61 @@ conda env update -f environment.yml --prune
 
 This installs new dependencies and removes dependencies that are no longer specified in the environment file.
 
+### Set Up Claude Access Through Amazon Bedrock
+
+The Claude examples use AWS credentials for Amazon Bedrock, rather than an
+Anthropic API key. Install or update the Conda environment first; it includes
+`boto3` and `python-dotenv`.
+
+#### Get temporary AWS credentials
+
+1. Sign in to the school AWS access portal using the URL provided by the professor
+   or school administrator. Ask them for the URL if you do not have it.
+2. Expand your assigned AWS account and locate the role authorized to use Bedrock.
+3. Select **Access keys** (sometimes labeled **Command line or programmatic access**)
+   beside that role.
+4. In the manual credentials section, copy the **access key ID**, **secret access
+   key**, and **session token** from the same session.
+
+See the [AWS instructions for obtaining temporary credentials](https://docs.aws.amazon.com/singlesignon/latest/userguide/howtogetcredentials.html#how-to-get-temp-credentials-manual).
+If the required account or role is missing, contact the professor or school
+administrator. S3 access alone does not establish permission to invoke Bedrock.
+
+#### Create your local `.env` file
+
+Create a file named `.env` in the repository root, alongside `environment.yml`.
+If it already exists, add or update these entries without removing other settings:
+
+```dotenv
+aws_access_key_id=YOUR_ACCESS_KEY_ID
+aws_secret_access_key=YOUR_SECRET_ACCESS_KEY
+aws_session_token=YOUR_SESSION_TOKEN
+```
+
+Use these lowercase variable names exactly: the current example reads them with
+`os.getenv()`. Paste only the credential values, without shell `export` commands
+or a `[BedRock_LLM_API]` section header. No `CONFIG_FILE` setting is needed for
+this example. `load_dotenv()` reads the file; it does not create it.
+
+The file is ignored by Git. Keep real credentials out of tracked files, including
+`example.env`, and do not share them in messages or screenshots. Temporary
+credentials expire; obtain a fresh set and replace all three values when needed,
+then restart the script or notebook session.
+
+#### Run the example
+
+From the repository root with the `capstone` environment activated and the project
+installed, run:
+
+```bash
+python examples/claude/ask_claude_api.py
+```
+
+This makes a real, billable Bedrock request. An expired-token error means the
+temporary credentials need refreshing. An `AccessDenied` error may require the
+professor or administrator to grant the role access to the requested Bedrock
+model or inference profile.
+
 ## Project Structure
 
 ```text
@@ -80,6 +138,7 @@ This installs new dependencies and removes dependencies that are no longer speci
 ├── data/                         # Downloaded project datasets
 ├── demo/                         # Demonstrations
 │   └── fig/                      # Demo figures
+├── docs/                         # Technical documentation; diagrams/ holds editable + SVG figures
 ├── presentation/                 # Presentation materials
 ├── proposal/                     # Project proposal and its diagram
 ├── reports/                      # Project and progress reports
@@ -325,7 +384,15 @@ python scripts/get_musique_dataset.py
 
 ## Activation Collection
 
-Activation collection is config-driven. Run from the repository root:
+For new mixed-dataset runs across EC2 workers, follow the
+[distributed collection workflow](docs/distributed_collection.md): prepare one
+manifest, collect assigned chunks, merge, then split/export. Intervention
+membership is reserved upfront, and its baselines are included in collection.
+
+### Existing single-machine MuSiQue runs
+
+The following commands and paths describe the supported legacy collection path.
+Run from the repository root:
 
     python scripts/collect_activations.py --config configs/collection/v1/smoke_train.yaml
 
@@ -351,15 +418,22 @@ Run metadata and reproducibility information are saved under:
 
     results/collection/<run_name>/<split>/
 
-This directory contains interactions.jsonl, resolved_config.yaml, and summary.json.
+This directory contains interactions.jsonl, resolved_config.yaml, summary.json,
+collected_question_ids.json and exclusions.jsonl. The record fields are defined
+in `docs/episode_record.md`, the provenance files and the identity used by
+`--resume` in `docs/collection_provenance.md`, and the capture position, tensor
+layout and row indices in `docs/activations.md` (including a historical MuSiQue
+partition diagram).
 
 The metadata of the finished production run (`natural_4b_full`: summaries,
 resolved configs, question lists, provenance) and of its partition export are
 committed under `results/collection/`. The labels, the partition manifest and
 the frozen question-to-partition mapping are committed under
 `results/behavior/behavior_v011_split80_10_10_20261006/`. Tensors and
-`interactions.jsonl` stay in S3. Any rerun takes its partitions from that
-mapping; see `docs/behavior_v01.md`, "Re-running the collection".
+`interactions.jsonl` stay in S3. Re-runs of these historical experiments take
+their partitions from that mapping; see `docs/behavior_v01.md`, "Re-running the
+collection". New mixed-dataset runs use their own prepared manifest and exported
+membership instead.
 
 ## SAE versions
 
