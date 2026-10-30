@@ -1,0 +1,31 @@
+# Layer selection on the candidates collection with the PR #153 final labels (#161).
+# Fit on `train`, rank on `validation`; test and intervention rows are never read.
+# Inputs (paths from results/behavior/candidate_final_20261027_probe/README.md):
+#   s3://dats-capstone/shared/group3/data/activations/natural_4b_full9_candidates/
+#   s3://dats-capstone/shared/group3/results/collection/natural_4b_full9_candidates/
+# Expected labels.csv SHA256: see results/behavior/candidate_final_20261027_probe/SHA256SUMS
+capstone_data_root: .
+activations_dir: data/activations/natural_4b_full9_candidates         # <dir>/layer_NN/{split}_attempt2.pt
+results_dir: results/collection/natural_4b_full9_candidates           # <dir>/{split}/interactions.jsonl
+labels_csv: results/behavior/candidate_final_20261027_probe/labels.csv
+manifest_csv: results/behavior/candidate_final_20261027_probe/split_manifest.csv
+index_column: full_index
+source_splits: [train, validation]                                    # MuSiQue source folders
+excluded_episodes:
+  "2hop__89162_77346": "collected, but the question has no frozen partition (PR #153 label: out)"
+  "3hop1__408193_427833_126099": "collected, but the question has no frozen partition (PR #153 label: out)"
+layers: [4, 8, 17, 25, 29, 30, 31, 32, 33]
+activation_file: "{split}_attempt2.pt"
+protocol: holdout
+fit_partition: train
+eval_partition: validation
+text_fields:
+  - solver_attempt_1
+  - critic_advocated_answer
+  - critic_feedback
+seed: 42
+c_grid: [0.001, 0.01, 0.1, 1.0, 10.0, 100.0]          # tuned INSIDE the train rows (inner grouped CV)
+inner_folds: 3
+n_bootstrap: 1000
+n_permutations: 0                                     # ~20 = label-shuffle control on the top layer
+output_dir: results/layer_selection_candidates_pr153
