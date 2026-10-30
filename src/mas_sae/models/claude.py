@@ -50,7 +50,8 @@ class ClaudeClient:
         max_tokens : int, optional
             Maximum number of output tokens, by default 4096.
             Responses may finish before reaching this limit.
-        temperature : float, optional
+        temperature : float, None, optional
+            None omits the parameter from the API request.
             Controls randomnes in generation. Lower values favor more consistent responses.
             This is especially useful for controlling the creativity of the model's responses, consider with data generation.
         """
