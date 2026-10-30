@@ -94,3 +94,26 @@ def test_refuses_changed_rule_files(build, tmp_path):
         fh.write("\n# edited\n")
     with pytest.raises(SystemExit, match="not the approved PR #153 rule file"):
         build.load_rules(tmp_path)
+
+
+def test_probe_package_from_the_partitioned_labels(build, prepared, tmp_path):
+    """Distributed export -> PR #153 labels -> probe package -> align_episodes with index checks."""
+    pd = pytest.importorskip("pandas")
+    from mas_sae.probe import behavior_data as bd
+
+    build.main(_args(prepared, tmp_path / "labels"))
+    ordinary = prepared / "results/fixture"
+    spec = importlib.util.spec_from_file_location("export_final_labels_for_probes",
+                                                  SCRIPT.parent / "export_final_labels_for_probes.py")
+    export = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(export)
+    export.main(["--labels", str(tmp_path / "labels/final_labels.jsonl"), "--counts", str(tmp_path / "labels/counts.json"),
+                 "--full-results", str(ordinary), "--layout", "partitioned", "--output", str(tmp_path / "pkg")])
+
+    episodes = bd.build_episode_table(ordinary, ["train", "validation", "test"], ["solver_attempt_1"])
+    table = pd.read_csv(tmp_path / "pkg/labels.csv")
+    _, diag = bd.align_episodes(episodes, table, pd.read_csv(tmp_path / "pkg/split_manifest.csv"),
+                                bd.Columns(), "full_index")
+    assert diag["index_verified_rows"] == len(episodes)
+    final = {r["question_id"]: r["label"] for r in read_jsonl(tmp_path / "labels/final_labels.jsonl")}
+    assert all(final[q] == label for q, label in zip(table.question_id, table.behavior_label))
