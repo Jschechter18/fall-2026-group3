@@ -87,6 +87,18 @@ def attach_labels(rows: list[dict], manifest: dict[str, dict], labels: dict[str,
         row["label"] = probe_label(record, policy_version)
 
 
+def unpartitioned(rows: list[dict], frozen: dict, labels: dict[str, dict]) -> dict[str, str]:
+    """Collected episodes without a frozen partition; the build must label each a collected, unpartitioned Out."""
+    excluded = {}
+    for qid in (r["question_id"] for r in rows if r["question_id"] not in frozen):
+        record = labels.get(qid)
+        found = {k: record[k] for k in ("collected", "partition", "label")} if record else None
+        if found != {"collected": True, "partition": None, "label": "out"}:
+            raise SystemExit(f"{qid}: has no frozen partition, but its PR #153 build record is {found}")
+        excluded[qid] = UNPARTITIONED
+    return excluded
+
+
 def main(argv=None) -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--labels", type=Path, required=True, help="final_labels.jsonl of a PR #153 build")
@@ -103,15 +115,16 @@ def main(argv=None) -> None:
         args.frozen_partitions = args.full_results / "partitions.csv"
     ensure_output_available(args.output)
 
-    labels, build = load_build(args.labels, args.counts)
-    inputs = [args.labels, args.counts, args.frozen_partitions, *interaction_paths(args.full_results, layout=args.layout)]
+    status = args.full_results / "collection_status.json"
+    inputs = [args.labels, args.counts, args.frozen_partitions, *interaction_paths(args.full_results, layout=args.layout),
+              *([status] if args.layout == "partitioned" else [])]
     hashes_before = {str(path): sha256_file(path) for path in inputs}
+    labels, build = load_build(args.labels, args.counts)
     frozen = read_partitions(args.frozen_partitions, layout=args.layout)
     rows = read_run_interactions(args.full_results, layout=args.layout)
-    excluded = {r["question_id"]: UNPARTITIONED for r in rows if r["question_id"] not in frozen}
+    excluded = unpartitioned(rows, frozen, labels)
     rows = [r for r in rows if r["question_id"] not in excluded]
-    exclusions = (json.loads((args.full_results / "collection_status.json").read_text())["excluded"]
-                  if args.layout == "partitioned" else [])
+    exclusions = json.loads(status.read_text())["excluded"] if args.layout == "partitioned" else []
     manifest = build_partition_manifest(rows, frozen=frozen, coverage=args.coverage, layout=args.layout,
                                         exclusions=exclusions)
     attach_labels(rows, manifest, labels, build["policy_version"])

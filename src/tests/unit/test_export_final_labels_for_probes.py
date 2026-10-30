@@ -93,3 +93,16 @@ def test_refuses_a_changed_build_or_a_partition_mismatch(export, legacy, tmp_pat
     labels, counts = _build_files(tmp_path, moved)
     with pytest.raises(SystemExit, match="partition"):
         export.main(_args(labels, counts, run, partitions, tmp_path / "b"))
+
+
+@pytest.mark.parametrize("change", [{"label": "adoption"}, {"collected": False}, {"partition": "train"}, None])
+def test_excludes_an_unpartitioned_episode_only_as_a_build_out(export, legacy, tmp_path, change):
+    """2hop__5_6 has no frozen partition: a build that labels it otherwise, or not at all, is refused."""
+    run, partitions, records = legacy
+    kept = [r for r in records if r["question_id"] != "2hop__5_6"]
+    if change is not None:
+        kept.append(dict(next(r for r in records if r["question_id"] == "2hop__5_6"), **change))
+    labels, counts = _build_files(tmp_path, kept)
+    with pytest.raises(SystemExit, match="2hop__5_6: has no frozen partition"):
+        export.main(_args(labels, counts, run, partitions, tmp_path / "pkg"))
+    assert not (tmp_path / "pkg").exists()
