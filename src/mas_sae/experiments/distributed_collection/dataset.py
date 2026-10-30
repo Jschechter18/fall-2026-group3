@@ -64,14 +64,14 @@ def build_master_dataset(inputs: list[dict[str, Any]]) -> dict[str, Any]:
                 raise ValueError(f"duplicate input id {global_id!r}")
             seen_global.add(global_id)
             hop_field = spec.get("hop_field")
-            # No real synthetic release exists yet. MuSiQue-compatible schema
-            # alone does not promise a hop_group field: agree on hop metadata
-            # with the producer before enabling synthetic inputs.
+            # Explicit metadata overrides MuSiQue-compatible ID prefixes.
             hop = payload.get(hop_field) if hop_field else spec.get("hop")
-            if hop is None and source == "musique":
+            if hop is None and source in {"musique", "synthetic"}:
                 # Parse before namespacing and persist the result; consumers never parse global ids.
                 from mas_sae.data.musique import hop_group
                 hop = hop_group(original_id)
+                if source == "synthetic" and hop == "unknown":
+                    hop = None
             if hop is None:
                 raise ValueError(f"{global_id}: explicit hop metadata is required")
             required = {"question": str, "paragraphs": list, "answer": str}

@@ -40,6 +40,25 @@ def make_config(tmp_path, *, presentation="candidates", count=40):
             "output": {"run_name": "fixture", "chunk_size": 3}}
 
 
+@pytest.mark.parametrize("question_id,metadata,expected", [
+    ("2hop__synthetic_1", {}, "2hop"),
+    ("3hop1__synthetic_1", {}, "3hop"),
+    ("2hop__synthetic_1", {"hop_field": "hop"}, "4hop"),
+    ("2hop__synthetic_1", {"hop": "3hop"}, "3hop"),
+    ("q1", {}, None),
+])
+def test_synthetic_hop_metadata_falls_back_to_id(tmp_path, question_id, metadata, expected):
+    path = tmp_path / "synthetic.json"
+    path.write_text(json.dumps([{"id": question_id, "question": "Where?",
+                                 "answer": "Paris", "paragraphs": [], "hop": "4hop"}]))
+    inputs = [{"source": "synthetic", "version": "fixture", "path": str(path), **metadata}]
+    if expected is None:
+        with pytest.raises(ValueError, match="explicit hop metadata is required"):
+            dataset.build_master_dataset(inputs)
+    else:
+        assert dataset.build_master_dataset(inputs)["questions"][0]["hop_group"] == expected
+
+
 def make_resolved(config, *, gpu="fixture"):
     return {**copy.deepcopy(config), "provenance": {
         "roles": {role: {"model_id": spec["id"], "requested_revision": None, "resolved_revision": None,

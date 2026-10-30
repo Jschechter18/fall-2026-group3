@@ -1,6 +1,7 @@
 # Example starting point: use a new run name and review proportions before preparation.
 # Work distribution is --num-chunks; output.chunk_size is checkpoint batch size.
-# Synthetic input is optional. Add its source/version/path and explicit hop_field.
+# Synthetic input is optional. Add its source/version/path; MuSiQue-style IDs supply hops.
+# Use hop_field to override hops with explicit record metadata.
 # Explicit related variants use a common globally qualified split_group_id.
 # Paths are read during prepare only; manifest workers need no source downloads.
 roles:
