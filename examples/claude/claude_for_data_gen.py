@@ -18,6 +18,7 @@ from uuid import uuid4
 import boto3
 from dotenv import load_dotenv
 
+from mas_sae.data.synthetic import normalize_question
 from mas_sae.models.claude import ClaudeClient
 
 
@@ -46,7 +47,7 @@ def main() -> None:
         with (root / "data" / "MuSiQue" / "clean" / f"{split}.json").open() as source:
             for line in source:
                 question = json.loads(line)["question"]
-                existing_questions.add(" ".join(question.casefold().split()))
+                existing_questions.add(normalize_question(question))
 
     # Vary the topic and reasoning depth instead of relying only on temperature.
     topic = random.choice([
@@ -106,7 +107,7 @@ def main() -> None:
             "Claude did not return a usable JSON question. "
             f"Response starts with: {result.text[:200]!r}"
         ) from exc
-    normalized = " ".join(candidate["question"].casefold().split())
+    normalized = normalize_question(candidate["question"])
     if normalized in existing_questions:
         raise ValueError("Generated question duplicates a local MuSiQue question.")
 

@@ -1,0 +1,143 @@
+{
+  "id": "2hop__synthetic_fixture",
+  "question": "When was the town containing Luma Observatory founded?",
+  "answer": "1842",
+  "answer_aliases": [],
+  "answerable": true,
+  "paragraphs": [
+    {
+      "idx": 0,
+      "title": "Luma Observatory",
+      "paragraph_text": "Luma Observatory is located in the fictional town of Selin.",
+      "is_supporting": true
+    },
+    {
+      "idx": 1,
+      "title": "Selin",
+      "paragraph_text": "The fictional town of Selin was founded in 1842.",
+      "is_supporting": true
+    },
+    {
+      "idx": 2,
+      "title": "Fictional place 2",
+      "paragraph_text": "Unrelated fictional place 2.",
+      "is_supporting": false
+    },
+    {
+      "idx": 3,
+      "title": "Fictional place 3",
+      "paragraph_text": "Unrelated fictional place 3.",
+      "is_supporting": false
+    },
+    {
+      "idx": 4,
+      "title": "Fictional place 4",
+      "paragraph_text": "Unrelated fictional place 4.",
+      "is_supporting": false
+    },
+    {
+      "idx": 5,
+      "title": "Fictional place 5",
+      "paragraph_text": "Unrelated fictional place 5.",
+      "is_supporting": false
+    },
+    {
+      "idx": 6,
+      "title": "Fictional place 6",
+      "paragraph_text": "Unrelated fictional place 6.",
+      "is_supporting": false
+    },
+    {
+      "idx": 7,
+      "title": "Fictional place 7",
+      "paragraph_text": "Unrelated fictional place 7.",
+      "is_supporting": false
+    },
+    {
+      "idx": 8,
+      "title": "Fictional place 8",
+      "paragraph_text": "Unrelated fictional place 8.",
+      "is_supporting": false
+    },
+    {
+      "idx": 9,
+      "title": "Fictional place 9",
+      "paragraph_text": "Unrelated fictional place 9.",
+      "is_supporting": false
+    },
+    {
+      "idx": 10,
+      "title": "Fictional place 10",
+      "paragraph_text": "Unrelated fictional place 10.",
+      "is_supporting": false
+    },
+    {
+      "idx": 11,
+      "title": "Fictional place 11",
+      "paragraph_text": "Unrelated fictional place 11.",
+      "is_supporting": false
+    },
+    {
+      "idx": 12,
+      "title": "Fictional place 12",
+      "paragraph_text": "Unrelated fictional place 12.",
+      "is_supporting": false
+    },
+    {
+      "idx": 13,
+      "title": "Fictional place 13",
+      "paragraph_text": "Unrelated fictional place 13.",
+      "is_supporting": false
+    },
+    {
+      "idx": 14,
+      "title": "Fictional place 14",
+      "paragraph_text": "Unrelated fictional place 14.",
+      "is_supporting": false
+    },
+    {
+      "idx": 15,
+      "title": "Fictional place 15",
+      "paragraph_text": "Unrelated fictional place 15.",
+      "is_supporting": false
+    },
+    {
+      "idx": 16,
+      "title": "Fictional place 16",
+      "paragraph_text": "Unrelated fictional place 16.",
+      "is_supporting": false
+    },
+    {
+      "idx": 17,
+      "title": "Fictional place 17",
+      "paragraph_text": "Unrelated fictional place 17.",
+      "is_supporting": false
+    },
+    {
+      "idx": 18,
+      "title": "Fictional place 18",
+      "paragraph_text": "Unrelated fictional place 18.",
+      "is_supporting": false
+    },
+    {
+      "idx": 19,
+      "title": "Fictional place 19",
+      "paragraph_text": "Unrelated fictional place 19.",
+      "is_supporting": false
+    }
+  ],
+  "question_decomposition": [
+    {
+      "id": 1,
+      "question": "In which town is Luma Observatory located?",
+      "answer": "Selin",
+      "paragraph_support_idx": 0
+    },
+    {
+      "id": 2,
+      "question": "When was #1 founded?",
+      "answer": "1842",
+      "paragraph_support_idx": 1
+    }
+  ]
+}
