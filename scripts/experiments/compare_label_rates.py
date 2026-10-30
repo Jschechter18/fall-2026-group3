@@ -1,8 +1,10 @@
-"""Label rates for one label set, by partition and hop type (#174).
+"""Label rates for one label set, by source, partition and hop type (#174).
 
 Run it on two label sets made the same way, e.g. Claude-labeled MuSiQue and synthetic pilot
-episodes, then compare the tables. Rows cover every partition x hop-type scope, with ``all`` for either side (so the
-first row is the whole build). Each reports the four-class counts and shares, the
+episodes, then compare the tables. Rows cover every source x partition x hop-type scope, with
+``all`` for any side (so the first row is the whole build). The source is the question-id
+namespace (``musique``, ``synthetic``; ``unnamespaced`` for legacy ids), so a mixed pilot is
+compared within one table. Each reports the four-class counts and shares, the
 Adoption+Retention share, Adoption's share of Adoption+Retention, and A1 accuracy, each with a
 95% Wilson interval. Small scopes are kept; ``n`` shows how far to trust them.
 
@@ -29,6 +31,7 @@ Usage:
 import argparse
 import csv
 import json
+from itertools import product
 from pathlib import Path
 
 from mas_sae.data.musique import hop_type
@@ -40,6 +43,7 @@ from mas_sae.experiments.records import read_jsonl, write_csv
 PARTITIONS = ("train", "validation", "test", "intervention")
 UNPARTITIONED = "unpartitioned"
 ALL = "all"
+UNNAMESPACED = "unnamespaced"
 
 
 def by_question(rows: list[dict], source: str) -> dict[str, dict]:
@@ -82,6 +86,11 @@ def check_inputs(labels: dict[str, dict], interactions: dict[str, dict]) -> None
             raise ValueError(f"{question_id!r}: solver_attempt_1_correct is not a boolean")
 
 
+def source_of(question_id: str) -> str:
+    """The ``source:`` namespace of a question id (``musique``, ``synthetic``), else ``unnamespaced``."""
+    return question_id.split(":", 1)[0] if ":" in question_id else UNNAMESPACED
+
+
 def hop_of(question_id: str) -> str:
     """Hop type such as ``3hop1``, ignoring a ``source:`` namespace."""
     return hop_type(question_id.split(":", 1)[-1])
@@ -93,14 +102,15 @@ def share(k: int, n: int) -> dict:
     return {"share": k / n if n else None, "ci_low": low, "ci_high": high}
 
 
-def scope_row(partition: str, hop: str, question_ids: list[str], labels: dict, interactions: dict) -> dict:
+def scope_row(source: str, partition: str, hop: str, question_ids: list[str], labels: dict,
+              interactions: dict) -> dict:
     """One output row: counts and shares for the given questions."""
     n = len(question_ids)
     counts = {label: sum(labels[q]["label"] == label for q in question_ids) for label in VALID_LABELS}
     binary = counts["adoption"] + counts["retention"]
     collected = [q for q in question_ids if q in interactions]
     correct = sum(interactions[q]["solver_attempt_1_correct"] for q in collected)
-    row = {"partition": partition, "hop_type": hop, "n": n}
+    row = {"source": source, "partition": partition, "hop_type": hop, "n": n}
     for label in VALID_LABELS:
         row[label] = counts[label]
         row.update({f"{label}_{key}": value for key, value in share(counts[label], n).items()})
@@ -115,16 +125,16 @@ def scope_row(partition: str, hop: str, question_ids: list[str], labels: dict, i
 
 
 def label_rates(labels: dict[str, dict], interactions: dict[str, dict]) -> list[dict]:
-    """One row per partition x hop-type scope, ``all`` first on each side, partitions in order."""
+    """One row per source x partition x hop-type scope, ``all`` first in each, partitions in order."""
     check_inputs(labels, interactions)
-    scopes: dict[tuple[str, str], list[str]] = {}
+    scopes: dict[tuple[str, str, str], list[str]] = {}
     for question_id, row in labels.items():
-        partition, hop = partition_of(question_id, row), hop_of(question_id)
-        for key in ((ALL, ALL), (partition, ALL), (ALL, hop), (partition, hop)):
+        values = (source_of(question_id), partition_of(question_id, row), hop_of(question_id))
+        for key in product(*((ALL, value) for value in values)):
             scopes.setdefault(key, []).append(question_id)
     order = (ALL, *PARTITIONS, UNPARTITIONED)
-    keys = sorted(scopes, key=lambda key: (order.index(key[0]), key[1] != ALL, key[1]))
-    return [scope_row(partition, hop, scopes[partition, hop], labels, interactions) for partition, hop in keys]
+    keys = sorted(scopes, key=lambda key: (key[0] != ALL, key[0], order.index(key[1]), key[2] != ALL, key[2]))
+    return [scope_row(*key, scopes[key], labels, interactions) for key in keys]
 
 
 def read_package(folder: Path) -> tuple[list[dict], dict[str, str]]:
@@ -171,10 +181,10 @@ def main(argv: list[str] | None = None) -> None:
         json.dumps({"inputs": hashes, "excluded_episodes": excluded, "rows": rows}, indent=2) + "\n",
         encoding="utf-8")
     for row in rows:
-        if ALL not in (row["partition"], row["hop_type"]):
-            continue                                    # partition x hop rows are in the CSV
+        if sum(row[k] != ALL for k in ("source", "partition", "hop_type")) > 1:
+            continue                                    # crossed scopes are in the CSV
         a1 = "n/a" if row["a1_accuracy_share"] is None else f"{row['a1_accuracy_share']:.1%}"
-        print(f"{row['partition']:>13} {row['hop_type']:>6}  n={row['n']:>6}  "
+        print(f"{row['source']:>12} {row['partition']:>13} {row['hop_type']:>6}  n={row['n']:>6}  "
               + "  ".join(f"{label} {row[f'{label}_share']:.1%}" for label in VALID_LABELS)
               + f"  A+R {row['binary_share']:.1%}  A1 acc {a1}")
     print(f"Wrote {args.output}")

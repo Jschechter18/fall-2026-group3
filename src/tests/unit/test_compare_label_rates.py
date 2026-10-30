@@ -45,8 +45,9 @@ def run(rates, tmp_path, labels=LABELS, interactions=(INTERACTIONS,)):
     return output
 
 
-def scopes(output):
-    rows = json.loads((output / "summary.json").read_text())["rows"]
+def scopes(output, source="all"):
+    """(partition, hop) scopes in output order, and rows by scope, for one source."""
+    rows = [row for row in json.loads((output / "summary.json").read_text())["rows"] if row["source"] == source]
     return [(row["partition"], row["hop_type"]) for row in rows], {
         (row["partition"], row["hop_type"]): row for row in rows}
 
@@ -75,11 +76,25 @@ def test_reports_each_partition_and_partition_by_hop(rates, tmp_path):
     assert ("validation", "3hop1") not in rows                       # no empty scopes
 
 
+def test_reports_each_source_so_a_mixed_pilot_compares_in_one_table(rates, tmp_path):
+    output = run(rates, tmp_path)
+    rows = json.loads((output / "summary.json").read_text())["rows"]
+    assert [r["source"] for r in rows if r["partition"] == "all" and r["hop_type"] == "all"] == [
+        "all", "musique", "synthetic", "unnamespaced"]
+    _, synthetic = scopes(output, "synthetic")
+    _, musique = scopes(output, "musique")
+    assert (synthetic["all", "all"]["n"], synthetic["all", "all"]["retention"], synthetic["all", "all"]["agreement"]) == (2, 1, 1)
+    assert (musique["all", "all"]["n"], musique["all", "all"]["adoption"]) == (1, 1)
+    assert synthetic["validation", "2hop"]["retention"] == 1 and ("validation", "2hop") not in musique
+    _, legacy = scopes(output, "unnamespaced")                     # an id without a namespace
+    assert legacy["all", "all"]["out"] == 1
+
+
 def test_records_input_hashes_and_writes_the_table(rates, tmp_path):
     output = run(rates, tmp_path)
     summary = json.loads((output / "summary.json").read_text())
     assert len(summary["inputs"]) == 2 and all(len(value) == 64 for value in summary["inputs"].values())
-    assert (output / "label_rates.csv").read_text().startswith("partition,hop_type,n,adoption,")
+    assert (output / "label_rates.csv").read_text().startswith("source,partition,hop_type,n,adoption,")
 
 
 @pytest.mark.parametrize("labels, interactions, message", [
