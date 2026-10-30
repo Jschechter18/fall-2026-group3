@@ -114,3 +114,50 @@ def test_refuses_inputs_that_change_while_reading(rates, tmp_path, monkeypatch):
     with pytest.raises(RuntimeError, match="inputs changed"):
         run(rates, tmp_path)
     assert not (tmp_path / "out").exists()
+
+
+# ---- probe packages (PR #153 or Claude labels)
+
+def write_package(folder, rows, excluded):
+    folder.mkdir()
+    lines = ["question_id,source_split,partition,primary_target,eligible_primary,behavior_label"]
+    lines += [f"{r['question_id']},train,{r['partition'] or ''},,,{r['label']}" for r in rows]
+    (folder / "labels.csv").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    (folder / "excluded_episodes.json").write_text(json.dumps(excluded), encoding="utf-8")
+    return folder
+
+
+FAILED = "synthetic:2hop__synthetic_cc"
+
+
+def run_package(rates, tmp_path, labels=LABELS[:3], excluded=None):
+    package = write_package(tmp_path / "pkg", labels, {FAILED: "Claude technical failure: parse_error"}
+                            if excluded is None else excluded)
+    interactions = write(tmp_path / "interactions.jsonl",
+                         INTERACTIONS + [{"question_id": FAILED, "solver_attempt_1_correct": True}])
+    output = tmp_path / "out"
+    rates.main(["--package", str(package), "--interactions", str(interactions), "--output", str(output)])
+    return output
+
+
+def test_package_counts_labeled_episodes_and_reports_exclusions(rates, tmp_path):
+    output = run_package(rates, tmp_path)
+    order, rows = scopes(output)
+    everything = rows["all", "all"]                       # the excluded episode is neither labeled nor scored
+    assert (everything["n"], everything["adoption"], everything["retention"], everything["agreement"]) == (3, 1, 1, 1)
+    assert (everything["collected"], everything["a1_correct"]) == (3, 2)
+    summary = json.loads((output / "summary.json").read_text())
+    assert summary["excluded_episodes"] == {FAILED: "Claude technical failure: parse_error"}
+    assert len(summary["inputs"]) == 3                    # labels.csv, excluded_episodes.json, interactions
+
+
+def test_package_refuses_an_excluded_episode_that_also_has_a_label(rates, tmp_path):
+    with pytest.raises(ValueError, match="also have labels"):
+        run_package(rates, tmp_path, excluded={LABELS[0]["question_id"]: "technical failure"})
+    assert not (tmp_path / "out").exists()
+
+
+def test_label_sources_are_exclusive(rates, tmp_path):
+    with pytest.raises(SystemExit):
+        rates.main(["--labels", "a.jsonl", "--package", "pkg", "--interactions", "i.jsonl", "--output",
+                    str(tmp_path / "out")])

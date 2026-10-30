@@ -1,7 +1,7 @@
-"""Label rates for one PR #153 label build, by partition and hop type (#174).
+"""Label rates for one label set, by partition and hop type (#174).
 
-Run it once on the approved MuSiQue labels and once on the synthetic pilot, then compare the
-two tables. Rows cover every partition x hop-type scope, with ``all`` for either side (so the
+Run it on two label sets made the same way, e.g. Claude-labeled MuSiQue and synthetic pilot
+episodes, then compare the tables. Rows cover every partition x hop-type scope, with ``all`` for either side (so the
 first row is the whole build). Each reports the four-class counts and shares, the
 Adoption+Retention share, Adoption's share of Adoption+Retention, and A1 accuracy, each with a
 95% Wilson interval. Small scopes are kept; ``n`` shows how far to trust them.
@@ -13,14 +13,21 @@ one (a collection failure, labeled Out) must have none, so it counts in the four
 but not in A1 accuracy. The hop type is the question-id prefix after any ``source:`` namespace.
 Inputs are hashed before reading and rechecked before writing.
 
+Two label sources:
+- ``--labels``: a PR #153 ``final_labels.jsonl``, which includes collection failures.
+- ``--package``: a probe package from ``export_final_labels_for_probes.py``, either PR #153 or Claude.
+  Each ``labels.csv`` row is a collected episode with its ``behavior_label``. Episodes listed in
+  ``excluded_episodes.json`` (e.g. Claude technical failures) are counted and left out, never relabeled.
+
 Usage:
     PYTHONPATH=src python scripts/experiments/compare_label_rates.py \\
-        --labels <build>/final_labels.jsonl \\
+        --package <probe package> \\
         --interactions <run>/train/interactions.jsonl <run>/validation/interactions.jsonl \\
         --output <dir>
 """
 
 import argparse
+import csv
 import json
 from pathlib import Path
 
@@ -120,18 +127,39 @@ def label_rates(labels: dict[str, dict], interactions: dict[str, dict]) -> list[
     return [scope_row(partition, hop, scopes[partition, hop], labels, interactions) for partition, hop in keys]
 
 
+def read_package(folder: Path) -> tuple[list[dict], dict[str, str]]:
+    """Label rows (each a collected episode) and excluded episodes of a probe package."""
+    with (folder / "labels.csv").open(newline="", encoding="utf-8") as fh:
+        rows = [{"question_id": row["question_id"], "label": row["behavior_label"], "collected": True,
+                 "partition": row["partition"] or None} for row in csv.DictReader(fh)]
+    return rows, json.loads((folder / "excluded_episodes.json").read_text(encoding="utf-8"))
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--labels", type=Path, required=True)
+    source = parser.add_mutually_exclusive_group(required=True)
+    source.add_argument("--labels", type=Path, help="a PR #153 final_labels.jsonl")
+    source.add_argument("--package", type=Path, help="a probe package folder (PR #153 or Claude labels)")
     parser.add_argument("--interactions", type=Path, nargs="+", required=True)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args(argv)
     ensure_output_available(args.output)
 
-    paths = [args.labels, *args.interactions]
+    label_files = ([args.labels] if args.labels
+                   else [args.package / "labels.csv", args.package / "excluded_episodes.json"])
+    paths = [*label_files, *args.interactions]
     hashes = {str(path): sha256_file(path) for path in paths}
-    labels = by_question(read_jsonl(args.labels), str(args.labels))
+    excluded = {}
+    if args.labels:
+        labels = by_question(read_jsonl(args.labels), str(args.labels))
+    else:
+        package_rows, excluded = read_package(args.package)
+        labels = by_question(package_rows, str(args.package / "labels.csv"))
+        labeled_excluded = sorted(set(excluded) & set(labels))
+        if labeled_excluded:
+            raise ValueError(f"excluded episodes also have labels, e.g. {labeled_excluded[:3]}")
     interactions = by_question([row for path in args.interactions for row in read_jsonl(path)], "interactions")
+    interactions = {qid: row for qid, row in interactions.items() if qid not in excluded}
     rows = label_rates(labels, interactions)
     changed = [path for path in paths if sha256_file(path) != hashes[str(path)]]
     if changed:
@@ -140,7 +168,8 @@ def main(argv: list[str] | None = None) -> None:
     args.output.mkdir(parents=True)
     write_csv(args.output / "label_rates.csv", rows)
     (args.output / "summary.json").write_text(
-        json.dumps({"inputs": hashes, "rows": rows}, indent=2) + "\n", encoding="utf-8")
+        json.dumps({"inputs": hashes, "excluded_episodes": excluded, "rows": rows}, indent=2) + "\n",
+        encoding="utf-8")
     for row in rows:
         if ALL not in (row["partition"], row["hop_type"]):
             continue                                    # partition x hop rows are in the CSV
