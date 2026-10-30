@@ -2,6 +2,7 @@ import json
 from dataclasses import dataclass
 
 from boto3.session import Session
+from botocore.config import Config
 from typing import Literal
 
 
@@ -14,10 +15,12 @@ class ClaudeResult:
     output_tokens: int
     task: str
     stop_reason: str | None
+    sdk_retry_attempts: int = 0
 
 class ClaudeClient:
     """Reusable client for calling Claude through Amazon Bedrock."""
-    def __init__(self, session: Session, *, model_id: str, region: str = "us-east-1",):
+    def __init__(self, session: Session, *, model_id: str, region: str = "us-east-1",
+                 config: Config | None = None):
         """Initialize the ClaudeClient with a Boto3 session and model details.
 
         Parameters
@@ -28,11 +31,14 @@ class ClaudeClient:
             The model ID for the Claude model to be used.
         region : str, optional
             The AWS region where the Bedrock client is created, by default "us-east-1"
+        config : Config | None, optional
+            Optional SDK transport timeout and retry configuration.
         """
         self.model_id = model_id
         self._client = session.client(
             "bedrock-runtime",
             region_name=region,
+            config=config,
         )
         
     def generate(self, prompt: str, *, system: str = "", max_tokens: int = 4096,
@@ -59,7 +65,6 @@ class ClaudeClient:
             raise ValueError("prompt must not be empty.")
         if max_tokens <= 0:
             raise ValueError("max_tokens must be positive.")
-        # if not 0 <= temperature <= 1:
         if temperature is not None and not 0 <= temperature <= 1:
             raise ValueError("temperature must be between 0 and 1.")
         if task not in ("data-gen", "labeling", "other"):
@@ -98,6 +103,7 @@ class ClaudeClient:
             output_tokens=data["usage"]["output_tokens"],
             task=task,
             stop_reason=data.get("stop_reason"),
+            sdk_retry_attempts=response.get("ResponseMetadata", {}).get("RetryAttempts", 0),
         )
 
     

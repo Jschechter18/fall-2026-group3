@@ -292,7 +292,8 @@ def generate_one(
                                  temperature=temperature, task="data-gen")
         attempt = {"model": result.model, "input_tokens": result.input_tokens,
                    "output_tokens": result.output_tokens, "stop_reason": result.stop_reason,
-                   "raw_text": result.text, "error": None, "precheck_errors": []}
+                   "raw_text": result.text, "error": None, "precheck_errors": [],
+                   "sdk_retry_attempts": getattr(result, "sdk_retry_attempts", 0)}
         provenance["attempts"].append(attempt)
         if result.stop_reason != "end_turn":
             attempt["error"] = f"stop_reason={result.stop_reason}"

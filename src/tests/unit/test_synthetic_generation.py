@@ -181,7 +181,7 @@ def test_cli_preserves_attempts_and_closes_client_on_fatal_error(tmp_path, monke
             self.closed = True
 
     client = BrokenClient([("not json", "end_turn")])
-    monkeypatch.setattr(generation_cli, "make_client", lambda model_id: client)
+    monkeypatch.setattr(generation_cli, "make_client", lambda model_id, **kwargs: client)
     original = tmp_path / "train.json"
     original.write_text(json.dumps({"paragraphs": [paragraph(f"Filler {i}") for i in range(30)]}) + "\n")
     out = tmp_path / "run"
@@ -207,7 +207,7 @@ def test_cli_preserves_attempts_and_closes_client_on_fatal_error(tmp_path, monke
 def test_cli_records_client_initialization_failure(tmp_path, monkeypatch):
     from mas_sae.data.synthetic import generation_cli
 
-    def fail(model_id):
+    def fail(model_id, **kwargs):
         raise RuntimeError("client initialization failed")
 
     monkeypatch.setattr(generation_cli, "make_client", fail)
@@ -221,7 +221,7 @@ def test_cli_records_client_initialization_failure(tmp_path, monkeypatch):
     assert summary["api_calls"] == 0
 
 
-def test_cli_marks_output_failure_and_closes_owned_client(tmp_path, monkeypatch):
+def test_cli_marks_output_failure_before_starting_a_client(tmp_path, monkeypatch):
     from pathlib import Path
     from mas_sae.data.synthetic import generation_cli
 
@@ -232,7 +232,7 @@ def test_cli_marks_output_failure_and_closes_owned_client(tmp_path, monkeypatch)
             self.closed = True
 
     client = TrackingClient([])
-    monkeypatch.setattr(generation_cli, "make_client", lambda model_id: client)
+    monkeypatch.setattr(generation_cli, "make_client", lambda model_id, **kwargs: client)
     original = tmp_path / "train.json"
     original.write_text(json.dumps({"paragraphs": [paragraph("Filler")]}) + "\n")
     out = tmp_path / "run"
@@ -251,7 +251,8 @@ def test_cli_marks_output_failure_and_closes_owned_client(tmp_path, monkeypatch)
     assert summary["status"] == "failed"
     assert summary["fatal_error"] == "OSError: cannot create candidates"
     assert summary["api_calls"] == 0
-    assert client.closed
+    assert not client.closed
+    assert client.calls == 0
 
 
 @pytest.mark.parametrize("hop_type", ["2hop", "3hop1", "3hop2", "4hop1", "4hop2", "4hop3"])

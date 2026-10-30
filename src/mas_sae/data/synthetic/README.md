@@ -86,20 +86,77 @@ quality or diversity; manually review a generated batch before dataset inclusion
 PYTHONPATH=src python scripts/generate_synthetic_musique.py --n 6 --seed 0
 ```
 
-This makes paid API calls (one per record, two on retry) using the credentials in
-`.env`. Hop types cycle round-robin (`--hop-types` to restrict). Outputs go to
-`data/MuSiQue/synthetic/runs/<run-id>/generation/`: `candidates.jsonl`,
-`provenance.jsonl` (prompt version, raw responses, tokens and errors, keyed
-by record ID) and `summary.json`. Invalid raw `support` values (including floats,
-booleans, and out-of-range integers) are rejected before paragraph-index remapping.
-API and unexpected runtime errors stop the command with a nonzero exit status;
-completed attempts and known token usage are retained. The summary distinguishes
-`api_calls` (client invocations, including failed calls) from `completed_responses`
-and includes `status` and `fatal_error`. Token totals include only returned usage;
-SDK-internal retries are not separately counted. Exhausting candidate-validation
-retries is an ordinary record failure and does not abort the batch.
-Then check the batch as below, passing
-`--output-dir` as the sibling `validation/` directory.
+This makes paid API calls using `.env` credentials. Opus 5 is the default;
+`--model-id` overrides it. `--n` retains its meaning: a fixed number of generation
+requests, each with up to two model invocations including a repair. Default
+concurrency is 1. `--concurrency 16` allows up to 16 requests to run simultaneously
+on one machine. Hop types are scheduled round-robin (`--hop-types` to restrict).
+
+Both the CLI and review notebook use `batch.run_batch`. Each worker reuses its own
+client and receives an independent RNG derived from the run seed and request ID.
+Only the coordinator touches the duplicate index, counters, and output files.
+Results are written as they complete. Request IDs join records to validation and
+provenance, irrespective of file order. Seeds are recorded, but model outputs and
+which concurrent duplicate wins are not guaranteed reproducible.
+
+For five accepted questions per subtype, with at most ten requests per subtype:
+
+```bash
+PYTHONPATH=src python scripts/generate_synthetic_musique.py \
+  --target-per-hop 5 --max-requests-per-hop 10 --concurrency 16 --seed 42 \
+  --dedup-original data/MuSiQue/clean/train.json data/MuSiQue/clean/validation.json
+```
+
+Quota mode counts accepted plus in-flight requests before scheduling, avoiding
+quota overshoot. Failed/duplicate requests free slots for replacements, within
+the cap. `--n` and `--target-per-hop` are mutually exclusive. A completed fixed
+request batch exits zero even with record failures. An unmet accepted quota exits
+1 with `status=quota_not_met`. Fatal errors propagate and fail either mode.
+
+Every new run writes under `data/MuSiQue/synthetic/runs/<run-id>/generation/`:
+
+- `candidates.jsonl`: structurally pre-checked candidates before deduplication.
+- `accepted.jsonl`: candidates passing validation and normalized-exact deduplication.
+- `validation.jsonl`: per-request acceptance, rejection, cancellation, or fatal error.
+- `provenance.jsonl`: request IDs/seeds, timestamps, raw responses, repairs, usage,
+  requested/returned model IDs, and errors. Exhausted requests may have no candidate.
+- `question_index.sqlite`: originals explicitly selected for deduplication plus accepted questions.
+- `summary.json`: status, counts, quotas, configuration, elapsed time, accepted/minute,
+  request-latency p50/p95 (including repairs), terminal API error codes, and SDK retry totals.
+
+`--dedup-original` indexes every supplied original split. In quota mode it defaults
+to `--original`; fixed-request mode defaults to within-batch deduplication only.
+This index does not automatically cover earlier synthetic runs. Use the standalone
+validation command with a shared index for cross-run exact deduplication before
+release. Acceptance is not manual approval. Index registration and file writing
+are not transactional; forced termination or storage errors may leave partial artifacts.
+
+On an API/programming error or KeyboardInterrupt, scheduling stops, unstarted work
+is cancelled, and running requests are allowed to finish and are saved before
+clients close and the failure propagates. A running request may finish its bounded
+repair attempts. Shutdown can therefore take time. Repeated interruption, process
+termination, or disk failure cannot guarantee draining. Existing output directories
+are refused; automatic resume is not implemented.
+
+Transport options are `--connect-timeout` (10 seconds), `--read-timeout` (300 seconds),
+and `--sdk-max-attempts` (3 total attempts per invocation, standard SDK retry mode).
+These are socket timeouts and retry limits, not a hard run deadline. Transport
+retries differ from model-output repairs. `api_calls` counts client invocations;
+`sdk_retry_attempts` counts retries reported on successful SDK responses. Failed
+invocations may have unreported usage/retries. `api_errors_by_code` counts terminal
+errors, not throttles recovered internally. No rate limiter or quota increase is
+implied by concurrency. See [Botocore configuration](https://docs.aws.amazon.com/botocore/latest/reference/config.html).
+
+To benchmark, run separate fixed-size batches at concurrency 1, 4, 8, and 16 with
+new output directories (for example, `--n 48 --concurrency 4 --seed 42`). These are
+paid calls; the software does not launch a benchmark automatically. Compare
+`accepted_per_minute`, elapsed time, p50/p95 latency, SDK retries and terminal API
+errors. More concurrency is useful only while actual throughput improves.
+
+`notebooks/synthetic_data_generation_sample.ipynb` calls the same runner with
+`CONCURRENCY`, subtype quotas, and both original splits. Generation is disabled by
+default. Existing saved batches/review worksheets are retained; loading and review
+cells make no calls. For a prior run, set `REVIEW_RUN_DIR` to its saved path.
 
 Filler paragraphs are real text while supporting paragraphs may be invented, so a
 filler can occasionally conflict with an invented fact; check this in manual review.
