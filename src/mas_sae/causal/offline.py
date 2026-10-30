@@ -194,10 +194,16 @@ def targeted_vs_random(targeted: np.ndarray, random: np.ndarray, control: np.nda
     rng = np.random.default_rng(seed + 1)
     n_draws = random.shape[1]
     with warnings.catch_warnings():
-        # a resample, or a draw, with no values left (all NaN) is NaN and left out below
+        # a question, resample or draw with no values left (all NaN) is NaN and left out below
         warnings.simplefilter("ignore", RuntimeWarning)
-        both = [targeted[i].mean() - np.nanmean(random[i][:, rng.integers(0, n_draws, n_draws)])
-                for i in grouped_bootstrap_indices(groups, n_bootstrap, seed)]
+        both = []
+        for i in grouped_bootstrap_indices(groups, n_bootstrap, seed):
+            # Same estimand as the point estimate: average each question's resampled draws, then the
+            # paired question differences. A question whose resampled draws are all left out is
+            # dropped from that resample, so questions are never weighted by their number of draws.
+            per_question = np.nanmean(random[i][:, rng.integers(0, n_draws, n_draws)], 1)
+            valid = np.isfinite(per_question)
+            both.append((targeted[i][valid] - per_question[valid]).mean() if valid.any() else np.nan)
         draw_effects = np.nanmean(random - control[:, None], 0)
     t_effect = (targeted - control).mean()
     finite = draw_effects[np.isfinite(draw_effects)]

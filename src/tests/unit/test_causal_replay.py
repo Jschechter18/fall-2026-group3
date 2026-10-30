@@ -928,6 +928,28 @@ def test_targeted_vs_random_leaves_out_missing_draws():
         offline.targeted_vs_random(t, np.where([[True, True]] * 4, np.nan, r), np.zeros(4), np.arange(4), 10, 10, 0)
 
 
+def test_questions_and_draws_ci_weights_questions_equally_when_draws_are_missing():
+    # Targeted equals each question's mean random outcome, so the effect is 0 in every resample.
+    # Pooling all valid cells instead weights the question with fewer valid draws differently.
+    r = np.zeros((6, 5))
+    r[0] = [1.0, np.nan, np.nan, np.nan, np.nan]
+    t = np.nanmean(r, 1)
+    res = offline.targeted_vs_random(t, r, np.zeros(6), np.arange(6), 500, 10, 0)
+    assert res["delta_pp"] == pytest.approx(0)
+    assert res["ci95_pp_questions_and_draws"] == pytest.approx([0, 0])
+
+
+def test_questions_and_draws_ci_is_unchanged_without_missing_draws():
+    rng = np.random.default_rng(3)
+    t, r = rng.integers(0, 2, 40).astype(float), rng.integers(0, 2, (40, 5)).astype(float)
+    res = offline.targeted_vs_random(t, r, np.zeros(40), np.arange(40), 200, 10, 7)
+    draws = np.random.default_rng(8)                                 # the function's draw stream
+    pooled = [t[i].mean() - r[i][:, draws.integers(0, 5, 5)].mean()
+              for i in offline.grouped_bootstrap_indices(np.arange(40), 200, 7)]
+    assert res["ci95_pp_questions_and_draws"] == pytest.approx(
+        [100 * np.quantile(pooled, q) for q in (0.025, 0.975)])
+
+
 def test_latent_stats_cover_every_latent():
     from mas_sae.probe import feature_selection as fs
     X = np.random.default_rng(1).normal(size=(30, 16)).astype(np.float32)
