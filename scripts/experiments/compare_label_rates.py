@@ -144,9 +144,10 @@ def main(argv: list[str] | None = None) -> None:
     for row in rows:
         if ALL not in (row["partition"], row["hop_type"]):
             continue                                    # partition x hop rows are in the CSV
+        a1 = "n/a" if row["a1_accuracy_share"] is None else f"{row['a1_accuracy_share']:.1%}"
         print(f"{row['partition']:>13} {row['hop_type']:>6}  n={row['n']:>6}  "
               + "  ".join(f"{label} {row[f'{label}_share']:.1%}" for label in VALID_LABELS)
-              + f"  A+R {row['binary_share']:.1%}  A1 acc {row['a1_accuracy_share'] or 0:.1%}")
+              + f"  A+R {row['binary_share']:.1%}  A1 acc {a1}")
     print(f"Wrote {args.output}")
 
 
