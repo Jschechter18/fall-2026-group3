@@ -138,3 +138,105 @@ def test_probe_package_from_the_partitioned_labels(build, prepared, tmp_path):
     assert diag["index_verified_rows"] == len(episodes)
     final = {r["question_id"]: r["label"] for r in read_jsonl(tmp_path / "labels/final_labels.jsonl")}
     assert all(final[q] == label for q, label in zip(table.question_id, table.behavior_label))
+
+
+# ---- Claude labels as the training targets (#161)
+
+CLASSES = ("adoption", "retention", "agreement", "out")
+
+
+def _exporter():
+    spec = importlib.util.spec_from_file_location("export_final_labels_for_probes",
+                                                  SCRIPT.parent / "export_final_labels_for_probes.py")
+    export = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(export)
+    return export
+
+
+def _claude_rows(ordinary, partition, technical=()):
+    """One Claude result per collected episode, cycling the four classes; ``technical`` ids fail."""
+    rows = []
+    for i, episode in enumerate(read_jsonl(ordinary / partition / "interactions.jsonl")):
+        label = None if episode["question_id"] in technical else CLASSES[i % 4]
+        rows.append({**{k: episode[k] for k in ("episode_id", "question_id", "source_split",
+                                                 "attempt1_activation_index", "attempt2_activation_index")},
+                     "partition": partition, "behavior_label": label, "claude_label": label,
+                     "claude_reason": "reason", "label_source": "claude", "claude_model": "claude-opus-5",
+                     "prompt_version": "claude_binary_v3_candidates",
+                     "eligible_primary": label in ("adoption", "retention"),
+                     "primary_target": {"adoption": 1, "retention": 0}.get(label),
+                     "exclusion_reason": "parse_error" if label is None else None})
+    return rows
+
+
+def _write_claude_run(folder, rows):
+    from mas_sae.evaluation.claude_validator import export_binary_labels, export_exclusions
+    export_binary_labels(rows, folder / "binary_labels.csv")
+    export_exclusions(rows, folder / "exclusions.jsonl")
+    return folder
+
+
+def _claude_args(runs, ordinary, output):
+    return ["--claude-runs", *map(str, runs), "--full-results", str(ordinary), "--layout", "partitioned",
+            "--output", str(output)]
+
+
+def test_claude_labels_package_aligns_and_leaves_held_out_partitions_unlabeled(prepared, tmp_path):
+    pd = pytest.importorskip("pandas")
+    from mas_sae.probe import behavior_data as bd
+
+    ordinary = prepared / "results/fixture"
+    failed = read_jsonl(ordinary / "train/interactions.jsonl")[0]["question_id"]
+    rows = {p: _claude_rows(ordinary, p, technical={failed}) for p in ("train", "validation")}
+    runs = [_write_claude_run(tmp_path / f"claude/{p}", r) for p, r in rows.items()]
+    _exporter().main(_claude_args(runs, ordinary, tmp_path / "pkg"))
+
+    table = pd.read_csv(tmp_path / "pkg/labels.csv").set_index("question_id")
+    expected = {r["question_id"]: r["behavior_label"] for p in rows for r in rows[p] if r["behavior_label"]}
+    assert table["behavior_label"].to_dict() == expected                         # all four classes kept
+    assert set(table[table.eligible_primary].behavior_label) == {"adoption", "retention"}
+    assert set(table.prompt_version) == {"claude_binary_v3_candidates"}
+    excluded = json.loads((tmp_path / "pkg/excluded_episodes.json").read_text())
+    assert excluded == {failed: "Claude technical failure: parse_error"}
+    counts = json.loads((tmp_path / "pkg/counts.json").read_text())
+    assert counts["unlabeled_partitions"] == ["test"] and counts["label_policy"]["name"] == "Claude labels"
+
+    episodes = bd.build_episode_table(ordinary, ["train", "validation"], ["solver_attempt_1"])
+    aligned, diag = bd.align_episodes(episodes, table.reset_index(), pd.read_csv(tmp_path / "pkg/split_manifest.csv"),
+                                      bd.Columns(), "full_index", excluded=excluded)
+    assert diag["index_verified_rows"] == len(episodes) - 1
+    selected, _ = bd.select_partitions(aligned, bd.Columns(), ["train"])
+    assert set(selected["target_name"]) == {"adopted_critic", "not_adopted"}
+
+
+def _first(rows):
+    return rows["train"][0]
+
+
+@pytest.mark.parametrize("change, message", [
+    (lambda rows: _first(rows).update(prompt_version="claude_binary_v2"), "share one prompt_version"),
+    (lambda rows: rows["validation"].append(dict(_first(rows))), "more than one Claude run"),
+    (lambda rows: rows["train"].pop(0), "but not this episode"),
+    (lambda rows: _first(rows).update(partition="validation"), "Claude row has partition"),
+    (lambda rows: _first(rows).update(attempt2_activation_index=_first(rows)["attempt2_activation_index"] + 1000),
+     "activation index"),
+    (lambda rows: rows["train"].append(dict(_first(rows), question_id="musique:not_collected")), "did not collect"),
+])
+def test_claude_labels_refuse_inconsistent_runs(prepared, tmp_path, change, message):
+    ordinary = prepared / "results/fixture"
+    rows = {p: _claude_rows(ordinary, p) for p in ("train", "validation")}
+    change(rows)
+    runs = [_write_claude_run(tmp_path / f"claude/{p}", r) for p, r in rows.items()]
+    with pytest.raises(SystemExit, match=message):
+        _exporter().main(_claude_args(runs, ordinary, tmp_path / "pkg"))
+    assert not (tmp_path / "pkg").exists()
+
+
+def test_label_sources_are_exclusive(prepared, tmp_path):
+    ordinary = prepared / "results/fixture"
+    run = _write_claude_run(tmp_path / "claude/train", _claude_rows(ordinary, "train"))
+    for argv in (["--labels", "x.jsonl"], _claude_args([run], ordinary, tmp_path / "pkg")[:2] + ["--counts", "c.json"]):
+        with pytest.raises(SystemExit):
+            _exporter().main(argv + ["--full-results", str(ordinary), "--layout", "partitioned",
+                                     "--output", str(tmp_path / "pkg")])
+    assert not (tmp_path / "pkg").exists()

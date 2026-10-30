@@ -1,4 +1,4 @@
-"""Write the approved PR #153 labels as a behavior package the probe loader reads (issue #155, for #161).
+"""Write PR #153 or Claude behavior labels as a package the probe loader reads (issue #155, for #161).
 
 Same package as ``prepare_behavior_v01.py`` (``labels.csv``, ``split_manifest.csv``, ``partitions.csv``,
 ``counts.json``) built with the same production functions, so ``layer_selection`` and
@@ -26,9 +26,23 @@ Usage, the candidates run (its 202 collection failures are frozen questions with
 
 A fresh partitioned run: ``--layout partitioned --full-results <prepared>/results/<run>``, with the
 labels and counts from ``build_final_labels_partitioned.py``; the run's own partitions.csv is used.
+
+Claude labels (the team's training targets for the mixed collection): ``--claude-runs`` takes the
+``run_claude_validation.py`` output folders (one per partition, or a combined technical-error retry) in
+place of ``--labels``/``--counts``. Each folder's ``binary_labels.csv`` (Adoption/Retention) and
+``exclusions.jsonl`` (Agreement, Out, technical failures) are read; every run must share one prompt
+version and Claude model. All four classes go to labels.csv, with only Adoption/Retention eligible. Every
+collected episode of a labeled partition needs exactly one Claude row with the same partition and
+activation index; a technical failure is written to ``excluded_episodes.json`` with its reason, and
+partitions no run labels (test, intervention) stay in the manifest without labels::
+
+    PYTHONPATH=src python scripts/export_final_labels_for_probes.py \\
+        --claude-runs <claude_labels>/train <claude_labels>/validation \\
+        --full-results <prepared>/results/<run> --layout partitioned --output <new folder>
 """
 
 import argparse
+import csv
 import json
 from collections import Counter
 from pathlib import Path
@@ -53,6 +67,8 @@ from mas_sae.experiments.records import read_jsonl
 
 TARGETS = {"adoption": 1, "retention": 0}
 UNPARTITIONED = "collected, but the question has no frozen partition (PR #153 label: out)"
+CLAUDE_FILES = ("binary_labels.csv", "exclusions.jsonl")
+CLAUDE_PROTOCOL = ("prompt_version", "claude_model")
 
 
 def load_build(labels_path: Path, counts_path: Path) -> tuple[dict[str, dict], dict]:
@@ -87,6 +103,66 @@ def attach_labels(rows: list[dict], manifest: dict[str, dict], labels: dict[str,
         row["label"] = probe_label(record, policy_version)
 
 
+def load_claude_runs(run_dirs: list[Path]) -> tuple[dict[str, dict], dict]:
+    """Claude result rows by question from labeling runs, and the one protocol they share."""
+    rows = []
+    for run in run_dirs:
+        with (run / "binary_labels.csv").open(newline="", encoding="utf-8") as fh:
+            rows += [dict(r, behavior_label=r["claude_label"]) for r in csv.DictReader(fh)]
+        rows += read_jsonl(run / "exclusions.jsonl")
+    labels = {}
+    for row in rows:
+        if row["question_id"] in labels:
+            raise SystemExit(f"{row['question_id']}: labeled in more than one Claude run")
+        labels[row["question_id"]] = row
+    protocol = {}
+    for key in CLAUDE_PROTOCOL:
+        values = sorted({row[key] for row in rows if row.get(key)})
+        if len(values) != 1:
+            raise SystemExit(f"the Claude runs must share one {key}; found {values}")
+        protocol[key] = values[0]
+    return labels, protocol
+
+
+def attach_claude_labels(rows: list[dict], manifest: dict[str, dict], labels: dict[str, dict],
+                         protocol: dict) -> tuple[list[dict], dict[str, str], list[str]]:
+    """Label every collected row of the partitions the Claude runs cover.
+
+    Returns the labeled rows, technical failures to exclude (with their reason), and the partitions no
+    run labels. Each row needs exactly one Claude row with the same partition and activation index.
+    """
+    collected = {row["question_id"] for row in rows}
+    stray = sorted(set(labels) - collected)
+    if stray:
+        raise SystemExit(f"{len(stray)} Claude row(s) for questions this run did not collect, e.g. {stray[:3]}")
+    covered = {record["partition"] for record in labels.values()}
+    labeled, failed = [], {}
+    for row in rows:
+        qid, partition = row["question_id"], manifest[row["question_id"]]["partition"]
+        if partition not in covered:
+            continue
+        record = labels.get(qid)
+        if record is None:
+            raise SystemExit(f"{qid}: the Claude runs label {partition} but not this episode")
+        if record["partition"] != partition:
+            raise SystemExit(f"{qid}: Claude row has partition {record['partition']!r}, the manifest {partition!r}")
+        if int(record["attempt2_activation_index"]) != int(row["attempt2_activation_index"]):
+            raise SystemExit(f"{qid}: Claude row has activation index {record['attempt2_activation_index']}, "
+                             f"the collection {row['attempt2_activation_index']}")
+        if not record["behavior_label"]:
+            failed[qid] = f"Claude technical failure: {record.get('exclusion_reason')}"
+            continue
+        label = record["behavior_label"]
+        row["partition"] = partition
+        row["label"] = {"primary_target": TARGETS.get(label), "eligible_primary": label in TARGETS,
+                        "behavior_label": label,
+                        "label_reason": record.get("claude_reason") or record.get("exclusion_reason"),
+                        "label_source": record.get("label_source") or "claude", **protocol}
+        labeled.append(row)
+    unlabeled = sorted({manifest[qid]["partition"] for qid in collected} - covered)
+    return labeled, failed, unlabeled
+
+
 def unpartitioned(rows: list[dict], frozen: dict, labels: dict[str, dict]) -> dict[str, str]:
     """Collected episodes without a frozen partition; the build must label each a collected, unpartitioned Out."""
     excluded = {}
@@ -101,14 +177,18 @@ def unpartitioned(rows: list[dict], frozen: dict, labels: dict[str, dict]) -> di
 
 def main(argv=None) -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--labels", type=Path, required=True, help="final_labels.jsonl of a PR #153 build")
-    parser.add_argument("--counts", type=Path, required=True, help="counts.json of the same build")
+    source = parser.add_mutually_exclusive_group(required=True)
+    source.add_argument("--labels", type=Path, help="final_labels.jsonl of a PR #153 build (with --counts)")
+    source.add_argument("--claude-runs", type=Path, nargs="+", help="run_claude_validation.py output folders")
+    parser.add_argument("--counts", type=Path, help="counts.json of the same PR #153 build")
     parser.add_argument("--full-results", type=Path, required=True, help="the run's results folder")
     parser.add_argument("--frozen-partitions", type=Path, help="default for --layout partitioned: the run's partitions.csv")
     parser.add_argument("--coverage", choices=COVERAGE_MODES, default="complete")
     parser.add_argument("--layout", choices=("legacy", "partitioned"), default="legacy")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args(argv)
+    if (args.labels is None) != (args.counts is None):
+        parser.error("--counts goes with --labels, and --labels needs --counts")
     if args.frozen_partitions is None:
         if args.layout != "partitioned":
             parser.error("--frozen-partitions is required for the legacy layout")
@@ -116,18 +196,36 @@ def main(argv=None) -> None:
     ensure_output_available(args.output)
 
     status = args.full_results / "collection_status.json"
-    inputs = [args.labels, args.counts, args.frozen_partitions, *interaction_paths(args.full_results, layout=args.layout),
+    label_files = ([args.labels, args.counts] if args.labels
+                   else [run / name for run in args.claude_runs for name in CLAUDE_FILES])
+    inputs = [*label_files, args.frozen_partitions, *interaction_paths(args.full_results, layout=args.layout),
               *([status] if args.layout == "partitioned" else [])]
     hashes_before = {str(path): sha256_file(path) for path in inputs}
-    labels, build = load_build(args.labels, args.counts)
+    if args.labels:
+        labels, build = load_build(args.labels, args.counts)
+    else:
+        labels, protocol = load_claude_runs(args.claude_runs)
     frozen = read_partitions(args.frozen_partitions, layout=args.layout)
     rows = read_run_interactions(args.full_results, layout=args.layout)
-    excluded = unpartitioned(rows, frozen, labels)
+    if args.labels:
+        excluded = unpartitioned(rows, frozen, labels)
+    else:
+        excluded = {r["question_id"]: "collected, but the question has no frozen partition"
+                    for r in rows if r["question_id"] not in frozen}
     rows = [r for r in rows if r["question_id"] not in excluded]
     exclusions = json.loads(status.read_text())["excluded"] if args.layout == "partitioned" else []
     manifest = build_partition_manifest(rows, frozen=frozen, coverage=args.coverage, layout=args.layout,
                                         exclusions=exclusions)
-    attach_labels(rows, manifest, labels, build["policy_version"])
+    if args.labels:
+        attach_labels(rows, manifest, labels, build["policy_version"])
+        unlabeled = []
+        label_policy = {"name": "PR #153 final", "version": build["policy_version"],
+                        "labels_sha256": build["labels_sha256"]}
+    else:
+        rows, failed, unlabeled = attach_claude_labels(rows, manifest, labels, protocol)
+        excluded |= failed
+        label_policy = {"name": "Claude labels", **protocol,
+                        "runs": [str(run) for run in args.claude_runs], "technical_failures": len(failed)}
 
     args.output.mkdir(parents=True)
     write_labels(args.output / "labels.csv", rows)
@@ -139,10 +237,10 @@ def main(argv=None) -> None:
     for row in rows:
         by_partition.setdefault(row["partition"], Counter())[row["label"]["behavior_label"]] += 1
     write_json_atomic(args.output / "counts.json", {
-        "label_policy": {"name": "PR #153 final", "version": build["policy_version"],
-                         "labels_sha256": build["labels_sha256"]},
+        "label_policy": label_policy,
         "target": {"column": "primary_target", "eligible": "eligible_primary", "1": "adoption", "0": "retention"},
         "labels_by_partition": {p: dict(c) for p, c in sorted(by_partition.items())},
+        "unlabeled_partitions": unlabeled,
         "binary_by_partition": {p: {k: c[k] for k in TARGETS} for p, c in sorted(by_partition.items())},
         "excluded_episodes": len(excluded),
         "partition": {"frozen_partitions": str(args.frozen_partitions), "coverage": args.coverage,
