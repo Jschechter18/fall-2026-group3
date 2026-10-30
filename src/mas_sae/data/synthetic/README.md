@@ -99,6 +99,32 @@ Results are written as they complete. Request IDs join records to validation and
 provenance, irrespective of file order. Seeds are recorded, but model outputs and
 which concurrent duplicate wins are not guaranteed reproducible.
 
+The full-run settings are saved in `configs/synthetic/opus5_v3_full.yaml`:
+
+```bash
+PYTHONPATH=src python scripts/generate_synthetic_musique.py \
+  --config configs/synthetic/opus5_v3_full.yaml
+```
+
+This targets 80,004 accepted questions at concurrency 256. It makes paid calls when
+executed; creating or reading the config does not launch a run. All config paths
+are relative to the working directory; launch from the repository root. YAML keys
+use the CLI names with underscores (for example, `target_per_hop`). Unknown keys
+and invalid types are rejected. Explicit CLI flags override config values:
+
+```bash
+PYTHONPATH=src python scripts/generate_synthetic_musique.py \
+  --config configs/synthetic/opus5_v3_full.yaml \
+  --target-per-hop 5 --max-requests-per-hop 10 --concurrency 16 \
+  --output-dir data/MuSiQue/synthetic/runs/config-smoke-001/generation
+```
+
+`--n` switches a quota config to fixed-request mode, clearing its quota and cap.
+`--target-per-hop` switches a fixed-request config to quota mode; supply the request
+cap as well. The output directory must be new. Saved config support does not add
+resume; complete resume support before relying on recovery of a full-size run.
+Resolved generation and transport settings are recorded in the run summary.
+
 For five accepted questions per subtype, with at most ten requests per subtype:
 
 ```bash
