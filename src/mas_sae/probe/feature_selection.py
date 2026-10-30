@@ -49,6 +49,8 @@ class FeatureSelectionConfig:
     labels_csv: str
     manifest_csv: str
     index_column: str = "full_index"
+    # question_id -> reason; collected episodes deliberately left out of a label package
+    excluded_episodes: dict = field(default_factory=dict)
     target_column: str = "primary_target"
     eligible_column: str = "eligible_primary"
     layer: int = 33
@@ -89,7 +91,8 @@ class FeatureSelectionConfig:
         return ls.LayerSelectionConfig(
             capstone_data_root=self.capstone_data_root, activations_dir=self.activations_dir,
             results_dir=self.results_dir, labels_csv=self.labels_csv, manifest_csv=self.manifest_csv,
-            index_column=self.index_column, layers=[self.layer], activation_file=self.activation_file,
+            index_column=self.index_column, excluded_episodes=self.excluded_episodes,
+            layers=[self.layer], activation_file=self.activation_file,
             target_column=self.target_column, eligible_column=self.eligible_column,
             protocol="holdout", fit_partition=self.fit_partition, eval_partition=self.eval_partition,
             text_fields=[], seed=self.seed)
