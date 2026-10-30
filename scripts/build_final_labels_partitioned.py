@@ -88,6 +88,15 @@ def build(rules, frozen: dict[str, dict], run_dirs: list[Path]) -> list[dict]:
     return records
 
 
+def input_hashes(partitions: Path, run_dirs: list[Path]) -> dict[str, str]:
+    """sha256 of every file the build reads, keyed as ``counts.json`` records it."""
+    files = {str(p): p for p in (*(POLICY_DIR / name for name in RULE_FILES), partitions)}
+    for run in run_dirs:
+        files[f"{run.name}/run_layout.json"] = run / "run_layout.json"
+        files |= {f"{run.name}/{p}/{name}": run / p / name for p in run_partitions(run) for name in RUN_FILES}
+    return {key: sha256_file(path) for key, path in files.items()}
+
+
 def main(argv=None) -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--partitions", type=Path, required=True, help="the prepared run's partitions.csv")
@@ -96,16 +105,13 @@ def main(argv=None) -> None:
     args = parser.parse_args(argv)
     ensure_output_available(args.output)
 
+    sources = input_hashes(args.partitions, args.runs)
     rules = load_rules()
-    before = sha256_file(args.partitions)
     records = build(rules, read_partitions(args.partitions, layout="partitioned"), args.runs)
-    if sha256_file(args.partitions) != before:
-        raise RuntimeError("partitions.csv changed during the build")
+    if input_hashes(args.partitions, args.runs) != sources:
+        raise RuntimeError("an input file changed during the build")
     args.output.mkdir(parents=True)
     (args.output / "final_labels.jsonl").write_text(rules.labels_jsonl(records), encoding="utf-8")
-    sources = {str(p): sha256_file(p) for p in (*(POLICY_DIR / name for name in RULE_FILES), args.partitions)}
-    sources |= {f"{run.name}/{p}/{name}": sha256_file(run / p / name)
-                for run in args.runs for p in run_partitions(run) for name in RUN_FILES}
     manifest = dict(rules.counts(records), labels_sha256=rules.labels_sha256(records), sources=sources)
     (args.output / "counts.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(manifest["labels"]))
