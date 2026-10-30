@@ -1,0 +1,256 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Mixed MuSiQue + Synthetic Collection Runbook</title><style>
+@page { size: Letter; margin: 0; }
+* { box-sizing: border-box; }
+body { margin: 0; color: #182838; background: #e6eaf0; font-family: "Lato", Arial, sans-serif; font-size: 10pt; line-height: 1.35; }
+.page { width: 8.5in; height: 11in; padding: .46in .55in .43in; background: white; position: relative; break-after: page; overflow: visible; }
+.page:last-child { break-after: auto; }
+header { display:flex; justify-content:space-between; font-size:7.2pt; color:#52677c; letter-spacing:.8px; border-bottom:1px solid #cbd5df; padding-bottom:9px; margin-bottom:20px; }
+.kicker { color:#007b83; font-size:8pt; font-weight:800; letter-spacing:1.2px; margin-bottom:6px; }
+h1 { font-size:24pt; line-height:1.1; margin:0 0 12px; color:#143854; font-weight:800; }
+h2 { font-size:11pt; color:#143854; margin:15px 0 7px; }
+p { margin:8px 0; }
+pre { background:#f1f5f9; border-left:3px solid #13828a; padding:10px 12px; margin:10px 0; font-family:"DejaVu Sans Mono",monospace; font-size:8.0pt; line-height:1.31; white-space:pre-wrap; overflow-wrap:anywhere; tab-size:4; }
+pre code { font:inherit; }
+p code,li code { font-size:8.3pt; }
+.note { background:#eef8f6; border:1px solid #bfdfda; border-radius:4px; padding:10px 12px; margin:12px 0; }
+ul { padding-left:18px; margin:9px 0; }
+li { margin:6px 0; }
+table { width:100%; border-collapse:collapse; margin:14px 0; font-size:9.3pt; }
+th { text-align:left; color:white; background:#143854; padding:8px; }
+td { padding:8px; border-bottom:1px solid #d9e1e8; vertical-align:top; }
+tr:nth-child(even) { background:#f5f8fa; }
+footer { position:absolute; bottom:.24in; left:.55in; right:.55in; border-top:1px solid #cbd5df; padding-top:6px; display:flex; justify-content:space-between; font-size:7pt; color:#607386; }
+@media screen { .page { margin:18px auto; box-shadow:0 2px 12px #bdc8d3; } }
+</style></head><body><section class="page" id="page-1"><header>GROUP 3 / MIXED DATA COLLECTION<span>OPERATIONS RUNBOOK</span></header><main><div class="kicker">READ FIRST</div><h1>One master. Many workers.</h1><p>Combine the questions once, distribute the frozen work, then reunite episodes and activations before creating labels.</p><table><thead><tr><th>Stage</th><th>Runs on</th><th>Produces</th></tr></thead><tbody><tr><td>Prepare</td><td>Coordinator, once</td><td>Master manifest + frozen work chunks</td></tr><tr><td>Collect</td><td>GPU workers</td><td>Episodes + activation checkpoints</td></tr><tr><td>Merge</td><td>Coordinator</td><td>One ordered set of collected results</td></tr><tr><td>Split / export</td><td>Coordinator</td><td>Aligned partitioned episodes + tensors</td></tr><tr><td>Claude label</td><td>Labeling machine</td><td>Train / validation behavior labels</td></tr><tr><td>Archive</td><td>Coordinator</td><td>Complete S3 collection bundle</td></tr></tbody></table><div class="note"><b>Master is made before distribution.</b> Prepare combines MuSiQue and synthetic question payloads into manifest.json. Post-collection merge combines worker results; it does not create a new question pool.</div><h2>What this guide completes</h2><p>A mixed collection, aligned activation exports, and Claude-based development labels. SAE training, probe training, feature selection, and causal interventions are later workflows.</p><h2>Current boundary</h2><p>The Claude labeling CLI permits <b>train and validation only</b>. Test and intervention episodes are collected/exported, but their Claude labeling is blocked by the current CLI. Do not describe this guide as completing labels for all partitions.</p><h2>Expected question pool</h2><p>19,938 MuSiQue train + 2,417 MuSiQue validation + a target of 80,004 synthetic = <b>102,359 questions</b>. This total assumes generation meets its target. Scientific exclusions can reduce collected episodes; adopt/retain eligibility reduces usable binary labels further.</p></main><footer><span>Verified source snapshots · 30 October 2026</span><span>1 / 12</span></footer></section><section class="page" id="page-2"><header>GROUP 3 / MIXED DATA COLLECTION<span>OPERATIONS RUNBOOK</span></header><main><div class="kicker">00 / ALL MACHINES</div><h1>Use the same code and shell setup</h1><p>Run commands from the repository root in the capstone environment. Start a tmux session before long GPU or labeling work.</p><div class="note"><b>Code prerequisite:</b> use one integrated checkout containing the distributed and Claude labeling implementations from main, plus this branch’s synthetic code and mixed config. The inspected synthetic branch lacks scripts/distributed_collection.py. Resolve integration before preparing the production manifest.</div><pre><code>tmux new -s mixed-collection
+# Inside tmux, from the repository root:
+conda activate capstone
+export PYTHONPATH=src
+export AWS_PROFILE=school
+export COLLECTION_RUN=mixed_opus5_full_001
+export RUN_DIR=&quot;$PWD/artifacts/collection/$COLLECTION_RUN&quot;
+export COLLECTION_CONFIG=&quot;$PWD/configs/collection/mixed_opus5_full_001.yaml&quot;
+export S3_RUN=&quot;s3://dats-capstone/shared/group3/artifacts/collection/$COLLECTION_RUN&quot;
+export GEN_DIR=&quot;$PWD/data/MuSiQue/synthetic/runs/opus5-v3-full-001/generation&quot;
+
+aws sso login --profile school --use-device-code
+unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN AWS_SECURITY_TOKEN
+export aws_access_key_id=&quot;&quot;
+export aws_secret_access_key=&quot;&quot;
+export aws_session_token=&quot;&quot;
+aws sts get-caller-identity --profile school</code></pre><p>Repeat these exports on every machine or new shell. Empty lowercase credential variables prevent load_dotenv() from supplying old explicit credentials; boto3 then uses the normal profile chain. Successful STS identity does not by itself establish Bedrock model permission.</p><pre><code>test -f scripts/distributed_collection.py
+test -f scripts/run_claude_validation.py
+test -f &quot;$COLLECTION_CONFIG&quot;
+git rev-parse HEAD</code></pre><p>Use the same integrated commit, config, and downloaded manifest on all workers. Collection needs access to the pinned Gemma/Qwen checkpoints, the appropriate environment, and a compatible GPU. Merge/export need sufficient RAM and disk for checkpoints plus merged and exported tensors.</p></main><footer><span>Verified source snapshots · 30 October 2026</span><span>2 / 12</span></footer></section><section class="page" id="page-3"><header>GROUP 3 / MIXED DATA COLLECTION<span>OPERATIONS RUNBOOK</span></header><main><div class="kicker">CONFIG / PART 1</div><h1>Pinned local collection models</h1><p>The complete config is configs/collection/mixed_opus5_full_001.yaml. These are its role settings; retain them consistently across workers.</p><pre><code>roles:
+  solver:
+    id: google/gemma-3-4b-it
+    revision: 093f9f388b31de276ce2de164bdc2081324b9767
+    loader: gemma3
+    dtype: bfloat16
+    device: cuda:0
+    generation:
+      max_new_tokens: 64
+      do_sample: false
+  critic:
+    id: Qwen/Qwen3-4B-Instruct-2507
+    revision: cdbee75f17c01a7cc42f958dc650907174af0554
+    loader: qwen3
+    dtype: bfloat16
+    device: cuda:0
+    generation:
+      max_new_tokens: 1024
+      do_sample: false
+  validator:
+    id: google/gemma-3-4b-it
+    revision: 093f9f388b31de276ce2de164bdc2081324b9767
+    loader: gemma3
+    dtype: bfloat16
+    device: cuda:0
+    generation:
+      max_new_tokens: 4
+      do_sample: false</code></pre><p>Solver and validator use Gemma 3 4B; the critic uses Qwen3 4B. These are local collection models. Claude is used later for behavior labels; it is not the model running these episodes.</p><div class="note">Generation’s API concurrency setting does not control local episode collection. Scale collection by assigning different work chunks to GPU machines.</div></main><footer><span>Verified source snapshots · 30 October 2026</span><span>3 / 12</span></footer></section><section class="page" id="page-4"><header>GROUP 3 / MIXED DATA COLLECTION<span>OPERATIONS RUNBOOK</span></header><main><div class="kicker">CONFIG / PART 2</div><h1>Mixed inputs and frozen settings</h1><p>This config includes both original MuSiQue splits and the synthetic release. It does not replace MuSiQue with synthetic-only input.</p><pre><code>dataset:
+  inputs:
+  - source: musique
+    version: musique-clean-local-v1
+    source_split: train
+    path: data/MuSiQue/clean/train.jsonl
+  - source: musique
+    version: musique-clean-local-v1
+    source_split: validation
+    path: data/MuSiQue/clean/validation.jsonl
+  - source: synthetic
+    version: opus5-v3-full-001
+    path: data/MuSiQue/synthetic/runs/opus5-v3-full-001/generation/accepted.jsonl
+    generation_provenance:
+      run_id: opus5-v3-full-001
+      artifacts_dir: data/MuSiQue/synthetic/runs/opus5-v3-full-001/generation
+      record_join_key: id -&gt; provenance.jsonl record_id
+  intervention:
+    fraction: 0.1
+    seed: 42
+  split:
+    proportions:
+      train: 0.8
+      validation: 0.1
+      test: 0.1
+    seed: 43
+collection:
+  protocol_version: v2
+  active_conditions:
+  - natural
+  a2_presentations:
+  - candidates
+  layers:
+  - 4
+  - 8
+  - 17
+  - 25
+  - 29
+  - 30
+  - 31
+  - 32
+  - 33
+  seed: 42
+output:
+  run_name: mixed_opus5_full_001
+  chunk_size: 50</code></pre><p>MuSiQue version is a local snapshot label, not an asserted Hub revision. Prepare hashes the actual input files. Synthetic generation provenance is a release reference: the importer does not automatically join its sidecar into each record.</p><div class="note">The example reserves 10% intervention, then allocates the remaining pool 80/10/10 to train/validation/test: approximately 72/9/9/10 overall. Assignment respects explicit families and source/hop/candidate-order strata. Original MuSiQue validation is an origin tag, not a permanently fixed final validation partition in this workflow.</div></main><footer><span>Verified source snapshots · 30 October 2026</span><span>4 / 12</span></footer></section><section class="page" id="page-5"><header>GROUP 3 / MIXED DATA COLLECTION<span>OPERATIONS RUNBOOK</span></header><main><div class="kicker">01 / COORDINATOR</div><h1>Finish generation, then stage the inputs</h1><p>Do not prepare while accepted.jsonl is still being written. The manifest freezes the exact payloads available at preparation time.</p><h2>If synthetic generation has not yet completed</h2><pre><code># Paid calls. Run once on the generation machine, in tmux.
+python -u scripts/generate_synthetic_musique.py \
+  --config configs/synthetic/opus5_v3_full.yaml
+
+# Upload only after the run has stopped writing.
+aws s3 sync \
+  data/MuSiQue/synthetic/runs/opus5-v3-full-001/ \
+  s3://dats-capstone/shared/group3/data/MuSiQue/synthetic/runs/opus5-v3-full-001/ \
+  --profile school</code></pre><p>This branch’s full-run config targets 80,004 structurally accepted questions with 256 generation workers. Its automatic Claude dataset-redundancy audit is disabled. Keep validation, exact deduplication, and generation provenance artifacts.</p><h2>On the coordinator</h2><pre><code>aws s3 sync \
+  s3://dats-capstone/shared/group3/data/MuSiQue/synthetic/runs/opus5-v3-full-001/ \
+  data/MuSiQue/synthetic/runs/opus5-v3-full-001/ \
+  --profile school
+
+# Only if either original input is missing:
+if [ ! -f data/MuSiQue/clean/train.json ] || \
+   [ ! -f data/MuSiQue/clean/validation.json ]; then
+  python scripts/get_musique_dataset.py
+fi
+cp data/MuSiQue/clean/train.json data/MuSiQue/clean/train.jsonl
+cp data/MuSiQue/clean/validation.json data/MuSiQue/clean/validation.jsonl
+
+test -f &quot;$GEN_DIR/accepted.jsonl&quot;
+cat &quot;$GEN_DIR/summary.json&quot;</code></pre><p>The existing clean .json files are JSONL. Copies with .jsonl extensions make the master importer select the correct parser. Confirm generation’s status and actual accepted count; a request cap can leave the target unmet.</p></main><footer><span>Verified source snapshots · 30 October 2026</span><span>5 / 12</span></footer></section><section class="page" id="page-6"><header>GROUP 3 / MIXED DATA COLLECTION<span>OPERATIONS RUNBOOK</span></header><main><div class="kicker">02 / COORDINATOR</div><h1>Create the master exactly once</h1><p>The coordinator needs all three input files. GPU workers only need the resulting manifest and config.</p><pre><code>mkdir -p &quot;$RUN_DIR&quot;
+cp &quot;$COLLECTION_CONFIG&quot; &quot;$RUN_DIR/collection.yaml&quot;
+
+python scripts/distributed_collection.py prepare \
+  --config &quot;$RUN_DIR/collection.yaml&quot; \
+  --num-chunks 8 \
+  --output &quot;$RUN_DIR/manifest.json&quot;
+
+aws s3 cp &quot;$RUN_DIR/manifest.json&quot; &quot;$S3_RUN/manifest.json&quot; \
+  --profile school
+aws s3 cp &quot;$RUN_DIR/collection.yaml&quot; &quot;$S3_RUN/collection.yaml&quot; \
+  --profile school</code></pre><h2>What prepare freezes</h2><ul><li>Namespaced IDs such as synthetic:2hop__synthetic_... and musique:2hop__....</li><li>Exact question payloads, input file hashes, and source/version metadata.</li><li>Intervention reservation, per-question collection seeds, candidate order, and eight work slices.</li><li>The split proportions and seed. Ordinary train/validation/test membership is assigned after merge, without using behavioral outcomes.</li></ul><div class="note">Eight chunks are eight work assignments, not eight concurrent API requests. output.chunk_size: 50 means a checkpoint batch of 50 questions within each assignment.</div><h2>Check the frozen question counts</h2><pre><code>python - &lt;&lt;&#x27;CHECK&#x27;
+import json, os
+from collections import Counter
+from pathlib import Path
+m = json.loads((Path(os.environ[&quot;RUN_DIR&quot;])/&quot;manifest.json&quot;).read_text())
+print(&quot;Master questions:&quot;, len(m[&quot;questions&quot;]))
+print(&quot;By source:&quot;, dict(Counter(q[&quot;dataset_source&quot;] for q in m[&quot;questions&quot;])))
+print(&quot;Chunks:&quot;, len(m[&quot;chunks&quot;]))
+print(&quot;Manifest hash:&quot;, m[&quot;manifest_sha256&quot;])
+CHECK</code></pre><p>Do not edit the manifest or prepare a different one per worker. Change sources, settings, or membership only by preparing a new experiment/run.</p></main><footer><span>Verified source snapshots · 30 October 2026</span><span>6 / 12</span></footer></section><section class="page" id="page-7"><header>GROUP 3 / MIXED DATA COLLECTION<span>OPERATIONS RUNBOOK</span></header><main><div class="kicker">03 / GPU WORKERS</div><h1>Download one master. Own different chunks.</h1><p>Example: worker A owns chunks 0–3; worker B owns chunks 4–7. Never run two owners of the same chunk simultaneously.</p><h2>On both workers: run page 2 setup, then download</h2><pre><code>mkdir -p &quot;$RUN_DIR&quot;
+aws s3 cp &quot;$S3_RUN/manifest.json&quot; &quot;$RUN_DIR/manifest.json&quot; \
+  --profile school
+aws s3 cp &quot;$S3_RUN/collection.yaml&quot; &quot;$RUN_DIR/collection.yaml&quot; \
+  --profile school</code></pre><h2>Choose the assignment on each worker</h2><pre><code># Worker A only:
+OWNED_CHUNKS=(0 1 2 3)
+
+# Worker B instead uses this assignment:
+# OWNED_CHUNKS=(4 5 6 7)</code></pre><h2>Run the same collection command on each worker</h2><pre><code>python -u scripts/collect_activations.py \
+  --config &quot;$RUN_DIR/collection.yaml&quot; \
+  --manifest &quot;$RUN_DIR/manifest.json&quot; \
+  --chunk &quot;${OWNED_CHUNKS[@]}&quot;</code></pre><p>Models load once per invocation. The worker runs Solver A1, the configured natural Critic interaction, Solver A2, and activation collection. Outputs are saved beneath chunks/000000/, chunks/000001/, and so on.</p><h2>If that worker is interrupted</h2><pre><code>python -u scripts/collect_activations.py \
+  --config &quot;$RUN_DIR/collection.yaml&quot; \
+  --manifest &quot;$RUN_DIR/manifest.json&quot; \
+  --chunk &quot;${OWNED_CHUNKS[@]}&quot; \
+  --resume</code></pre><p>Resume reuses committed checkpoints and skips matching completed work. An unfinished checkpoint batch may repeat. Keep local storage; S3 upload does not happen automatically. For one machine, use OWNED_CHUNKS=(0 1 2 3 4 5 6 7).</p></main><footer><span>Verified source snapshots · 30 October 2026</span><span>7 / 12</span></footer></section><section class="page" id="page-8"><header>GROUP 3 / MIXED DATA COLLECTION<span>OPERATIONS RUNBOOK</span></header><main><div class="kicker">04 / WORKERS → S3 → COORDINATOR</div><h1>Upload completed chunks, marker last</h1><p>A completion marker is the signal that a chunk is ready to merge. Upload data first, then complete.json.</p><h2>On each worker after its assignment completes</h2><pre><code># Recreate OWNED_CHUNKS if you opened a new shell.
+for chunk in &quot;${OWNED_CHUNKS[@]}&quot;; do
+  chunk_name=$(printf &#x27;%06d&#x27; &quot;$chunk&quot;)
+  chunk_dir=&quot;$RUN_DIR/chunks/$chunk_name&quot;
+  test -f &quot;$chunk_dir/complete.json&quot; || exit 1
+
+  aws s3 sync &quot;$chunk_dir/&quot; &quot;$S3_RUN/chunks/$chunk_name/&quot; \
+    --exclude complete.json --exclude &#x27;*.tmp/*&#x27; \
+    --profile school || exit 1
+
+  aws s3 cp &quot;$chunk_dir/complete.json&quot; \
+    &quot;$S3_RUN/chunks/$chunk_name/complete.json&quot; \
+    --profile school || exit 1
+done</code></pre><p>Upload only your assigned chunks. If a transfer fails, repeat it after the worker has stopped writing. Stop the old owner before reassigning a chunk. This workflow does not reconcile competing attempts.</p><h2>On the coordinator, after every assigned chunk is uploaded</h2><pre><code>aws s3 sync &quot;$S3_RUN/chunks/&quot; &quot;$RUN_DIR/chunks/&quot; \
+  --profile school
+
+# This eight-chunk example expects all eight completion markers.
+for chunk in 0 1 2 3 4 5 6 7; do
+  chunk_name=$(printf &#x27;%06d&#x27; &quot;$chunk&quot;)
+  test -f &quot;$RUN_DIR/chunks/$chunk_name/complete.json&quot; || exit 1
+done</code></pre><div class="note">Marker presence is a quick readiness check, not validation. The merge command checks completion hashes, master identity, membership, seeds, candidate order, coverage, and tensor/episode alignment.</div></main><footer><span>Verified source snapshots · 30 October 2026</span><span>8 / 12</span></footer></section><section class="page" id="page-9"><header>GROUP 3 / MIXED DATA COLLECTION<span>OPERATIONS RUNBOOK</span></header><main><div class="kicker">05 / COORDINATOR</div><h1>Merge results, then export partitions</h1><p>This is the second kind of merge: it reunites collected worker results, not source question files.</p><pre><code>python scripts/distributed_collection.py merge \
+  --manifest &quot;$RUN_DIR/manifest.json&quot;
+
+python scripts/distributed_collection.py split \
+  --manifest &quot;$RUN_DIR/manifest.json&quot; \
+  --config &quot;$RUN_DIR/collection.yaml&quot;</code></pre><h2>Expected layout</h2><pre><code>$RUN_DIR/
+  merged/
+    collection.json
+    activations/raw/layer_NN/all*.pt
+    results/raw/all/interactions.jsonl
+  prepared/
+    partitions.csv
+    split.json
+    activations/mixed_opus5_full_001/layer_NN/
+    activations/mixed_opus5_full_001_intervention/layer_NN/
+    results/mixed_opus5_full_001/
+      train/interactions.jsonl
+      validation/interactions.jsonl
+      test/interactions.jsonl
+      split_manifest.csv
+      collection_status.json
+    results/mixed_opus5_full_001_intervention/
+      intervention/interactions.jsonl
+      contexts.jsonl
+      collection_status.json</code></pre><ul><li>Merge orders records by the master and rebuilds activation indices.</li><li>Split assigns non-intervention questions without looking at labels or outcomes, then exports aligned tensors and interactions.</li><li>Label the final prepared/results files, not the internal merged/raw files. Their indices refer to the final partition tensors.</li><li>Inspect merged/collection.json and both final collection_status.json files. Scientific exclusions are recorded; missing work chunks are not scientific exclusions.</li></ul><div class="note">Fresh merge and prepared destinations are required. Failed builds use staging directories; do not delete or overwrite successful outputs to force a rerun. Preserve the original manifest, chunks, and frozen partition mapping.</div></main><footer><span>Verified source snapshots · 30 October 2026</span><span>9 / 12</span></footer></section><section class="page" id="page-10"><header>GROUP 3 / MIXED DATA COLLECTION<span>OPERATIONS RUNBOOK</span></header><main><div class="kicker">06 / LABELING MACHINE</div><h1>Create Claude behavior labels</h1><p>Claude judges whether A2 follows the Critic or retains A1. It does not judge whether the synthetic question or its answer is factually correct.</p><p>Use page 2’s refreshed school profile setup. The labels below explicitly request the account-tested Opus ID; the script otherwise defaults to Sonnet. These are separate from both the disabled redundancy audit and prepare_behavior_v01.py’s deterministic labels.</p><h2>Preview ten train episodes: no API calls</h2><pre><code>python scripts/run_claude_validation.py \
+  --episodes &quot;$RUN_DIR/prepared/results/$COLLECTION_RUN/train/interactions.jsonl&quot; \
+  --partition train --model-id us.anthropic.claude-opus-5 \
+  --effort medium --max-tokens 8000 \
+  --output &quot;$RUN_DIR/claude_labels/train&quot; \
+  --limit 10 --dry-run</code></pre><h2>Paid labeling: train and validation</h2><pre><code>for partition in train validation; do
+  python -u scripts/run_claude_validation.py \
+    --episodes &quot;$RUN_DIR/prepared/results/$COLLECTION_RUN/$partition/interactions.jsonl&quot; \
+    --partition &quot;$partition&quot; \
+    --model-id us.anthropic.claude-opus-5 \
+    --effort medium --max-tokens 8000 \
+    --output &quot;$RUN_DIR/claude_labels/$partition&quot; || exit 1
+done</code></pre><p>Do not add --limit to the full run. The validation command must explicitly select --partition validation; the default is train. Output directories must be new. Dry-run does not create them or validate live Bedrock access.</p><table><thead><tr><th>Result</th><th>Binary export</th></tr></thead><tbody><tr><td>Adoption</td><td>primary_target = 1; eligible_primary = true</td></tr><tr><td>Retention</td><td>primary_target = 0; eligible_primary = true</td></tr><tr><td>Agreement / out</td><td>Excluded from binary training labels, with reasons</td></tr><tr><td>API / parse / truncation failure</td><td>Technical exclusion, not a behavioral decision</td></tr></tbody></table><div class="note">Current labeling is serial within each invocation and has no --concurrency flag. Generation/audit concurrency does not speed it up. Noncommittal-critic exclusions can be decided by rule and are identified by label_source. Opus’s output budget also covers reasoning; a pilot is needed to measure actual speed and successful response rate.</div></main><footer><span>Verified source snapshots · 30 October 2026</span><span>10 / 12</span></footer></section><section class="page" id="page-11"><header>GROUP 3 / MIXED DATA COLLECTION<span>OPERATIONS RUNBOOK</span></header><main><div class="kicker">07 / LABELING RECOVERY</div><h1>Inspect errors before calling the run complete</h1><p>A completed process may still contain technical exclusions. Preserve original outputs and retry only failed work when the script supports it.</p><h2>Inspect both summaries</h2><pre><code>cat &quot;$RUN_DIR/claude_labels/train/summary.json&quot;
+cat &quot;$RUN_DIR/claude_labels/validation/summary.json&quot;</code></pre><p>Check n_episodes, label_counts, n_technical_errors, error_reasons, label_sources, and token usage. Agreement and out are legitimate exclusions. Technical failures should not silently count as retention. No fixed adopt/retain yield is guaranteed.</p><h2>Retry technical failures from a finished train run</h2><pre><code>python -u scripts/run_claude_validation.py \
+  --episodes &quot;$RUN_DIR/prepared/results/$COLLECTION_RUN/train/interactions.jsonl&quot; \
+  --partition train --model-id us.anthropic.claude-opus-5 \
+  --effort medium --max-tokens 8000 \
+  --retry-technical-errors-from &quot;$RUN_DIR/claude_labels/train&quot; \
+  --output &quot;$RUN_DIR/claude_labels/train_retry_001&quot;
+
+python scripts/summarize_claude_validation.py \
+  --runs &quot;$RUN_DIR/claude_labels/train&quot; \
+         &quot;$RUN_DIR/claude_labels/train_retry_001&quot; \
+  --output &quot;$RUN_DIR/claude_labels/train_combined&quot;</code></pre><p>Do this only when technical failures exist. For validation, substitute validation in the episode path, --partition, and output directories. Combine runs for the same cohort/source; do not use this retry combiner to mix train and validation.</p><div class="note">No automatic labeling resume: a fatal stop may leave raw_results.jsonl without a final summary. Preserve it, refresh credentials, and assess recovery before resubmitting the whole cohort; repeating into a new directory can bill already completed episodes again. The finished-run technical retry command is not a general crash-resume command.</div><p>Collection resume is different: collect_activations.py --resume is supported for matching checkpoints. Neither synthetic generation nor this Claude labeling CLI has the same automatic resume behavior.</p></main><footer><span>Verified source snapshots · 30 October 2026</span><span>11 / 12</span></footer></section><section class="page" id="page-12"><header>GROUP 3 / MIXED DATA COLLECTION<span>OPERATIONS RUNBOOK</span></header><main><div class="kicker">08 / ARCHIVE & HANDOFF</div><h1>Save the bundle. Keep the boundaries clear.</h1><p>Upload after writers have stopped. Keep generation artifacts as well as collection artifacts so the questions, episodes, tensors, and decisions remain traceable.</p><pre><code># On the coordinator after final processing:
+aws s3 sync &quot;$RUN_DIR/&quot; &quot;$S3_RUN/&quot; --profile school
+
+# On a local computer, from its repository root:
+aws sso login --profile school --use-device-code
+aws s3 sync \
+  s3://dats-capstone/shared/group3/artifacts/collection/mixed_opus5_full_001/ \
+  artifacts/collection/mixed_opus5_full_001/ \
+  --profile school</code></pre><h2>What downstream users receive</h2><ul><li>Frozen question and split identity: manifest.json, collection.yaml, prepared/partitions.csv, and split.json.</li><li>Aligned prepared/results and prepared/activations for ordinary and intervention runs.</li><li>Claude train/validation binary_labels.csv, raw_results.jsonl, exclusions.jsonl, excluded_episodes.json, selected_episodes.json, and summary.json.</li><li>Use combined outputs for a cohort when a technical-error retry was combined. Targets are primary_target / eligible_primary, not deterministic strict_target / eligible_strict.</li><li>Downstream alignment must join IDs against the matching frozen manifest and activation indices, with excluded_episodes.json accounted for. Do not substitute new labels into an old results/tensor package.</li></ul><h2>Remaining scope / evidence</h2><p>The current CLI refuses test and intervention labeling. An explicit later implementation/policy decision is needed before claiming all-partition Claude labels or final held-out evaluation. The failed dataset-redundancy audit remains disabled; behavior labeling does not close semantic question-quality gaps.</p><p>This runbook is a command and source review, not a production execution certificate. No GPU episode collection, paid labeling, or live S3 transfer was executed to produce it. Offline checks: 169 synthetic tests passed earlier; this build passed 147 distributed/Claude tests with network blocked. The mixed config also prepared six real sample records using cached main.</p><p>Source snapshots: synthetic branch <code>646da88fe4b7</code>; cached origin/main <code>e1ee614ddd6c</code>. Live main could not be refreshed through local Git; confirm current implementations before deployment. Config: <code>configs/collection/mixed_opus5_full_001.yaml</code>.</p><p>Verified source references: main’s docs/distributed_collection.md, distributed_collection/{dataset,core,cli}.py, collect_activations.py, run_claude_validation.py, summarize_claude_validation.py, and evaluation/{claude_validator,claude_adaptive_client}.py. The config and synthetic settings come from this branch.</p></main><footer><span>Verified source snapshots · 30 October 2026</span><span>12 / 12</span></footer></section>
+<script>
+window.addEventListener('load',()=>{
+ const diagnostics = [...document.querySelectorAll('.page')].map((p,i)=>({page:i+1,bottom:p.querySelector('main').getBoundingClientRect().bottom-p.getBoundingClientRect().top,footer:p.querySelector('footer').getBoundingClientRect().top-p.getBoundingClientRect().top}));
+ const out=document.createElement('script');out.type='application/json';out.id='layout-diagnostics';out.textContent=JSON.stringify(diagnostics);document.body.append(out);
+ const n=new URLSearchParams(location.search).get('page');
+ if(n){document.querySelectorAll('.page').forEach((p,i)=>{if(i+1!==Number(n))p.style.display='none';});}
+});
+</script>
+</body></html>
