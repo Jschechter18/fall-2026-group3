@@ -156,6 +156,7 @@ def collect_examples(
     question_offset: int = 0,
     a2_presentations=OMITTED,
     candidate_orders: dict[str, str] | None = None,
+    question_seeds: dict[str, int] | None = None,
 ) -> CollectionResult:
     """Collect paired Solver-Critic episodes and activation-row mappings.
 
@@ -214,6 +215,11 @@ def collect_examples(
         the candidates presentation is on (``select_questions`` assigns it).
         A question whose Critic gives no recommendation is excluded with
         stage ``critic_recommendation``.
+    question_seeds
+        Optional frozen seed by question id. This is used by portable work
+        packages so scheduling, worker count, and chunk boundaries cannot
+        change generation. The historical ``base_seed + position`` behavior
+        remains the default.
 
     Returns
     -------
@@ -234,6 +240,14 @@ def collect_examples(
         raise ValueError("candidate_sites must not be empty.")
     if type(question_offset) is not int or question_offset < 0:
         raise ValueError("question_offset must be a non-negative integer.")
+    if question_seeds is not None:
+        missing = [str(example["id"]) for example in examples
+                   if str(example["id"]) not in question_seeds]
+        if missing:
+            raise ValueError(f"question_seeds is missing question ids: {missing[:5]}")
+        if any(type(question_seeds[str(example["id"])]) is not int
+               for example in examples):
+            raise ValueError("question seeds must be integers")
 
     if experiment_splits is not None:
         missing = [
@@ -269,7 +283,8 @@ def collect_examples(
     exclusions: list[dict[str, Any]] = []
 
     for question_index, example in enumerate(examples, start=question_offset):
-        seed = base_seed + question_index
+        seed = (question_seeds[str(example["id"])] if question_seeds is not None
+                else base_seed + question_index)
         logger.info(
             "Collecting question %d/%d (%s)",
             question_index - question_offset + 1,
