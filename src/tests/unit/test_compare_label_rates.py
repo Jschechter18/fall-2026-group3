@@ -18,10 +18,12 @@ def rates():
 
 
 LABELS = [
-    {"question_id": "musique:2hop__1_2", "label": "adoption", "collected": True},
-    {"question_id": "synthetic:2hop__synthetic_aa", "label": "retention", "collected": True},
-    {"question_id": "synthetic:3hop1__synthetic_bb", "label": "agreement", "collected": True},
-    {"question_id": "4hop2__3_4_5_6", "label": "out", "collected": False},
+    {"question_id": "musique:2hop__1_2", "label": "adoption", "collected": True, "partition": "train"},
+    {"question_id": "synthetic:2hop__synthetic_aa", "label": "retention", "collected": True,
+     "partition": "validation"},
+    {"question_id": "synthetic:3hop1__synthetic_bb", "label": "agreement", "collected": True,
+     "partition": "train"},
+    {"question_id": "4hop2__3_4_5_6", "label": "out", "collected": False, "partition": None},
 ]
 INTERACTIONS = [
     {"question_id": "musique:2hop__1_2", "solver_attempt_1_correct": False},
@@ -43,23 +45,41 @@ def run(rates, tmp_path, labels=LABELS, interactions=(INTERACTIONS,)):
     return output
 
 
+def scopes(output):
+    rows = json.loads((output / "summary.json").read_text())["rows"]
+    return [(row["partition"], row["hop_type"]) for row in rows], {
+        (row["partition"], row["hop_type"]): row for row in rows}
+
+
 def test_counts_all_labels_and_a1_over_collected_questions_only(rates, tmp_path):
-    rows = json.loads((run(rates, tmp_path) / "summary.json").read_text())["rows"]
-    assert [row["scope"] for row in rows] == ["all", "2hop", "3hop1", "4hop2"]
-    everything = rows[0]
+    order, rows = scopes(run(rates, tmp_path))
+    assert order[0] == ("all", "all")
+    everything = rows["all", "all"]
     assert (everything["n"], everything["binary"], everything["out"]) == (4, 2, 1)
     assert everything["binary_share"] == 0.5 and everything["adoption_of_binary_share"] == 0.5
     assert (everything["collected"], everything["a1_correct"]) == (3, 2)
-    two_hop = rows[1]  # musique: and synthetic: namespaces share the 2hop scope
+    two_hop = rows["all", "2hop"]  # musique: and synthetic: namespaces share the 2hop scope
     assert (two_hop["n"], two_hop["adoption"], two_hop["retention"]) == (2, 1, 1)
-    assert rows[3]["collected"] == 0 and rows[3]["a1_accuracy_share"] is None
+    unpartitioned = rows["unpartitioned", "all"]  # a null partition is reported, not dropped
+    assert unpartitioned["out"] == 1 and unpartitioned["a1_accuracy_share"] is None
+
+
+def test_reports_each_partition_and_partition_by_hop(rates, tmp_path):
+    order, rows = scopes(run(rates, tmp_path))
+    assert [p for p, hop in order if hop == "all"] == ["all", "train", "validation", "unpartitioned"]
+    train, validation = rows["train", "all"], rows["validation", "all"]
+    assert (train["n"], train["adoption_share"], train["agreement_share"]) == (2, 0.5, 0.5)
+    assert (validation["n"], validation["retention_share"], validation["adoption_share"]) == (1, 1.0, 0.0)
+    assert train["adoption_of_binary_share"] == 1.0 and validation["adoption_of_binary_share"] == 0.0
+    assert (rows["train", "3hop1"]["n"], rows["train", "3hop1"]["agreement"]) == (1, 1)
+    assert ("validation", "3hop1") not in rows                       # no empty scopes
 
 
 def test_records_input_hashes_and_writes_the_table(rates, tmp_path):
     output = run(rates, tmp_path)
     summary = json.loads((output / "summary.json").read_text())
     assert len(summary["inputs"]) == 2 and all(len(value) == 64 for value in summary["inputs"].values())
-    assert (output / "label_rates.csv").read_text().startswith("scope,n,adoption,")
+    assert (output / "label_rates.csv").read_text().startswith("partition,hop_type,n,adoption,")
 
 
 @pytest.mark.parametrize("labels, interactions, message", [
@@ -70,6 +90,9 @@ def test_records_input_hashes_and_writes_the_table(rates, tmp_path):
     (LABELS, (INTERACTIONS + [{"question_id": "4hop2__3_4_5_6", "solver_attempt_1_correct": False}],),
      "disagrees with the interactions"),
     ([{**LABELS[0], "label": "adopted"}, *LABELS[1:]], (INTERACTIONS,), "unknown labels"),
+    ([{**LABELS[0], "partition": "dev"}, *LABELS[1:]], (INTERACTIONS,), "unknown partition"),
+    ([{k: v for k, v in LABELS[0].items() if k != "partition"}, *LABELS[1:]], (INTERACTIONS,),
+     "no partition field"),
     (LABELS, ([{**INTERACTIONS[0], "solver_attempt_1_correct": "True"}, *INTERACTIONS[1:]],),
      "not a boolean"),
 ])
