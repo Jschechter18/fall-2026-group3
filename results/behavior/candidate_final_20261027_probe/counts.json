@@ -1,0 +1,78 @@
+{
+  "label_policy": {
+    "name": "PR #153 final",
+    "version": "candidate-final-2026-10-27",
+    "labels_sha256": "21a5c7716ae4fd59bfc0731acb8683b25ff01e5861d867bee5ffcc48982c9092"
+  },
+  "target": {
+    "column": "primary_target",
+    "eligible": "eligible_primary",
+    "1": "adoption",
+    "0": "retention"
+  },
+  "labels_by_partition": {
+    "intervention": {
+      "adoption": 534,
+      "out": 276,
+      "agreement": 732,
+      "retention": 438
+    },
+    "test": {
+      "out": 263,
+      "agreement": 755,
+      "adoption": 529,
+      "retention": 416
+    },
+    "train": {
+      "adoption": 4146,
+      "out": 2114,
+      "retention": 3465,
+      "agreement": 6063
+    },
+    "validation": {
+      "agreement": 901,
+      "retention": 491,
+      "adoption": 625,
+      "out": 382
+    }
+  },
+  "binary_by_partition": {
+    "intervention": {
+      "adoption": 534,
+      "retention": 438
+    },
+    "test": {
+      "adoption": 529,
+      "retention": 416
+    },
+    "train": {
+      "adoption": 4146,
+      "retention": 3465
+    },
+    "validation": {
+      "adoption": 625,
+      "retention": 491
+    }
+  },
+  "excluded_episodes": 2,
+  "partition": {
+    "frozen_partitions": "results/behavior/behavior_v012_official_20261011/partitions.csv",
+    "coverage": "subset",
+    "questions": {
+      "expected": 22332,
+      "collected": 22130,
+      "missing": 202
+    }
+  },
+  "code": {
+    "git_commit": "72d41763e6fb761b0635451b4e1a5fa8acf597ce",
+    "uncommitted_changes_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "source_files_sha256": {
+    "results/experiments/candidate_final_labels_20261027/output/final_labels.jsonl": "21a5c7716ae4fd59bfc0731acb8683b25ff01e5861d867bee5ffcc48982c9092",
+    "results/experiments/candidate_final_labels_20261027/counts.json": "99831caa0265b97c455ca804f99da4d5552863198427f5dd447a25e450df39be",
+    "results/behavior/behavior_v012_official_20261011/partitions.csv": "b0c717d5c4f41129a5d2a838e132df057f6e4f5a72644aa889a41e55cc884389",
+    "results/collection/natural_4b_full9_candidates/train/interactions.jsonl": "9e64a49668586d95a31f604ed9e1405f10ab4bce42462d376a6bb7ecbd48764b",
+    "results/collection/natural_4b_full9_candidates/validation/interactions.jsonl": "f27201c784c78046ffe57259a1f5439fc1b9204c460369e3dbd42b573c13784a"
+  }
+}
