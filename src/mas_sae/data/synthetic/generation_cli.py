@@ -91,7 +91,7 @@ def main(argv: list[str] | None = None, *, client=None) -> int:
     parser.add_argument("--dataset-audit", action=argparse.BooleanOptionalAction, default=True,
                         help="Audit the complete question catalog for redundancy after generation")
     parser.add_argument("--audit-model-id", help="Audit model ID; defaults to the generation model")
-    parser.add_argument("--audit-concurrency", type=int, help="Audit workers; default min(generation concurrency, 4)")
+    parser.add_argument("--audit-concurrency", type=int, help="Audit workers; default min(generation concurrency, 16)")
     parser.add_argument("--audit-batch-size", type=int, default=100, help="Maximum questions per catalog group")
     parser.add_argument("--audit-max-prompt-chars", type=int, default=100000)
     parser.add_argument("--audit-max-neighbor-batches", type=int, default=200)

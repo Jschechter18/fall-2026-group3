@@ -278,7 +278,7 @@ limits cause a nonzero CLI result, while preserving the generated dataset.
 Audit controls are `--audit-model-id`, `--audit-concurrency`, `--audit-batch-size`,
 `--audit-max-prompt-chars`, `--audit-max-neighbor-batches`, `--audit-max-attempts`, and
 `--audit-max-tokens`; YAML keys use underscores. Defaults: same model as generation,
-up to 4 audit workers, 100 questions/group, 100,000 prompt characters, 200 extra
+up to 16 audit workers, 100 questions/group, 100,000 prompt characters, 200 extra
 neighbor groups, 2 attempts/group and 8,192 output tokens. These are independent of
 generation concurrency. `--no-dataset-audit` / YAML `dataset_audit: false` explicitly
 selects generation-only benchmarking. Exhausted transient API errors are recorded;

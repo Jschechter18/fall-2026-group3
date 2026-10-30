@@ -19,7 +19,7 @@ from .review import AUDIT_VERSION, RELATIONSHIPS, _review_batch
 
 def audit_dataset(
     input_path: str | Path, output_dir: str | Path, *, model_id: str,
-    client_factory: Callable | None = None, client=None, concurrency: int = 4,
+    client_factory: Callable | None = None, client=None, concurrency: int = 16,
     batch_size: int = 100, max_prompt_chars: int = 100000, max_neighbor_batches: int = 200,
     max_attempts: int = 2, max_tokens: int = 8192,
     transport_settings: dict | None = None, progress: Callable | None = None,

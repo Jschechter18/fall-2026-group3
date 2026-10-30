@@ -40,9 +40,9 @@ def test_full_run_config_preserves_requested_settings(tmp_path, setup):
     assert args["max_requests_per_type"] == 16000
     assert args["concurrency"] == 256
     assert args["seed"] == 42
-    assert args["dataset_audit"] is True
+    assert args["dataset_audit"] is False
     assert args["audit_model_id"] == "us.anthropic.claude-opus-5"
-    assert args["audit_concurrency"] == 4
+    assert args["audit_concurrency"] == 16
     assert args["audit_max_attempts"] == 2 and args["audit_max_tokens"] == 8192
     assert args["model_id"] == "us.anthropic.claude-opus-5"
     assert args["dedup_originals"] == [original]

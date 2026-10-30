@@ -88,7 +88,7 @@ def run_batch(
         if audit_model_id not in (None, model_id) and audit_client_factory is None:
             raise ValueError("A different audit_model_id requires audit_client_factory")
         if audit_concurrency is None:
-            audit_concurrency = 1 if client is not None and audit_client_factory is None else min(concurrency, 4)
+            audit_concurrency = 1 if client is not None and audit_client_factory is None else min(concurrency, 16)
         positive("audit_concurrency", audit_concurrency)
         positive("audit_max_attempts", audit_max_attempts)
         positive("audit_max_tokens", audit_max_tokens)

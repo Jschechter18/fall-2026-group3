@@ -18,11 +18,11 @@ connect_timeout: 10
 read_timeout: 300
 sdk_max_attempts: 3
 
-# One dataset-wide post-processing job, with catalog and cross-group comparisons.
+# Automatic audit disabled; audit the saved accepted.jsonl separately when ready.
 # Report-only: accepted records are not silently deleted or rewritten.
-dataset_audit: true
+dataset_audit: false
 audit_model_id: us.anthropic.claude-opus-5
-audit_concurrency: 4
+audit_concurrency: 16
 audit_batch_size: 100
 audit_max_prompt_chars: 100000
 audit_max_neighbor_batches: 200

@@ -12,7 +12,7 @@ def main(argv=None):
     parser.add_argument("input", type=Path, help="Generated accepted.jsonl; audit is report-only")
     parser.add_argument("--output-dir", type=Path, help="New directory; default: input's parent/dataset_audit")
     parser.add_argument("--model-id", default=DEFAULT_MODEL_ID)
-    parser.add_argument("--concurrency", type=int, default=4)
+    parser.add_argument("--concurrency", type=int, default=16)
     parser.add_argument("--batch-size", type=int, default=100)
     parser.add_argument("--max-prompt-chars", type=int, default=100000)
     parser.add_argument("--max-neighbor-batches", type=int, default=200)
