@@ -1,0 +1,18 @@
+# Run from the repository root. All paths are relative to the working directory.
+# Launching this config makes paid API calls. No automatic resume is implemented.
+# Targets 80,004 structurally accepted questions (13,334 for each subtype).
+# Caps: 96,000 requests / 192,000 model invocations, excluding SDK retries.
+model_id: us.anthropic.claude-opus-5
+hop_types: [2hop, 3hop1, 3hop2, 4hop1, 4hop2, 4hop3]
+target_per_hop: 13334
+max_requests_per_hop: 16000
+concurrency: 256
+seed: 42
+original: data/MuSiQue/clean/train.json
+dedup_original:
+  - data/MuSiQue/clean/train.json
+  - data/MuSiQue/clean/validation.json
+output_dir: data/MuSiQue/synthetic/runs/opus5-v3-full-001/generation
+connect_timeout: 10
+read_timeout: 300
+sdk_max_attempts: 3
