@@ -11,6 +11,19 @@ from uuid import uuid4
 from .generation import TOPICS, ParagraphPool, generate_one
 from .validation import HOP_TYPES
 
+
+# TODO: CODEX AUDIT
+# P1 — Standalone validation accepts incorrect hop topology.
+# cli.py:55 only calls validate_candidate(). The subtype-specific check_shape() runs only during generation. Consequently, a chained decomposition can be written to accepted.jsonl while claiming to be 3hop2, 4hop2, or 4hop3. Move hop-shape validation into validate_candidate() or explicitly call it from the validation CLI based on the ID prefix.
+
+# P2 — Invalid model support values can silently become valid indices.
+# In generation.py:215-217, dictionary lookup treats 0.0 as 0, and True/False as 1/0. The invalid type is then replaced with a valid integer paragraph index, so downstream validation cannot detect it. I confirmed that support: 0.0 passes validation. Require type(step["support"]) is int and bounds-check it before remapping.
+
+# P2 — Unexpected programming errors are reported as ordinary generation failures.
+# generation_cli.py:69-73 catches every Exception, despite the comment saying network/auth errors. A regression such as an AttributeError could make the batch finish with exit code 0 and only failed records. Catch the relevant Bedrock/network exceptions, or re-raise unexpected errors after recording context.
+
+
+# TODO: SHOULD PROBABLY USE OPUS 5 RATHER THAN SONNET 4.5 - ALL REASONING SHOULD BE DONE ON THE MODEL BEST FOR COMPLEX REASONING
 DEFAULT_MODEL_ID = "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
 
 
@@ -61,6 +74,7 @@ def main(argv: list[str] | None = None, *, client=None) -> int:
     counts: Counter = Counter(generated=0, failed=0, api_calls=0, input_tokens=0, output_tokens=0)
     by_hop: Counter = Counter()
     try:
+        # TODO: we need to set up a a directory for synthetic dataset that maps to master dataset merger from PR: issue160-partition-collection-runs
         with (args.output_dir / "candidates.jsonl").open("w", encoding="utf-8") as candidates, \
                 (args.output_dir / "provenance.jsonl").open("w", encoding="utf-8") as provenance_file:
             for i in range(args.n):

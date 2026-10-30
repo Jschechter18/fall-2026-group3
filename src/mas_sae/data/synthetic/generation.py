@@ -30,6 +30,10 @@ HOP_SHAPES = {
     "4hop3": [(), (1,), (), (2, 3)],
 }
 
+
+# TODO: we don't want/need to restrict topics
+# we really only care if the agents are correct given the documents - the generated questions don't need to be perfect in terms of real world truth
+# we are not evaluating accuracy of the MAS, we are evaluating the adoption retention behavior of the Solver
 TOPICS = [
     "botany and exploration", "architecture and literature",
     "astronomy and scientific instruments", "music and geography",
@@ -95,8 +99,9 @@ def build_prompt(hop_type: str, topic: str, *, n_distractors: int = 3) -> str:
     """Prompt for one raw record; the shape is fixed by ``hop_type``."""
     if hop_type not in HOP_SHAPES:
         raise ValueError(f"Unsupported hop type: {hop_type!r}")
-    hops = HOP_TYPES[hop_type]
+    n_hops = HOP_TYPES[hop_type]
     branched = any(len(refs) > 1 for refs in HOP_SHAPES[hop_type])
+    # TODO: are we sure this prompt is set up so that it can be done on not just 2hop? some parts of it seem specific to 2hop questions - especially in branch note
     branch_note = """
 This is NOT a simple chain: two independent facts are found separately and then
 combined in one step. For example, "Who started the Bethel branch of the religion
@@ -107,7 +112,7 @@ capital used to be?" (self-contained), and "Who started the Bethel branch of #1 
     return f"""Write ONE new answerable multi-hop question in the style of the MuSiQue dataset.
 
 Theme: {topic}
-Number of hops: {hops}
+Number of hops: {n_hops}
 Required dependency structure of the decomposition ("#n" = the answer of step n):
 {describe_shape(hop_type)}
 {branch_note}
@@ -117,7 +122,7 @@ Rules:
   if a real entity appears, everything said about it must be true.
 - Treat the paragraphs as the only ground truth: they must not contradict each other
   or the answer.
-- Write exactly {hops} supporting paragraphs, one per step, in step order. Each is 3-5
+- Write exactly {n_hops} supporting paragraphs, one per step, in step order. Each is 3-5
   encyclopedic sentences, titled with the entity it describes, and contains the fact
   its step needs plus some unrelated detail. A paragraph should not also state the
   facts needed by later steps.
@@ -137,6 +142,7 @@ Return one JSON object with exactly the keys shown in this 2-hop example, and no
 {json.dumps(EXAMPLE, indent=2)}"""
 
 
+# TODO: can this be placed under artifacts.py?
 def parse_response(text: str) -> dict:
     """Parse a JSON object, allowing a surrounding Markdown code fence."""
     text = text.strip()
@@ -232,6 +238,8 @@ def generate_one(client: TextGenerator, hop_type: str, topic: str, pool: Paragra
                  rng: random.Random, *, max_attempts: int = 2, max_tokens: int = 6000,
                  temperature: float = 1.0) -> tuple[SyntheticCandidate | None, dict]:
     """Make up to ``max_attempts`` API calls; return the candidate (or None) and provenance."""
+    
+    # TODO: we probably want to remove topic as an input
     prompt = build_prompt(hop_type, topic)
     provenance: dict[str, Any] = {"record_id": None, "hop_type": hop_type, "topic": topic,
                                   "model_id": client.model_id, "prompt_version": PROMPT_VERSION,
