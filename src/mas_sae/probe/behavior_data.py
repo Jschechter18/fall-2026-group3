@@ -285,8 +285,8 @@ def select_partitions(
     sealed = SEALED_PARTITIONS & set(partitions)
     if sealed and not allow_sealed:
         raise PermissionError(
-            f"Partition(s) {sorted(sealed)} are sealed (test is scored once after the freeze; "
-            "intervention is for the causal stage). Do not use them to fit, tune or select anything.")
+            f"Partition(s) {sorted(sealed)} are sealed (test only compares completed SAE versions to choose "
+            "the one carried forward; intervention is for the causal stage). Do not use them to fit or tune anything.")
     in_part = df[df[cols.partition].astype(str).isin(partitions)]
     out = in_part[as_bool(in_part[cols.eligible])].reset_index(drop=True)
     out["target_name"] = target_names(out[cols.target])

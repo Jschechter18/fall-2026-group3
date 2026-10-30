@@ -104,7 +104,7 @@ Each question belongs to exactly one partition, decided from its question id and
 |---|---|---|---|
 | train | MuSiQue train, 80% | fitting the SAE, the probes and the per-layer probes | `fit` |
 | validation | all of MuSiQue validation | early stopping, layer choice, feature choice | `tune` |
-| test | MuSiQue train, 10% | the frozen SAE and probes, scored once | `evaluate` |
+| test | MuSiQue train, 10% | comparing completed SAE versions and selecting the one carried forward | `evaluate` |
 | intervention | MuSiQue train, 10% | the causal experiment, run live, much later | `intervene` |
 
 Question counts for the agreed proportions on the collected run are in the package's `counts.json` under `split_audit.by_partition`. MuSiQue validation has a harder hop mix than MuSiQue train (about 17% four-hop versus 6%), so validation loss will sit above train and test loss; that is expected and not leakage.
@@ -220,7 +220,7 @@ What this guarantees:
 
 - A question keeps its partition whatever order the run collected it in. Only `full_index` / `scan_index`, the activation rows, are rebuilt for the new run.
 - `--coverage complete` (the default) stops if any frozen question is missing from the run. `--coverage subset` is for runs that deliberately cover part of the question set, such as a layer scan; the uncovered ids are written to `missing_question_ids.json` and counted in `counts.json["partition"]["questions"]`.
-- Every package built from the frozen file carries the whole frozen mapping as its `partitions.csv`, byte for byte, however much of it the run covers. Only `split_manifest.csv` is run-specific.
+- Every package built from the frozen file carries the same full frozen mapping as its `partitions.csv`, however much of it the run covers. Only `split_manifest.csv` is run-specific.
 - A question the frozen file does not know stops the run. Adding questions is a new manifest version made by a person, not something the script decides.
 - The rerun's `split_manifest.csv` has the same columns as before, so every reader (`read_manifest`, the export, the layer-selection loader) works unchanged.
 - `scripts/export_partition_activations.py` checks the package manifest against the frozen file before writing anything, so a package built under a different cut is refused.
