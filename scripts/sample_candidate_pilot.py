@@ -25,19 +25,23 @@ Usage:
 """
 
 import argparse
-import csv
-import hashlib
 import json
 import random
 from collections import Counter
 from pathlib import Path
 
+from mas_sae.evaluation.candidate_selection import (  # noqa: F401  (re-exported for tests)
+    CLASSES,
+    PARTITIONS,
+    check_label_partitions,
+    load_verified_labels,
+    read_frozen_partitions,
+    read_run_sources,
+)
 from mas_sae.experiments.artifacts import ensure_output_available, sha256_file
-from mas_sae.experiments.records import read_jsonl, write_jsonl
+from mas_sae.experiments.records import write_jsonl
 
 APPROVED_COUNTS = Path("results/experiments/candidate_final_labels_20261027/counts.json")
-CLASSES = ("adoption", "retention", "agreement", "out")
-PARTITIONS = ("train", "validation", "test", "intervention")
 PER_CLASS = 50
 DIFFICULT_FLAGS = ("letter_reply", "citation_only", "critic_mentions_a1", "potential_hybrid")
 
@@ -90,51 +94,19 @@ def select_pilot(labels: list[dict], seed: int) -> dict[str, list[dict]]:
                                 **{r["question_id"]: f"difficult:{f}" for r, f in zip(difficult, DIFFICULT_FLAGS)}}}
 
 
-def read_frozen_partitions(path: Path) -> dict[str, str]:
-    """``{question_id: partition}`` from a frozen partitions.csv; duplicates and unknown partitions raise."""
-    frozen: dict[str, str] = {}
-    with path.open(newline="", encoding="utf-8") as fh:
-        for row in csv.DictReader(fh):
-            qid, partition = row["question_id"], row["partition"]
-            if qid in frozen:
-                raise ValueError(f"{path}: question {qid} appears more than once")
-            if partition not in PARTITIONS:
-                raise ValueError(f"{path}: question {qid} has unknown partition {partition!r}")
-            frozen[qid] = partition
-    return frozen
-
-
-def check_label_partitions(labels: list[dict], frozen: dict[str, str]) -> None:
-    """Every label's partition must equal the frozen one (``None`` = absent from the frozen file)."""
-    bad = [(r["question_id"], r["partition"], frozen.get(r["question_id"])) for r in labels
-           if r["partition"] != frozen.get(r["question_id"])]
-    if bad:
-        raise ValueError(f"{len(bad)} label partition(s) disagree with the frozen partitions, "
-                         f"e.g. {bad[:3]} (question, labels file, frozen)")
-
-
 def main(argv=None) -> None:
     args = parse_args(argv)
     ensure_output_available(args.output)
 
-    approved = json.loads(args.counts.read_text())
-    labels_sha = hashlib.sha256(args.labels.read_bytes()).hexdigest()
-    if labels_sha != approved["labels_sha256"]:
-        raise SystemExit(f"{args.labels} sha256 {labels_sha[:12]}… is not the approved PR #153 labels "
-                         f"({approved['labels_sha256'][:12]}…)")
-    labels = read_jsonl(args.labels)
-    frozen = read_frozen_partitions(args.partitions)
-    check_label_partitions(labels, frozen)
+    labels, frozen, approved = load_verified_labels(args.labels, args.counts, args.partitions)
+    labels_sha = approved["labels_sha256"]
     picked = select_pilot(labels, args.seed)
     outside = [r["question_id"] for r in picked["evaluation"] + picked["challenge"]
                if frozen.get(r["question_id"]) != "train"]
     if outside:
         raise ValueError(f"{len(outside)} selected question(s) are not frozen train: {outside[:3]}")
 
-    source = {}
-    for split in ("train", "validation"):
-        for row in read_jsonl(args.run / split / "interactions.jsonl"):
-            source[row["question_id"]] = row
+    source = read_run_sources(args.run)
     selected = picked["evaluation"] + picked["challenge"]
     missing = [r["question_id"] for r in selected if r["question_id"] not in source]
     if missing:

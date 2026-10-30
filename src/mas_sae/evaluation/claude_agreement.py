@@ -7,6 +7,8 @@ column, never silently dropped.
 
 from __future__ import annotations
 
+import math
+from collections import Counter
 from typing import Iterable
 
 from mas_sae.evaluation.claude_validator import VALID_LABELS
@@ -69,3 +71,28 @@ def binary_side_agreement(pairs: Iterable[tuple[str, str | None]]) -> dict[str, 
     both = [(r, p) for r, p in pairs if r in ("adoption", "retention") and p in ("adoption", "retention")]
     same = sum(r == p for r, p in both)
     return {"n": len(both), "same": same, "rate": same / len(both) if both else None}
+
+
+def wilson(k: int, n: int, z: float = 1.96) -> tuple[float, float] | None:
+    """95% Wilson score interval for k successes out of n."""
+    if not n:
+        return None
+    p = k / n
+    denom = 1 + z * z / n
+    centre = (p + z * z / (2 * n)) / denom
+    half = z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / denom
+    return max(0.0, centre - half), min(1.0, centre + half)
+
+
+def label_distribution(labels: Iterable[str | None]) -> dict:
+    """Counts, shares and 95% intervals per label; a missing label counts as ``error``."""
+    labels = list(labels)
+    n = len(labels)
+    counts = Counter(label if label in VALID_LABELS else ERROR for label in labels)
+    out = {"n": n, **{label: {"count": counts[label], "share": counts[label] / n if n else None,
+                              "ci95": wilson(counts[label], n)} for label in (*VALID_LABELS, ERROR)}}
+    binary = counts["adoption"] + counts["retention"]
+    out["retention_share_of_binary"] = {"retention": counts["retention"], "binary": binary,
+                                        "share": counts["retention"] / binary if binary else None,
+                                        "ci95": wilson(counts["retention"], binary)}
+    return out
