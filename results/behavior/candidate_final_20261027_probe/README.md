@@ -5,7 +5,7 @@ Tracking: #155 (export), #161 (probe retraining).
 
 ## Run
 - Collection: `natural_4b_full9_candidates` (candidates presentation), `s3://dats-capstone/shared/group3/results/collection/natural_4b_full9_candidates`.
-- Activations: that run's `layer_NN/{train,validation}_attempt2.pt`. The row index is `attempt2_activation_index`, which `align_episodes` checks against `full_index` in `split_manifest.csv`.
+- Activations: `s3://dats-capstone/shared/group3/data/activations/natural_4b_full9_candidates/`, `layer_NN/{train,validation}_attempt2.pt` (54 files; sizes checked 2026-10-29). The row index is `attempt2_activation_index`, which `align_episodes` checks against `full_index` in `split_manifest.csv`.
 - Partitions: the frozen `behavior_v012_official_20261011/partitions.csv`, unchanged.
 
 ## Labels (`labels.csv`)
@@ -23,7 +23,7 @@ Tracking: #155 (export), #161 (probe retraining).
 ## Loading (layer selection config)
 ```yaml
 results_dir: results/collection/natural_4b_full9_candidates
-activations_dir: <local copy of the candidates run's activations>
+activations_dir: data/activations/natural_4b_full9_candidates   # synced from the S3 path above
 labels_csv: results/behavior/candidate_final_20261027_probe/labels.csv
 manifest_csv: results/behavior/candidate_final_20261027_probe/split_manifest.csv
 index_column: full_index
