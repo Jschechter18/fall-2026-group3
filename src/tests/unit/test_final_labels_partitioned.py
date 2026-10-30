@@ -87,6 +87,27 @@ def test_refuses_incomplete_partitions_and_unknown_failures(build, prepared, tmp
         build.main(_args(prepared, tmp_path / "c"))
 
 
+def test_sources_are_hashed_before_the_build_and_rechecked(build, prepared, tmp_path, monkeypatch):
+    runs = [prepared / "results" / run for run in ("fixture", "fixture_intervention")]
+    before = build.input_hashes(prepared / "partitions.csv", runs)
+    assert {"fixture/run_layout.json", "fixture_intervention/run_layout.json"} <= set(before)
+    build.main(_args(prepared, tmp_path / "labels"))
+    assert json.loads((tmp_path / "labels/counts.json").read_text())["sources"] == before
+
+    label = build.build
+    interactions = runs[0] / build.run_partitions(runs[0])[0] / "interactions.jsonl"
+
+    def label_then_edit(*args):  # a run file rewritten after it was read
+        records = label(*args)
+        interactions.write_text(interactions.read_text() + "\n")
+        return records
+
+    monkeypatch.setattr(build, "build", label_then_edit)
+    with pytest.raises(RuntimeError, match="an input file changed during the build"):
+        build.main(_args(prepared, tmp_path / "edited"))
+    assert not (tmp_path / "edited").exists()
+
+
 def test_refuses_changed_rule_files(build, tmp_path):
     for name in ("counts.json", *build.RULE_FILES):
         shutil.copy(build.POLICY_DIR / name, tmp_path / name)
