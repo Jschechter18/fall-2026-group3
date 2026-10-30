@@ -56,6 +56,7 @@ from mas_sae.data.production import (
     write_package_tables,
 )
 from mas_sae.evaluation.behavior_labels import write_labels
+from mas_sae.evaluation.claude_validator import VALID_LABELS
 from mas_sae.experiments.artifacts import (
     ensure_output_available,
     get_git_commit,
@@ -114,6 +115,9 @@ def load_claude_runs(run_dirs: list[Path]) -> tuple[dict[str, dict], dict]:
     for row in rows:
         if row["question_id"] in labels:
             raise SystemExit(f"{row['question_id']}: labeled in more than one Claude run")
+        if row["behavior_label"] and row["behavior_label"] not in VALID_LABELS:
+            raise SystemExit(f"{row['question_id']}: unknown Claude label {row['behavior_label']!r}; "
+                             f"expected one of {list(VALID_LABELS)} or a technical failure")
         labels[row["question_id"]] = row
     protocol = {}
     for key in CLAUDE_PROTOCOL:

@@ -221,6 +221,10 @@ def _first(rows):
     (lambda rows: _first(rows).update(attempt2_activation_index=_first(rows)["attempt2_activation_index"] + 1000),
      "activation index"),
     (lambda rows: rows["train"].append(dict(_first(rows), question_id="musique:not_collected")), "did not collect"),
+    (lambda rows: rows["validation"][0].update(behavior_label="adopted", claude_label="adopted"),
+     "unknown Claude label 'adopted'"),                                  # binary_labels.csv row
+    (lambda rows: rows["validation"][2].update(behavior_label="agree", claude_label="agree"),
+     "unknown Claude label 'agree'"),                                    # exclusions.jsonl row
 ])
 def test_claude_labels_refuse_inconsistent_runs(prepared, tmp_path, change, message):
     ordinary = prepared / "results/fixture"
