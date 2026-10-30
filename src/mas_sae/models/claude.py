@@ -36,7 +36,7 @@ class ClaudeClient:
         )
         
     def generate(self, prompt: str, *, system: str = "", max_tokens: int = 4096,
-                 temperature: float = 0.0, task: Literal["data-gen", "labeling", "other"]) -> ClaudeResult:
+                 temperature: float | None = None, task: Literal["data-gen", "labeling", "other"]) -> ClaudeResult:
         """Send a prompt to Claude and return its response and usage metadata.
 
         Parameters
@@ -58,7 +58,8 @@ class ClaudeClient:
             raise ValueError("prompt must not be empty.")
         if max_tokens <= 0:
             raise ValueError("max_tokens must be positive.")
-        if not 0 <= temperature <= 1:
+        # if not 0 <= temperature <= 1:
+        if temperature is not None and not 0 <= temperature <= 1:
             raise ValueError("temperature must be between 0 and 1.")
         if task not in ("data-gen", "labeling", "other"):
             raise ValueError("task must be 'data-gen', 'labeling', or 'other'.")
@@ -66,10 +67,11 @@ class ClaudeClient:
         body = {
             "anthropic_version": "bedrock-2023-05-31",
             "max_tokens": max_tokens,
-            "temperature": temperature,
             "system": system,
             "messages": [{"role": "user", "content": prompt}],
         }
+        if temperature is not None:
+            body["temperature"] = temperature
         
         response = self._client.invoke_model(
             modelId=self.model_id,
