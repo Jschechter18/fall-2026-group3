@@ -27,7 +27,7 @@ class TextGenerator(Protocol):
     model_id: str
 
     def generate(self, prompt: str, *, system: str = "", max_tokens: int = 4096,
-                 temperature: float = 0.0, task: str) -> Any: ...
+                 temperature: float | None = None, task: str) -> Any: ...
 
 
 def describe_shape(hop_type: str) -> str:
@@ -239,7 +239,7 @@ def generate_one(
     *,
     max_attempts: int = 2,
     max_tokens: int = 6000,
-    temperature: float = 1.0,
+    temperature: float | None= None,
     provenance: dict[str, Any] | None = None,
 ) -> tuple[SyntheticCandidate | None, dict]:
     """Generate one synthetic candidate using the API. Make up to ``max_attempts`` API calls; return the candidate (or None) and provenance.
@@ -258,8 +258,8 @@ def generate_one(
         Max API calls, by default 2
     max_tokens : int, optional
         Max tokens for generation, by default 6000
-    temperature : float, optional
-        Sampling temperature, by default 1.0
+    temperature : float, None
+        Sampling temperature. None omits the parameter from the API request. by default None
     provenance : dict[str, Any] | None, optional
         Caller-owned dictionary retaining completed attempts if generation raises.
 
@@ -281,6 +281,7 @@ def generate_one(
         "model_id": client.model_id,
         "prompt_version": PROMPT_VERSION,
         "temperature": temperature,
+        "max_tokens": max_tokens,
         "api_calls": 0,
         "attempts": [],
     })

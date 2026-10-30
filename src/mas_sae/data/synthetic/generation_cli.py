@@ -12,8 +12,7 @@ from .generation import ParagraphPool, generate_one
 from .hop_types import HOP_TYPES
 
 
-# TODO: SHOULD PROBABLY USE OPUS 5 RATHER THAN SONNET 4.5 - ALL REASONING SHOULD BE DONE ON THE MODEL BEST FOR COMPLEX REASONING
-DEFAULT_MODEL_ID = "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
+DEFAULT_MODEL_ID = "us.anthropic.claude-opus-5"
 
 
 def make_client(model_id: str):
