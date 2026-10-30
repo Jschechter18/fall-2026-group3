@@ -221,7 +221,8 @@ def test_build_resolved_config_records_presentations_and_candidate_prompt(monkey
             SimpleNamespace(max_new_tokens=1024), SimpleNamespace(max_new_tokens=4))
 
     plain = provenance.build_resolved_config({"output": {"run_name": "r"}}, *args)["provenance"]
-    assert "a2_presentations" not in plain and "prompt_sha256" not in plain
+    assert "a2_presentations" not in plain
+    assert set(plain["prompt_sha256"]) == set(plain["prompt_versions"])
     assert "solver_candidates" not in plain["prompt_versions"]
 
     config = {"collection": {"a2_presentations": ["feedback", "candidates"]}, "output": {"run_name": "r"}}
@@ -231,3 +232,38 @@ def test_build_resolved_config_records_presentations_and_candidate_prompt(monkey
     assert record["prompt_versions"]["solver_candidates"] == "CANDIDATE_PROMPT"
     assert record["prompt_sha256"]["solver_candidates"] == artifacts.sha256_text(
         Solver.CANDIDATE_PROMPT + json.dumps(Solver.CANDIDATE_LABELS, sort_keys=True))
+
+
+@pytest.mark.parametrize("target,name", [
+    (Solver, "SOLVE_PROMPT_V1"), (Solver, "REVISE_PROMPT_V1"),
+    (Solver, "CANDIDATE_PROMPT"), (Solver, "CANDIDATE_LABELS"),
+    (provenance.Validator, "VALIDATE_PROMPT"),
+    (provenance.critic_prompts, "NATURAL_BLIND_PROMPT"),
+    (provenance.critic_prompts, "NATURAL_COMPARE_PROMPT"),
+    (provenance.critic_prompts, "CONTROLLED_OWN_CONCLUSION_PROMPT"),
+    (provenance.critic_prompts, "DISTRACTOR_PROMPT"),
+])
+def test_prompt_content_changes_compatibility_without_renaming(monkeypatch, target, name):
+    model = SimpleNamespace(config=SimpleNamespace(_commit_hash="rev", architectures=["Fixture"]),
+                            dtype=torch.float32, device=torch.device("cpu"))
+    solver = Solver(model, object())
+    critic = provenance.critic_prompts.Critic(model, object(), blind_then_compare=True,
+                                             controlled_as_own_conclusion=True)
+    validator = provenance.Validator(model, object())
+    for role, agent in (("solver", solver), ("critic", critic), ("validator", validator)):
+        spec = roles.resolve_role_spec(role, {"id": "fixture", "loader": "qwen3", "revision": "rev",
+                                            "dtype": "float32", "device": "cpu"}, default_max_new_tokens=8)
+        roles.configure_agent(agent, spec)
+    def contract():
+        resolved = provenance.build_resolved_config(
+            {"collection": {"a2_presentations": ["feedback", "candidates"]}}, model, solver, critic, validator,
+            protocol_version="v2", type_checked_target=True)
+        return provenance.experiment_compatibility(resolved, ["model.layers.8"])
+    before = contract()
+    value = getattr(target, name)
+    changed = {**value, "a1": "different label"} if isinstance(value, dict) else value + " changed instruction"
+    monkeypatch.setattr(target, name, changed)
+    after = contract()
+    assert before["prompt_versions"] == after["prompt_versions"]
+    assert before["prompt_sha256"] != after["prompt_sha256"]
+    assert before != after

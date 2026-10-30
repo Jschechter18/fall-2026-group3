@@ -73,10 +73,12 @@ def main():
     parser.add_argument("--frozen-partitions", type=Path, default=FROZEN_PARTITIONS,
                         help="committed partitions.csv the package manifest must agree with "
                              "(default: the repository's frozen mapping)")
+    parser.add_argument("--layout", choices=("legacy", "partitioned"), default="legacy",
+                        help="Source layout; distributed runs use partitioned and their own --frozen-partitions CSV.")
     args = parser.parse_args()
 
-    rows, manifest = load_labeled_rows(args.source_results, args.package)
-    check_manifest_matches_frozen(manifest, read_partitions(args.frozen_partitions))
+    rows, manifest = load_labeled_rows(args.source_results, args.package, layout=args.layout)
+    check_manifest_matches_frozen(manifest, read_partitions(args.frozen_partitions, layout=args.layout))
     summary = export_partition_activations(
         rows, manifest, args.source_activations, run=args.run, layers=args.layers,
         export_activation_root=args.export_activation_root,

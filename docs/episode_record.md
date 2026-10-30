@@ -1,6 +1,13 @@
 # What is in one episode record
 
-One line of `interactions.jsonl` is one episode: one MuSiQue question, Gemma's first answer, Qwen's review, Gemma's second answer, and what we recorded about it. The paragraphs the Solver read are not stored; they come from MuSiQue by `question_id`.
+One line of `interactions.jsonl` is one episode: a question, the Solver's first
+answer, the Critic's review, the Solver's second answer, and the recorded
+metadata. Examples below use the existing Gemma/Qwen roles.
+
+For [distributed mixed-dataset runs](distributed_collection.md), the shared
+manifest retains the exact input payloads; the separate intervention bundle
+also contains `contexts.jsonl` for causal replay. Historical MuSiQue runs recover
+paragraphs by original question ID and dataset revision.
 
 This page explains the fields a reader needs to follow the experiment. The complete technical list of every field, with types and the code that sets each one, is the appendix of `collection_provenance.md`; the activation files and row indices are explained in `activations.md`.
 
@@ -8,10 +15,10 @@ This page explains the fields a reader needs to follow the experiment. The compl
 
 | Field | What it means | Why it matters |
 |---|---|---|
-| `question_id` | MuSiQue id; the prefix gives the hop count (`2hop__`, `3hop1__`, `4hop…`) | The key that joins labels, partitions and activations |
+| `question_id` | `dataset_source:original_id` in mixed runs; historical MuSiQue IDs encode hop count in their prefix | The key that joins labels, partitions and activations |
 | `episode_id` | `question_id` plus the feedback condition, and the A2 presentation in runs that record one | One row per episode; the condition is always `natural` in production |
 | `question` | The question Gemma was asked | What the whole exchange is about |
-| `ground_truth`, `answer_aliases` | MuSiQue's correct answer and accepted alternative spellings | Lets us say whether each answer was right |
+| `ground_truth`, `answer_aliases` | the source record's correct answer and accepted alternative spellings | Lets us say whether each answer was right |
 | `solver_attempt_1` | Gemma's first answer (A1), before any feedback | The starting position |
 | `critic_blind_answer` | Qwen's own answer, given before it saw A1 | Shows the Critic formed a position of its own |
 | `critic_verdict` | `agree` or `disagree` with A1 | Whether the Critic pushed back |
@@ -67,17 +74,19 @@ Older behaviour fields on the record itself (`solver_behavior`, `critic_position
 
 | Field | Meaning |
 |---|---|
-| `partition` | the question's group: `train`, `validation`, `test`, `intervention`; fixed once for every question in `partitions.csv` |
-| `source_split` | which MuSiQue file the question came from (`train` or `validation`); provenance only |
+| `partition` | research role in prepared exports; intervention is reserved before collection, while ordinary roles are assigned after merging |
+| `source_split` | actual tensor/interaction folder; also the original MuSiQue split in legacy collection files |
+| `original_source_split` | original dataset split, retained separately in mixed runs |
 | `experiment_split` | the group the collection run assigned at the time; history only, the partition is the authority |
 | `attempt1_activation_index`, `attempt2_activation_index` | row of this episode in `<split>_attempt1.pt` and `<split>_attempt2.pt` (always equal in production) |
 | `sae_attempt1_index`, `sae_attempt2_index` | rows in the combined `<split>.pt` (A1 rows first, then A2 rows) |
-| `source_run`, `source_activation_index` | in a partition export: where the row came from before regrouping |
+| `source_run`, `source_activation_index` | legacy exports: the original run and row before regrouping |
+| `collection_activation_index` | new exports: original merged row for traceability; attempt indices address the final tensors |
 
 ## Bookkeeping
 
 | Field | Meaning |
 |---|---|
-| `seed` | the seed recorded for this question; decoding is greedy, so outputs do not depend on it |
+| `seed` | the question's collection seed; frozen in the distributed manifest independently of chunk assignment |
 | `generation_telemetry` | one entry per model call (`solver_a1`, `critic_blind`, `critic_review`, `solver_a2`, `validator`): tokens written, the limit, and whether the limit was hit, which means the output may be cut off |
 | `controlled_target_source`, `controlled_target_type_check` | only used by the controlled feedback conditions; `null` here |

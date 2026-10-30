@@ -2,6 +2,9 @@
 
 Master's Data Science Capstone project.
 
+Distributed collection: [workflow guide](docs/distributed_collection.md) and
+[two-EC2 smoke-test commands](docs/distributed_collection_smoke_test.md).
+
 ## Messages for Professor/AI Reviewer:
 
 # Instructor Review 3 Response:
@@ -381,7 +384,15 @@ python scripts/get_musique_dataset.py
 
 ## Activation Collection
 
-Activation collection is config-driven. Run from the repository root:
+For new mixed-dataset runs across EC2 workers, follow the
+[distributed collection workflow](docs/distributed_collection.md): prepare one
+manifest, collect assigned chunks, merge, then split/export. Intervention
+membership is reserved upfront, and its baselines are included in collection.
+
+### Existing single-machine MuSiQue runs
+
+The following commands and paths describe the supported legacy collection path.
+Run from the repository root:
 
     python scripts/collect_activations.py --config configs/collection/v1/smoke_train.yaml
 
@@ -411,16 +422,18 @@ This directory contains interactions.jsonl, resolved_config.yaml, summary.json,
 collected_question_ids.json and exclusions.jsonl. The record fields are defined
 in `docs/episode_record.md`, the provenance files and the identity used by
 `--resume` in `docs/collection_provenance.md`, and the capture position, tensor
-layout and row indices in `docs/activations.md` (with the partition diagram,
-`docs/diagrams/data_split_workflow.drawio`).
+layout and row indices in `docs/activations.md` (including a historical MuSiQue
+partition diagram).
 
 The metadata of the finished production run (`natural_4b_full`: summaries,
 resolved configs, question lists, provenance) and of its partition export are
 committed under `results/collection/`. The labels, the partition manifest and
 the frozen question-to-partition mapping are committed under
 `results/behavior/behavior_v011_split80_10_10_20261006/`. Tensors and
-`interactions.jsonl` stay in S3. Any rerun takes its partitions from that
-mapping; see `docs/behavior_v01.md`, "Re-running the collection".
+`interactions.jsonl` stay in S3. Re-runs of these historical experiments take
+their partitions from that mapping; see `docs/behavior_v01.md`, "Re-running the
+collection". New mixed-dataset runs use their own prepared manifest and exported
+membership instead.
 
 ## SAE versions
 

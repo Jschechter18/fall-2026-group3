@@ -19,6 +19,8 @@ from mas_sae.experiments.provenance import (
     build_collection_progress_provenance,
     build_resolved_config,
 )
+from mas_sae.experiments.distributed_collection.dataset import read_manifest, select_chunks
+from mas_sae.experiments.distributed_collection.core import check_config, chunk_directory, collect_manifest_chunks
 from mas_sae.models.roles import resolve_roles, load_role_models, configure_agent
 from mas_sae.activations.sites import resolve_solver_sites
 from mas_sae.experiments.conditions import OMITTED
@@ -57,10 +59,12 @@ def parse_args() -> argparse.Namespace:
         required=True,
         help="Path to a collection YAML config.",
     )
+    parser.add_argument("--manifest", type=Path, help="Prepared mixed-dataset manifest; includes reserved intervention baselines.")
+    parser.add_argument("--chunk", type=int, nargs="+", help="Assigned work chunk IDs; omission processes all planned chunks.")
     parser.add_argument(
         "--resume",
         action="store_true",
-        help="Continue a run whose chunks are under data/activations/<run>/_progress/<source_split>.",
+        help="Continue committed checkpoints for the selected manifest chunks or legacy run.",
     )
     return parser.parse_args()
 
@@ -77,8 +81,20 @@ def main() -> None:
     config = load_collection_config(args.config)
     role_specs = resolve_roles(config)
     model_id = role_specs["solver"]["id"]
-    source_split = config["dataset"]["source_split"]
-    num_questions = config["dataset"]["num_questions"]
+    manifest_path = getattr(args, "manifest", None)
+    chunk_ids = getattr(args, "chunk", None)
+    prepared = read_manifest(manifest_path) if manifest_path else None
+    if prepared:
+        check_config(prepared, config)
+        chunks = select_chunks(prepared, chunk_ids)
+        for chunk in chunks:
+            root = chunk_directory(manifest_path, chunk)
+            if root.exists() and not args.resume:
+                raise FileExistsError(f"{root}: use --resume to continue")
+    elif chunk_ids is not None or "inputs" in config["dataset"]:
+        raise SystemExit("Manifest collection requires --manifest; --chunk requires --manifest")
+    source_split = "all" if prepared else config["dataset"]["source_split"]
+    num_questions = sum(c["end"]-c["start"] for c in chunks) if prepared else config["dataset"]["num_questions"]
     layers = config["collection"]["layers"]
     seed = config["collection"]["seed"]
     protocol_version = config["collection"].get(
@@ -95,11 +111,10 @@ def main() -> None:
         )
     protocol = PROTOCOLS[protocol_version]
 
-    collection_progress.ensure_can_start(
-        resume=args.resume,
-        final_output_dir=RESULT_ROOT / run_name / source_split,
-        progress=progress,
-    )
+    if not prepared:
+        collection_progress.ensure_can_start(
+            resume=args.resume, final_output_dir=RESULT_ROOT / run_name / source_split,
+            progress=progress)
 
     logger.info(
         "Starting run=%s split=%s questions=%d protocol=%s",
@@ -132,10 +147,13 @@ def main() -> None:
         protocol_version=protocol_version,
         type_checked_target=protocol["type_checked_target"],
     )
+    if prepared:
+        collect_manifest_chunks(manifest_path, prepared, chunks, config=config, resolved_config=resolved_config,
+            model=model, solver=solver, critic=critic, validator=validator,
+            candidate_sites=candidate_sites, type_checked_target=protocol["type_checked_target"], resume=args.resume)
+        return
     a2_presentations = config["collection"].get("a2_presentations", OMITTED)
-    selection = select_questions(
-        config["dataset"], default_seed=seed, a2_presentations=a2_presentations
-    )
+    selection = select_questions(config["dataset"], default_seed=seed, a2_presentations=a2_presentations)
 
     if selection["sampled_questions"] is not None:
         logger.info(
@@ -147,7 +165,7 @@ def main() -> None:
 
     manifest = selection["sampled_questions"]
     if manifest is None:
-        manifest = describe_sampled_questions(selection["examples"], None)
+        manifest = describe_sampled_questions(selection["examples"], None, selection["candidate_orders"])
     identity = build_collection_progress_provenance(
         config,
         resolved_config,

@@ -61,7 +61,7 @@ def main() -> None:
             from mas_sae.utils.versioning import create_versioned_run_dir
             episodes = replay.load_episodes(cfg)
             saes = tiny_saes()
-            comp = smoke_components(replay.load_paragraphs(episodes, cfg.musique_revision), cfg.layer, saes,
+            comp = smoke_components(replay.load_paragraphs(episodes, cfg.musique_revision, cfg.capstone_data_root / cfg.contexts_jsonl if cfg.contexts_jsonl else None), cfg.layer, saes,
                                     tiny_features(saes, n_random_draws=cfg.n_random_draws))
             run_dir = args.resume or create_versioned_run_dir(cfg.output_dir)
             replay.replay(cfg, episodes, comp, run_dir, args.config, args.preflight_only)

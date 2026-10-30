@@ -1,6 +1,12 @@
 # Behavior v0.1: labelling how the Solver responds to Critic feedback
 
-Status: rule version `behavior_v0.1.1_candidate`. Human QC is complete: the labels were checked by human annotators between 2026-10-06 and 2026-10-11 (see "Human check"). No production label freeze has been approved. An experimental overlay, `behavior_v0.1.2_qc_candidate`, exists on branch `issue55-v012-qc` and is not a production label.
+The named runs, allocation rules, and original status notes below document the
+historical MuSiQue experiments. Label-policy definitions also apply to new
+compatible episodes. For new mixed-dataset collection and its separate
+intervention export, use the [distributed workflow](distributed_collection.md);
+it reserves intervention first and assigns train/validation/test after merging.
+
+Historical v0.1.1 status: rule version `behavior_v0.1.1_candidate`. Human QC is complete: the labels were checked by human annotators between 2026-10-06 and 2026-10-11 (see "Human check"). No production label freeze has been approved. An experimental overlay, `behavior_v0.1.2_qc_candidate`, exists on branch `issue55-v012-qc` and is not a production label.
 
 ## The problem this solves
 
