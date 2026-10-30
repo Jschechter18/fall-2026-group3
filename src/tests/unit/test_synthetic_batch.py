@@ -8,7 +8,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from mas_sae.data.synthetic import batch
+from mas_sae.data.synthetic.generation import runner as batch
 from mas_sae.data.synthetic.generation_cli import main, make_client
 from mas_sae.data.synthetic.prompt_examples import build_example
 
@@ -79,7 +79,7 @@ class Factory:
 
 
 def run(tmp_path, original, factory, **kwargs):
-    options = dict(n=12, concurrency=4, seed=42)
+    options = dict(n=12, concurrency=4, seed=42, dataset_audit=False)
     if "target_per_type" in kwargs:
         options.pop("n")
     options.update(kwargs)
@@ -237,7 +237,7 @@ def test_request_seeds_do_not_depend_on_concurrency(tmp_path, original):
     for concurrency in (1, 4):
         output = tmp_path / str(concurrency)
         batch.run_batch(output, original=original, model_id="fake", n=12,
-                        concurrency=concurrency, seed=42, client_factory=Factory())
+                        concurrency=concurrency, seed=42, client_factory=Factory(), dataset_audit=False)
         maps.append({p["request_id"]: p["request_seed"] for p in read(output / "provenance.jsonl")})
     assert maps[0] == maps[1]
     assert len(set(maps[0].values())) == 12
@@ -283,7 +283,7 @@ def test_cli_quota_mode_and_cap_exit_status(tmp_path, original, monkeypatch):
     from mas_sae.data.synthetic import generation_cli
     factory = Factory(lambda n, raw: "invalid")
     monkeypatch.setattr(generation_cli, "make_client", lambda *a, **k: factory())
-    result = main(["--target-per-hop", "1", "--max-requests-per-hop", "1",
+    result = main(["--no-dataset-audit", "--target-per-hop", "1", "--max-requests-per-hop", "1",
                    "--concurrency", "2", "--hop-types", "2hop", "3hop1",
                    "--original", str(original), "--output-dir", str(tmp_path / "run")])
     assert result == 1
@@ -330,7 +330,7 @@ def test_injected_serial_client_is_not_closed(tmp_path, original):
             client.owner = threading.get_ident()
             return client.generate(*args, **kwargs)
     batch.run_batch(tmp_path / "serial", original=original, model_id="fake", n=1,
-                    client=Adapter())
+                    client=Adapter(), dataset_audit=False)
     assert client.closed == 0
 
 

@@ -3,12 +3,35 @@
 This package owns the answerable candidate contract, structural validation and
 normalized exact question deduplication. Generation, factual checking, semantic
 novelty and reasoning-quality evaluation remain separate responsibilities.
-No model API calls are made here.
+The deterministic `validate_candidate` function makes no API calls. Generation
+and the dataset-wide redundancy audit use the supplied Claude client.
+
+## Package layout
+
+- `generation/prompts.py` and `generation/examples.py`: generation requirements,
+  repair prompts, and subtype demonstrations.
+- `generation/assembly.py`: filler paragraph sampling and candidate assembly.
+- `generation/service.py`: one candidate's API calls, retries, and provenance.
+- `generation/runner.py`: concurrency, acceptance quotas, deduplication, run
+  artifacts, and the automatic dataset-audit handoff.
+- `audit/catalog.py`: compact catalogs and local dataset statistics.
+- `audit/similarity.py`: heuristic templates and approximate neighbor retrieval.
+- `audit/planning.py`: comparison batches and prompt-budget limits.
+- `audit/review.py`: comparison prompts, response validation, and API retries.
+- `audit/runner.py`: audit execution, linked artifacts, and the summary report.
+- `clients.py`: shared model default and Bedrock client construction.
+- `contracts.py`, `hop_types.py`, `validation.py`, `deduplication.py`,
+  `responses.py`, and `workers.py`: shared contracts and infrastructure.
+
+The three CLI modules remain entry points. Existing imports through `generation`,
+`batch`, `dataset_audit`, `prompt_examples`, and the client names in
+`generation_cli` remain supported. New code should import from the owning module.
+This layout preserves prompts, defaults, output schemas, and artifact paths.
 
 ## Generator contract
 
 Produce a JSON object matching `SyntheticCandidate` in `contracts.py`, including
-`question_decomposition`. `generation.py` (below) does this; the older
+`question_decomposition`. The `generation` package (below) does this; the older
 `examples/claude/claude_for_data_gen.py` omits this field.
 
 - IDs: one of `2hop`, `3hop1`, `3hop2`, `4hop1`, `4hop2`, `4hop3`, followed by
@@ -66,7 +89,7 @@ A malformed import rolls back that file's additions.
 
 ## Generating a batch
 
-`generation.py` asks Claude (via `mas_sae.models.claude.ClaudeClient` on Bedrock)
+The `generation` package asks Claude (via `mas_sae.models.claude.ClaudeClient` on Bedrock)
 for one record per call: question, answer, decomposition, one supporting paragraph
 per hop and three hard distractors. Each prompt fixes the step dependency shape of
 the hop type (for example `4hop3`: 1 → 2, 3 independent, 2 + 3 → 4). The remaining
@@ -79,8 +102,9 @@ specific failure details. Records that still fail are not written. Prompt versio
 `v3` lets the model choose its subject and treats the generated documents as ground
 truth; real-world factual accuracy is not required. Internal consistency and
 necessary reasoning hops remain requirements. Each subtype uses a matching compact
-example from `prompt_examples.py`. Structural checks cannot establish semantic
-quality or diversity; manually review a generated batch before dataset inclusion.
+example from `generation/examples.py`. Structural checks cannot establish semantic
+quality. The dataset-wide audit below reports redundancy and distribution patterns
+after generation; it does not run per-question semantic API validation.
 
 Before assembly samples fillers or normalizes aliases, raw final/step answers
 must be nonempty strings and aliases must be a list of nonempty strings. An
@@ -162,7 +186,7 @@ Every new run writes under `data/MuSiQue/synthetic/runs/<run-id>/generation/`:
 to `--original`; fixed-request mode defaults to within-batch deduplication only.
 This index does not automatically cover earlier synthetic runs. Use the standalone
 validation command with a shared index for cross-run exact deduplication before
-release. Acceptance is not manual approval. Index registration and file writing
+release. Structural acceptance does not certify semantic quality. Index registration and file writing
 are not transactional; forced termination or storage errors may leave partial artifacts.
 
 On an API/programming error or KeyboardInterrupt, scheduling stops, unstarted work
@@ -189,11 +213,98 @@ errors. More concurrency is useful only while actual throughput improves.
 
 `notebooks/synthetic_data_generation_sample.ipynb` calls the same runner with
 `CONCURRENCY`, subtype quotas, and both original splits. Generation is disabled by
-default. Existing saved batches/review worksheets are retained; loading and review
+default. Existing saved batches are retained; loading and inspection
 cells make no calls. For a prior run, set `REVIEW_RUN_DIR` to its saved path.
 
 Filler paragraphs are real text while supporting paragraphs may be invented, so a
-filler can occasionally conflict with an invented fact; check this in manual review.
+filler can occasionally conflict with an invented fact. The redundancy audit does
+not check these within-record contradictions.
+
+## Dataset-wide redundancy audit
+
+After generation completes, one audit job scans the entire `accepted.jsonl` dataset.
+There is no per-question Claude semantic validation. The audit is report-only:
+questions are not silently removed, rewritten, or approved. Original candidates and
+generation provenance remain unchanged.
+
+Local analysis covers every record: normalized exact-question duplicates, repeated
+question templates (heuristic entity/number masking), repeated supporting titles,
+answer concentration, question-opening concentration, and hop distributions. A
+compact catalog retains each question, answer, decomposition, supporting titles,
+and original candidate content hash. Full paragraph bodies are not sent to Claude;
+this checks relationships between questions, not individual document grounding.
+
+Claude reviews the complete fitting catalog in bounded groups. Questions are sorted
+by template to put similar tasks together. Additional MinHash/LSH retrieval proposes
+cross-group comparisons: 64 signature values, 16 bands, Jaccard >=0.5, top five
+retrieved neighbors per question. Candidate lookup and bucket sizes are bounded.
+This avoids all-pairs work, but is approximate and can miss semantic paraphrases.
+The audit does not claim exhaustive detection of all redundancies.
+
+Model findings distinguish semantic duplicates, template variants, conflicting
+variants, and uncertainty. Shared topic alone is not a duplicate. Fictional worlds
+may reuse names with different facts; that is reported without claiming an internal
+contradiction. Every reported group member must be a supplied record ID with an
+exact question excerpt. Every successful catalog response must acknowledge all its
+supplied IDs. Invalid/truncated outputs get bounded format retries. Operational
+errors remain errors, never a conclusion that there are no redundant questions.
+
+Artifacts live under `<generation-output>/dataset_audit/`:
+
+- `report.md`: measured global counts, model findings, examples, and limitations.
+- `summary.json`: status, timing, API usage, coverage, model/version/settings.
+- `statistics.json`: dataset-wide deterministic distributions and concentrations.
+- `catalog.jsonl`: compact question metadata and original content hashes.
+- `exact_duplicates.jsonl`: normalized exact-question groups.
+- `template_groups.jsonl`: heuristic template groups, not automatic rejections.
+- `groups.jsonl`: model-reported redundancy/variant groups with evidence and IDs.
+- `observations.jsonl`: model observations supported by bounded catalog groups.
+- `reviews.jsonl`, `provenance.jsonl`, `errors.jsonl`: responses, attempts, and failures.
+- `plan.json`: groups to review and the maximum model-invocation budget before SDK retries.
+
+The summary distinguishes records scanned locally from records in successful Claude
+catalog reviews. Prompt-size exclusions, capped neighbor groups, and LSH bucket
+limits are recorded. `coverage_limited` means a configured bound skipped comparisons;
+`completed_with_errors` means some reviews failed. Even `completed` means the planned
+job completed, not a certificate of uniqueness. Counts of affected records can
+overlap and must not be added into an overall defective-question percentage.
+
+The CLI, notebook and full YAML config enable this audit by default. Generation
+quotas and `accepted_total` still mean structural acceptance. Parent summaries put
+audit results under `dataset_audit`; existing generation timing/token counters stay
+separate, and `total_elapsed_seconds` includes both phases. Audit errors/coverage
+limits cause a nonzero CLI result, while preserving the generated dataset.
+
+Audit controls are `--audit-model-id`, `--audit-concurrency`, `--audit-batch-size`,
+`--audit-max-prompt-chars`, `--audit-max-neighbor-batches`, `--audit-max-attempts`, and
+`--audit-max-tokens`; YAML keys use underscores. Defaults: same model as generation,
+up to 4 audit workers, 100 questions/group, 100,000 prompt characters, 200 extra
+neighbor groups, 2 attempts/group and 8,192 output tokens. These are independent of
+generation concurrency. `--no-dataset-audit` / YAML `dataset_audit: false` explicitly
+selects generation-only benchmarking. Exhausted transient API errors are recorded;
+authentication/configuration and programming errors stop scheduling and fail the
+job after running requests are drained. No automatic resume is implemented.
+
+For an existing run, first inspect the plan without making API calls:
+
+```bash
+PYTHONPATH=src python scripts/audit_synthetic_dataset.py path/to/run/accepted.jsonl \
+  --output-dir path/to/run/dataset_audit_plan --dry-run
+```
+
+Then launch a real audit in a different, new directory (paid calls):
+
+```bash
+PYTHONPATH=src python scripts/audit_synthetic_dataset.py path/to/run/accepted.jsonl \
+  --output-dir path/to/run/dataset_audit
+```
+
+The reusable function is `audit.audit_dataset(...)` (also available through the
+compatibility module `dataset_audit`). All paths and input
+hashes are saved; existing output directories are refused. The notebook includes
+a disabled existing-dataset audit cell, and loading questions/reports makes no calls.
+Restart the kernel after updating imported modules. Fake-client tests verify
+plumbing and output contracts, not live model judgment or throughput.
 
 ## Checking a saved batch
 

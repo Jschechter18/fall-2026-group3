@@ -151,7 +151,7 @@ def test_cli_writes_outputs(tmp_path):
     original.write_text(json.dumps({"paragraphs": [paragraph(f"Filler {i}") for i in range(30)]}) + "\n")
     client = FakeClient([(json.dumps(RAW_2HOP), "end_turn"), ("nope", "end_turn"), ("nope", "end_turn")])
     out = tmp_path / "run"
-    assert main(["--n", "2", "--hop-types", "2hop", "--seed", "1", "--original", str(original),
+    assert main(["--no-dataset-audit", "--n", "2", "--hop-types", "2hop", "--seed", "1", "--original", str(original),
                  "--output-dir", str(out)], client=client) == 0
     summary = json.loads((out / "summary.json").read_text())
     assert summary["generated"] == 1 and summary["failed"] == 1 and summary["api_calls"] == 3
@@ -188,7 +188,7 @@ def test_cli_preserves_attempts_and_closes_client_on_fatal_error(tmp_path, monke
     original.write_text(json.dumps({"paragraphs": [paragraph(f"Filler {i}") for i in range(30)]}) + "\n")
     out = tmp_path / "run"
     with pytest.raises(type(error), match=str(error)):
-        main(["--n", "2", "--hop-types", "2hop", "--original", str(original),
+        main(["--no-dataset-audit", "--n", "2", "--hop-types", "2hop", "--original", str(original),
               "--output-dir", str(out)])
 
     provenance = json.loads((out / "provenance.jsonl").read_text())
@@ -217,7 +217,7 @@ def test_cli_records_client_initialization_failure(tmp_path, monkeypatch):
     original.write_text(json.dumps({"paragraphs": [paragraph("Filler")]}) + "\n")
     out = tmp_path / "run"
     with pytest.raises(RuntimeError, match="client initialization failed"):
-        main(["--original", str(original), "--output-dir", str(out)])
+        main(["--no-dataset-audit", "--original", str(original), "--output-dir", str(out)])
     summary = json.loads((out / "summary.json").read_text())
     assert summary["status"] == "failed"
     assert summary["api_calls"] == 0
@@ -247,7 +247,7 @@ def test_cli_marks_output_failure_before_starting_a_client(tmp_path, monkeypatch
 
     monkeypatch.setattr(Path, "open", fail_candidate_open)
     with pytest.raises(OSError, match="cannot create candidates"):
-        main(["--original", str(original), "--output-dir", str(out)])
+        main(["--no-dataset-audit", "--original", str(original), "--output-dir", str(out)])
 
     summary = json.loads((out / "summary.json").read_text())
     assert summary["status"] == "failed"
@@ -360,7 +360,7 @@ def test_malformed_answer_exhaustion_is_record_failure_not_batch_failure(tmp_pat
     original = tmp_path / "train.json"
     original.write_text(json.dumps({"paragraphs": [paragraph(f"Filler {i}") for i in range(30)]}) + "\n")
     output = tmp_path / "run"
-    assert main(["--n", "1", "--hop-types", "2hop", "--original", str(original),
+    assert main(["--no-dataset-audit", "--n", "1", "--hop-types", "2hop", "--original", str(original),
                  "--output-dir", str(output)], client=client) == 0
     summary = json.loads((output / "summary.json").read_text())
     assert summary["status"] == "completed"

@@ -40,6 +40,10 @@ def test_full_run_config_preserves_requested_settings(tmp_path, setup):
     assert args["max_requests_per_type"] == 16000
     assert args["concurrency"] == 256
     assert args["seed"] == 42
+    assert args["dataset_audit"] is True
+    assert args["audit_model_id"] == "us.anthropic.claude-opus-5"
+    assert args["audit_concurrency"] == 4
+    assert args["audit_max_attempts"] == 2 and args["audit_max_tokens"] == 8192
     assert args["model_id"] == "us.anthropic.claude-opus-5"
     assert args["dedup_originals"] == [original]
     assert args["transport_settings"] == {
@@ -71,7 +75,8 @@ def test_cli_can_switch_fixed_config_to_quota_mode(tmp_path, setup):
 
 
 @pytest.mark.parametrize("settings", [
-    [], {"typo": 1}, {"concurrency": True}, {"concurrency": "256"},
+    [], {"typo": 1}, {"dataset_audit": "true"}, {"audit_concurrency": False},
+    {"audit_max_tokens": 0}, {"concurrency": True}, {"concurrency": "256"},
     {"hop_types": "2hop"}, {"hop_types": ["5hop"]}, {"hop_types": ["2hop", "2hop"]},
     {"read_timeout": "slow"}, {"read_timeout": float("inf")},
     {"model_id": None}, {"original": []}, {"dedup_original": []},

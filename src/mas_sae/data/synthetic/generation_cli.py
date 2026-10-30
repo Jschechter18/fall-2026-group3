@@ -3,35 +3,12 @@ import argparse
 from datetime import datetime, timezone
 import json
 import math
-import os
 from pathlib import Path
 from uuid import uuid4
 
-from .batch import run_batch
+from .generation.runner import run_batch
+from .clients import DEFAULT_MODEL_ID, make_client
 from .hop_types import HOP_TYPES
-
-
-DEFAULT_MODEL_ID = "us.anthropic.claude-opus-5"
-
-
-def make_client(model_id: str, *, connect_timeout: float = 10,
-                read_timeout: float = 300, sdk_max_attempts: int = 3):
-    """Create an independent session/client with bounded transport retries."""
-    import boto3
-    from botocore.config import Config
-    from dotenv import load_dotenv
-    from mas_sae.models.claude import ClaudeClient
-
-    load_dotenv()
-    session = boto3.Session(
-        aws_access_key_id=os.getenv("aws_access_key_id"),
-        aws_secret_access_key=os.getenv("aws_secret_access_key"),
-        aws_session_token=os.getenv("aws_session_token"),
-    )
-    config = Config(connect_timeout=connect_timeout, read_timeout=read_timeout,
-                    retries={"mode": "standard", "total_max_attempts": sdk_max_attempts})
-    return ClaudeClient(session=session, model_id=model_id, config=config)
-
 
 
 def _config_defaults(parser: argparse.ArgumentParser, argv) -> dict:
@@ -51,17 +28,22 @@ def _config_defaults(parser: argparse.ArgumentParser, argv) -> dict:
         parser.error(f"Cannot read config {supplied.config}: {exc}")
     if not isinstance(settings, dict) or any(not isinstance(key, str) for key in settings):
         parser.error("Config must be a mapping with string keys")
-    integers = {"n", "target_per_hop", "max_requests_per_hop", "concurrency", "seed", "sdk_max_attempts"}
+    integers = {"n", "target_per_hop", "max_requests_per_hop", "concurrency", "seed", "sdk_max_attempts",
+                "audit_concurrency", "audit_max_attempts", "audit_max_tokens",
+                "audit_batch_size", "audit_max_prompt_chars", "audit_max_neighbor_batches"}
     numbers = {"connect_timeout", "read_timeout"}
-    strings = {"model_id", "original", "output_dir"}
+    strings = {"model_id", "original", "output_dir", "audit_model_id"}
+    booleans = {"dataset_audit"}
     lists = {"hop_types", "dedup_original"}
-    nullable = {"n", "target_per_hop", "max_requests_per_hop", "seed", "output_dir", "dedup_original"}
-    unknown = settings.keys() - (integers | numbers | strings | lists)
+    nullable = {"n", "target_per_hop", "max_requests_per_hop", "seed", "output_dir", "dedup_original", "audit_model_id", "audit_concurrency"}
+    unknown = settings.keys() - (integers | numbers | strings | lists | booleans)
     if unknown:
         parser.error(f"Unknown config keys: {', '.join(sorted(unknown))}")
     for key, value in settings.items():
         if value is None and key in nullable:
             continue
+        if key in booleans and type(value) is not bool:
+            parser.error(f"Config {key} must be boolean")
         if key in integers and type(value) is not int:
             parser.error(f"Config {key} must be an integer")
         if key in numbers and type(value) not in (int, float):
@@ -106,8 +88,22 @@ def main(argv: list[str] | None = None, *, client=None) -> int:
     parser.add_argument("--read-timeout", type=float, default=300)
     parser.add_argument("--sdk-max-attempts", type=int, default=3,
                         help="SDK transport attempts per invocation, including the first")
+    parser.add_argument("--dataset-audit", action=argparse.BooleanOptionalAction, default=True,
+                        help="Audit the complete question catalog for redundancy after generation")
+    parser.add_argument("--audit-model-id", help="Audit model ID; defaults to the generation model")
+    parser.add_argument("--audit-concurrency", type=int, help="Audit workers; default min(generation concurrency, 4)")
+    parser.add_argument("--audit-batch-size", type=int, default=100, help="Maximum questions per catalog group")
+    parser.add_argument("--audit-max-prompt-chars", type=int, default=100000)
+    parser.add_argument("--audit-max-neighbor-batches", type=int, default=200)
+    parser.add_argument("--audit-max-attempts", type=int, default=2)
+    parser.add_argument("--audit-max-tokens", type=int, default=8192)
     parser.set_defaults(**_config_defaults(parser, argv))
     args = parser.parse_args(argv)
+    if (args.audit_concurrency is not None and args.audit_concurrency < 1
+            or args.audit_max_attempts < 1 or args.audit_max_tokens < 1
+            or args.audit_batch_size < 2 or args.audit_max_prompt_chars < 1
+            or args.audit_max_neighbor_batches < 0):
+        parser.error("audit concurrency/attempts/tokens/chars must be positive, batch size >=2, neighbor cap >=0")
     if args.concurrency < 1 or args.sdk_max_attempts < 1:
         parser.error("concurrency and sdk-max-attempts must be positive")
     if any(not math.isfinite(value) or value <= 0 for value in (args.connect_timeout, args.read_timeout)):
@@ -142,7 +138,14 @@ def main(argv: list[str] | None = None, *, client=None) -> int:
         return make_client(args.model_id, connect_timeout=args.connect_timeout,
                            read_timeout=args.read_timeout, sdk_max_attempts=args.sdk_max_attempts)
 
+    def audit_factory():
+        return make_client(args.audit_model_id or args.model_id, connect_timeout=args.connect_timeout,
+                           read_timeout=args.read_timeout, sdk_max_attempts=args.sdk_max_attempts)
+
     def progress(report):
+        if report.get("phase") == "dataset_audit":
+            print(f"dataset audit {report['batch_id']}: {report['status']}", flush=True)
+            return
         state = "ok" if report["accepted"] else "FAILED"
         print(f"{report['request_id']} {state}", flush=True)
 
@@ -153,9 +156,15 @@ def main(argv: list[str] | None = None, *, client=None) -> int:
         concurrency=args.concurrency, seed=args.seed, dedup_originals=dedup,
         client=client, client_factory=None if client is not None else factory,
         transport_settings=transport if client is None else None, progress=progress,
+        dataset_audit=args.dataset_audit,
+        audit_client_factory=audit_factory if client is None else None,
+        audit_model_id=args.audit_model_id, audit_concurrency=args.audit_concurrency,
+        audit_max_attempts=args.audit_max_attempts, audit_max_tokens=args.audit_max_tokens,
+        audit_batch_size=args.audit_batch_size, audit_max_prompt_chars=args.audit_max_prompt_chars,
+        audit_max_neighbor_batches=args.audit_max_neighbor_batches,
     )
     print(json.dumps(summary, indent=2))
-    return 1 if summary["status"] == "quota_not_met" else 0
+    return 1 if summary["status"] in {"quota_not_met", "dataset_audit_incomplete"} else 0
 
 
 if __name__ == "__main__":

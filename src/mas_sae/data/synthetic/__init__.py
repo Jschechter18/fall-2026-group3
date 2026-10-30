@@ -2,6 +2,7 @@
 from .contracts import DuplicateMatch, SyntheticCandidate, ValidationIssue, ValidationResult
 from .deduplication import DuplicateIndex, normalize_question
 from .validation import validate_candidate
+from .audit import audit_dataset
 
 __all__ = ["DuplicateMatch", "SyntheticCandidate", "ValidationIssue", "ValidationResult",
-           "DuplicateIndex", "normalize_question", "validate_candidate"]
+           "DuplicateIndex", "normalize_question", "validate_candidate", "audit_dataset"]
