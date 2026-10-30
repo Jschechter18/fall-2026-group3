@@ -82,6 +82,14 @@ necessary reasoning hops remain requirements. Each subtype uses a matching compa
 example from `prompt_examples.py`. Structural checks cannot establish semantic
 quality or diversity; manually review a generated batch before dataset inclusion.
 
+Before assembly samples fillers or normalizes aliases, raw final/step answers
+must be nonempty strings and aliases must be a list of nonempty strings. An
+omitted alias field defaults to `[]`; explicit null, numeric answers, string
+aliases, and malformed alias elements produce field-specific `ValueError`s.
+These use the existing bounded repair loop and retain the rejected response and
+error in provenance. Values are not coerced. Exhaustion is a record failure;
+unexpected programming errors remain fatal to the batch.
+
 ```bash
 PYTHONPATH=src python scripts/generate_synthetic_musique.py --n 6 --seed 0
 ```

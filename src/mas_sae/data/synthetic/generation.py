@@ -132,6 +132,32 @@ def parse_response(text: str) -> dict:
     return raw
 
 
+def _validate_raw_answer_fields(raw: dict) -> None:
+    """Reject malformed answer fields before sampling or alias normalization."""
+    def require_text(value: object, field: str) -> None:
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError(
+                f"{field}: expected a nonempty string; got {type(value).__name__}"
+            )
+
+    require_text(raw.get("answer"), "answer")
+    aliases = raw.get("answer_aliases", [])
+    if not isinstance(aliases, list):
+        raise ValueError(
+            f"answer_aliases: expected a list of strings; got {type(aliases).__name__}"
+        )
+    for position, alias in enumerate(aliases):
+        require_text(alias, f"answer_aliases[{position}]")
+
+    steps = raw.get("question_decomposition")
+    if not isinstance(steps, list):
+        raise ValueError("question_decomposition: expected a list")
+    for position, step in enumerate(steps):
+        if not isinstance(step, dict):
+            raise ValueError(f"question_decomposition[{position}]: expected an object")
+        require_text(step.get("answer"), f"question_decomposition[{position}].answer")
+
+
 class ParagraphPool:
     """Original MuSiQue paragraphs used as filler distractors, unique by title."""
     def __init__(self, paragraphs: list[dict]):
@@ -172,8 +198,10 @@ def assemble_candidate(raw: dict, hop_type: str, pool: ParagraphPool, rng: rando
     """Turn a raw model response into the ``SyntheticCandidate`` contract.
 
     Raises ``KeyError``/``TypeError``/``ValueError`` when the response is missing pieces;
-    contract-level problems are left for ``validate_candidate`` to report.
+    malformed answer fields are rejected before sampling or normalization.
+    Remaining contract-level problems are reported by ``validate_candidate``.
     """
+    _validate_raw_answer_fields(raw)
     supporting = [{"title": p["title"], "paragraph_text": p["paragraph_text"], "is_supporting": True}
                   for p in raw["supporting_paragraphs"]]
     distractors = [{"title": p["title"], "paragraph_text": p["paragraph_text"], "is_supporting": False}

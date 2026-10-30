@@ -1,5 +1,6 @@
 import json
 import random
+import re
 
 import pytest
 
@@ -8,6 +9,7 @@ from mas_sae.data.synthetic.generation import (
     ParagraphPool, assemble_candidate, build_prompt, generate_one, parse_response)
 from mas_sae.data.synthetic.generation_cli import main
 from mas_sae.models.claude import ClaudeResult
+from mas_sae.evaluation.scoring import answer_matches
 
 
 def paragraph(title):
@@ -318,3 +320,84 @@ def test_repair_uses_latest_failure_without_nesting_prompts(pool):
     assert "second invalid response" in client.prompts[2]
     assert "first invalid response" not in client.prompts[2]
     assert client.prompts[2].count("Your previous response was rejected.") == 1
+
+
+@pytest.mark.parametrize("field,value,error_field", [
+    *(('answer', value, 'answer') for value in [1842, 18.42, None, True, "", "  ", [], {}]),
+    *(('answer_aliases', value, 'answer_aliases') for value in
+      ["MDCCC", "", None, 1842, False, {}, [""], ["  "], [1], [None], [True], ["MDCCC", 1]]),
+    *(('step_answer', value, 'question_decomposition[0].answer') for value in
+      [1842, 18.42, None, False, "", "  ", [], {}]),
+])
+def test_malformed_answer_fields_are_rejected_before_assembly_and_repaired(pool, field, value, error_field):
+    raw = json.loads(json.dumps(RAW_2HOP))
+    if field == "step_answer":
+        raw["question_decomposition"][0]["answer"] = value
+    else:
+        raw[field] = value
+    rejected_text = json.dumps(raw)
+
+    # A malformed field must be reported before the empty filler pool is sampled.
+    with pytest.raises(ValueError, match=re.escape(error_field)):
+        assemble_candidate(raw, "2hop", ParagraphPool([]), random.Random(0))
+
+    client = FakeClient([(rejected_text, "end_turn"), (json.dumps(RAW_2HOP), "end_turn")])
+    candidate, provenance = generate_one(client, "2hop", pool, random.Random(0))
+    assert candidate is not None
+    assert validate_candidate(candidate).valid
+    assert client.calls == provenance["api_calls"] == 2
+    assert provenance["attempts"][0]["error"].startswith("ValueError:")
+    assert error_field in provenance["attempts"][0]["error"]
+    assert provenance["attempts"][0]["raw_text"] == rejected_text
+    assert error_field in client.prompts[1]
+    assert json.dumps(rejected_text) in client.prompts[1]
+
+
+@pytest.mark.parametrize("field,value", [("answer", 1842), ("answer_aliases", "MDCCC")])
+def test_malformed_answer_exhaustion_is_record_failure_not_batch_failure(tmp_path, field, value):
+    raw = dict(RAW_2HOP, **{field: value})
+    client = FakeClient([(json.dumps(raw), "end_turn")] * 2)
+    original = tmp_path / "train.json"
+    original.write_text(json.dumps({"paragraphs": [paragraph(f"Filler {i}") for i in range(30)]}) + "\n")
+    output = tmp_path / "run"
+    assert main(["--n", "1", "--hop-types", "2hop", "--original", str(original),
+                 "--output-dir", str(output)], client=client) == 0
+    summary = json.loads((output / "summary.json").read_text())
+    assert summary["status"] == "completed"
+    assert summary["failed"] == 1 and summary["api_calls"] == 2
+    assert summary["generated"] == summary["accepted"] == 0
+    assert (output / "accepted.jsonl").read_text() == ""
+    assert (output / "candidates.jsonl").read_text() == ""
+    provenance = json.loads((output / "provenance.jsonl").read_text())
+    assert all(attempt["error"].startswith("ValueError:") for attempt in provenance["attempts"])
+
+
+@pytest.mark.parametrize("aliases,expected", [([], []), (["MDCCC"], ["MDCCC"]),
+                                               (["1842 ", "MDCCC"], ["MDCCC"])])
+def test_valid_alias_lists_preserve_scoring_and_do_not_mutate_raw(pool, aliases, expected):
+    raw = dict(RAW_2HOP, answer_aliases=aliases)
+    before = json.dumps(raw)
+    candidate = assemble_candidate(raw, "2hop", pool, random.Random(0))
+    assert candidate["answer_aliases"] == expected
+    assert not answer_matches("C", candidate["answer"], candidate["answer_aliases"])
+    assert answer_matches("1842", candidate["answer"], candidate["answer_aliases"])
+    if "MDCCC" in expected:
+        assert answer_matches("MDCCC", candidate["answer"], candidate["answer_aliases"])
+    assert json.dumps(raw) == before
+
+
+def test_omitted_aliases_still_default_to_empty_list(pool):
+    raw = dict(RAW_2HOP)
+    del raw["answer_aliases"]
+    candidate = assemble_candidate(raw, "2hop", pool, random.Random(0))
+    assert candidate["answer_aliases"] == []
+    assert "answer_aliases" not in raw
+
+
+@pytest.mark.parametrize("steps,error_field", [(None, "question_decomposition"),
+                                               ([None], "question_decomposition[0]"),
+                                               ([{}], "question_decomposition[0].answer")])
+def test_malformed_step_containers_produce_field_errors(steps, error_field):
+    raw = dict(RAW_2HOP, question_decomposition=steps)
+    with pytest.raises(ValueError, match=re.escape(error_field)):
+        assemble_candidate(raw, "2hop", ParagraphPool([]), random.Random(0))
