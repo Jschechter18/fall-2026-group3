@@ -1,5 +1,6 @@
 # src/mas_sae/data/musique.py
 
+import json
 import math
 import random
 import re
@@ -73,14 +74,41 @@ def load_musique_split(
     source_split: str,
     *,
     revision: str | None = None,
+    path: str | Path | None = None,
 ):
-    """Load one MuSiQue source split, optionally pinned to a Hub revision.
+    """Load MuSiQue-format JSONL locally, or a source split from the Hub.
 
+    Local paths are relative to the working directory; ``source_split``
+    labels the collection output and does not filter the local file.
     When ``revision`` is omitted the call is identical to the historical
     unpinned load; a non-empty revision string is forwarded to
     ``load_dataset`` unchanged.
     """
     _validate_source_split(source_split)
+
+    if path is not None:
+        if revision is not None:
+            raise ValueError("Local dataset path and Hub revision are mutually exclusive.")
+        rows = []
+        ids = set()
+        with Path(path).open(encoding="utf-8") as file:
+            for line_number, line in enumerate(file, 1):
+                if not line.strip():
+                    continue
+                try:
+                    row = json.loads(line)
+                except json.JSONDecodeError as exc:
+                    raise ValueError(f"{path}:{line_number}: invalid JSON") from exc
+                if not isinstance(row, dict) or any(
+                    not isinstance(row.get(key), str) or not row[key].strip()
+                    for key in ("id", "question", "answer")
+                ) or not isinstance(row.get("paragraphs"), list):
+                    raise ValueError(f"{path}:{line_number}: expected a MuSiQue record")
+                if row["id"] in ids:
+                    raise ValueError(f"{path}:{line_number}: duplicate question id {row['id']!r}")
+                ids.add(row["id"])
+                rows.append(row)
+        return rows
 
     if revision is None:
         return load_dataset(MUSIQUE_DATASET_ID, split=source_split)
@@ -123,6 +151,7 @@ def load_musique_examples(
     num_questions: int | None = None,
     *,
     revision: str | None = None,
+    path: str | Path | None = None,
 ) -> list[MuSiQueExample]:
     """Load answerable MuSiQue examples from one source split in dataset order."""
     _validate_source_split(source_split)
@@ -130,7 +159,7 @@ def load_musique_examples(
     if num_questions is not None and num_questions <= 0:
         raise ValueError("num_questions must be greater than zero.")
 
-    dataset = load_musique_split(source_split, revision=revision)
+    dataset = load_musique_split(source_split, revision=revision, **({"path": path} if path is not None else {}))
     examples: list[MuSiQueExample] = []
 
     for example in dataset:
@@ -156,6 +185,7 @@ def load_musique_examples_by_id(
     question_ids: list[str],
     *,
     revision: str | None = None,
+    path: str | Path | None = None,
 ) -> list[MuSiQueExample]:
     """Load the given MuSiQue questions, in the given order, without sampling.
 
@@ -171,7 +201,7 @@ def load_musique_examples_by_id(
     if len(set(ids)) != len(ids):
         raise ValueError("question_ids must not contain duplicates.")
 
-    dataset = load_musique_split(source_split, revision=revision)
+    dataset = load_musique_split(source_split, revision=revision, **({"path": path} if path is not None else {}))
     wanted = set(ids)
     found: dict[str, MuSiQueExample] = {}
 
@@ -306,6 +336,7 @@ def sample_musique_examples(
     seed: int,
     hop_proportions: dict[str, float] | None = None,
     revision: str | None = None,
+    path: str | Path | None = None,
 ) -> list[MuSiQueExample]:
     """Draw a seeded random sample of answerable MuSiQue questions.
 
@@ -344,7 +375,7 @@ def sample_musique_examples(
     if hop_proportions is not None:
         validate_proportions(hop_proportions, name="hop_proportions")
 
-    dataset = load_musique_split(source_split, revision=revision)
+    dataset = load_musique_split(source_split, revision=revision, **({"path": path} if path is not None else {}))
     pool: list[MuSiQueExample] = [
         cast(MuSiQueExample, dict(example))
         for example in dataset

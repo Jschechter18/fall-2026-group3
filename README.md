@@ -385,6 +385,29 @@ Activation collection is config-driven. Run from the repository root:
 
     python scripts/collect_activations.py --config configs/collection/v1/smoke_train.yaml
 
+To run 100 existing synthetic sample questions through the solver–critic pipeline:
+
+```bash
+PYTHONPATH=src python scripts/collect_activations.py \
+  --config configs/collection/synthetic_sample_100q_pilot.yaml
+```
+
+This pilot uses Gemma 3 4B as solver, Qwen3 4B as critic, the natural critic
+condition, candidate presentation for the solver's second answer, and nine
+activation layers. It selects 34 two-hop, 33 three-hop, and 33 four-hop questions
+with seed 42. It requires the configured models and a suitable CUDA GPU.
+Results go to `results/collection/synthetic_sample_100q_pilot/train/` and
+activations under `data/activations/synthetic_sample_100q_pilot/layer_<N>/`.
+Add `--resume` to continue an interrupted run from its saved chunks.
+
+Collection configs can set `dataset.path` to a local MuSiQue-format JSONL file,
+including synthetic `accepted.jsonl`, instead of loading from Hugging Face.
+Paths are relative to the working directory; omit `dataset.revision` for local
+files. `dataset.source_split` labels the output directory and does not filter the
+file. Existing sampling strategies and `dataset.num_questions` apply to that
+file. The input file hash is saved in provenance and checked on resume. To use
+another sample, change `dataset.path` and choose a new `output.run_name`.
+
 Collection run definitions are versioned under `configs/collection/`. Once a
 config has produced a recorded experiment run, keep that version unchanged and
 create a new version directory for protocol changes.

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+from pathlib import Path
 from typing import Any
 
 import torch
@@ -86,6 +87,7 @@ def build_collection_progress_provenance(
         "config_sha256": config_sha256(config),
         "manifest_sha256": manifest_sha256,
         "dataset_revision": config["dataset"].get("revision"),
+        "dataset_file_sha256": resolved.get("dataset_file_sha256"),
         "model_revisions": {
             role: {key: metadata.get(key) for key in ("requested_revision", "resolved_revision")}
             for role, metadata in resolved["roles"].items()
@@ -181,7 +183,12 @@ def build_resolved_config(
             "model_revision": (
                 getattr(model.config, "_commit_hash", None) or "unknown"
             ),
-            "dataset_id": MUSIQUE_DATASET_ID,
+            "dataset_id": (
+                str(Path(config["dataset"]["path"]).resolve())
+                if "path" in config.get("dataset", {}) else MUSIQUE_DATASET_ID
+            ),
+            **({"dataset_file_sha256": artifacts.sha256_file(config["dataset"]["path"])}
+               if "path" in config.get("dataset", {}) else {}),
             "roles": {name: role_metadata(agent) for name, agent in
                       (("solver", solver), ("critic", critic), ("validator", validator))},
             "environment": environment_metadata(),

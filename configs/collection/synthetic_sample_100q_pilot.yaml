@@ -1,0 +1,63 @@
+# Run from the repository root with scripts/collect_activations.py.
+# Existing synthetic records; no question generation or Bedrock calls.
+# source_split is an output label; dataset.path supplies all questions.
+# 34 two-hop, 33 three-hop, 33 four-hop questions, seed 42.
+roles:
+  solver:
+    id: google/gemma-3-4b-it
+    revision: 093f9f388b31de276ce2de164bdc2081324b9767
+    loader: gemma3
+    dtype: bfloat16
+    device: cuda:0
+    generation:
+      max_new_tokens: 64
+      do_sample: false
+  critic:
+    id: Qwen/Qwen3-4B-Instruct-2507
+    revision: cdbee75f17c01a7cc42f958dc650907174af0554
+    loader: qwen3
+    dtype: bfloat16
+    device: cuda:0
+    generation:
+      max_new_tokens: 1024
+      do_sample: false
+  validator:
+    id: google/gemma-3-4b-it
+    revision: 093f9f388b31de276ce2de164bdc2081324b9767
+    loader: gemma3
+    dtype: bfloat16
+    device: cuda:0
+    generation:
+      max_new_tokens: 4
+      do_sample: false
+dataset:
+  path: data/MuSiQue/synthetic/runs/sample/20261030T173616Z_review30_8cfe1443/accepted.jsonl
+  source_split: train
+  num_questions: 100
+  sampling:
+    strategy: stratified
+    seed: 42
+    hop_proportions:
+      2hop: 0.34
+      3hop: 0.33
+      4hop: 0.33
+collection:
+  protocol_version: v2
+  active_conditions:
+  - natural
+  a2_presentations:
+  - candidates
+  layers:
+  - 4
+  - 8
+  - 17
+  - 25
+  - 29
+  - 30
+  - 31
+  - 32
+  - 33
+  seed: 42
+output:
+  run_name: synthetic_sample_100q_pilot
+  chunk_size: 10
