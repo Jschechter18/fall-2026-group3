@@ -9,7 +9,7 @@ MuSiQue source split alone:
 
     train         fitting: the SAE, the probes, the per-layer probes
     validation    tuning: early stopping, layer choice, feature choice
-    test          the frozen SAE and probes, scored once
+    test          comparing completed SAE versions; selects the one carried forward
     intervention  the causal experiment, run live, much later
 
 All MuSiQue-validation questions are ``validation``. MuSiQue-train questions

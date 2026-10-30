@@ -445,6 +445,9 @@ After each successful `scripts/train_sae.py` run, a row is appended to
 `checkpoint_path` (relative to the repository root), `commit`, `test_score`,
 and `best_val_score`. Scores are reconstruction MSE plus the sparsity penalty;
 lower is better. Missing test scores are written as literal `null`.
+`test_score` is how completed versions are compared: the test partition only
+selects the version carried forward and is never used to fit or tune (see
+`docs/behavior_v01.md`, "Keeping evaluation honest").
 
 The checkpoint path points to `best_checkpoint.pt`, and test evaluation, when
 available, uses that checkpoint. Repeating an append for the same run ID leaves
