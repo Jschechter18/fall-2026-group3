@@ -66,6 +66,27 @@ def test_condition_summary_requires_the_exported_file(tmp_path):
         summ.condition_summary(condition, run)
 
 
+def test_condition_summary_refuses_a_repeated_episode(tmp_path):
+    """A second row for e2 used to replace the first silently and still pass the coverage check."""
+    summ = _load("summarize_condition_labels")
+    lexical = [{"episode_id": "e1", "adopted_target": True, "retained_a1": False},
+               {"episode_id": "e2", "adopted_target": False, "retained_a1": True}]
+    condition = {"condition": "X", "slug": "x", "a2_presentation": "feedback", "sampled_episodes_sha256": "abc",
+                 "lexical": lexical}
+    run = tmp_path / "x"
+    (run / "summary.json").parent.mkdir(parents=True)
+    (run / "summary.json").write_text(json.dumps({"episodes_sha256": "abc", "total_input_tokens": 1, "total_output_tokens": 1}))
+    write_jsonl(run / "raw_results.jsonl", [{"episode_id": "e1", "behavior_label": "adoption"},
+                                            {"episode_id": "e2", "behavior_label": "retention"},
+                                            {"episode_id": "e2", "behavior_label": "adoption"}])
+    with pytest.raises(SystemExit, match="raw_results.jsonl: an episode_id appears more than once"):
+        summ.condition_summary(condition, run)
+    write_jsonl(run / "raw_results.jsonl", [{"episode_id": "e1", "behavior_label": "adoption"},
+                                            {"episode_id": "e2", "behavior_label": "retention"}])
+    with pytest.raises(SystemExit, match="x lexical outcomes: an episode_id appears more than once"):
+        summ.condition_summary(dict(condition, lexical=[*lexical, lexical[1]]), run)
+
+
 class TestOrderBreakdown:
     @pytest.fixture
     def order(self):

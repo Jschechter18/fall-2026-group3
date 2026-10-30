@@ -31,12 +31,20 @@ def lexical_counts(rows: list[dict]) -> dict[str, int]:
     return out
 
 
+def by_episode(rows: list[dict], source) -> dict[str, dict]:
+    """Rows keyed by episode_id; a repeated episode would silently replace another row's result."""
+    keyed = {r["episode_id"]: r for r in rows}
+    if len(keyed) != len(rows):
+        raise SystemExit(f"{source}: an episode_id appears more than once")
+    return keyed
+
+
 def condition_summary(condition: dict, run_dir: Path) -> dict:
     summary = json.loads((run_dir / "summary.json").read_text())
     if summary.get("episodes_sha256") != condition["sampled_episodes_sha256"]:
         raise SystemExit(f"{run_dir} did not label the exported {condition['slug']} file")
-    rows = {r["episode_id"]: r for r in read_jsonl(run_dir / "raw_results.jsonl")}
-    if set(rows) != {e["episode_id"] for e in condition["lexical"]}:
+    rows = by_episode(read_jsonl(run_dir / "raw_results.jsonl"), run_dir / "raw_results.jsonl")
+    if set(rows) != set(by_episode(condition["lexical"], f"{condition['slug']} lexical outcomes")):
         raise SystemExit(f"{run_dir} covers different episodes than {condition['slug']}")
     return {"condition": condition["condition"], "a2_presentation": condition["a2_presentation"],
             "claude": label_distribution(r.get("behavior_label") for r in rows.values()),
