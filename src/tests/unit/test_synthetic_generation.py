@@ -5,7 +5,7 @@ import pytest
 
 from mas_sae.data.synthetic import validate_candidate
 from mas_sae.data.synthetic.generation import (
-    ParagraphPool, assemble_candidate, build_prompt, check_shape, generate_one, parse_response)
+    ParagraphPool, assemble_candidate, build_prompt, generate_one, parse_response)
 from mas_sae.data.synthetic.generation_cli import main
 from mas_sae.models.claude import ClaudeResult
 
@@ -54,9 +54,11 @@ class FakeClient:
     def __init__(self, responses):
         self.responses = list(responses)
         self.calls = 0
+        self.prompts = []
 
     def generate(self, prompt, *, system="", max_tokens=4096, temperature=0.0, task):
         self.calls += 1
+        self.prompts.append(prompt)
         text, stop_reason = self.responses.pop(0)
         return ClaudeResult(text=text, model="fake-model", input_tokens=10, output_tokens=20,
                             task=task, stop_reason=stop_reason)
@@ -100,14 +102,14 @@ def test_parse_response_fenced_and_plain():
 
 
 def test_build_prompt_rejects_unknown_hop_type():
-    assert "#1 and #2" in build_prompt("3hop2", "music")
+    assert "#1 and #2" in build_prompt("3hop2")
     with pytest.raises(ValueError):
-        build_prompt("5hop", "music")
+        build_prompt("5hop")
 
 
 def test_generate_one_retries_then_succeeds(pool):
     client = FakeClient([("not json", "end_turn"), (json.dumps(RAW_2HOP), "end_turn")])
-    candidate, provenance = generate_one(client, "2hop", "astronomy", pool, random.Random(0))
+    candidate, provenance = generate_one(client, "2hop", pool, random.Random(0))
     assert candidate is not None and client.calls == 2
     assert provenance["record_id"] == candidate["id"]
     assert provenance["attempts"][0]["error"].startswith("JSONDecodeError")
@@ -119,10 +121,13 @@ def test_chain_rejected_for_branched_hop_type(pool):
         dict(step, question=q) for step, q in zip(RAW_4HOP3["question_decomposition"], [
             "Kell >> capital of", "#1 >> located in sea", "Largest port on #2?", "Who sent migrants to #3?"])])
     candidate = assemble_candidate(chain, "4hop3", pool, random.Random(0))
-    assert validate_candidate(candidate).valid
-    assert {i.field for i in check_shape(candidate, "4hop3")} == {
+    result = validate_candidate(candidate)
+    assert not result.valid
+    assert {i.field for i in result.errors if i.code == "hop_shape"} == {
         "question_decomposition[2].question", "question_decomposition[3].question"}
-    assert check_shape(assemble_candidate(RAW_4HOP3, "4hop3", pool, random.Random(0)), "4hop3") == []
+    assert validate_candidate(
+        assemble_candidate(RAW_4HOP3, "4hop3", pool, random.Random(0))
+    ).valid
 
 
 def test_alias_equal_to_answer_is_dropped(pool):
@@ -133,7 +138,7 @@ def test_alias_equal_to_answer_is_dropped(pool):
 def test_generate_one_gives_up_on_truncation_and_invalid(pool):
     broken = dict(RAW_2HOP, answer="1843")  # final step answer mismatch
     client = FakeClient([("{", "max_tokens"), (json.dumps(broken), "end_turn")])
-    candidate, provenance = generate_one(client, "2hop", "astronomy", pool, random.Random(0))
+    candidate, provenance = generate_one(client, "2hop", pool, random.Random(0))
     assert candidate is None
     assert provenance["attempts"][0]["error"] == "stop_reason=max_tokens"
     assert {e["code"] for e in provenance["attempts"][1]["precheck_errors"]} == {"final_answer"}
@@ -150,3 +155,165 @@ def test_cli_writes_outputs(tmp_path):
     assert summary["generated"] == 1 and summary["failed"] == 1 and summary["api_calls"] == 3
     assert len((out / "candidates.jsonl").read_text().splitlines()) == 1
     assert len((out / "provenance.jsonl").read_text().splitlines()) == 2
+
+
+@pytest.mark.parametrize("support", [0.0, True, False, -1, 2, "0", None, [], {}])
+def test_invalid_raw_support_is_rejected(pool, support):
+    raw = json.loads(json.dumps(RAW_2HOP))
+    raw["question_decomposition"][0]["support"] = support
+    with pytest.raises(ValueError, match="support"):
+        assemble_candidate(raw, "2hop", pool, random.Random(0))
+
+
+@pytest.mark.parametrize("error", [AttributeError("broken code"), TimeoutError("API timeout")])
+def test_cli_preserves_attempts_and_closes_client_on_fatal_error(tmp_path, monkeypatch, error):
+    from mas_sae.data.synthetic import generation_cli
+
+    class BrokenClient(FakeClient):
+        closed = False
+
+        def generate(self, *args, **kwargs):
+            if self.calls == 1:
+                raise error
+            return super().generate(*args, **kwargs)
+
+        def close(self):
+            self.closed = True
+
+    client = BrokenClient([("not json", "end_turn")])
+    monkeypatch.setattr(generation_cli, "make_client", lambda model_id: client)
+    original = tmp_path / "train.json"
+    original.write_text(json.dumps({"paragraphs": [paragraph(f"Filler {i}") for i in range(30)]}) + "\n")
+    out = tmp_path / "run"
+    with pytest.raises(type(error), match=str(error)):
+        main(["--n", "2", "--hop-types", "2hop", "--original", str(original),
+              "--output-dir", str(out)])
+
+    provenance = json.loads((out / "provenance.jsonl").read_text())
+    assert len(provenance["attempts"]) == 1
+    assert provenance["attempts"][0]["raw_text"] == "not json"
+    assert provenance["error"] == f"{type(error).__name__}: {error}"
+    summary = json.loads((out / "summary.json").read_text())
+    assert summary["status"] == "failed"
+    assert summary["failed"] == 1
+    assert summary["api_calls"] == 2
+    assert summary["completed_responses"] == 1
+    assert summary["input_tokens"] == 10
+    assert summary["output_tokens"] == 20
+    assert client.closed
+    assert (out / "candidates.jsonl").read_text() == ""
+
+
+def test_cli_records_client_initialization_failure(tmp_path, monkeypatch):
+    from mas_sae.data.synthetic import generation_cli
+
+    def fail(model_id):
+        raise RuntimeError("client initialization failed")
+
+    monkeypatch.setattr(generation_cli, "make_client", fail)
+    original = tmp_path / "train.json"
+    original.write_text(json.dumps({"paragraphs": [paragraph("Filler")]}) + "\n")
+    out = tmp_path / "run"
+    with pytest.raises(RuntimeError, match="client initialization failed"):
+        main(["--original", str(original), "--output-dir", str(out)])
+    summary = json.loads((out / "summary.json").read_text())
+    assert summary["status"] == "failed"
+    assert summary["api_calls"] == 0
+
+
+def test_cli_marks_output_failure_and_closes_owned_client(tmp_path, monkeypatch):
+    from pathlib import Path
+    from mas_sae.data.synthetic import generation_cli
+
+    class TrackingClient(FakeClient):
+        closed = False
+
+        def close(self):
+            self.closed = True
+
+    client = TrackingClient([])
+    monkeypatch.setattr(generation_cli, "make_client", lambda model_id: client)
+    original = tmp_path / "train.json"
+    original.write_text(json.dumps({"paragraphs": [paragraph("Filler")]}) + "\n")
+    out = tmp_path / "run"
+    original_open = Path.open
+
+    def fail_candidate_open(path, *args, **kwargs):
+        if path == out / "candidates.jsonl":
+            raise OSError("cannot create candidates")
+        return original_open(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "open", fail_candidate_open)
+    with pytest.raises(OSError, match="cannot create candidates"):
+        main(["--original", str(original), "--output-dir", str(out)])
+
+    summary = json.loads((out / "summary.json").read_text())
+    assert summary["status"] == "failed"
+    assert summary["fatal_error"] == "OSError: cannot create candidates"
+    assert summary["api_calls"] == 0
+    assert client.closed
+
+
+@pytest.mark.parametrize("hop_type", ["2hop", "3hop1", "3hop2", "4hop1", "4hop2", "4hop3"])
+def test_prompt_example_matches_hop_subtype(pool, hop_type):
+    from mas_sae.data.synthetic.prompt_examples import build_example
+
+    example = build_example(hop_type)
+    candidate = assemble_candidate(example, hop_type, pool, random.Random(0))
+    result = validate_candidate(candidate)
+    assert result.valid, result.errors
+    prompt = build_prompt(hop_type)
+    assert json.dumps(example, indent=2) in prompt
+    assert prompt.rstrip().endswith("Return JSON only.")
+
+
+@pytest.mark.parametrize("failure", ["parse", "truncation", "support", "validation"])
+def test_retry_contains_rejected_response_and_specific_errors(pool, failure):
+    broken = json.loads(json.dumps(RAW_2HOP))
+    stop_reason = "end_turn"
+    if failure == "parse":
+        rejected_text = "not json"
+        expected_error = "JSONDecodeError"
+    elif failure == "truncation":
+        rejected_text = '{"question":'
+        stop_reason = "max_tokens"
+        expected_error = "stop_reason=max_tokens"
+    elif failure == "support":
+        broken["question_decomposition"][0]["support"] = False
+        rejected_text = json.dumps(broken)
+        expected_error = "support must be an integer"
+    else:
+        broken["answer"] = "1843"
+        rejected_text = json.dumps(broken)
+        expected_error = "final_answer"
+
+    client = FakeClient([
+        (rejected_text, stop_reason),
+        (json.dumps(RAW_2HOP), "end_turn"),
+    ])
+    candidate, provenance = generate_one(client, "2hop", pool, random.Random(0))
+    assert candidate is not None
+    assert client.calls == 2
+    assert client.prompts[1].startswith(client.prompts[0])
+    assert json.dumps(rejected_text) in client.prompts[1]
+    assert expected_error in client.prompts[1]
+    assert client.prompts[1].count("Your previous response was rejected.") == 1
+    assert provenance["prompt_version"] == "v3"
+    assert "topic" not in provenance
+    assert provenance["attempts"][0]["raw_text"] == rejected_text
+
+
+def test_repair_uses_latest_failure_without_nesting_prompts(pool):
+    client = FakeClient([
+        ("first invalid response", "end_turn"),
+        ("second invalid response", "end_turn"),
+        (json.dumps(RAW_2HOP), "end_turn"),
+    ])
+    candidate, provenance = generate_one(
+        client, "2hop", pool, random.Random(0), max_attempts=3
+    )
+    assert candidate is not None
+    assert len(provenance["attempts"]) == 3
+    assert "second invalid response" in client.prompts[2]
+    assert "first invalid response" not in client.prompts[2]
+    assert client.prompts[2].count("Your previous response was rejected.") == 1

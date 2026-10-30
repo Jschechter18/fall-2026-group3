@@ -20,7 +20,8 @@ Produce a JSON object matching `SyntheticCandidate` in `contracts.py`, including
 - Decomposition: one step per hop, unique integer step IDs, and supporting paragraph
   indices. `#1` means the answer of the first step, not the step's `id`. References
   must point backwards. Every intermediate step must feed a later step, and every
-  supporting paragraph must be used. Branches are supported.
+  supporting paragraph must be used. References must match the subtype dependency
+  shape defined in `hop_types.py`, in generation and standalone validation alike.
 - Final step answer must equal the record answer. `answer_aliases` is a list;
   `answerable` must be true. Unanswerable examples are outside this starter scope.
 - Store model/prompt versions, raw responses, sources and other provenance
@@ -73,7 +74,13 @@ paragraphs up to 20 come from original MuSiQue records (`--original`), skipping
 titles already used and paragraphs that mention the answer. Code, not the model,
 shuffles paragraphs and assigns `idx`, `is_supporting`, step IDs and the record ID.
 Each response is pre-checked with `validate_candidate`; a failed parse, truncation
-or pre-check triggers one retry, and records that still fail are not written.
+or pre-check triggers one repair retry containing the rejected raw response and
+specific failure details. Records that still fail are not written. Prompt version
+`v3` lets the model choose its subject and treats the generated documents as ground
+truth; real-world factual accuracy is not required. Internal consistency and
+necessary reasoning hops remain requirements. Each subtype uses a matching compact
+example from `prompt_examples.py`. Structural checks cannot establish semantic
+quality or diversity; manually review a generated batch before dataset inclusion.
 
 ```bash
 PYTHONPATH=src python scripts/generate_synthetic_musique.py --n 6 --seed 0
@@ -82,8 +89,16 @@ PYTHONPATH=src python scripts/generate_synthetic_musique.py --n 6 --seed 0
 This makes paid API calls (one per record, two on retry) using the credentials in
 `.env`. Hop types cycle round-robin (`--hop-types` to restrict). Outputs go to
 `data/MuSiQue/synthetic/runs/<run-id>/generation/`: `candidates.jsonl`,
-`provenance.jsonl` (prompt version, topic, raw responses, tokens and errors, keyed
-by record ID) and `summary.json`. Then check the batch as below, passing
+`provenance.jsonl` (prompt version, raw responses, tokens and errors, keyed
+by record ID) and `summary.json`. Invalid raw `support` values (including floats,
+booleans, and out-of-range integers) are rejected before paragraph-index remapping.
+API and unexpected runtime errors stop the command with a nonzero exit status;
+completed attempts and known token usage are retained. The summary distinguishes
+`api_calls` (client invocations, including failed calls) from `completed_responses`
+and includes `status` and `fatal_error`. Token totals include only returned usage;
+SDK-internal retries are not separately counted. Exhausting candidate-validation
+retries is an ordinary record failure and does not abort the batch.
+Then check the batch as below, passing
 `--output-dir` as the sibling `validation/` directory.
 
 Filler paragraphs are real text while supporting paragraphs may be invented, so a
@@ -120,14 +135,15 @@ storage in one transaction. This starter is a batch checking and integration too
 ## What passing means
 
 Passing establishes structural validity and normalized exact question uniqueness
-against the files you imported and prior registrations. It does not establish
-factual correctness, necessary reasoning hops, semantic uniqueness, distributional
-similarity, or the exact dependency topology implied by hop subtypes. These need
-additional evaluation before including examples in a research dataset.
+against the files you imported and prior registrations, plus the decomposition
+reference topology implied by the hop subtype. It does not establish factual
+correctness, necessary reasoning hops, semantic uniqueness, or distributional
+similarity. These need additional evaluation before dataset inclusion.
 
 The validator was checked against the local train/validation files. Two training
-records contain non-backward decomposition references and are intentionally
-flagged rather than treated as valid examples to imitate.
+records contain the literal song title `#9 Dream`. The reference parser interprets
+`#9` as a non-backward step reference and flags those records; distinguishing
+literal titles from reference notation remains a separate parser limitation.
 
 Run focused tests:
 

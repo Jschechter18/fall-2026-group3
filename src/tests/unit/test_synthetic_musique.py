@@ -155,3 +155,44 @@ def test_import_and_registration_reject_invalid_source(tmp_path, source):
         with pytest.raises(ValueError, match=":1:"):
             index.import_jsonl(original, source=source)
         assert index.find_duplicate("Original?") is None
+
+
+@pytest.mark.parametrize("hop_type,questions", [
+    ("2hop", ["First?", "Uses #1?"]),
+    ("3hop1", ["First?", "Uses #1?", "Uses #2?"]),
+    ("3hop2", ["First?", "Second?", "Uses #1 and #2?"]),
+    ("4hop1", ["First?", "Uses #1?", "Uses #2?", "Uses #3?"]),
+    ("4hop2", ["First?", "Second?", "Uses #1 and #2?", "Uses #3?"]),
+    ("4hop3", ["First?", "Uses #1?", "Third?", "Uses #2 and #3?"]),
+])
+def test_hop_topology_matches_subtype(candidate, hop_type, questions):
+    candidate["id"] = f"{hop_type}__fixture"
+    for i, paragraph in enumerate(candidate["paragraphs"]):
+        paragraph["is_supporting"] = i < len(questions)
+    candidate["question_decomposition"] = [
+        {"id": i + 1, "question": question, "answer": candidate["answer"],
+         "paragraph_support_idx": i}
+        for i, question in enumerate(questions)
+    ]
+    assert validate_candidate(candidate).valid
+    candidate["question_decomposition"][-1]["question"] = "Missing dependencies?"
+    assert "hop_shape" in codes(candidate)
+
+
+def test_cli_rejects_chain_labeled_as_branch(tmp_path, candidate):
+    candidate["id"] = "3hop2__chain"
+    candidate["paragraphs"][2]["is_supporting"] = True
+    candidate["question_decomposition"].append({
+        "id": 3, "question": "What follows #2?", "answer": candidate["answer"],
+        "paragraph_support_idx": 2,
+    })
+    source = tmp_path / "original.jsonl"
+    source.write_text('{"id":"o1","question":"Original?"}\n')
+    incoming = tmp_path / "candidates.jsonl"
+    incoming.write_text(json.dumps(candidate) + "\n")
+    output = tmp_path / "validation"
+    assert main([str(incoming), "--original", str(source), "--index", str(tmp_path / "index.sqlite"),
+                 "--output-dir", str(output)]) == 0
+    assert (output / "accepted.jsonl").read_text() == ""
+    rejection = json.loads((output / "rejected.jsonl").read_text())
+    assert "hop_shape" in {error["code"] for error in rejection["errors"]}

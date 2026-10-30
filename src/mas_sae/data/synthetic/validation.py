@@ -1,14 +1,10 @@
 """Structural checks only: passing does not establish factual or semantic quality."""
 import re
-from typing import Any
 
 from .contracts import ValidationIssue, ValidationResult
+from .hop_types import HOP_SHAPES, HOP_TYPES
 
-
-HOP_TYPES = {"2hop": 2, "3hop1": 3, "3hop2": 3, "4hop1": 4, "4hop2": 4, "4hop3": 4}
-
-
-def validate_candidate(candidate: Any, *, expected_paragraphs: int | None = None) -> ValidationResult:
+def validate_candidate(candidate: object, *, expected_paragraphs: int | None = None) -> ValidationResult:
     """Validate the answerable profile. IDs use a MuSiQue hop prefix plus ``__``.
 
     Step references such as #1 are one-based positions, not step IDs.
@@ -99,12 +95,31 @@ def validate_candidate(candidate: Any, *, expected_paragraphs: int | None = None
             used_supports.add(support)
         question = step.get("question")
         if isinstance(question, str):
-            for reference in re.findall(r"#(\d+)", question):
-                number = int(reference)
+            references = {
+                int(reference)
+                for reference in re.findall(r"#(\d+)", question)
+            }
+
+            for number in references:
                 if not 1 <= number <= position:
-                    issue("step_reference", path + "question", "References must point to earlier one-based step positions.")
+                    issue(
+                        "step_reference",
+                        path + "question",
+                        "References must point to earlier one-based step positions.",
+                    )
                 else:
                     used_steps.add(number)
+
+            shape = HOP_SHAPES.get(prefix)
+            if shape is not None and position < len(shape):
+                expected = set(shape[position])
+                if references != expected:
+                    issue(
+                        "hop_shape",
+                        path + "question",
+                        f"{prefix} step {position + 1} must reference "
+                        f"{sorted(expected)}, found {sorted(references)}.",
+                    )
     if used_supports != supporting:
         issue("unused_support", "question_decomposition", "Every supporting paragraph must be referenced.")
     if set(range(1, len(steps))) - used_steps:
