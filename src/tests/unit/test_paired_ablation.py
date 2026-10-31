@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 import pytest
+import yaml
 
 from mas_sae.evaluation.paired_ablation import (analyses, arm_outcomes, exact_mcnemar, paired_difference_ci,
                                                 paired_test)
@@ -106,7 +107,24 @@ LABELING = {"prompt_version": "claude_binary_v3_candidates", "model_id": "opus",
             "max_attempts": 3}
 
 
-def write_arm(root: Path, labels: dict[str, str | None], excluded=(), orders=None, settings=None):
+def collection_config(root: Path, changes: dict | None) -> dict:
+    """A resolved_config.yaml whose arm-specific fields (dataset, run name, time) differ per arm."""
+    config = {"roles": {"solver": {"model_id": "gemma", "revision": "093f9f38"}},
+              "collection": {"layers": [25, 33], "seed": 7},
+              "dataset": {"path": str(root / "accepted.jsonl"), "sampling": {"strategy": "listed"}},
+              "output": {"run_name": root.name},
+              "provenance": {"git_commit": "3448996", "created_at_utc": root.name, "dataset_id": root.name,
+                             "dataset_file_sha256": root.name, "environment": {"git_dirty": False}}}
+    for dotted, value in (changes or {}).items():
+        *parents, leaf = dotted.split(".")
+        node = config
+        for key in parents:
+            node = node[key]
+        node[leaf] = value
+    return config
+
+
+def write_arm(root: Path, labels: dict[str, str | None], excluded=(), orders=None, settings=None, config=None):
     """A collection folder and its label run: ``labels`` for collected questions, ``excluded`` by protocol."""
     collection, run = root / "collection", root / "labels"
     collection.mkdir(parents=True)
@@ -117,6 +135,7 @@ def write_arm(root: Path, labels: dict[str, str | None], excluded=(), orders=Non
     (collection / "sampled_questions.json").write_text(json.dumps(
         [{"position": i, "question_id": q, "candidate_order": (orders or {}).get(q, "a1_first")}
          for i, q in enumerate(IDS)]))
+    (collection / "resolved_config.yaml").write_text(yaml.safe_dump(collection_config(root, config)))
     jsonl(run / "raw_results.jsonl", [label(q, value) for q, value in labels.items()])
     (run / "summary.json").write_text(json.dumps({"episodes_sha256": sha256_file(collection / "interactions.jsonl"),
                                                   **LABELING, **(settings or {})}))
@@ -143,6 +162,9 @@ def test_cli_end_to_end(cli, tmp_path, capsys):
     ({"settings": {"effort": "high"}}, r"labeled differently \(effort\)"),
     ({"settings": {"max_tokens": 4000}}, r"labeled differently \(max_tokens\)"),
     ({"settings": {"temperature": 1.0, "client": "ClaudeClient"}}, r"labeled differently \(client, temperature\)"),
+    ({"config": {"roles.solver.revision": "1a2b3c4d"}}, r"collected with different settings: \['roles.solver.revision'\]"),
+    ({"config": {"provenance.git_commit": "101bc6c"}}, r"collected with different settings: \['provenance.git_commit'\]"),
+    ({"config": {"collection.layers": [25]}}, r"collected with different settings: \['collection.layers'\]"),
 ])
 def test_cli_refuses_arms_that_do_not_pair(cli, tmp_path, change, message):
     base = write_arm(tmp_path / "base", dict.fromkeys(IDS, "agreement"))
@@ -152,9 +174,11 @@ def test_cli_refuses_arms_that_do_not_pair(cli, tmp_path, change, message):
     assert not (tmp_path / "out").exists()
 
 
-def test_cli_pairs_arms_that_differ_only_in_retries_of_technical_errors(cli, tmp_path):
+def test_cli_pairs_arms_that_differ_only_in_arm_specific_settings(cli, tmp_path):
+    # Dataset, run name and time differ per arm already; also retries and untracked files at collection time.
     base = write_arm(tmp_path / "base", dict.fromkeys(IDS, "agreement"))
-    treated = write_arm(tmp_path / "treated", dict.fromkeys(IDS, "adoption"), settings={"max_attempts": 5})
+    treated = write_arm(tmp_path / "treated", dict.fromkeys(IDS, "adoption"), settings={"max_attempts": 5},
+                        config={"provenance.environment.git_dirty": True, "dataset.sampling": {"strategy": "stratified"}})
     cli.main(["--baseline", *base, "--treated", *treated, "--output", str(tmp_path / "out")])
     assert json.loads((tmp_path / "out/summary.json").read_text())["primary"]["n"] == 4
 

@@ -7,9 +7,10 @@ The outcome rules and the three analyses (primary, intention-to-treat, treated-o
 
 Each arm is a collection folder (``interactions.jsonl``, ``exclusions.jsonl``, ``sampled_questions.json``)
 and the Claude label run made from it (``raw_results.jsonl``, ``summary.json``). It refuses arms whose
-assigned questions, positions or candidate orders differ, labels made from other episodes, and arms
-labeled with any other labeling setting (``LABELING_SETTINGS``). Inputs are hashed before reading and
-rechecked before writing.
+assigned questions, positions or candidate orders differ, labels made from other episodes, arms labeled
+with any other labeling setting (``LABELING_SETTINGS``), and arms collected with any other collection setting
+in ``resolved_config.yaml`` (models, revisions, decoding, prompts, code commit) outside ``ARM_SPECIFIC``.
+Inputs are hashed before reading and rechecked before writing.
 
 Usage:
     PYTHONPATH=src python scripts/experiments/compare_paired_ablation.py \\
@@ -22,18 +23,36 @@ import argparse
 import json
 from pathlib import Path
 
+import yaml
+
 from mas_sae.evaluation.paired_ablation import analyses, arm_outcomes, breakdown, by_question, correctness_cell, hop_of
 from mas_sae.experiments.artifacts import ensure_output_available, sha256_file, write_json_atomic
 from mas_sae.experiments.records import read_jsonl, write_csv
 
-COLLECTION_FILES = ("interactions.jsonl", "exclusions.jsonl", "sampled_questions.json")
+COLLECTION_FILES = ("interactions.jsonl", "exclusions.jsonl", "sampled_questions.json", "resolved_config.yaml")
 LABEL_FILES = ("raw_results.jsonl", "summary.json")
 # Every label-run setting that can change a label; max_attempts only retries technical errors.
 LABELING_SETTINGS = ("prompt_version", "model_id", "client", "effort", "max_tokens", "temperature", "a2_presentation")
+# Collection settings that may differ between the arms: the dataset (the change under test; the questions and
+# candidate orders are compared directly), the run name and time, and git_dirty, which also counts untracked
+# run outputs (git_commit is compared).
+ARM_SPECIFIC = ("dataset.", "output.run_name", "provenance.created_at_utc", "provenance.dataset_id",
+                "provenance.dataset_file_sha256", "provenance.environment.git_dirty")
 
 
 def arm_paths(collection: Path, labels: Path) -> list[Path]:
     return [collection / name for name in COLLECTION_FILES] + [labels / name for name in LABEL_FILES]
+
+
+def collection_settings(config: dict, prefix: str = "") -> dict:
+    """``resolved_config.yaml`` flattened to dotted keys, without the ``ARM_SPECIFIC`` ones."""
+    settings = {}
+    for key, value in config.items():
+        if isinstance(value, dict):
+            settings.update(collection_settings(value, f"{prefix}{key}."))
+        elif not f"{prefix}{key}".startswith(ARM_SPECIFIC):
+            settings[f"{prefix}{key}"] = value
+    return settings
 
 
 def read_arm(name: str, collection: Path, labels: Path) -> dict:
@@ -50,7 +69,9 @@ def read_arm(name: str, collection: Path, labels: Path) -> dict:
                             read_jsonl(labels / "raw_results.jsonl"))
     return {"assignment": assignment, "assigned": assigned, "outcomes": outcomes,
             "episodes": by_question(interactions, f"{name} interactions"),
-            "labeling": {key: summary.get(key) for key in LABELING_SETTINGS}}
+            "labeling": {key: summary.get(key) for key in LABELING_SETTINGS},
+            "collection": collection_settings(yaml.safe_load((collection / "resolved_config.yaml").read_text(
+                encoding="utf-8")))}
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -68,6 +89,10 @@ def main(argv: list[str] | None = None) -> None:
     baseline, treated = arms["baseline"], arms["treated"]
     if baseline["assignment"] != treated["assignment"]:
         raise ValueError("the arms were assigned different questions, positions or candidate orders")
+    collected = sorted(key for key in baseline["collection"].keys() | treated["collection"].keys()
+                       if baseline["collection"].get(key) != treated["collection"].get(key))
+    if collected:
+        raise ValueError(f"the arms were collected with different settings: {collected}")
     differing = [key for key in LABELING_SETTINGS if baseline["labeling"][key] != treated["labeling"][key]]
     if differing:
         raise ValueError(f"the arms were labeled differently ({', '.join(differing)}): "
