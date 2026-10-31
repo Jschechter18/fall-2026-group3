@@ -549,16 +549,19 @@ def _meta(selected: pd.DataFrame, name: str) -> np.ndarray:
 
 
 def breakdowns(res: dict, y_eval: np.ndarray, fields: dict[str, np.ndarray], positive: str) -> pd.DataFrame:
-    """Balanced accuracy and AUROC of every candidate within each value of each field (evaluation rows)."""
+    """Balanced accuracy and AUROC of every candidate within each value of each field (evaluation rows).
+    Both are NaN in a subgroup missing one of the classes: balanced accuracy there would be the recall
+    of the only class present, which can look perfect. The class counts are always given."""
     rows = []
     for name, pred in res["_preds"].items():
         for fname, values in fields.items():
             for v in np.unique(values):
                 m = values == v
                 y01 = (y_eval[m] == positive).astype(int)
+                both = 0 < y01.sum() < len(y01)
                 rows.append({"name": name, "field": fname, "value": v, "n": int(m.sum()),
                              "n_target_1": int(y01.sum()), "n_target_0": int((1 - y01).sum()),
-                             "balanced_accuracy": balanced_accuracy(y_eval[m], pred[m]),
+                             "balanced_accuracy": balanced_accuracy(y_eval[m], pred[m]) if both else float("nan"),
                              "auroc": (_auroc(y01, res["_scores"][name][m]) if res["_scores"] is not None
                                        else float("nan"))})
     return pd.DataFrame(rows)

@@ -24,6 +24,6 @@ seed: 42
 c_grid: [0.001, 0.01, 0.1, 1.0, 10.0, 100.0]
 inner_folds: 3
 n_bootstrap: 1000
-n_permutations: 10
+n_permutations: 100                                   # as in the attempt2 config (~10 h of CPU)
 permutation_layers: all
 output_dir: results/layer_selection_mixed_final_001_attempt1

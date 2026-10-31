@@ -203,6 +203,16 @@ def test_breakdowns_count_each_subgroup_and_include_the_baselines(tmp_path):
     assert set(table.field) == {"dataset_source", "correctness_cell", "candidate_order", "hop_group"}
 
 
+def test_a_subgroup_with_one_class_reports_no_balanced_accuracy_but_keeps_its_counts():
+    y = np.array(["adoption", "adoption", "retention", "adoption"])
+    res = {"_preds": {"layer_17": y.copy()}, "_scores": {"layer_17": np.array([2.0, 1.0, -1.0, 3.0])}}
+    table = ls.breakdowns(res, y, {"hop_group": np.array(["2hop", "2hop", "2hop", "4hop"])}, "adoption")
+    one_class = table.set_index("value").loc["4hop"]
+    assert one_class["n_target_1"] == 1 and one_class["n_target_0"] == 0
+    assert np.isnan(one_class["balanced_accuracy"]) and np.isnan(one_class["auroc"])
+    assert table.set_index("value").loc["2hop", "balanced_accuracy"] == 1.0
+
+
 def test_excluded_episodes_file_is_merged_and_conflicting_reasons_are_refused(tmp_path):
     (tmp_path / "ex.json").write_text(json.dumps({"q1": "api_error", "q2": "agreement"}))
     cfg = ls.LayerSelectionConfig(capstone_data_root=tmp_path, excluded_episodes={"q0": "manual"},
