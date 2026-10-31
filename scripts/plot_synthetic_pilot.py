@@ -2,7 +2,8 @@
 
 Each cohort is a Claude labeling run (``raw_results.jsonl``) and, optionally, the collection's
 ``exclusions.jsonl``. A question excluded at collection (e.g. the Critic gave no recommendation) is
-counted as Out, as the final labeling rules count collection failures. Writes:
+counted as Out, as the final labeling rules count collection failures. Inputs are hashed before
+they are read and rechecked before anything is written. Writes:
 
 * ``<figures>/synthetic_vs_musique_behavior.{svg,pdf}``: one 100% stacked bar per cohort, segments
   Adoption, Retention, Agreement and Out, with the Adoption + Retention share at the right.
@@ -32,6 +33,8 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
+plt.rcParams["svg.hashsalt"] = "synthetic-pilot"  # stable SVG element ids
+
 from mas_sae.evaluation.claude_agreement import wilson  # noqa: E402
 
 LABELS = ("adoption", "retention", "agreement", "out")
@@ -40,6 +43,10 @@ NAMES = {"adoption": "Adoption", "retention": "Retention", "agreement": "Agreeme
 # figure; validated categorical pair (CVD dE 24.7). Agreement and Out are not probe targets: recessive grays.
 COLORS = {"adoption": "#eb6834", "retention": "#2a78d6", "agreement": "#d3d1cb", "out": "#8f8d87"}
 INK, MUTED, GRID = "#1f1f1e", "#6b6a66", "#e4e3df"
+
+
+def file_sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def read_jsonl(path: Path) -> list[dict]:
@@ -101,8 +108,9 @@ def plot(rows: list[dict], outputs: list[Path]) -> None:
     ax.legend(handles, [NAMES[label] for label in LABELS], frameon=False, fontsize=8.5, ncol=4,
               loc="lower left", bbox_to_anchor=(0, 1.0), handlelength=1.2, columnspacing=1.2)
     fig.tight_layout()
-    for path in outputs:
-        fig.savefig(path, bbox_inches="tight", facecolor="white")
+    for path in outputs:  # no timestamps, so regenerating from the same inputs gives identical files
+        metadata = {"CreationDate": None} if path.suffix == ".pdf" else {"Date": None}
+        fig.savefig(path, bbox_inches="tight", facecolor="white", metadata=metadata)
     plt.close(fig)
 
 
@@ -119,8 +127,10 @@ def main(argv=None) -> None:
     rows, hashes = [], {}
     for name, labels, *exclusions in args.cohort:
         paths = [Path(labels), *(Path(e) for e in exclusions)]
-        hashes[name] = {str(p): hashlib.sha256(p.read_bytes()).hexdigest() for p in paths}
+        hashes[name] = {str(p): file_sha256(p) for p in paths}
         rows.append(table_row(name, cohort_counts(paths[0], paths[1] if len(paths) > 1 else None)))
+    if any(file_sha256(Path(p)) != h for files in hashes.values() for p, h in files.items()):
+        raise SystemExit("an input file changed while it was read; nothing written")
     args.figures.mkdir(parents=True, exist_ok=True)
     args.tables.mkdir(parents=True, exist_ok=True)
     with (args.tables / "synthetic_vs_musique_behavior.csv").open("w", newline="", encoding="utf-8") as fh:

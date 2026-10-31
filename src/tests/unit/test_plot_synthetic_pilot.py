@@ -41,6 +41,15 @@ def test_writes_vector_figure_table_and_input_hashes(plot, tmp_path):
     assert json.loads((tmp_path / "t/synthetic_vs_musique_inputs.json").read_text())["A"][str(labels)]
 
 
+def test_refuses_inputs_that_change_while_read(plot, tmp_path, monkeypatch):
+    labels = write(tmp_path / "l.jsonl", LABELED)
+    calls = iter(range(100))
+    monkeypatch.setattr(plot, "file_sha256", lambda path: str(next(calls)))
+    with pytest.raises(SystemExit, match="changed while it was read"):
+        plot.main(["--cohort", "A", str(labels), "--figures", str(tmp_path / "f"), "--tables", str(tmp_path / "t")])
+    assert not (tmp_path / "f").exists() and not (tmp_path / "t").exists()
+
+
 @pytest.mark.parametrize("labels, exclusions, message", [
     (LABELED + LABELED[:1], [], "labeled twice"),
     (LABELED + [{"question_id": "q9", "behavior_label": None, "exclusion_reason": "parse_error"}], [], "retry it first"),
