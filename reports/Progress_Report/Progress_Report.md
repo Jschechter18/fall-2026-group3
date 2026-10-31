@@ -91,7 +91,7 @@
 
 ---
 
-## Date: Week 7 - 10 06 Year
+## Date: Week 7 - 10 06 2026
 
 - Topics of discussion
   - Finish linear probing
@@ -111,7 +111,7 @@
 
 ---
 
-## Date: Week 8 - 10 13 Year
+## Date: Week 8 - 10 13 2026
 
 - Topics of discussion
   - NO CLASS
@@ -127,7 +127,7 @@
 
 ---
 
-## Date: Week 9 - 10 20 Year
+## Date: Week 9 - 10 20 2026
 
 - Topics of discussion
   - Preliminary Presentation day
@@ -144,20 +144,20 @@
 
 ---
 
-## Date: Week 10 - Month Day Year
+## Date: Week 10 - 10 27 2026
 
 - Topics of discussion
-  - Item1
-  - Item2
-  - Item3
+  - Bug fix for experiment - scaling issue
+  - Use claude api to generate synethic data
+  - Use claude api to generate labels on full dataset
 
 - Action Items:
 
-* [ ] Action Item 1
-* [ ] Action Item 2
-* [ ] Action Item 3
-* [ ] Action Item 4
-* [ ] Action Item 5
+* [ ] Fix scaling bug in experiment that led to l1 looking better than it was
+* [ ] Claude api to generate data
+* [ ] Claude api for labeling data
+* [ ] Implement parallelization for initial data activation collection episodes to improve run time
+* [ ] Implement parallelization for causality experiment to improve run time
 
 ---
 
