@@ -1,0 +1,12 @@
+{
+  "Synthetic, random fillers": {
+    "results/claude_validation/pilot174_synthetic100_opus5_run1/raw_results.jsonl": "7eaae669d8e71bea8639b09584fea60e44b83c878145cd75d746f354d3d41260"
+  },
+  "Synthetic, related fillers": {
+    "results/claude_validation/pilot174_related_fillers99_opus5_run1/raw_results.jsonl": "eec3bcb5036d7c005c1f786bfb763dfe665b23730165ab1f7a44e3b2e228df82",
+    "results/collection/synthetic_sample_100q_related_fillers/train/exclusions.jsonl": "cc54132bfc51578bc16b767aab2e10a65cc227941bad081ce880ac2e4d1a47a9"
+  },
+  "MuSiQue control": {
+    "results/claude_validation/pilot174_musique100_opus5_run1/raw_results.jsonl": "7223dc97974cb3c6937af0e34cdca790d6306277d743690941c3f4444047ea2c"
+  }
+}
