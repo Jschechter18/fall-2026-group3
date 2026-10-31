@@ -32,6 +32,7 @@ import csv
 import hashlib
 import json
 import re
+from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
 from functools import partial
 from pathlib import Path
 from typing import Any
@@ -428,6 +429,74 @@ def is_fatal_api_error(exc: BaseException) -> bool:
             and exc.response.get("Error", {}).get("Code") in FATAL_ERROR_CODES)
 
 
+def _label_episode(client: ClaudeClient, episode: dict[str, Any], **settings: Any) -> dict[str, Any]:
+    """``validate_episode``, recording a non-fatal error as an ``api_error`` row; fatal errors re-raise."""
+    try:
+        return validate_episode(client, episode, **settings)
+    except Exception as exc:
+        if is_fatal_api_error(exc):
+            raise
+        return _make_excluded(
+            _extract_passthrough(episode),
+            prompt_version=prompt_version(settings["include_question"], episode.get("a2_presentation")),
+            reason="api_error",
+            claude_reason=str(exc),
+        )
+
+
+def completed_rows(output_path: Path, episodes: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    """Rows already in *output_path*, by episode_id, for resuming a batch over *episodes*.
+
+    Refuses episodes without a unique episode_id, a partial last row (a write cut
+    off by a hard kill), a repeated episode_id, and rows for episodes outside the batch.
+    """
+    ids = [ep.get("episode_id") for ep in episodes]
+    if None in ids or len(set(ids)) != len(ids):
+        raise ValueError("resuming needs a unique episode_id on every episode")
+    text = output_path.read_text(encoding="utf-8") if output_path.exists() else ""
+    if text and not text.endswith("\n"):
+        raise ValueError(f"{output_path} ends in a partial row; delete that last line, then resume")
+    done: dict[str, dict[str, Any]] = {}
+    for line in text.splitlines():
+        row = json.loads(line)
+        if row.get("episode_id") in done:
+            raise ValueError(f"{output_path} repeats episode_id {row['episode_id']!r}")
+        done[row.get("episode_id")] = row
+    foreign = sorted(map(str, set(done) - set(ids)))
+    if foreign:
+        raise ValueError(f"{output_path} has {len(foreign)} row(s) for episodes outside this batch "
+                         f"(e.g. {foreign[0]!r})")
+    return done
+
+
+def batch_counts(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    """Label counts (by ``behavior_label``; ``error`` is every row without one), sources, errors, tokens."""
+    label_counts: dict[str, int] = {
+        "adoption": 0, "retention": 0, "agreement": 0, "out": 0, "error": 0,
+    }
+    label_sources: dict[str, int] = {}
+    error_reasons: dict[str, int] = {}
+    for row in rows:
+        label = row["behavior_label"]
+        if label is None:
+            label_counts["error"] += 1
+            reason = row["exclusion_reason"]
+            error_reasons[reason] = error_reasons.get(reason, 0) + 1
+        else:
+            label_counts[label] += 1
+            source = row["label_source"]
+            label_sources[source] = label_sources.get(source, 0) + 1
+    return {
+        "label_counts": label_counts,
+        "label_sources": label_sources,
+        "error_reasons": error_reasons,
+        "n_technical_errors": sum(is_technical_error(r) for r in rows),
+        "n_retried": sum(r.get("claude_attempts", 1) > 1 for r in rows),
+        "total_input_tokens": sum(r.get("input_tokens", 0) for r in rows),
+        "total_output_tokens": sum(r.get("output_tokens", 0) for r in rows),
+    }
+
+
 def validate_batch(
     client: ClaudeClient,
     episodes: list[dict[str, Any]],
@@ -437,80 +506,72 @@ def validate_batch(
     temperature: float | None = 0.0,
     max_attempts: int = DEFAULT_MAX_ATTEMPTS,
     include_question: bool = True,
+    concurrency: int = 1,
+    resume: bool = False,
 ) -> dict[str, Any]:
     """Process episodes, writing each result to *output_path* as soon as it is known.
 
-    *output_path* must not exist: earlier results are never overwritten.  A
-    crash leaves the completed rows on disk, but there is no resume; rerun
-    into a new output path.
+    Up to *concurrency* episodes are labeled at once; rows are still written and
+    returned in episode order, so the file matches a serial run.
+
+    Without *resume*, *output_path* must not exist: earlier results are never
+    overwritten.  With *resume*, the rows an interrupted batch over the same
+    episodes left in *output_path* are kept (see ``completed_rows``) and only
+    the remaining episodes are labeled.
 
     Other API errors are recorded per episode as ``api_error``; credential and
-    permission errors (``is_fatal_api_error``) stop the batch and re-raise.
+    permission errors (``is_fatal_api_error``) stop the batch: no new calls start,
+    the rows before the failed episode are written, and the error re-raises.
 
-    Returns a summary dict with label counts (by ``behavior_label``; ``error``
-    is every row without one), label sources, error reasons, token usage and
-    the full results list.
+    Returns a summary dict over every row, resumed ones included: ``batch_counts``,
+    ``n_resumed`` and the full results list.
     """
     if max_attempts < 1:
         raise ValueError(f"max_attempts must be at least 1, got {max_attempts}")
+    if concurrency < 1:
+        raise ValueError(f"concurrency must be at least 1, got {concurrency}")
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    results: list[dict[str, Any]] = []
-    total_input_tokens = 0
-    total_output_tokens = 0
-    label_counts: dict[str, int] = {
-        "adoption": 0, "retention": 0, "agreement": 0, "out": 0, "error": 0,
-    }
-    label_sources: dict[str, int] = {}
-    error_reasons: dict[str, int] = {}
-    n_retried = 0
+    done = completed_rows(output_path, episodes) if resume else {}
+    results = [done.get(ep.get("episode_id")) for ep in episodes]
+    todo = [i for i, row in enumerate(results) if row is None]
+    label = partial(_label_episode, client, max_tokens=max_tokens, temperature=temperature,
+                    max_attempts=max_attempts, include_question=include_question)
 
-    with output_path.open("x", encoding="utf-8") as fh:
-        for episode in episodes:
-            try:
-                row = validate_episode(
-                    client, episode,
-                    max_tokens=max_tokens, temperature=temperature,
-                    max_attempts=max_attempts, include_question=include_question,
-                )
-            except Exception as exc:
-                if is_fatal_api_error(exc):
-                    raise
-                row = _make_excluded(
-                    _extract_passthrough(episode),
-                    prompt_version=prompt_version(include_question, episode.get("a2_presentation")),
-                    reason="api_error",
-                    claude_reason=str(exc),
-                )
-
-            n_retried += row.get("claude_attempts", 1) > 1
-            label = row["behavior_label"]
-            if label is None:
-                label_counts["error"] += 1
-                reason = row["exclusion_reason"]
-                error_reasons[reason] = error_reasons.get(reason, 0) + 1
-            else:
-                label_counts[label] += 1
-                source = row["label_source"]
-                label_sources[source] = label_sources.get(source, 0) + 1
-
-            total_input_tokens += row.get("input_tokens", 0)
-            total_output_tokens += row.get("output_tokens", 0)
-            results.append(row)
-            fh.write(json.dumps(row, ensure_ascii=False) + "\n")
-            fh.flush()
+    fatal: Exception | None = None
+    with output_path.open("a" if resume else "x", encoding="utf-8") as fh, \
+            ThreadPoolExecutor(max_workers=concurrency) as pool:
+        running: dict[Future, int] = {}
+        finished: dict[int, dict[str, Any]] = {}
+        submitted = written = 0
+        while True:
+            while fatal is None and submitted < len(todo) and len(running) < concurrency:
+                running[pool.submit(label, episodes[todo[submitted]])] = todo[submitted]
+                submitted += 1
+            if not running:
+                break
+            completed, _ = wait(running, return_when=FIRST_COMPLETED)
+            for future in completed:
+                index = running.pop(future)
+                try:
+                    finished[index] = future.result()
+                except Exception as exc:  # only fatal errors leave _label_episode
+                    fatal = fatal or exc
+            # Write in episode order; rows after a fatal error's episode are never written.
+            while written < len(todo) and todo[written] in finished:
+                row = results[todo[written]] = finished.pop(todo[written])
+                fh.write(json.dumps(row, ensure_ascii=False) + "\n")
+                fh.flush()
+                written += 1
+    if fatal is not None:
+        raise fatal
 
     return {
         "n_episodes": len(episodes),
-        "label_counts": label_counts,
-        "label_sources": label_sources,
-        "error_reasons": error_reasons,
-        "n_technical_errors": sum(is_technical_error(r) for r in results),
-        "n_retried": n_retried,
+        **batch_counts(results),
         "max_attempts": max_attempts,
-        "total_input_tokens": total_input_tokens,
-        "total_output_tokens": total_output_tokens,
+        "n_resumed": len(done),
         "results": results,
     }
 

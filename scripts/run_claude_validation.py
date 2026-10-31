@@ -13,7 +13,10 @@ records are silently discarded.
 
 With ``--limit N`` the first N complete episodes in file order are taken, so
 a dry run and the real run select the same episodes.  The output directory
-must not exist; earlier results are never overwritten.
+must not exist; earlier results are never overwritten.  ``--resume`` continues
+an interrupted run in its own output directory instead: rerun the same command
+with ``--resume`` added; it refuses if the settings or selected episodes differ.
+``--concurrency N`` labels N episodes at once; rows stay in episode order.
 
 Requires AWS Bedrock credentials in ``.env`` (see README).  Use ``--dry-run``
 to preview without making API calls.
@@ -41,6 +44,7 @@ import time
 from pathlib import Path
 
 import boto3
+from botocore.config import Config
 from botocore.exceptions import ClientError, NoCredentialsError
 from dotenv import load_dotenv
 
@@ -48,6 +52,7 @@ from mas_sae.evaluation.claude_validator import (
     CANDIDATE_SOURCES,
     DEFAULT_MAX_ATTEMPTS,
     alignment_exclusions,
+    completed_rows,
     is_technical_error,
     build_labeling_prompt,
     candidates_shown,
@@ -147,6 +152,15 @@ def parse_args(argv=None):
         "--no-question", action="store_true",
         help="Leave the question out of Claude's input (experimental variant, recorded as "
              "prompt_version <v>_noq). The saved data is unchanged.",
+    )
+    parser.add_argument(
+        "--concurrency", type=positive_int, default=1,
+        help="Episodes labeled at once (default 1). Labels and row order do not depend on it.",
+    )
+    parser.add_argument(
+        "--resume", action="store_true",
+        help="Continue an interrupted run in --output: same command plus --resume. Episodes already "
+             "in its raw_results.jsonl are kept; refused if the settings or selected episodes differ.",
     )
     parser.add_argument(
         "--dry-run", action="store_true",
@@ -285,6 +299,54 @@ def labeling_settings(model_id: str, effort: str, max_tokens: int | None, includ
             "prompt_sha256": prompt_sha256(include_question, presentation), "a2_presentation": presentation}
 
 
+def run_settings(args, episodes_sha256: str, partitions_sha256: str | None, presentation: str | None) -> dict:
+    """What fixes a run's episodes and labels, written to ``run_settings.json`` before any call.
+
+    ``--resume`` must reproduce it exactly; ``--concurrency`` is left out because it changes neither.
+    """
+    return {
+        **labeling_settings(args.model_id, args.effort, args.max_tokens, not args.no_question, presentation),
+        "max_attempts": args.max_attempts,
+        "episodes_sha256": episodes_sha256,
+        "partitions_sha256": partitions_sha256,
+        "condition_filter": CONDITION,
+        "partition": args.partition,
+        "limit": args.limit,
+        "retry_technical_errors_from": (str(args.retry_technical_errors_from)
+                                        if args.retry_technical_errors_from else None),
+    }
+
+
+def check_unchanged(path: Path, sha256: str) -> None:
+    """Refuse an input that changed while it was read: its recorded sha256 would not describe it."""
+    if sha256_file(path) != sha256:
+        raise ValueError(f"{path} changed while it was being read; rerun once it is stable")
+
+
+def check_resume(output_dir: Path, settings: dict, selection: list[dict]) -> None:
+    """Refuse to resume *output_dir* unless it is an unfinished run with these settings and episodes."""
+    if (output_dir / "summary.json").exists():
+        raise ValueError(f"{output_dir} already finished (summary.json exists); nothing to resume")
+    try:
+        earlier = json.loads((output_dir / "run_settings.json").read_text(encoding="utf-8"))
+        earlier_selection = json.loads((output_dir / "selected_episodes.json").read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:
+        raise ValueError(f"{output_dir} is not a resumable run ({exc.filename} is missing)") from None
+    differing = [key for key in sorted(set(earlier) | set(settings)) if earlier.get(key) != settings.get(key)]
+    if differing:
+        raise ValueError(f"{output_dir} was started with other settings: " + ", ".join(
+            f"{key} {earlier.get(key)!r} (now {settings.get(key)!r})" for key in differing))
+    if earlier_selection != selection:
+        raise ValueError(f"{output_dir} was started on other episodes ({len(earlier_selection)} selected "
+                         f"then, {len(selection)} now)")
+
+
+def session_seconds(output_dir: Path) -> list[float]:
+    """Wall-clock seconds of each session recorded in ``sessions.jsonl`` (one row per invocation)."""
+    path = output_dir / "sessions.jsonl"
+    return [row["wall_clock_seconds"] for row in read_jsonl(path)] if path.exists() else []
+
+
 def generation_settings(model_id: str, effort: str, max_tokens: int | None) -> dict:
     """Client class and per-call settings for a model: Claude 5.x rejects temperature and always thinks."""
     if uses_adaptive_thinking(model_id):
@@ -297,12 +359,14 @@ def generation_settings(model_id: str, effort: str, max_tokens: int | None) -> d
 def main(argv=None) -> None:
     args = parse_args(argv)
 
-    if not args.dry_run:
+    if not args.dry_run and not args.resume:
         ensure_output_available(args.output)
 
     episodes_path = args.episodes / "interactions.jsonl" if args.episodes.is_dir() else args.episodes
+    # Hashed before reading and rechecked after, so the recorded sha256 describes what was read.
+    episodes_sha256 = sha256_file(episodes_path) if episodes_path.exists() else None
     all_episodes = load_episodes(episodes_path)
-    episodes_sha256 = sha256_file(episodes_path)
+    partitions_sha256 = sha256_file(args.partitions) if args.partitions else None
     print(f"Loaded {len(all_episodes)} episode(s) from {episodes_path}")
     print(f"Source sha256: {episodes_sha256}")
 
@@ -313,9 +377,11 @@ def main(argv=None) -> None:
         print(f"  {cond}: {count}{marker}")
 
     try:
+        check_unchanged(episodes_path, episodes_sha256)
         unpartitioned: list[str] = []
         if args.partitions is not None:
             natural, unpartitioned = attach_partitions(natural, args.partitions)
+            check_unchanged(args.partitions, partitions_sha256)
             print(f"Frozen partitions attached from {args.partitions}: {len(natural)} assigned, "
                   f"{len(unpartitioned)} not in the file (not labeled)")
         in_partition = filter_by_partition(natural, args.partition)
@@ -342,6 +408,17 @@ def main(argv=None) -> None:
         print(f"Limit applied: first {len(episodes)} complete episode(s) "
               f"({n_skipped} incomplete episode(s) in the partition were not eligible)")
     selection = selection_record(episodes)
+    output_dir = Path(args.output)
+    raw_path = output_dir / "raw_results.jsonl"
+    if args.resume:
+        try:
+            check_resume(output_dir, run_settings(args, episodes_sha256, partitions_sha256, presentation),
+                         selection)
+            n_done = len(completed_rows(raw_path, episodes))
+        except ValueError as exc:
+            print(f"\nERROR: cannot resume: {exc}", file=sys.stderr)
+            sys.exit(1)
+        print(f"Resuming {output_dir}: {n_done} of {len(episodes)} episode(s) already labeled")
 
     if args.dry_run:
         print(f"\n--- DRY RUN (prompt_version={prompt_version(not args.no_question, presentation)}) ---")
@@ -387,32 +464,49 @@ def main(argv=None) -> None:
               file=sys.stderr)
         sys.exit(1)
     settings = generation_settings(args.model_id, args.effort, args.max_tokens)
-    client = settings["client"](session=session, model_id=args.model_id, **settings["client_kwargs"])
+    # A connection per concurrent call, and client-side rate limiting when Bedrock throttles.
+    config = (Config(max_pool_connections=args.concurrency, retries={"mode": "adaptive", "max_attempts": 8})
+              if args.concurrency > 1 else None)
+    client = settings["client"](session=session, model_id=args.model_id, config=config,
+                                **settings["client_kwargs"])
 
-    output_dir = Path(args.output)
-    output_dir.mkdir(parents=True)
-    (output_dir / "selected_episodes.json").write_text(
-        json.dumps(selection, indent=2) + "\n", encoding="utf-8",
-    )
+    if not args.resume:
+        output_dir.mkdir(parents=True)
+        (output_dir / "run_settings.json").write_text(json.dumps(
+            run_settings(args, episodes_sha256, partitions_sha256, presentation), indent=2) + "\n",
+            encoding="utf-8",
+        )
+        (output_dir / "selected_episodes.json").write_text(
+            json.dumps(selection, indent=2) + "\n", encoding="utf-8",
+        )
 
     started = time.perf_counter()
+    finished = False
     try:
         summary = validate_batch(
             client, episodes,
-            output_path=output_dir / "raw_results.jsonl",
+            output_path=raw_path,
             max_attempts=args.max_attempts,
             include_question=not args.no_question,
             max_tokens=settings["max_tokens"],
             temperature=settings["temperature"],
+            concurrency=args.concurrency,
+            resume=args.resume,
         )
+        finished = True
     except (ClientError, NoCredentialsError) as exc:
         print(f"\nERROR: stopped on a credential/permission error ({exc}). Rows completed "
-              f"before it are in {output_dir / 'raw_results.jsonl'}; refresh credentials "
-              "and rerun into a new --output.", file=sys.stderr)
+              f"before it are in {raw_path}; refresh credentials and rerun the same command "
+              "with --resume.", file=sys.stderr)
         sys.exit(1)
     finally:
         client.close()
-    wall_clock_seconds = round(time.perf_counter() - started, 2)
+        with (output_dir / "sessions.jsonl").open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps({"wall_clock_seconds": round(time.perf_counter() - started, 2),
+                                 "concurrency": args.concurrency, "resume": args.resume,
+                                 "finished": finished}) + "\n")
+    sessions = session_seconds(output_dir)
+    wall_clock_seconds = round(sum(sessions), 2)
 
     results = summary.pop("results")
     export_binary_labels(results, output_dir / "binary_labels.csv")
@@ -424,10 +518,12 @@ def main(argv=None) -> None:
     summary.update(labeling_settings(args.model_id, args.effort, args.max_tokens, not args.no_question, presentation))
     summary["models_returned"] = sorted({r["claude_model"] for r in results if r.get("claude_model")})
     summary["partitions_path"] = str(args.partitions) if args.partitions else None
-    summary["partitions_sha256"] = sha256_file(args.partitions) if args.partitions else None
+    summary["partitions_sha256"] = partitions_sha256
     summary["n_unpartitioned"] = len(unpartitioned)
     summary["episodes_path"] = str(episodes_path)
     summary["episodes_sha256"] = episodes_sha256
+    summary["concurrency"] = args.concurrency
+    summary["n_sessions"] = len(sessions)
     summary["condition_filter"] = CONDITION
     summary["condition_counts"] = condition_counts
     summary["partition"] = args.partition
@@ -451,7 +547,8 @@ def main(argv=None) -> None:
     print(f"Errors by reason: {summary['error_reasons']} "
           f"(technical: {summary['n_technical_errors']}, retried episodes: {summary['n_retried']})")
     print(f"Tokens: {summary['total_input_tokens']} in / {summary['total_output_tokens']} out")
-    print(f"Wall clock: {wall_clock_seconds}s")
+    print(f"Wall clock: {wall_clock_seconds}s over {len(sessions)} session(s); "
+          f"{summary['n_resumed']} row(s) kept from earlier sessions")
     print(f"Output: {output_dir}")
 
 
