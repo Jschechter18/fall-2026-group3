@@ -104,7 +104,7 @@ Each question belongs to exactly one partition, decided from its question id and
 |---|---|---|---|
 | train | MuSiQue train, 80% | fitting the SAE, the probes and the per-layer probes | `fit` |
 | validation | all of MuSiQue validation | early stopping, layer choice, feature choice | `tune` |
-| test | MuSiQue train, 10% | the frozen SAE and probes, scored once | `evaluate` |
+| test | MuSiQue train, 10% | comparing completed SAE versions and selecting the one carried forward | `evaluate` |
 | intervention | MuSiQue train, 10% | the causal experiment, run live, much later | `intervene` |
 
 Question counts for the agreed proportions on the collected run are in the package's `counts.json` under `split_audit.by_partition`. MuSiQue validation has a harder hop mix than MuSiQue train (about 17% four-hop versus 6%), so validation loss will sit above train and test loss; that is expected and not leakage.
@@ -220,7 +220,7 @@ What this guarantees:
 
 - A question keeps its partition whatever order the run collected it in. Only `full_index` / `scan_index`, the activation rows, are rebuilt for the new run.
 - `--coverage complete` (the default) stops if any frozen question is missing from the run. `--coverage subset` is for runs that deliberately cover part of the question set, such as a layer scan; the uncovered ids are written to `missing_question_ids.json` and counted in `counts.json["partition"]["questions"]`.
-- Every package built from the frozen file carries the whole frozen mapping as its `partitions.csv`, byte for byte, however much of it the run covers. Only `split_manifest.csv` is run-specific.
+- Every package built from the frozen file carries the same full frozen mapping as its `partitions.csv`, however much of it the run covers. Only `split_manifest.csv` is run-specific.
 - A question the frozen file does not know stops the run. Adding questions is a new manifest version made by a person, not something the script decides.
 - The rerun's `split_manifest.csv` has the same columns as before, so every reader (`read_manifest`, the export, the layer-selection loader) works unchanged.
 - `scripts/export_partition_activations.py` checks the package manifest against the frozen file before writing anything, so a package built under a different cut is refused.
@@ -251,4 +251,4 @@ X = load_production_activations(train, manifest, "<artifacts>/natural_4b_full/da
 
 1. Behavior v0.1.2 is an experimental rule overlay (`src/mas_sae/evaluation/behavior_v012_qc.py` on branch `issue55-v012-qc`) written from the 559-row disagreements. On a separate blind sample of 120 train rows (80 that the overlay changes, 40 unchanged controls; 30 double-annotated with A/B kappa 0.84 / 0.51 / 1.00; the 10 disagreements were reviewed and resolved by Annotator A, and all decisions were documented and verified during the final reproducibility audit) agreement with the human reference moves from 47 to 74 of 120 (`feedback_type`), 30 to 85 of 120 (`solver_response`), 85 to 110 of 116 (`eligible_primary`, 4 uncertain rows excluded) and 19 to 50 of 116 (all three). Of the 80 changed rows, 76 improved, 3 regressed and 1 was unchanged. The sample is enriched, not a population estimate. Over the full run the overlay changes 1,575 of 22,332 labels. Whether to promote it is a separate team decision; until then `behavior_v0.1.1_candidate` is the label in use.
 2. Probe and SAE work (Raye, Josh) fits on the train partition and chooses on validation, with a text baseline and a breakdown by Critic correctness. An early look on the old discovery role suggested A2 activations predict adoption better than the feedback text does (balanced accuracy about 0.84 versus 0.75); that is unvalidated and is theirs to reproduce properly on the new partitions.
-3. The role of the test partition is being restated under issue #97; intervention is used only for the causal experiment.
+3. Test is used to compare completed SAE versions and select the one carried forward; intervention is used only for the causal experiment.
