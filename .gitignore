@@ -90,3 +90,4 @@ results/causal_replay/*/per_row.jsonl
 
 # Examples
 examples/claude/artifacts/
+artifacts/*

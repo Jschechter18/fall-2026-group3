@@ -1,6 +1,11 @@
-# Example starting point: use a new run name and review proportions before preparation.
-# Work distribution is --num-chunks; output.chunk_size is checkpoint batch size.
-# Synthetic input is optional. Add its source/version/path; MuSiQue-style IDs supply hops.
+# Mixed MuSiQue + synthetic collection for ten machines (one chunk per machine).
+# Prepare once with --num-chunks 10; output.chunk_size is checkpoint batch size.
+# Retains the existing model, collection, intervention and split settings.
+# Confirm intervention/split proportions and synthetic release readiness before preparation.
+# Local MuSiQue downloads contain JSONL despite their .json names: stage copies
+# as data/MuSiQue/clean/{train,validation}.jsonl for the suffix-based input loader.
+# Local snapshot versions below identify these files, not a verified Hub revision.
+# MuSiQue-style IDs supply hops, including synthetic IDs.
 # Use hop_field to override hops with explicit record metadata.
 # Explicit related variants use a common globally qualified split_group_id.
 # Paths are read during prepare only; manifest workers need no source downloads.
@@ -35,13 +40,16 @@ roles:
 dataset:
   inputs:
   - source: musique
-    version: c8f4f8c9465fb69d31a8eae894c3fd509c4ca321
+    version: clean-local-v1
     source_split: train
-    path: data/musique/train.json
+    path: data/MuSiQue/clean/train.jsonl
   - source: musique
-    version: c8f4f8c9465fb69d31a8eae894c3fd509c4ca321
+    version: clean-local-v1
     source_split: validation
-    path: data/musique/validation.json
+    path: data/MuSiQue/clean/validation.jsonl
+  - source: synthetic
+    version: opus5-v3-full-001
+    path: data/MuSiQue/synthetic/runs/opus5-v3-full-001/generation/accepted.jsonl
   intervention:
     fraction: 0.1
     seed: 42
@@ -69,5 +77,5 @@ collection:
   - 33
   seed: 42
 output:
-  run_name: mixed_collection
+  run_name: mixed_collection_10m_001
   chunk_size: 50
