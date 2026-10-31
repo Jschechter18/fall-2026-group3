@@ -1,0 +1,4 @@
+cohort,n,adoption,retention,agreement,out,collection_failures,a_plus_r_share,a_plus_r_ci_low,a_plus_r_ci_high,adoption_share_of_a_plus_r
+"Synthetic, random fillers",100,5,11,84,0,0,0.16,0.10095202349473717,0.24420444558894414,0.3125
+"Synthetic, related fillers",100,18,17,64,1,1,0.35,0.2636410465347802,0.4474573957080203,0.5142857142857142
+MuSiQue control,100,31,25,44,0,0,0.56,0.4622792771125631,0.6532813459903167,0.5535714285714286

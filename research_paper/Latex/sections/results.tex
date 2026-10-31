@@ -83,31 +83,44 @@ probe and feature analysis.
 \label{sec:res-synthetic}
 
 The synthetic questions did not behave like MuSiQue questions
-(Table~\ref{tab:synthetic-pilot}). Only 16 of 100 synthetic episodes were
+(Figure~\ref{fig:synthetic}, Table~\ref{tab:synthetic-pilot}). Only 16 of 100 synthetic episodes were
 Adoption or Retention, against 56 of 100 matched MuSiQue episodes, and the
 two 95\% intervals do not overlap. The difference arises before the Solver
 ever sees the feedback. The Solver answered 78\% of synthetic questions
 correctly on its first attempt, and the Critic 90\%, so in most episodes
 both agreed on the right answer.
 
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\linewidth]{../../reports/figures/synthetic_pilot/synthetic_vs_musique_behavior.pdf}
+    \caption{Behavior labels for the synthetic pilot with its original (random)
+    fillers, the same questions with related fillers, and a hop-matched MuSiQue
+    control (LLM-derived labels, $n = 100$ each).}
+    \label{fig:synthetic}
+\end{figure}
+
 \begin{table}[htbp]
     \centering
-    \caption{Synthetic pilot against a hop-matched MuSiQue control, both
-    with LLM-derived labels ($n = 100$ each).}
+    \caption{Synthetic pilot, paired filler ablation, and hop-matched MuSiQue
+    control (LLM-derived labels, $n = 100$ each). One related-filler question
+    was excluded at collection because the Critic gave no recommendation; it is
+    counted as Out, and accuracies use the 99 collected episodes.}
     \label{tab:synthetic-pilot}
-    \begin{tabular}{lrr}
+    \begin{tabular}{lrrr}
         \toprule
-         & Synthetic & MuSiQue \\
+         & \multicolumn{2}{c}{Synthetic} & MuSiQue \\
+        \cmidrule(lr){2-3}
+         & Random fillers & Related fillers & \\
         \midrule
-        Adoption  &  5 & 31 \\
-        Retention & 11 & 25 \\
-        Agreement & 84 & 44 \\
-        Out       &  0 &  0 \\
+        Adoption  &  5 & 18 & 31 \\
+        Retention & 11 & 17 & 25 \\
+        Agreement & 84 & 64 & 44 \\
+        Out       &  0 &  1 &  0 \\
         \midrule
-        Adoption + Retention (95\% CI) & 16\% (10--24) & 56\% (46--65) \\
-        Adoption share of the binary cohort & 31\% & 55\% \\
-        A1 correct & 78\% & 21\% \\
-        Critic correct & 90\% & 27\% \\
+        Adoption + Retention (95\% CI) & 16\% (10--24) & 35\% (26--45) & 56\% (46--65) \\
+        Adoption share of the binary cohort & 31\% & 51\% & 55\% \\
+        A1 correct & 78\% & 65\% & 21\% \\
+        Critic correct & 90\% & 89\% & 27\% \\
         \bottomrule
     \end{tabular}
 \end{table}
@@ -141,4 +154,23 @@ enough clean disagreement, not a match to MuSiQue's rate.
 \subsection{Related fillers}
 \label{sec:res-fillers}
 
-% Results of the paired filler ablation (Section~\ref{sec:exp-fillers}) will be added once collection and labeling finish (#174).
+Replacing only the filler paragraphs more than doubled the useful
+disagreement: Adoption + Retention rose from 16\% to 35\% of episodes
+(Table~\ref{tab:synthetic-pilot}). Pairing the same questions across the two
+conditions, 22 episodes became Adoption or Retention and 3 stopped being so
+(exact McNemar test, $p < 0.001$). The Adoption share of the binary cohort
+also moved from 31\% to 51\%, close to MuSiQue's 55\%.
+
+The related fillers act mainly on the Solver's first answer. A1 accuracy fell
+from 78\% to 65\%, while the Critic stayed near 90\%. In 17 of the 22 new
+disagreements the Solver was wrong and the Critic right, which is the clean
+case of correctable feedback. The new wrong answers are genuine reasoning
+errors rather than noise: of 19, twelve take an intermediate entity or the
+wrong span from a supporting paragraph, four take an answer from a related
+filler, two from a generated distractor, and one appears nowhere in the
+context.
+
+Two checks support attributing the change to the fillers. Collecting the
+original questions again in the same environment reproduced every A1, Critic
+answer, and A2 of the original pilot exactly. On the 57 episodes whose three
+answers did not change, the labeler assigned the same label in every case.
