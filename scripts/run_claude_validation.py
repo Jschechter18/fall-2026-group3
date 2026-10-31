@@ -54,6 +54,7 @@ from mas_sae.evaluation.claude_validator import (
     export_binary_labels,
     export_exclusions,
     missing_required_field,
+    prompt_sha256,
     prompt_version,
     validate_batch,
 )
@@ -262,6 +263,28 @@ def technical_error_ids(run_dir: Path, episodes_sha256: str) -> set[str]:
     return {r["episode_id"] for r in read_jsonl(run_dir / "raw_results.jsonl") if is_technical_error(r)}
 
 
+def check_retry_settings(run_dir: Path, current: dict) -> None:
+    """Refuse retrying *run_dir* with other labeling settings, which would mix two labeling setups.
+
+    Only settings the earlier run recorded are compared; runs made before ``prompt_sha256`` existed lack it.
+    """
+    earlier = json.loads((run_dir / "summary.json").read_text(encoding="utf-8"))
+    differing = [key for key, value in current.items() if key in earlier and earlier[key] != value]
+    if differing:
+        raise ValueError(f"{run_dir} was labeled with other settings: " + ", ".join(
+            f"{key} {earlier[key]!r} (now {current[key]!r})" for key in differing))
+
+
+def labeling_settings(model_id: str, effort: str, max_tokens: int | None, include_question: bool,
+                      presentation: str | None) -> dict:
+    """Every setting of a label run that can change a label, as recorded in ``summary.json``."""
+    settings = generation_settings(model_id, effort, max_tokens)
+    return {"model_id": model_id, "client": settings["client"].__name__, "effort": settings["effort"],
+            "max_tokens": settings["max_tokens"], "temperature": settings["temperature"],
+            "prompt_version": prompt_version(include_question, presentation),
+            "prompt_sha256": prompt_sha256(include_question, presentation), "a2_presentation": presentation}
+
+
 def generation_settings(model_id: str, effort: str, max_tokens: int | None) -> dict:
     """Client class and per-call settings for a model: Claude 5.x rejects temperature and always thinks."""
     if uses_adaptive_thinking(model_id):
@@ -305,6 +328,9 @@ def main(argv=None) -> None:
                   f"{args.retry_technical_errors_from}")
         episodes, n_skipped = select_episodes(in_partition, args.limit)
         presentation = single_presentation(episodes)
+        if args.retry_technical_errors_from is not None:
+            check_retry_settings(args.retry_technical_errors_from, labeling_settings(
+                args.model_id, args.effort, args.max_tokens, not args.no_question, presentation))
     except ValueError as exc:
         print(f"\nERROR: {exc}", file=sys.stderr)
         sys.exit(1)
@@ -395,14 +421,8 @@ def main(argv=None) -> None:
         json.dumps(alignment_exclusions(results), indent=2) + "\n", encoding="utf-8",
     )
 
-    summary["model_id"] = args.model_id
-    summary["client"] = settings["client"].__name__
-    summary["effort"] = settings["effort"]
-    summary["max_tokens"] = settings["max_tokens"]
-    summary["temperature"] = settings["temperature"]
+    summary.update(labeling_settings(args.model_id, args.effort, args.max_tokens, not args.no_question, presentation))
     summary["models_returned"] = sorted({r["claude_model"] for r in results if r.get("claude_model")})
-    summary["prompt_version"] = prompt_version(not args.no_question, presentation)
-    summary["a2_presentation"] = presentation
     summary["partitions_path"] = str(args.partitions) if args.partitions else None
     summary["partitions_sha256"] = sha256_file(args.partitions) if args.partitions else None
     summary["n_unpartitioned"] = len(unpartitioned)

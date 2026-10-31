@@ -24,6 +24,7 @@ from mas_sae.evaluation.claude_validator import (
     export_binary_labels,
     export_exclusions,
     parse_label_response,
+    prompt_sha256,
     validate_batch,
     validate_episode,
 )
@@ -1053,6 +1054,89 @@ class TestRetryTechnicalErrorsFrom:
 
         with pytest.raises(ValueError, match="different episodes file"):
             technical_error_ids(self._run_dir(tmp_path, "abc", []), "xyz")
+
+
+class TestPromptSha256:
+
+    def test_depends_on_the_fixed_prompt_text_and_variant(self, monkeypatch):
+        import mas_sae.evaluation.claude_validator as validator
+        base = prompt_sha256(True, "candidates")
+        assert base == prompt_sha256(True, "candidates")
+        assert len({base, prompt_sha256(True, None), prompt_sha256(False, "candidates")}) == 3
+        monkeypatch.setattr(validator, "_PROMPT_TEMPLATE", validator._PROMPT_TEMPLATE + "Be brief.\n")
+        assert prompt_sha256(True, "candidates") != base
+        monkeypatch.setattr(validator, "LABELING_SYSTEM", validator.LABELING_SYSTEM + " ")
+        assert prompt_sha256(True, None) != base
+
+
+class TestRetrySettings:
+    """A retry must use the labeling settings of the run it retries (#185)."""
+
+    def _setup(self, tmp_path, **earlier_changes):
+        partitions = tmp_path / "partitions.csv"
+        partitions.write_text("question_id,source_split,partition,hop_group\nmusique:2hop__test_1,train,train,2hop\n")
+        episodes = tmp_path / "interactions.jsonl"
+        ep = _candidate_episode(); ep.pop("partition")
+        write_jsonl(episodes, [ep])
+        args = CLI.parse_args(["--episodes", str(episodes), "--output", "unused"])
+        earlier = CLI.labeling_settings(args.model_id, args.effort, args.max_tokens, True, "candidates")
+        run = tmp_path / "earlier"
+        run.mkdir()
+        (run / "summary.json").write_text(json.dumps(
+            {"episodes_sha256": CLI.sha256_file(episodes), **earlier, **earlier_changes}))
+        write_jsonl(run / "raw_results.jsonl", [{"episode_id": ep["episode_id"], "behavior_label": None,
+                                                  "exclusion_reason": "api_error"}])
+        return ["--episodes", str(episodes), "--output", str(tmp_path / "out"), "--partitions", str(partitions),
+                "--retry-technical-errors-from", str(run), "--dry-run"]
+
+    def test_labeling_settings_name_the_prompt_text(self):
+        s = CLI.labeling_settings("us.anthropic.claude-opus-5", "medium", None, True, "candidates")
+        assert s == {"model_id": "us.anthropic.claude-opus-5", "client": "AdaptiveThinkingClaudeClient",
+                     "effort": "medium", "max_tokens": 8000, "temperature": None,
+                     "prompt_version": PROMPT_VERSION + "_candidates",
+                     "prompt_sha256": prompt_sha256(True, "candidates"), "a2_presentation": "candidates"}
+
+    def test_retry_with_the_same_settings_runs(self, tmp_path, capsys):
+        CLI.main(self._setup(tmp_path))
+        assert "Retry filter: 1 episode(s)" in capsys.readouterr().out
+
+    @pytest.mark.parametrize("change, named", [({"effort": "high"}, "effort 'high'"),
+                                               ({"prompt_sha256": "0" * 64}, "prompt_sha256 '000"),
+                                               ({"max_tokens": 4000}, "max_tokens 4000")])
+    def test_retry_with_other_settings_is_refused(self, tmp_path, capsys, change, named):
+        with pytest.raises(SystemExit):
+            CLI.main(self._setup(tmp_path, **change))
+        assert "labeled with other settings: " + named in capsys.readouterr().err
+        assert not (tmp_path / "out").exists()
+
+    def test_a_run_records_its_labeling_settings_and_prompt_hash(self, tmp_path, monkeypatch):
+        class FakeClient:
+            def __init__(self, **kwargs):
+                self.generate = _mock_client().generate
+
+            def close(self):
+                pass
+
+        monkeypatch.setattr(CLI, "load_dotenv", lambda: None)
+        monkeypatch.setattr(CLI.boto3, "Session", MagicMock())
+        monkeypatch.setattr(CLI, "ClaudeClient", FakeClient)
+        monkeypatch.setattr(CLI, "AdaptiveThinkingClaudeClient", FakeClient)
+        argv = self._setup(tmp_path)
+        argv = argv[:argv.index("--retry-technical-errors-from")]
+        CLI.main(argv)
+        summary = json.loads((tmp_path / "out" / "summary.json").read_text())
+        args = CLI.parse_args(argv)
+        expected = CLI.labeling_settings(args.model_id, args.effort, args.max_tokens, True, "candidates")
+        assert {key: summary[key] for key in expected} == expected
+        assert summary["prompt_sha256"] == prompt_sha256(True, "candidates") and summary["client"] == "FakeClient"
+
+    def test_runs_from_before_the_prompt_hash_can_still_be_retried(self, tmp_path, capsys):
+        argv = self._setup(tmp_path)
+        summary = Path(argv[argv.index("--retry-technical-errors-from") + 1]) / "summary.json"
+        recorded = json.loads(summary.read_text()); recorded.pop("prompt_sha256")
+        summary.write_text(json.dumps(recorded))
+        CLI.main(argv)
+        assert "Retry filter: 1 episode(s)" in capsys.readouterr().out
 
 
 class TestAuditFixes:
