@@ -6,6 +6,35 @@
 %   - Layer-wise probe performance
 %   - Causal intervention outcomes
 
+\subsection{Free-form feedback made the Solver adopt almost everything}
+\label{sec:res-protocol}
+
+Under the free-form protocol, the Solver almost always followed the Critic
+(Table~\ref{tab:protocol}). Retention was too rare to train a probe on: 8\%
+of the binary cohort under the rule-based labels and 3\% under the
+LLM-derived labels. The candidate presentation, with the same questions and
+models, brought the Adoption share down to 54.8\%, which gives a usable
+binary target. This is why every later collection uses the candidate
+presentation.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Adoption share of the binary cohort under the two Solver
+    protocols. The free-form rows use the training partition (rule-based) or
+    a 1,000-episode sample (LLM-derived); the candidate row uses the full
+    collection.}
+    \label{tab:protocol}
+    \begin{tabular}{llrr}
+        \toprule
+        Protocol & Label source & Binary episodes & Adoption share \\
+        \midrule
+        Free-form feedback & Rule-based (earlier rules) & 4,177 & 91.7\% \\
+        Free-form feedback & LLM-derived                &   586 & 97.3\% \\
+        Candidate presentation & Rule-based (final rules) & 10,644 & 54.8\% \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
 \subsection{Candidate order shifts the Adoption--Retention balance}
 \label{sec:res-order}
 
@@ -13,7 +42,16 @@ Presentation order changes the Solver's choice. When the Critic's
 recommendation is listed first, the Adoption share of the binary cohort is
 57.8\% (95\% CI 56.4--59.1), against 51.9\% (50.5--53.2) when A1 is listed
 first (Table~\ref{tab:order}). The gap appears in every partition, with the
-Critic-first share higher by 4 to 9 percentage points.
+Critic-first share higher by 4 to 9 percentage points
+(Figure~\ref{fig:order}).
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.85\linewidth]{../../reports/figures/candidate_order_balance/candidate_order_adoption.pdf}
+    \caption{Adoption share of the binary cohort by candidate order, with 95\%
+    Wilson intervals (rule-based reference labels).}
+    \label{fig:order}
+\end{figure}
 
 \begin{table}[htbp]
     \centering
