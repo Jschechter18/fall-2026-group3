@@ -5,11 +5,13 @@ import csv
 import fcntl
 import hashlib
 import json
+import os
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 import shlex
 import subprocess
 import sys
+import tempfile
 from typing import Literal
 
 
@@ -168,15 +170,36 @@ def ensure_output_available(output_dir: str | Path) -> None:
         )
 
 
-def write_json_atomic(path: Path, data: dict[str, object]) -> None:
-    """Write JSON through a temporary file and rename it into place."""
-    temporary_path = path.with_suffix(".json.tmp")
+def write_json_atomic(
+    path: Path, data: dict[str, object], *, overwrite: bool = True,
+) -> None:
+    """Publish complete JSON atomically; optionally refuse existing destinations.
 
-    with temporary_path.open("w", encoding="utf-8") as file:
-        json.dump(data, file, indent=2)
-        file.write("\n")
+    The parent directory must exist. With ``overwrite=False``, a same-directory
+    temporary file is linked into place so even a concurrent creator cannot be
+    overwritten. Existing callers retain replacement behavior by default.
+    """
+    if overwrite:
+        temporary_path = path.with_suffix(".json.tmp")
+        file = temporary_path.open("w", encoding="utf-8")
+    else:
+        ensure_output_available(path)
+        file = tempfile.NamedTemporaryFile(
+            mode="w", encoding="utf-8", dir=path.parent,
+            prefix=f".{path.name}.", suffix=".tmp", delete=False,
+        )
+        temporary_path = Path(file.name)
 
-    temporary_path.replace(path)
+    try:
+        with file:
+            json.dump(data, file, indent=2)
+            file.write("\n")
+        if overwrite:
+            temporary_path.replace(path)
+        else:
+            os.link(temporary_path, path)
+    finally:
+        temporary_path.unlink(missing_ok=True)
 
 
 def build_manifest(

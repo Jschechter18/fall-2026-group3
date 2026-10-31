@@ -13,6 +13,10 @@ Only Solver activations are captured. The hidden size for Gemma-3-4b-it is 2560.
 
 ## Files
 
+The paths below use the legacy collection roots. Distributed runs use the same
+three tensor filenames inside `prepared/activations/<run>/layer_NN/`; see the
+[workflow guide](distributed_collection.md) for the complete bundle layout.
+
 ```
 data/activations/<run>/layer_NN/<source_split>_attempt1.pt   # one row per collected question
 data/activations/<run>/layer_NN/<source_split>_attempt2.pt   # one row per episode
@@ -21,7 +25,9 @@ data/activations/<run>/layer_NN/<source_split>.pt            # attempt1 rows, th
 
 The third file is the SAE-facing tensor; `scripts/train_sae.py` reads it as unlabeled rows (train / validation / test). Every file is written through `ActivationStore` and read back to verify the round trip before the run is marked finished (`collection_artifacts.py`).
 
-While a run is in progress, chunks live under `data/activations/<run>/_progress/<source_split>/chunk_XXXXXXXX/` with their own `records.jsonl` and `activations.pt`; `merge_chunks` concatenates them in order and assigns the global indices below.
+While a legacy run is in progress, chunks live under `data/activations/<run>/_progress/<source_split>/chunk_XXXXXXXX/` with their own `records.jsonl` and `activations.pt`; `merge_chunks` concatenates them in order and assigns the global indices below.
+Manifest workers checkpoint under `<run-directory>/chunks/<work-id>/chunk_XXXXXXXX/`;
+the distributed merge uses the same index-reconstruction logic.
 
 ## Indices in `interactions.jsonl`
 
@@ -38,11 +44,31 @@ Alignment is checked twice: by `_validate_alignment` when chunks are merged, and
 
 ## Partitions and exports
 
-The source split mixes research roles. `results/behavior/<package>/split_manifest.csv` maps each `question_id` to its partition (train / validation / test / intervention) and to `full_index` (its row in `natural_4b_full`) and `scan_index` (its row in the layer scan, when present). The frozen `partitions.csv` is the authority on membership; indices are rebuilt per run. See `behavior_v01.md`, "Keeping evaluation honest" and "Re-running the collection".
+For distributed collection, intervention membership is reserved before inference,
+but its baseline episodes and activations are collected with the rest of the
+master pool. Train/validation/test membership is assigned after merging.
+Intervention baselines are exported under a separate run name.
 
-`scripts/export_partition_activations.py` writes the same three-file layout under a new run name with the partition in place of the source split, for example `natural_4b_partitioned/layer_33/train_attempt2.pt`, re-indexes the records per partition and records `source_activation_index` so a row can be traced back. Intervention is exported as ids only.
+In new final exports, `source_split` is the actual storage folder and
+`original_source_split` retains dataset origin. `full_index` and attempt indices
+refer to the final split's tensor rows; `collection_activation_index` records
+the original merged row. See the [workflow guide](distributed_collection.md).
 
-![Dataset partition workflow](diagrams/data_split_workflow.svg)
+### Historical MuSiQue exports
+
+In the historical runs, a MuSiQue source split mixes research roles. The behavior
+package manifest maps each question to its research partition and its original
+full-run/layer-scan indices. Historical exports retain `source_activation_index`
+so their existing readers can verify the original address.
+
+`scripts/export_partition_activations.py` gathers tensors by partition. An
+intervention export contains baseline episodes and tensors under its own run
+name; causal replay later regenerates A2 live.
+
+The following diagram records the historical MuSiQue allocation. Use the current
+workflow above for new mixed-dataset runs.
+
+![Historical MuSiQue partition workflow](diagrams/data_split_workflow.svg)
 
 Editable source: `docs/diagrams/data_split_workflow.drawio`. The overall experimental pipeline diagram is `proposal/revised_capstone_diagram.drawio` (`.drawio.svg` beside it), embedded in `proposal/proposal.md`.
 
@@ -53,7 +79,7 @@ Editable source: `docs/diagrams/data_split_workflow.drawio`. The overall experim
 | SAE training (`scripts/train_sae.py`, `sae/dataloader.py`) | `layer_NN/{train,validation,test}.pt` of an exported run | No: unlabeled rows, A1 and A2 together |
 | Probes (`production.load_labeled_rows` + `load_production_activations`) | `labels.csv`, the manifest, `layer_NN/<split>_attempt{1,2}.pt` | Yes: manifest index must equal the record index, with purpose gating (`fit`, `tune`, `evaluate`, `intervene`) |
 | Layer-selection probe (PR #51) | exported partition runs through the same loader | Yes |
-| Causal stage | `intervention_question_ids.json` and the stored episodes; re-runs the Solver live | Indices not needed: the hook runs at generation time |
+| Causal stage | separate intervention episodes, matching labels, and saved contexts for mixed datasets; re-runs the Solver live | Indices not needed: the hook runs at generation time |
 | Alignment checks (`experiments/alignment.py`, `scripts/validate_pilot_activations.py`) | records and tensors | Yes |
 
 Use `attempt=2` rows for feedback-uptake questions and `attempt=1` rows for the "before feedback" control; never mix a row from `<split>.pt` with an index meant for the per-attempt files.

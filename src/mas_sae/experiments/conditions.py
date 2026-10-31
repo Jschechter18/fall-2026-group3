@@ -42,14 +42,16 @@ def resolve_presentations(values=OMITTED):
     return presentations
 
 
-def assign_candidate_orders(question_ids, *, seed):
+def assign_candidate_orders(question_ids, *, seed, hop_groups=None):
     """Seeded candidate order per question, balanced within each hop group.
 
     Decided from the question ids and the seed alone, before any generation.
+    Explicit ``hop_groups`` supports IDs that do not encode a MuSiQue hop type.
     """
     return assign_experiment_splits(
         question_ids,
         proportions={order: 0.5 for order in Solver.CANDIDATE_ORDERS},
         seed=seed,
         supported_splits=Solver.CANDIDATE_ORDERS,
+        hop_groups=hop_groups,
     )

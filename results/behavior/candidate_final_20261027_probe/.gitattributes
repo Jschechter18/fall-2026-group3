@@ -1,0 +1,2 @@
+# Store package files byte-for-byte so SHA256SUMS and the frozen partitions.csv checksum hold.
+* -text

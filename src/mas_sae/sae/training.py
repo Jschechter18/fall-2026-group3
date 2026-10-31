@@ -78,7 +78,7 @@ def train_sae(
     results_root: Path,
     project_root: Path,
     *,
-    evaluate_test: bool = True,
+    evaluate_test: bool = False,
     register_version: bool = True,
     resume_directory: Path | None = None,
     run_context: dict | None = None,
@@ -105,7 +105,8 @@ def train_sae(
     project_root : Path
         The root directory of the project.
     evaluate_test : bool, optional
-        Whether to evaluate the test set. Defaults to True.
+        Whether to evaluate the test set. Defaults to False; enable only after
+        model selection is complete.
     register_version : bool, optional
         Whether to register the version. Defaults to True.
     resume_directory : Path | None, optional
@@ -520,6 +521,7 @@ def finish_run(run_directory: Path, epochs: int, project_root: Path) -> Training
         results_root=results_root,
         project_root=project_root,
         resume_directory=run_directory,
+        evaluate_test=True,
         register_version=record_path is None,
     )
     if record_path is not None:

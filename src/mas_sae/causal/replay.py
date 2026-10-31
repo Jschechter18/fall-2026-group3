@@ -30,7 +30,7 @@ Conditions per episode:
                  strength (``steer_strengths``): the targeted set and the random sets (draws)
   per SAE, EP    the same targeted / random edits with the error-preserving splice (control: plain replay)
 
-The regenerated A2 is labeled with the same Behavior v0.1.2 rules as the stored data, and
+The regenerated A2 is labeled with the same configured behavior-label rules as the stored data, and
 acceptance means ``solver_response == "adopted_critic"``. Conclusions are about critic adoption on
 eligible disagreement episodes only; claims about correctness need correctness-aware analysis.
 
@@ -74,7 +74,6 @@ from mas_sae.experiments.artifacts import (
 
 logger = logging.getLogger(__name__)
 
-POLICY = bl.V012_QC
 ACCEPT = "adopted_critic"
 BASELINE = "Baseline"
 INTERVENTION = "final_prompt_token_prefill_only"
@@ -106,6 +105,8 @@ class ReplayConfig:
     layer: int                                       # Solver layer the SAEs are spliced into
     solver: dict = field(default_factory=dict)       # same role spec as the collection config
     musique_revision: str | None = None
+    contexts_jsonl: str | None = None              # exact collected payloads for mixed datasets
+    label_policy: str = "v0.1.2-qc"               # legacy default; candidates use v0.2.0-candidate
     partition: str = "intervention"
     # name -> {kind: custom | gemma_scope, path: ...}; must be SAEs of the feature-selection run
     saes: dict = field(default_factory=dict)
@@ -138,6 +139,8 @@ class ReplayConfig:
             if k in raw:
                 raw[k] = Path(raw[k])
         cfg = cls(**raw)
+        if cfg.label_policy not in bl.POLICIES:
+            raise ValueError(f"Unknown label_policy {cfg.label_policy!r}")
         for name, spec in cfg.saes.items():
             if name == BASELINE or spec.get("kind") not in {"custom", "gemma_scope"} or "path" not in spec:
                 raise ValueError(f"SAE {name!r} needs kind: custom|gemma_scope and a path.")
@@ -274,20 +277,22 @@ def load_episodes(cfg: ReplayConfig) -> pd.DataFrame:
     """Eligible episodes of ``cfg.partition`` in a seeded order, with their stored labels.
 
     Every eligible label must have exactly one stored Natural episode, and relabeling the stored
-    A2 with the v0.1.2 rules must reproduce labels.csv, so the regenerated A2s are labeled by
+    A2 with the configured rules must reproduce labels.csv, so the regenerated A2s are labeled by
     exactly the rules that produced the stored labels.
     """
     from mas_sae.probe.behavior_data import read_jsonl
 
     root = Path(cfg.capstone_data_root)
     labels = bl.read_labels(root / cfg.labels_csv)
+    policy = bl.POLICIES[cfg.label_policy]
+    eligibility, target = (("eligible_strict", "strict_target") if policy.candidate_rules else ("eligible_primary", "primary_target"))
     versions = {lab["rule_version"] for lab in labels.values()}
-    if versions != {POLICY.version}:
-        raise ValueError(f"labels.csv rule_version {sorted(versions)} is not {POLICY.version!r}.")
+    if versions != {policy.version}:
+        raise ValueError(f"labels.csv rule_version {sorted(versions)} is not {policy.version!r}.")
     eligible = {q: lab for q, lab in labels.items()
-                if lab["partition"] == cfg.partition and lab["eligible_primary"]}
+                if lab["partition"] == cfg.partition and lab[eligibility]}
     if not eligible:
-        raise ValueError(f"No eligible_primary labels in partition {cfg.partition!r}.")
+        raise ValueError(f"No {eligibility} labels in partition {cfg.partition!r}.")
 
     records = read_jsonl(root / cfg.interactions_jsonl)
     seen: dict[str, dict] = {}
@@ -307,17 +312,21 @@ def load_episodes(cfg: ReplayConfig) -> pd.DataFrame:
     rows = []
     for qid, lab in eligible.items():
         r = seen[qid]
-        relabel = bl.classify_candidate(r, POLICY)
-        if (relabel["solver_response"], relabel["primary_target"]) != (lab["solver_response"], lab["primary_target"]):
+        relabel = bl.classify_candidate(r, policy)
+        if lab.get("episode_id") and lab["episode_id"] != r.get("episode_id"):
+            raise ValueError(f"{qid}: label episode_id differs from the collected episode")
+        if (relabel["solver_response"], relabel[target]) != (lab["solver_response"], lab[target]):
             raise ValueError(f"{qid}: relabeling the stored A2 gives {relabel['solver_response']!r}, "
                              f"labels.csv says {lab['solver_response']!r}.")
-        rows.append({"question_id": qid, "source_split": r["source_split"], "question": r["question"],
+        rows.append({**{k: r[k] for k in policy.input_fields if k in r},
+                     "a2_presentation": r.get("a2_presentation", "feedback"),
+                     "candidate_order": r.get("candidate_order"), "question_id": qid, "source_split": r["source_split"], "question": r["question"],
                      "solver_attempt_1": r["solver_attempt_1"], "critic_feedback": r["critic_feedback"],
                      "critic_advocated_answer": r["critic_advocated_answer"],
                      "critic_noncommittal": r["critic_noncommittal"],
                      "stored_solver_attempt_2": r["solver_attempt_2"],
                      "stored_solver_response": lab["solver_response"],
-                     "stored_adopted": int(lab["primary_target"]),
+                     "stored_adopted": int(lab[target]),
                      # exact A2 prompt token ids at collection, when the collection recorded them
                      "stored_a2_input_ids_sha256": ((r.get("generation_telemetry") or {}).get("solver_a2_prompt")
                                                     or {}).get("input_ids_sha256")})
@@ -326,8 +335,21 @@ def load_episodes(cfg: ReplayConfig) -> pd.DataFrame:
     return df.head(cfg.limit) if cfg.limit else df
 
 
-def load_paragraphs(episodes: pd.DataFrame, revision: str | None) -> dict[str, list]:
-    """MuSiQue paragraphs for each episode, from its source split at the pinned revision."""
+def load_paragraphs(episodes: pd.DataFrame, revision: str | None, contexts_path: Path | None = None) -> dict[str, list]:
+    """Exact exported contexts, or the original MuSiQue lookup for legacy runs."""
+    if contexts_path is not None:
+        from mas_sae.experiments.records import read_jsonl
+        contexts = read_jsonl(contexts_path)
+        by_id = {r["question_id"]: r["payload"] for r in contexts}
+        if len(by_id) != len(contexts):
+            raise ValueError("Duplicate context question IDs")
+        out = {}
+        for ep in episodes.to_dict("records"):
+            payload = by_id.get(ep["question_id"])
+            if payload is None or payload.get("question") != ep["question"] or not isinstance(payload.get("paragraphs"), list):
+                raise ValueError(f"{ep['question_id']}: missing or mismatched collected context")
+            out[ep["question_id"]] = payload["paragraphs"]
+        return out
     from mas_sae.data.musique import load_musique_examples_by_id
 
     out = {}
@@ -503,7 +525,7 @@ def load_components(cfg: ReplayConfig, episodes: pd.DataFrame) -> Components:
     features = feature_sets(cfg, hashes)
     saes = {name: load_sae(sae_spec, root, cfg.layer)[0].eval() for name, sae_spec in cfg.saes.items()}
     validate_features(features, saes)                    # before the (slow) model load
-    paragraphs = load_paragraphs(episodes, cfg.musique_revision)
+    paragraphs = load_paragraphs(episodes, cfg.musique_revision, root / cfg.contexts_jsonl if cfg.contexts_jsonl else None)
 
     spec = resolve_role_spec("solver", cfg.solver, default_max_new_tokens=64)
     model, processor = load_spec(spec)
@@ -546,18 +568,22 @@ def generate(comp: Components, ep: dict, cond: dict, control_token: int | None =
               if cond["features"] is not None else contextlib.nullcontext())
     t0 = time.perf_counter()
     with splice, FirstTokenLogits(comp.model) as first:
-        a2 = comp.solver.revise(ep["question"], comp.paragraphs[ep["question_id"]],
-                                ep["solver_attempt_1"], ep["critic_feedback"])
+        if ep.get("a2_presentation", "feedback") == "candidates":
+            a2 = comp.solver.choose(ep["question"], comp.paragraphs[ep["question_id"]],
+                                    ep["solver_attempt_1"], ep["critic_advocated_answer"], ep["candidate_order"])
+        else:
+            a2 = comp.solver.revise(ep["question"], comp.paragraphs[ep["question_id"]],
+                                    ep["solver_attempt_1"], ep["critic_feedback"])
     seconds = time.perf_counter() - t0
-    label = bl.classify_candidate({"solver_attempt_1": ep["solver_attempt_1"], "solver_attempt_2": a2,
-                                   "critic_advocated_answer": ep["critic_advocated_answer"],
-                                   "critic_noncommittal": ep["critic_noncommittal"]}, POLICY)
+    policy = bl.POLICIES[comp.info.get("label_policy_name", "v0.1.2-qc")]
+    generated_ids = comp.solver.last_generated_token_ids or []
+    label = bl.classify_candidate({**ep, "solver_attempt_2": a2,
+        "solver_a2_first_token_id": generated_ids[0] if generated_ids else None}, policy)
     gen = comp.solver.last_generation or {}
     prompt = comp.solver.last_prompt or {}
     stats = splice.stats if isinstance(splice, SAESplice) else {}
     # the token generation actually chose (after any logits processing), scored by the model's raw log-probs
-    generated = comp.solver.last_generated_token_ids or []
-    token = generated[0] if generated else None
+    token = generated_ids[0] if generated_ids else None
     stored_prompt = ep.get("stored_a2_input_ids_sha256")
     stored_prompt = stored_prompt if isinstance(stored_prompt, str) else None
     return {"question_id": ep["question_id"], "experiment": cond["experiment"],
@@ -596,9 +622,9 @@ def provenance(cfg: ReplayConfig, config_path: Path | None, comp: Components) ->
         "config_path": str(config_path) if config_path else None,
         "config_sha256": sha256_file(config_path) if config_path else None,
         "input_sha256": {p: sha256_file(root / p) for p in
-                         (cfg.interactions_jsonl, cfg.labels_csv, cfg.feature_selection_summary, cfg.feature_reference)
+                         (cfg.interactions_jsonl, cfg.labels_csv, cfg.feature_selection_summary, cfg.feature_reference, cfg.contexts_jsonl)
                          if p},
-        "label_policy": POLICY.version, "label_policy_sha256": POLICY.definition_sha256(),
+        "label_policy": bl.POLICIES[cfg.label_policy].version, "label_policy_sha256": bl.POLICIES[cfg.label_policy].definition_sha256(),
         "packages": {p: get_package_version(p) for p in PACKAGES},
         "site": comp.site, "intervention": INTERVENTION,
         **comp.info,
@@ -641,6 +667,7 @@ def replay(cfg: ReplayConfig, episodes: pd.DataFrame, comp: Components, run_dir:
         raise ValueError("Steering needs reference activations for every SAE's features.")
     run_dir.mkdir(parents=True, exist_ok=True)
     conds = conditions(comp.features, cfg.error_preserving, cfg.ablation, cfg.steer_strengths)
+    comp.info["label_policy_name"] = cfg.label_policy
     meta_path = run_dir / "replay_config.json"
     meta = {"config": _config_dict(cfg), "conditions": conds, "features": comp.features}
     prov = provenance(cfg, config_path, comp)
@@ -1032,6 +1059,8 @@ def analyse(run_dir: Path, n_bootstrap: int | None = None, n_permutations: int |
     if not check["passed"]:
         logger.warning("replay check failed (%s): the results are unvalidated", check["failures"])
     steering = [a for a in arms if a != ABLATION]
+    policy_version = (meta.get("provenance") or {}).get(
+        "label_policy", bl.POLICIES[cfg.get("label_policy", "v0.1.2-qc")].version)
     summary = {
         "n_episodes_complete": n,
         "n_episodes_planned": int(len(manifest)),
@@ -1067,7 +1096,7 @@ def analyse(run_dir: Path, n_bootstrap: int | None = None, n_permutations: int |
         "seconds_per_generation": float(rows.seconds.mean()),
         "features": meta["features"],
         "provenance": meta.get("provenance"),
-        "outcome_note": ("Acceptance = regenerated A2 labeled adopted_critic under Behavior v0.1.2 rules, on "
+        "outcome_note": (f"Acceptance = regenerated A2 labeled adopted_critic under {policy_version} rules, on "
                          "eligible disagreement episodes only; these results say nothing about correctness or "
                          "harmful compliance. The intervention is final-prompt-token, prefill-only. Δ is paired "
                          "by question against the condition's control: the same SAE's reconstruction-only run "

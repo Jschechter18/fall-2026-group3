@@ -1,0 +1,39 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage[hidelinks]{hyperref}
+
+\graphicspath{{figures/}}
+
+\title{Capstone Report}
+\author{Group 3}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+    \input{sections/abstract}
+\end{abstract}
+
+\tableofcontents
+\clearpage
+
+\input{sections/introduction}
+\input{sections/related_work}
+\input{sections/eda}
+\input{sections/methodology}
+\input{sections/experiments}
+\input{sections/results}
+\input{sections/discussion}
+
+\appendix
+\input{sections/appendix}
+
+\bibliographystyle{plain}
+\bibliography{references}
+
+\end{document}

@@ -251,6 +251,14 @@ def merge_chunks(
             f"Cannot finalise: committed chunks cover {position}/{len(question_ids)} questions."
         )
 
+    return merge_checkpoint_paths(paths, question_ids=question_ids, candidate_sites=candidate_sites)
+
+
+def merge_checkpoint_paths(paths, *, question_ids, candidate_sites):
+    """Merge ordered checkpoints across workers using the same index reconstruction."""
+    membership = [qid for path in paths for qid in json.loads((path / "metadata.json").read_text())["question_ids"]]
+    if membership != question_ids or len(set(question_ids)) != len(question_ids):
+        raise ValueError("Checkpoint membership does not cover the ordered questions exactly once")
     records: list[dict[str, Any]] = []
     exclusions: list[dict[str, Any]] = []
     attempt1: dict[str, list[torch.Tensor]] = {site: [] for site in candidate_sites}

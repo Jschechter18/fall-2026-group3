@@ -15,6 +15,9 @@ from typing import Any
 
 import torch
 
+from mas_sae.agents import critic as critic_prompts
+from mas_sae.agents.solver import Solver
+from mas_sae.agents.validator import Validator
 from mas_sae.data.musique import MUSIQUE_DATASET_ID
 from mas_sae.experiments import artifacts
 from mas_sae.experiments.conditions import (
@@ -24,6 +27,20 @@ from mas_sae.experiments.conditions import (
     resolve_presentations,
 )
 from mas_sae.experiments.reproducibility import config_sha256
+
+
+def experiment_compatibility(resolved_config: dict[str, Any], candidate_sites: list[str]) -> dict[str, Any]:
+    """Compare recorded experiment settings while allowing different worker hardware."""
+    provenance = resolved_config["provenance"]
+    return {
+        "roles": {role: {k: metadata.get(k) for k in (
+            "model_id", "requested_revision", "resolved_revision", "loader", "dtype",
+            "quantization", "generation", "chat_template_kwargs")}
+            for role, metadata in provenance["roles"].items()},
+        **{k: provenance.get(k) for k in ("protocol_version", "capabilities", "active_conditions", "prompt_versions", "prompt_sha256")},
+        "a2_presentations": provenance.get("a2_presentations", ["feedback"]),
+        "activation_sites": candidate_sites,
+    }
 
 
 def role_metadata(agent: Any) -> dict[str, Any]:
@@ -130,6 +147,28 @@ def _critic_prompt_names(
     return names
 
 
+def _prompt_hashes(names: dict[str, str], solver: Any, validator: Any) -> dict[str, str]:
+    """Fingerprint the runtime templates; critic templates live at module scope.
+
+    Default class templates also support lightweight agents used by provenance
+    callers. Instance overrides are used whenever the agent supplies them.
+    """
+    hashes = {}
+    for role, name in names.items():
+        if role.startswith("critic_"):
+            templates = [getattr(critic_prompts, part) for part in name.split("+")]
+            hashes[role] = artifacts.sha256_json(templates)
+        else:
+            agent, defaults = (validator, Validator) if role == "validator" else (solver, Solver)
+            template = getattr(agent, name, getattr(defaults, name))
+            if role == "solver_candidates":
+                # Preserve the established candidate-template-and-label digest.
+                labels = getattr(solver, "CANDIDATE_LABELS", Solver.CANDIDATE_LABELS)
+                template += json.dumps(labels, sort_keys=True)
+            hashes[role] = artifacts.sha256_text(template)
+    return hashes
+
+
 def build_resolved_config(
     config: dict[str, Any],
     model: Any,
@@ -168,12 +207,13 @@ def build_resolved_config(
     candidate_prompt = {}
     if A2Presentation.CANDIDATES in presentations:
         candidate_prompt = {"solver_candidates": "CANDIDATE_PROMPT"}
-        # Template and labels together, so a rebuilt prompt can be checked against the run.
-        presentation_record["prompt_sha256"] = {
-            "solver_candidates": artifacts.sha256_text(
-                solver.CANDIDATE_PROMPT + json.dumps(solver.CANDIDATE_LABELS, sort_keys=True)
-            ),
-        }
+    prompt_versions = {
+        "solver_solve": "SOLVE_PROMPT_V1",
+        "solver_revise": "REVISE_PROMPT_V1",
+        **candidate_prompt,
+        **_critic_prompt_names(critic, type_checked_target),
+        "validator": "VALIDATE_PROMPT",
+    }
 
     return {
         **config,
@@ -184,11 +224,19 @@ def build_resolved_config(
                 getattr(model.config, "_commit_hash", None) or "unknown"
             ),
             "dataset_id": (
-                str(Path(config["dataset"]["path"]).resolve())
-                if "path" in config.get("dataset", {}) else MUSIQUE_DATASET_ID
+                "mixed-manifest"
+                if "inputs" in config.get("dataset", {})
+                else (
+                    str(Path(config["dataset"]["path"]).resolve())
+                    if "path" in config.get("dataset", {})
+                    else MUSIQUE_DATASET_ID
+                )
             ),
-            **({"dataset_file_sha256": artifacts.sha256_file(config["dataset"]["path"])}
-               if "path" in config.get("dataset", {}) else {}),
+            **(
+                {"dataset_file_sha256": artifacts.sha256_file(config["dataset"]["path"])}
+                if "path" in config.get("dataset", {})
+                else {}
+            ),
             "roles": {name: role_metadata(agent) for name, agent in
                       (("solver", solver), ("critic", critic), ("validator", validator))},
             "environment": environment_metadata(),
@@ -201,13 +249,8 @@ def build_resolved_config(
             },
             **label,
             "capabilities": capabilities,
-            "prompt_versions": {
-                "solver_solve": "SOLVE_PROMPT_V1",
-                "solver_revise": "REVISE_PROMPT_V1",
-                **candidate_prompt,
-                **_critic_prompt_names(critic, type_checked_target),
-                "validator": "VALIDATE_PROMPT",
-            },
+            "prompt_versions": prompt_versions,
+            "prompt_sha256": _prompt_hashes(prompt_versions, solver, validator),
             "generation": {
                 "do_sample": (False if "roles" not in config else None),
                 "solver_max_new_tokens": solver.max_new_tokens,

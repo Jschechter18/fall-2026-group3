@@ -153,6 +153,13 @@ def test_config_rejects_unknown_sae_kinds(tmp_path):
         fs.FeatureSelectionConfig.from_yaml(p)
 
 
+def test_config_passes_excluded_episodes_to_the_loader(tmp_path):
+    p = tmp_path / "c.yaml"
+    p.write_text(PATHS_YAML + 'excluded_episodes:\n  "2hop__89162_77346": "no frozen partition"\n')
+    cfg = fs.FeatureSelectionConfig.from_yaml(p)
+    assert cfg.layer_selection_config().excluded_episodes == {"2hop__89162_77346": "no frozen partition"}
+
+
 def test_committed_config_loads_with_three_saes():
     from pathlib import Path
     repo = Path(__file__).resolve().parents[3]

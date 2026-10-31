@@ -1,5 +1,9 @@
 """Partition manifest and safe loading for the production activation data.
 
+The rules below describe the historical/default layout. Distributed collection
+uses explicit ``layout="partitioned"`` readers and frozen membership; its
+``source_split`` is a storage directory and ``original_source_split`` is origin.
+
 Every question belongs to exactly one partition, decided from its id and its
 MuSiQue source split alone:
 
@@ -68,7 +72,7 @@ PARTITION_PURPOSE = {partition: purpose for purpose, partition in PURPOSE_PARTIT
 
 MANIFEST_FIELDS = [
     "question_id",
-    "source_split",         # MuSiQue split the question came from
+    "source_split",         # tensor/results folder; also dataset origin in legacy runs
     "partition",            # the only column anyone reads to choose data
     "hop_group",            # what the stratification used
     "collection_split",     # experiment_split the collection run assigned; history
@@ -91,19 +95,44 @@ MISSING_IDS_FILE = "missing_question_ids.json"   # frozen questions a partial ru
 COVERAGE_MODES = ("complete", "subset")
 
 
-def interaction_paths(results_dir, partitions=None):
-    """The run's ``interactions.jsonl`` files that can hold ``partitions`` (all when None)."""
-    if partitions is None:
+def interaction_paths(results_dir, partitions=None, *, layout="legacy"):
+    """Interaction files for a layout; partitioned runs declare folders in run_layout.json."""
+    results_dir = Path(results_dir)
+    if layout not in {"legacy", "partitioned"}:
+        raise ValueError("layout must be legacy or partitioned")
+    descriptor_path = results_dir/"run_layout.json"
+    if layout == "legacy" and descriptor_path.is_file():
+        descriptor = json.loads(descriptor_path.read_text())
+        if descriptor.get("layout") == "partitioned":
+            raise ValueError(
+                f"{results_dir} declares a partitioned run; pass layout='partitioned' to avoid incomplete reads"
+            )
+    if layout == "partitioned":
+        descriptor = json.loads(descriptor_path.read_text())
+        if descriptor.get("layout") != "partitioned":
+            raise ValueError("Run metadata does not describe a partitioned layout")
+        sources = descriptor["source_splits"]
+        if (not sources or len(set(sources)) != len(sources)
+                or not (set(sources) <= set(EXPORT_PARTITIONS) or sources == ["intervention"])):
+            raise ValueError("Expected ordinary split directories or a separate intervention run")
+        if partitions is not None:
+            if not set(partitions) <= set(PARTITIONS):
+                raise ValueError("Unknown requested partitions")
+            unavailable = set(partitions) - set(sources)
+            if unavailable:
+                raise ValueError(f"Requested partitions are unavailable in this run: {sorted(unavailable)}")
+            sources = set(partitions)
+    elif partitions is None:
         sources = SUPPORTED_SOURCE_SPLITS
     else:
         sources = {"train" if p in TRAIN_SOURCE_PARTITIONS else "validation" for p in partitions}
-    return [Path(results_dir) / source_split / "interactions.jsonl" for source_split in sorted(sources)]
+    return [results_dir / source_split / "interactions.jsonl" for source_split in sorted(sources)]
 
 
-def read_run_interactions(results_dir):
-    """All episodes of one run: its train and validation ``interactions.jsonl`` together."""
+def read_run_interactions(results_dir, *, layout="legacy"):
+    """All episodes from the selected layout, including test for distributed runs."""
     rows = []
-    for path in interaction_paths(results_dir):
+    for path in interaction_paths(results_dir, layout=layout):
         rows.extend(read_jsonl(path))
     return rows
 
@@ -157,7 +186,7 @@ def assign_partitions(question_ids_by_source, *, proportions, seed):
 
 
 def build_partition_manifest(full_rows, scan_rows=(), qc100_ids=(), *, proportions=None, seed=None,
-                             frozen=None, coverage="complete"):
+                             frozen=None, coverage="complete", layout="legacy", exclusions=()):
     """Build {question_id: record} from the full run, the layer scan and the old QC sample.
 
     Without ``frozen`` the partition is derived: ``proportions`` and ``seed``
@@ -172,7 +201,17 @@ def build_partition_manifest(full_rows, scan_rows=(), qc100_ids=(), *, proportio
     a person, not here. With ``coverage="complete"`` a frozen question that was
     not collected raises too; ``coverage="subset"`` allows it, for runs that
     deliberately cover part of the question set such as the layer scan.
+    ``layout="partitioned"`` instead consumes explicit source/hop metadata and
+    frozen research partitions, including separately collected intervention
+    baselines. Explicit exclusions are accounted for separately from missing questions.
     """
+    if layout == "partitioned":
+        if frozen is None or proportions is not None or seed is not None or scan_rows:
+            raise ValueError("Partitioned runs require frozen membership and no historical split derivation/scan")
+        from mas_sae.data.partition_adapter import build_collected_manifest
+        return build_collected_manifest(full_rows, frozen, exclusions=exclusions, coverage=coverage)
+    if layout != "legacy":
+        raise ValueError("layout must be legacy or partitioned")
     if frozen is None and (proportions is None or seed is None):
         raise ValueError("proportions and seed are required when no frozen mapping is given")
     if frozen is not None and (proportions is not None or seed is not None):
@@ -334,7 +373,7 @@ def sample_partition_questions(manifest, *, partition, num_questions, seed, excl
     """
     pool = sorted(
         q for q, m in manifest.items()
-        if m["partition"] == partition and not m["in_development_data"] and q not in exclude)
+        if m["partition"] == partition and m["in_development_data"] is False and q not in exclude)
     by_group = {}
     for q in pool:
         by_group.setdefault(manifest[q]["hop_group"], []).append(q)
@@ -349,13 +388,16 @@ def sample_partition_questions(manifest, *, partition, num_questions, seed, excl
 
 def write_manifest(path, manifest):
     with open(path, "w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=MANIFEST_FIELDS)
+        extra = list(dict.fromkeys(k for r in manifest.values() for k in r if k not in MANIFEST_FIELDS))
+        writer = csv.DictWriter(f, fieldnames=MANIFEST_FIELDS + extra)
         writer.writeheader()
         for record in manifest.values():
             writer.writerow({k: "" if v is None else v for k, v in record.items()})
 
 
 def read_manifest(path):
+    from mas_sae.data.partition_adapter import optional_bool
+
     with open(path, newline="") as f:
         records = list(csv.DictReader(f))
     manifest = {}
@@ -363,23 +405,36 @@ def read_manifest(path):
         if record["question_id"] in manifest:
             raise ValueError(f"{path}: question {record['question_id']} appears twice")
         for field in ("in_qc100", "in_development_data"):
-            record[field] = record[field] == "True"
+            if "dataset_source" in record:
+                record[field] = optional_bool(record.get(field))
+            else:
+                record[field] = record[field] == "True"
         for field in ("full_index", "scan_index"):
             record[field] = int(record[field]) if record[field] else None
+        for field in ("exposure_history_known", "prior_development_exposure"):
+            if field in record:
+                record[field] = optional_bool(record[field])
+        if record.get("collection_seed"):
+            record["collection_seed"] = int(record["collection_seed"])
         manifest[record["question_id"]] = record
     return manifest
 
 
-def write_partitions(path, manifest):
+def write_partitions(path, manifest, *, layout="legacy"):
     """Write the frozen mapping: the manifest columns that never change between runs."""
+    fields = PARTITION_FIELDS
+    if layout == "partitioned":
+        fields = fields + list(dict.fromkeys(k for r in manifest.values() for k in r if k not in fields))
+    elif layout != "legacy":
+        raise ValueError("layout must be legacy or partitioned")
     with open(path, "w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=PARTITION_FIELDS)
+        writer = csv.DictWriter(f, fieldnames=fields)
         writer.writeheader()
         for record in manifest.values():
-            writer.writerow({field: record[field] for field in PARTITION_FIELDS})
+            writer.writerow({field: record.get(field) for field in fields})
 
 
-def write_package_tables(output_dir, manifest, frozen=None):
+def write_package_tables(output_dir, manifest, frozen=None, *, layout="legacy", exclusions=()):
     """Write a package's ``split_manifest.csv``, ``partitions.csv`` and, for a partial run,
     ``missing_question_ids.json``.
 
@@ -394,16 +449,21 @@ def write_package_tables(output_dir, manifest, frozen=None):
     output_dir = Path(output_dir)
     write_manifest(output_dir / "split_manifest.csv", manifest)
     if frozen is None:
-        write_partitions(output_dir / PARTITIONS_FILE, manifest)
+        write_partitions(output_dir / PARTITIONS_FILE, manifest, layout=layout)
         return None
-    write_partitions(output_dir / PARTITIONS_FILE, frozen)
-    coverage = partition_coverage(manifest, frozen)
+    write_partitions(output_dir / PARTITIONS_FILE, frozen, layout=layout)
+    if layout == "partitioned":
+        excluded = {r["question_id"] for r in exclusions}
+        coverage = partition_coverage(manifest, {q: r for q, r in frozen.items() if q not in excluded})
+        coverage.update(excluded=len(excluded))
+    else:
+        coverage = partition_coverage(manifest, frozen)
     if coverage["missing"]:
         (output_dir / MISSING_IDS_FILE).write_text(json.dumps(coverage["missing_ids"], indent=2) + "\n")
     return coverage
 
 
-def read_partitions(path):
+def read_partitions(path, *, layout="legacy"):
     """Read a frozen mapping and check it is well formed.
 
     Accepts ``partitions.csv`` or a full ``split_manifest.csv`` (extra columns
@@ -411,13 +471,37 @@ def read_partitions(path):
     hop_group}}. Raises on a repeated id, an unknown source split or partition,
     a hop group that does not follow from the id, and a MuSiQue-validation
     question outside ``validation`` (or a MuSiQue-train question inside it).
+    ``layout="partitioned"`` reads explicit source/original-ID/hop metadata,
+    preserves exposure flags, and uses partition names as storage splits.
     """
+    path = Path(path)
     with open(path, newline="") as f:
         reader = csv.DictReader(f)
         missing_columns = [field for field in PARTITION_FIELDS if field not in (reader.fieldnames or [])]
         if missing_columns:
             raise ValueError(f"{path}: missing columns {missing_columns}")
         records = list(reader)
+    if layout == "partitioned":
+        from mas_sae.data.partition_adapter import SOURCE_FIELDS, EXPOSURE_FIELDS, optional_bool
+        frozen = {}
+        for record in records:
+            qid = record["question_id"]
+            if (qid in frozen or record["partition"] not in PARTITIONS
+                    or record["source_split"] != record["partition"]):
+                raise ValueError(f"{path}: duplicate ID or invalid partition/storage split for {qid}")
+            if any(k not in record for k in SOURCE_FIELDS) or qid != f"{record['dataset_source']}:{record['original_id']}":
+                raise ValueError(f"{path}: missing or inconsistent source identity for {qid}")
+            for field in (*EXPOSURE_FIELDS, "exposure_history_known", "prior_development_exposure"):
+                if field in record:
+                    record[field] = optional_bool(record[field])
+            if record.get("collection_seed"):
+                record["collection_seed"] = int(record["collection_seed"])
+            frozen[qid] = record
+        if not frozen:
+            raise ValueError(f"{path}: no questions")
+        return frozen
+    if layout != "legacy":
+        raise ValueError("layout must be legacy or partitioned")
     frozen = {}
     for record in records:
         qid = record["question_id"]
@@ -477,12 +561,15 @@ def check_package_sources(package_dir, paths):
                              "its labels may not describe these episodes")
 
 
-def load_labeled_rows(results_dir, package_dir, *, partitions=None):
+def load_labeled_rows(results_dir, package_dir, *, partitions=None, layout="legacy"):
     """Join a run's interactions with the labels and the partition manifest.
 
     ``results_dir`` holds ``train/`` and ``validation/`` folders, each with an
     ``interactions.jsonl`` (full run or layer scan). ``package_dir`` is the
     folder written by ``scripts/prepare_behavior_v01.py``.
+    Set ``layout="partitioned"`` for distributed results, whose folders come
+    from run_layout.json. Labels are still supplied separately; optional
+    episode IDs must match, and the manifest remains the partition authority.
 
     With ``partitions``, only the interaction files that can hold them are
     opened, and rows of other partitions sharing a file are dropped as soon as
@@ -496,7 +583,7 @@ def load_labeled_rows(results_dir, package_dir, *, partitions=None):
     manifest = read_manifest(package_dir / "split_manifest.csv")
     labels = read_labels(package_dir / "labels.csv")
 
-    paths = interaction_paths(results_dir, partitions)
+    paths = interaction_paths(results_dir, partitions, layout=layout)
     check_package_sources(package_dir, paths)
     rows = [row for path in paths for row in read_jsonl(path)]
     if partitions is not None:
@@ -505,6 +592,8 @@ def load_labeled_rows(results_dir, package_dir, *, partitions=None):
         qid = row["question_id"]
         row["partition"] = manifest[qid]["partition"]
         row["label"] = labels[qid]
+        if row["label"].get("episode_id") and row["label"]["episode_id"] != row.get("episode_id"):
+            raise ValueError(f"{qid}: label episode_id does not match collected episode")
     return rows, manifest
 
 

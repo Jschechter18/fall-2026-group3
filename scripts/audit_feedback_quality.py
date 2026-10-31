@@ -101,6 +101,8 @@ def main():
     parser.add_argument("--seed", type=int, default=42, help="review packet sampling seed")
     parser.add_argument("--expect-procedure-sha256",
                         help="frozen audit procedure hash; required for the validation partition")
+    parser.add_argument("--layout", choices=("legacy", "partitioned"), default="legacy",
+                        help="Results directory layout; distributed results use partitioned.")
     args = parser.parse_args()
 
     procedure_sha = feedback_audit.procedure_sha256()
@@ -113,11 +115,11 @@ def main():
         parser.error(f"audit procedure hash is {procedure_sha}, expected {args.expect_procedure_sha256}")
     ensure_output_available(args.output)
 
-    input_files = interaction_paths(args.results, {args.partition})
+    input_files = interaction_paths(args.results, {args.partition}, layout=args.layout)
     input_files += [args.labels / "labels.csv", args.labels / "split_manifest.csv"]
     hashes_before = {str(p): sha256_file(p) for p in input_files}
 
-    rows, manifest = load_labeled_rows(args.results, args.labels, partitions={args.partition})
+    rows, manifest = load_labeled_rows(args.results, args.labels, partitions={args.partition}, layout=args.layout)
     authorize_rows(rows, manifest, purpose=PURPOSE[args.partition])
 
     records = [feedback_audit.audit_row(r) for r in rows]
