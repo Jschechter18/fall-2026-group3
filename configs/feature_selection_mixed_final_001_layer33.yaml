@@ -27,7 +27,7 @@ saes:
     kind: gemma_scope
     path: results/sae/pretrained/gemma-scope-2-4b-it/resid_post_all/layer_33_width_16k_l0_big
 n_targeted: 10
-n_random_draws: 50
+n_random_draws: 100                  # >=100 for the confirmatory comparison (Instructor Review #6)
 n_top_report: 25
 seed: 42
 c_grid: [0.001, 0.01, 0.1, 1.0, 10.0]
