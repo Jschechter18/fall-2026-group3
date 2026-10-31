@@ -74,6 +74,16 @@ def test_cli_can_switch_fixed_config_to_quota_mode(tmp_path, setup):
     assert args["n"] is None and args["target_per_type"] == 1
 
 
+def test_filler_setting_reaches_the_runner(tmp_path, setup):
+    original, captured = setup
+    path = write_config(tmp_path, dict(original=str(original), n=2, filler="related"))
+    assert generation_cli.main(["--config", str(path)]) == 0
+    assert captured[0][1]["filler"] == "related"
+    assert generation_cli.main(["--n", "2", "--original", str(original),
+                                "--output-dir", str(tmp_path / "default")]) == 0
+    assert captured[1][1]["filler"] == "random"
+
+
 @pytest.mark.parametrize("settings", [
     [], {"typo": 1}, {"dataset_audit": "true"}, {"audit_concurrency": False},
     {"audit_max_tokens": 0}, {"concurrency": True}, {"concurrency": "256"},
@@ -81,6 +91,7 @@ def test_cli_can_switch_fixed_config_to_quota_mode(tmp_path, setup):
     {"read_timeout": "slow"}, {"read_timeout": float("inf")},
     {"model_id": None}, {"original": []}, {"dedup_original": []},
     {"n": 5, "target_per_hop": 1}, {"target_per_hop": 2, "max_requests_per_hop": 1},
+    {"filler": "nearest"}, {"filler": ""},
 ])
 def test_invalid_configs_fail_before_runner(tmp_path, setup, settings):
     _, captured = setup

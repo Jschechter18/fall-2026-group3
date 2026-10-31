@@ -88,6 +88,63 @@ def test_fillers_skip_used_titles_and_answer_mentions():
     assert titles.count("Selin") == 1 and "Leak" not in titles
 
 
+# ---- related fillers (#156): the pool paragraphs most similar to the question
+
+def text(title, body):
+    return {"title": title, "paragraph_text": body}
+
+
+TOPICAL = [text(f"Observatory {i}", f"The observatory {i} houses a refracting telescope founded by astronomers "
+                                    f"in a hill town; its dome and telescope survey comets.") for i in range(30)]
+UNRELATED = [text(f"Album {i}", f"Album {i} is a rock record with guitar songs released by a band on tour.")
+             for i in range(30)]
+
+
+def test_random_filler_draws_exactly_as_before():
+    paragraphs = [paragraph(f"Filler {i}") for i in range(40)]
+    pool = ParagraphPool(paragraphs)
+    assert pool.filler == "random"
+    expected = ParagraphPool(paragraphs).sample(16, random.Random(7), exclude_titles={"Selin"}, exclude_text="1842")
+    assert pool.fillers(16, random.Random(7), raw=RAW_2HOP, exclude_titles={"Selin"}) == expected
+
+
+def test_related_fillers_prefer_paragraphs_about_the_question():
+    pool = ParagraphPool(UNRELATED + TOPICAL, filler="related", related_top=20)
+    fillers = pool.fillers(16, random.Random(0), raw=RAW_2HOP, exclude_titles=set())
+    assert all(p["title"].startswith("Observatory") for p in fillers)
+
+
+@pytest.mark.parametrize("leak", ["Selin was its earlier name.", "It opened in 1842.", "Its site, SELIN, is old."])
+def test_related_fillers_never_mention_a_hop_answer(leak):
+    """A topical paragraph naming any step answer (normalized) could contradict the evidence."""
+    raw = dict(RAW_2HOP, answer_aliases=["the year 1842"])
+    tainted = text("Observatory leak", f"The observatory telescope dome survey founded astronomers. {leak}")
+    pool = ParagraphPool([tainted] + TOPICAL + UNRELATED, filler="related", related_top=40)
+    fillers = pool.fillers(16, random.Random(0), raw=raw, exclude_titles=set())
+    assert "Observatory leak" not in [p["title"] for p in fillers]
+
+
+def test_related_fillers_repeat_for_the_same_seed():
+    pool = ParagraphPool(UNRELATED + TOPICAL, filler="related", related_top=25)
+    draw = lambda seed: pool.fillers(16, random.Random(seed), raw=RAW_2HOP, exclude_titles=set())
+    assert draw(3) == draw(3)
+
+
+def test_related_candidate_is_valid_and_keeps_used_titles_out():
+    pool = ParagraphPool([text("Selin River", "An observatory telescope near the river.")] + UNRELATED + TOPICAL,
+                         filler="related")
+    candidate = assemble_candidate(RAW_2HOP, "2hop", pool, random.Random(0))
+    assert validate_candidate(candidate, expected_paragraphs=20).valid
+    assert [p["title"] for p in candidate["paragraphs"]].count("Selin River") == 1   # the generated distractor
+
+
+def test_unknown_filler_and_small_related_pool_are_refused():
+    with pytest.raises(ValueError, match="filler must be one of"):
+        ParagraphPool([], filler="nearest")
+    with pytest.raises(ValueError, match="pool too small"):
+        ParagraphPool(TOPICAL[:5], filler="related").fillers(16, random.Random(0), raw=RAW_2HOP, exclude_titles=set())
+
+
 def test_small_pool_raises():
     with pytest.raises(ValueError):
         assemble_candidate(RAW_2HOP, "2hop", ParagraphPool([]), random.Random(0))

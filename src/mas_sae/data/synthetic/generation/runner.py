@@ -53,6 +53,7 @@ def run_batch(
     max_tokens: int = 6000,
     temperature: float | None = None,
     dedup_originals: Sequence[str | Path] = (),
+    filler: str = "random",
     client_factory: Callable[[], Any] | None = None,
     client: Any = None,
     transport_settings: dict | None = None,
@@ -260,7 +261,7 @@ def run_batch(
             progress(report)
 
     try:
-        pool = ParagraphPool.from_jsonl(original)
+        pool = ParagraphPool.from_jsonl(original, filler=filler)
         with ExitStack() as stack:
             candidates_file = stack.enter_context((output_dir / "candidates.jsonl").open("w", encoding="utf-8"))
             accepted_file = stack.enter_context((output_dir / "accepted.jsonl").open("w", encoding="utf-8"))
@@ -332,7 +333,7 @@ def run_batch(
             "requests_by_type": {h: requested[h] for h in hops},
             "accepted_by_type": {h: accepted[h] for h in hops},
             "model_id": client.model_id if client is not None else model_id,
-            "prompt_version": PROMPT_VERSION, "max_tokens": max_tokens,
+            "prompt_version": PROMPT_VERSION, "filler": filler, "max_tokens": max_tokens,
             "temperature": temperature, "max_attempts": max_attempts,
             "seed": seed, "effective_seed": effective_seed, "n": n,
             "target_per_type": target_per_type, "max_requests_per_type": max_requests_per_type,
