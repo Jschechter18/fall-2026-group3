@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import contextmanager
 from datetime import datetime, timezone
 import csv
 import fcntl
@@ -109,6 +110,41 @@ def sha256_file(path: str | Path) -> str:
     """SHA-256 of a file's exact bytes."""
     with Path(path).open("rb") as file:
         return hashlib.file_digest(file, "sha256").hexdigest()
+
+
+def file_facts(
+    root: str | Path,
+    *,
+    exclude_names: set[str] | frozenset[str] = frozenset(),
+) -> dict[str, dict[str, object]]:
+    """Return stable sizes and hashes for every completed file below ``root``.
+
+    Temporary path components are ignored so callers can checksum a durable
+    artifact directory while it is being assembled. Domain-specific commit or
+    summary files can be omitted with ``exclude_names``.
+    """
+    root = Path(root)
+    return {
+        str(path.relative_to(root)): {"size": path.stat().st_size, "sha256": sha256_file(path)}
+        for path in sorted(root.rglob("*"))
+        if path.is_file()
+        and path.name not in exclude_names
+        and not any(part.endswith(".tmp") for part in path.relative_to(root).parts)
+    }
+
+
+@contextmanager
+def staged_output(destination: str | Path):
+    """Build a directory privately and publish it with one atomic rename."""
+    destination = Path(destination)
+    ensure_output_available(destination)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix=f".{destination.name}-", dir=destination.parent) as temporary:
+        root = Path(temporary) / "bundle"
+        root.mkdir()
+        yield root
+        ensure_output_available(destination)
+        root.rename(destination)
 
 
 def get_git_provenance() -> dict[str, object]:

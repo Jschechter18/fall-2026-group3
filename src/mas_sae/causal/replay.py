@@ -160,13 +160,24 @@ class ReplayConfig:
 
     @classmethod
     def from_yaml(cls, path: Path) -> "ReplayConfig":
-        raw = yaml.safe_load(Path(path).read_text()) or {}
+        return cls.from_dict(yaml.safe_load(Path(path).read_text()) or {}, source=str(path))
+
+    @classmethod
+    def from_dict(cls, values: dict, *, source: str = "config mapping") -> "ReplayConfig":
+        """Build and validate a config from a stored resolved mapping.
+
+        Distributed workers use the config frozen in the preflight artifact
+        rather than depending on a separately copied YAML file.
+        """
+        if not isinstance(values, dict):
+            raise ValueError(f"Config {source} must be a mapping.")
+        raw = dict(values)
         unknown = set(raw) - {f.name for f in fields(cls)}
         if unknown:
             raise ValueError(f"Unknown config keys: {sorted(unknown)}")
         missing = [k for k in REQUIRED_KEYS if raw.get(k) in (None, "")]
         if missing:
-            raise ValueError(f"Config {path} must set {missing}.")
+            raise ValueError(f"Config {source} must set {missing}.")
         for k in ("capstone_data_root", "output_dir"):
             if k in raw:
                 raw[k] = Path(raw[k])
@@ -645,6 +656,13 @@ def conditions(features: dict, error_preserving: bool = False, ablation: bool = 
     return out
 
 
+def configured_conditions(cfg: ReplayConfig, features: dict) -> list[dict]:
+    """Resolve the condition list identically for serial and map-worker execution."""
+    return conditions(features, cfg.error_preserving, cfg.ablation, cfg.steer_strengths,
+                      cfg.scale_fractions, cfg.edit_norms, cfg.reconstruction,
+                      cfg.random_directions, cfg.seed)
+
+
 def control_key(c: dict) -> tuple | None:
     """(experiment, condition, draw) that ``c`` is compared with on the same episode.
 
@@ -838,8 +856,7 @@ def replay(cfg: ReplayConfig, episodes: pd.DataFrame, comp: Components, run_dir:
     if cfg.steer_strengths and any("ref" not in f for f in comp.features.values()):
         raise ValueError("Steering needs reference activations for every SAE's features.")
     run_dir.mkdir(parents=True, exist_ok=True)
-    conds = conditions(comp.features, cfg.error_preserving, cfg.ablation, cfg.steer_strengths, cfg.scale_fractions,
-                       cfg.edit_norms, cfg.reconstruction, cfg.random_directions, cfg.seed)
+    conds = configured_conditions(cfg, comp.features)
     comp.info["label_policy_name"] = cfg.label_policy
     meta_path = run_dir / "replay_config.json"
     meta = {"config": _config_dict(cfg), "conditions": conds, "features": comp.features}
@@ -855,8 +872,8 @@ def replay(cfg: ReplayConfig, episodes: pd.DataFrame, comp: Components, run_dir:
         manifest.to_csv(manifest_path, index=False)          # first start, or a checked extension
 
     out = run_dir / "per_row.jsonl"
-    _repair_tail(out)
-    rows = _read_rows(out)
+    repair_tail(out)
+    rows = read_rows(out)
     unknown = {r["question_id"] for r in rows} - set(episodes.question_id)
     if unknown:
         raise ValueError(f"{out} has generations for {len(unknown)} episodes outside this run's episodes.")
@@ -865,9 +882,9 @@ def replay(cfg: ReplayConfig, episodes: pd.DataFrame, comp: Components, run_dir:
             if (ep["question_id"], c["experiment"], c["condition"], c["draw"]) not in first]
     logger.info("%d episodes x %d conditions; %d generations already done, %d to go",
                 len(episodes), len(conds), len(first), len(todo))
-    _generate_all([t for t in todo if t[1]["features"] is None], comp, out, first, "plain replay")
+    generate_all([t for t in todo if t[1]["features"] is None], comp, out, first, "plain replay")
 
-    generated = pd.DataFrame(_read_rows(out))
+    generated = pd.DataFrame(read_rows(out))
     check = replay_check(generated, manifest, cfg.min_replay_label_match)
     (run_dir / "replay_check.json").write_text(json.dumps(check, indent=2))
     _mismatches(generated, manifest).to_csv(run_dir / "replay_check_mismatches.csv", index=False)
@@ -880,11 +897,11 @@ def replay(cfg: ReplayConfig, episodes: pd.DataFrame, comp: Components, run_dir:
         if cfg.on_replay_check_fail == "stop":
             raise RuntimeError(msg + " Stopping before the SAE conditions.")
         logger.warning("%s Continuing; the run is marked unvalidated.", msg)
-    _generate_all([t for t in todo if t[1]["features"] is not None], comp, out, first, "SAE condition", cfg.max_hours)
+    generate_all([t for t in todo if t[1]["features"] is not None], comp, out, first, "SAE condition", cfg.max_hours)
     return run_dir
 
 
-def _generate_all(todo: list, comp: Components, out: Path, first: dict, what: str,
+def generate_all(todo: list, comp: Components, out: Path, first: dict, what: str,
                   max_hours: float | None = None) -> None:
     """Generate and append ``todo`` in order; ``first`` maps done keys to their first generated token.
 
@@ -984,6 +1001,11 @@ def _mismatches(rows: pd.DataFrame, manifest: pd.DataFrame) -> pd.DataFrame:
     return base[base.kind != "exact_match"].reindex(columns=cols)
 
 
+def replay_mismatches(rows: pd.DataFrame, manifest: pd.DataFrame) -> pd.DataFrame:
+    """Public replay-check diagnostic shared by serial and distributed reduction."""
+    return _mismatches(rows, manifest)
+
+
 def _check_resume(run_dir: Path, old: dict, meta: dict, prov: dict, manifest: pd.DataFrame) -> None:
     """Refuse to append to ``run_dir`` unless the new generations would come from the same experiment."""
     # what was generated must not change; limit may grow (to extend a smoke run into the full run)
@@ -991,9 +1013,7 @@ def _check_resume(run_dir: Path, old: dict, meta: dict, prov: dict, manifest: pd
     if same(old) != same(json.loads(json.dumps(meta))):
         raise ValueError(f"{run_dir} was started with a different config or feature sets; use a new run.")
     old_prov, new_prov = old.get("provenance") or {}, json.loads(json.dumps(prov, default=str))
-    changed = [k for k in IDENTITY_KEYS if old_prov.get(k) != new_prov.get(k)]
-    if changed:
-        raise ValueError(f"{run_dir} was generated with different {changed}; use a new run.")
+    validate_provenance_identity(old_prov, new_prov, context=str(run_dir))
     # the saved manifest must be a prefix of this run's episodes: same episodes, same order, only more
     saved = pd.read_csv(run_dir / "episodes.csv", dtype={"question_id": str})
     if len(manifest) < len(saved):
@@ -1002,6 +1022,17 @@ def _check_resume(run_dir: Path, old: dict, meta: dict, prov: dict, manifest: pd
     fresh = pd.read_csv(io.StringIO(head.to_csv(index=False)), dtype={"question_id": str})
     if list(fresh.columns) != list(saved.columns) or not fresh.equals(saved):
         raise ValueError(f"{run_dir}/episodes.csv does not match the first {len(saved)} episodes of this run.")
+
+
+def validate_provenance_identity(expected: dict, actual: dict, *, context: str = "run") -> None:
+    """Require the scientific and numerical identity used by replay resume.
+
+    Commands and output locations may differ across map workers; the model,
+    code, inputs, packages, GPU model, SAE files, and intervention may not.
+    """
+    changed = [k for k in IDENTITY_KEYS if expected.get(k) != actual.get(k)]
+    if changed:
+        raise ValueError(f"{context} was generated with different {changed}; use a new run.")
 
 
 def _repair_tail(path: Path) -> None:
@@ -1035,6 +1066,16 @@ def _read_rows(path: Path) -> list[dict]:
         except json.JSONDecodeError as e:
             raise ValueError(f"{path} line {i} is not valid JSON: the file is corrupt.") from e
     return rows
+
+
+def repair_tail(path: Path) -> None:
+    """Public artifact seam for resumable distributed workers."""
+    _repair_tail(path)
+
+
+def read_rows(path: Path) -> list[dict]:
+    """Read committed replay rows, preserving the serial runner's corruption checks."""
+    return _read_rows(path)
 
 
 # ---------------------------------------------------------------------------------------------
@@ -1105,7 +1146,7 @@ def analyse(run_dir: Path, n_bootstrap: int | None = None, n_permutations: int |
     n_permutations = n_permutations or cfg["n_permutations"]
     seed = cfg["seed"]
     expected = {(c["experiment"], c["condition"], c["draw"]) for c in conds}
-    all_rows = pd.DataFrame(_read_rows(run_dir / "per_row.jsonl"))
+    all_rows = pd.DataFrame(read_rows(run_dir / "per_row.jsonl"))
     if all_rows.empty:
         raise ValueError(f"No generations in {run_dir}.")
     rows = all_rows.drop_duplicates(["question_id", "experiment", "condition", "draw"], keep="last")
