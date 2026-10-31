@@ -78,12 +78,14 @@ def select_questions(
     strategy = sampling.get("strategy", "first_n")
     split_config = dataset_config.get("experiment_split")
     revision = dataset_config.get("revision")
+    local_input = {"path": dataset_config["path"]} if "path" in dataset_config else {}
 
     if strategy == "first_n":
         examples = load_musique_examples(
             source_split=source_split,
             num_questions=num_questions,
             revision=revision,
+            **local_input,
         )
     elif strategy == "listed":
         question_ids = json.loads(
@@ -95,7 +97,7 @@ def select_questions(
                 f"questions but dataset.num_questions is {num_questions}."
             )
         examples = load_musique_examples_by_id(
-            source_split, question_ids, revision=revision
+            source_split, question_ids, revision=revision, **local_input
         )
     else:
         examples = sample_musique_examples(
@@ -108,6 +110,7 @@ def select_questions(
                 else None
             ),
             revision=revision,
+            **local_input,
         )
 
     experiment_splits = None

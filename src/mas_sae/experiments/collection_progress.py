@@ -39,6 +39,7 @@ IDENTITY_KEYS = (
     "config_sha256",
     "manifest_sha256",
     "dataset_revision",
+    "dataset_file_sha256",
     "model_revisions",
     "git_commit",
     "git_diff_sha256",

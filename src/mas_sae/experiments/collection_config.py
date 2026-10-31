@@ -59,6 +59,7 @@ class DatasetConfig(TypedDict):
     source_split: str
     num_questions: int
     revision: NotRequired[str]
+    path: NotRequired[str]
     sampling: NotRequired[SamplingConfig]
     experiment_split: NotRequired[ExperimentSplitConfig]
 
@@ -148,6 +149,14 @@ def load_collection_config(path: str | Path) -> CollectionConfig:
 
         if "revision" in dataset:
             validate_commit_revision(dataset["revision"], "dataset")
+
+        if "path" in dataset:
+            if not isinstance(dataset["path"], str) or not dataset["path"].strip():
+                raise ValueError("dataset.path must be a nonempty string.")
+            if "revision" in dataset:
+                raise ValueError("dataset.path and dataset.revision are mutually exclusive.")
+            if not Path(dataset["path"]).is_file():
+                raise ValueError(f"dataset.path does not exist: {dataset['path']}")
 
         num_questions = dataset.get("num_questions")
         if type(num_questions) is not int or num_questions <= 0:

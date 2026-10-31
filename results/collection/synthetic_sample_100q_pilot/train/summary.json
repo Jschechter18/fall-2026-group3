@@ -1,0 +1,161 @@
+{
+  "run_name": "synthetic_sample_100q_pilot",
+  "source_split": "train",
+  "num_questions": 100,
+  "num_episodes": 100,
+  "num_excluded": 0,
+  "sae_rows_per_layer": 200,
+  "behavior_schema_versions": [
+    "lexical_v2"
+  ],
+  "behavior_matching_basis": "normalized_text_not_semantic",
+  "solver_behavior_counts": {
+    "adopted_critic": 5,
+    "ambiguous": 2,
+    "no_conflict": 83,
+    "retained_solver_a1": 10
+  },
+  "critic_position_counts": {
+    "ambiguous_or_unresolved": 2,
+    "different_nonrefusal_candidate": 15,
+    "same_position": 83
+  },
+  "legacy_acceptance_counts": {
+    "accepted": 88,
+    "rejected": 12,
+    "unlabeled_noncommittal": 0
+  },
+  "site_shapes": {
+    "layer_04": {
+      "attempt1": [
+        100,
+        2560
+      ],
+      "attempt2": [
+        100,
+        2560
+      ],
+      "sae": [
+        200,
+        2560
+      ]
+    },
+    "layer_08": {
+      "attempt1": [
+        100,
+        2560
+      ],
+      "attempt2": [
+        100,
+        2560
+      ],
+      "sae": [
+        200,
+        2560
+      ]
+    },
+    "layer_17": {
+      "attempt1": [
+        100,
+        2560
+      ],
+      "attempt2": [
+        100,
+        2560
+      ],
+      "sae": [
+        200,
+        2560
+      ]
+    },
+    "layer_25": {
+      "attempt1": [
+        100,
+        2560
+      ],
+      "attempt2": [
+        100,
+        2560
+      ],
+      "sae": [
+        200,
+        2560
+      ]
+    },
+    "layer_29": {
+      "attempt1": [
+        100,
+        2560
+      ],
+      "attempt2": [
+        100,
+        2560
+      ],
+      "sae": [
+        200,
+        2560
+      ]
+    },
+    "layer_30": {
+      "attempt1": [
+        100,
+        2560
+      ],
+      "attempt2": [
+        100,
+        2560
+      ],
+      "sae": [
+        200,
+        2560
+      ]
+    },
+    "layer_31": {
+      "attempt1": [
+        100,
+        2560
+      ],
+      "attempt2": [
+        100,
+        2560
+      ],
+      "sae": [
+        200,
+        2560
+      ]
+    },
+    "layer_32": {
+      "attempt1": [
+        100,
+        2560
+      ],
+      "attempt2": [
+        100,
+        2560
+      ],
+      "sae": [
+        200,
+        2560
+      ]
+    },
+    "layer_33": {
+      "attempt1": [
+        100,
+        2560
+      ],
+      "attempt2": [
+        100,
+        2560
+      ],
+      "sae": [
+        200,
+        2560
+      ]
+    }
+  },
+  "hop_group_counts": {
+    "2hop": 34,
+    "3hop": 33,
+    "4hop": 33
+  }
+}
