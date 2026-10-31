@@ -11,7 +11,8 @@ Writes, in the given question order (every record in the dataset when ``--questi
 - ``question_ids.json``: the kept questions in order, for ``dataset.sampling.question_ids_file`` with
   ``strategy: listed``. Candidate orders are balanced over the whole list, so collect both arms of a
   paired comparison from this file.
-- ``swap_report.json``: input and output hashes, settings, the per-record checks and the skipped questions.
+- ``swap_report.json``: the code commit, input and output hashes, settings, the per-record checks and the
+  skipped questions.
 
 Skips a question whose fillers fail a check, and lists it with the reason in ``swap_report.json``: too
 few eligible pool paragraphs, a filler that mentions a hop answer or alias (after ``normalize_answer``)
@@ -36,7 +37,7 @@ from mas_sae.data.synthetic import validate_candidate
 from mas_sae.data.synthetic.generation import ParagraphPool
 from mas_sae.data.synthetic.related_fillers import RelatedFillers
 from mas_sae.evaluation.scoring import normalize_answer
-from mas_sae.experiments.artifacts import ensure_output_available, sha256_file, write_json_atomic
+from mas_sae.experiments.artifacts import ensure_output_available, get_git_commit, sha256_file, write_json_atomic
 from mas_sae.experiments.records import read_jsonl, write_jsonl
 
 
@@ -166,7 +167,7 @@ def main(argv: list[str] | None = None) -> None:
     kept = [record["id"] for record in edited]
     (args.output / "question_ids.json").write_text(json.dumps(kept, indent=2) + "\n", encoding="utf-8")
     write_json_atomic(args.output / "swap_report.json", {
-        "inputs_sha256": hashes, "seed": args.seed, "filler": "related", "related_top": pool.top,
+        "git_commit": get_git_commit(), "inputs_sha256": hashes, "seed": args.seed, "filler": "related", "related_top": pool.top,
         "records": len(edited), "fillers_replaced": sum(c["fillers_replaced"] for c in checks),
         "outputs_sha256": {name: sha256_file(args.output / name) for name in ("accepted.jsonl", "question_ids.json")},
         "per_record": checks, "skipped": skipped,

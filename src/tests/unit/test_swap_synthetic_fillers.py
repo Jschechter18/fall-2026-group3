@@ -66,6 +66,7 @@ def test_only_fillers_change_in_place_and_order_is_kept(swap, run, tmp_path):
                 assert after["idx"] == before["idx"] and after["title"].startswith("Observatory")
     report = json.loads((tmp_path / "out/swap_report.json").read_text())
     assert report["fillers_replaced"] == 2 * 16 and report["filler"] == "related" and len(report["inputs_sha256"]) == 4
+    assert len(report["git_commit"]) == 40
 
 
 def test_same_seed_gives_the_same_records(swap, run, tmp_path):
