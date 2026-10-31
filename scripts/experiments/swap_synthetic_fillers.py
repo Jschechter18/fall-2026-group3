@@ -2,7 +2,8 @@
 
 Every record keeps its id, question, answer, aliases, decomposition, supporting paragraphs and generated
 distractors byte-identical, at the same positions. Each filler paragraph is replaced in place by a
-related pool paragraph (``ParagraphPool.related``). The generated distractors are identified from the
+related pool paragraph (``RelatedFillers``) whose title and text mention no hop answer or alias
+and no supporting or distractor title. The generated distractors are identified from the
 generation run's ``provenance.jsonl``, i.e. the titles in the response the record was built from.
 
 Writes, in the given question order (every record in the dataset when ``--question-ids`` is omitted):
@@ -33,6 +34,7 @@ from pathlib import Path
 
 from mas_sae.data.synthetic import validate_candidate
 from mas_sae.data.synthetic.generation import ParagraphPool
+from mas_sae.data.synthetic.related_fillers import RelatedFillers
 from mas_sae.evaluation.scoring import normalize_answer
 from mas_sae.experiments.artifacts import ensure_output_available, sha256_file, write_json_atomic
 from mas_sae.experiments.records import read_jsonl, write_jsonl
@@ -71,7 +73,8 @@ def read_question_ids(path: Path) -> list[str]:
     return ids
 
 
-def swap_fillers(record: dict, distractors: set[str], pool: ParagraphPool, rng: random.Random) -> tuple[dict, list[int]]:
+def swap_fillers(record: dict, distractors: set[str], pool: RelatedFillers,
+                 rng: random.Random) -> tuple[dict, list[int]]:
     """A copy of ``record`` with each filler replaced in place by a related pool paragraph."""
     supporting = [p for p in record["paragraphs"] if p["is_supporting"]]
     keep = {p["title"] for p in record["paragraphs"] if p["is_supporting"] or p["title"] in distractors}
@@ -79,7 +82,7 @@ def swap_fillers(record: dict, distractors: set[str], pool: ParagraphPool, rng: 
     query = " ".join([record["question"], *(p["paragraph_text"] for p in supporting)])
     answers = [record["answer"], *record["answer_aliases"], *(s["answer"] for s in record["question_decomposition"])]
     try:
-        fillers = pool.related(len(slots), rng, query=query, exclude_titles=keep, exclude_answers=answers)
+        fillers = pool.draw(len(slots), rng, query=query, exclude_titles=keep, exclude_mentions=[*answers, *keep])
     except ValueError as error:
         raise BadQuestion(f"{record['id']}: {error}") from error
     edited = json.loads(json.dumps(record))
@@ -104,7 +107,8 @@ def check(original: dict, edited: dict, slots: list[int], distractors: set[str])
     names = {normalize_answer(p["title"]) for p in original["paragraphs"]
              if p["is_supporting"] or p["title"] in distractors}
     for i in slots:
-        text = f" {normalize_answer(edited['paragraphs'][i]['paragraph_text'])} "
+        filler = edited["paragraphs"][i]
+        text = f" {normalize_answer(filler['title'] + ' ' + filler['paragraph_text'])} "
         leaked = sorted(n for n in answers | names if n and f" {n} " in text)
         if leaked:
             raise BadQuestion(f"{qid}: filler {i} mentions {leaked}")
@@ -139,7 +143,7 @@ def main(argv: list[str] | None = None) -> None:
     if missing:
         raise SystemExit(f"{len(missing)} question id(s) have no record or provenance, e.g. {missing[:3]}")
     titles = distractor_titles({q: provenance[q] for q in question_ids})
-    pool = ParagraphPool.from_jsonl(args.pool, filler="related")
+    pool = RelatedFillers(ParagraphPool.from_jsonl(args.pool).paragraphs)
 
     edited, checks, skipped = [], [], []
     for qid in question_ids:
@@ -162,7 +166,7 @@ def main(argv: list[str] | None = None) -> None:
     kept = [record["id"] for record in edited]
     (args.output / "question_ids.json").write_text(json.dumps(kept, indent=2) + "\n", encoding="utf-8")
     write_json_atomic(args.output / "swap_report.json", {
-        "inputs_sha256": hashes, "seed": args.seed, "filler": pool.filler, "related_top": pool.related_top,
+        "inputs_sha256": hashes, "seed": args.seed, "filler": "related", "related_top": pool.top,
         "records": len(edited), "fillers_replaced": sum(c["fillers_replaced"] for c in checks),
         "outputs_sha256": {name: sha256_file(args.output / name) for name in ("accepted.jsonl", "question_ids.json")},
         "per_record": checks, "skipped": skipped,

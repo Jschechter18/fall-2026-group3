@@ -6,7 +6,6 @@ import math
 from pathlib import Path
 from uuid import uuid4
 
-from .generation.assembly import FILLERS
 from .generation.runner import run_batch
 from .clients import DEFAULT_MODEL_ID, make_client
 from .hop_types import HOP_TYPES
@@ -33,7 +32,7 @@ def _config_defaults(parser: argparse.ArgumentParser, argv) -> dict:
                 "audit_concurrency", "audit_max_attempts", "audit_max_tokens",
                 "audit_batch_size", "audit_max_prompt_chars", "audit_max_neighbor_batches"}
     numbers = {"connect_timeout", "read_timeout"}
-    strings = {"model_id", "original", "output_dir", "audit_model_id", "filler"}
+    strings = {"model_id", "original", "output_dir", "audit_model_id"}
     booleans = {"dataset_audit"}
     lists = {"hop_types", "dedup_original"}
     nullable = {"n", "target_per_hop", "max_requests_per_hop", "seed", "output_dir", "dedup_original", "audit_model_id", "audit_concurrency"}
@@ -54,8 +53,6 @@ def _config_defaults(parser: argparse.ArgumentParser, argv) -> dict:
         if key in lists and (not isinstance(value, list) or not value
                              or any(not isinstance(item, str) or not item.strip() for item in value)):
             parser.error(f"Config {key} must be a nonempty list of strings")
-    if "filler" in settings and settings["filler"] not in FILLERS:
-        parser.error(f"Config filler must be one of {', '.join(FILLERS)}")
     if settings.get("n") is not None and settings.get("target_per_hop") is not None:
         parser.error("Config cannot specify both n and target_per_hop")
     for key in ("original", "output_dir"):
@@ -84,8 +81,6 @@ def main(argv: list[str] | None = None, *, client=None) -> int:
     parser.add_argument("--seed", type=int, help="Seed for independent per-request sampling/shuffling")
     parser.add_argument("--original", type=Path, default=Path("data/MuSiQue/clean/train.json"),
                         help="MuSiQue JSONL used for filler paragraphs")
-    parser.add_argument("--filler", choices=FILLERS, default="random",
-                        help="Filler paragraphs: random pool draws, or the pool paragraphs most related to the question")
     parser.add_argument("--dedup-original", type=Path, nargs="+",
                         help="Original JSONL splits to index; quota mode defaults to --original")
     parser.add_argument("--output-dir", type=Path, help="New output directory; existing paths are refused")
@@ -158,7 +153,7 @@ def main(argv: list[str] | None = None, *, client=None) -> int:
         args.output_dir, original=args.original, model_id=args.model_id,
         n=args.n, target_per_type=args.target_per_hop,
         max_requests_per_type=args.max_requests_per_hop, hop_types=args.hop_types,
-        concurrency=args.concurrency, seed=args.seed, dedup_originals=dedup, filler=args.filler,
+        concurrency=args.concurrency, seed=args.seed, dedup_originals=dedup,
         client=client, client_factory=None if client is not None else factory,
         transport_settings=transport if client is None else None, progress=progress,
         dataset_audit=args.dataset_audit,

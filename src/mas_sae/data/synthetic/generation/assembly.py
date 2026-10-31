@@ -1,17 +1,10 @@
 """Build candidates and sample filler paragraphs from original MuSiQue."""
 import json
 import random
-import threading
 from pathlib import Path
 from uuid import uuid4
 
-from mas_sae.evaluation.scoring import normalize_answer
-
 from ..contracts import DecompositionStep, SyntheticCandidate
-
-# random: uniform draws from the pool (the original behavior).
-# related: the pool paragraphs most similar (TF-IDF) to the question and its supporting paragraphs.
-FILLERS = ("random", "related")
 
 
 def _validate_raw_answer_fields(raw: dict) -> None:
@@ -42,18 +35,11 @@ def _validate_raw_answer_fields(raw: dict) -> None:
 
 class ParagraphPool:
     """Original MuSiQue paragraphs used as filler distractors, unique by title."""
-    def __init__(self, paragraphs: list[dict], *, filler: str = "random", related_top: int = 20):
-        if filler not in FILLERS:
-            raise ValueError(f"filler must be one of {FILLERS}, got {filler!r}")
+    def __init__(self, paragraphs: list[dict]):
         self.paragraphs = paragraphs
-        self.filler = filler
-        self.related_top = related_top
-        self._index = None
-        self._index_lock = threading.Lock()
 
     @classmethod
-    def from_jsonl(cls, path: str | Path, *, max_records: int | None = 5000,
-                   filler: str = "random") -> "ParagraphPool":
+    def from_jsonl(cls, path: str | Path, *, max_records: int | None = 5000) -> "ParagraphPool":
         by_title: dict[str, dict] = {}
         with Path(path).open(encoding="utf-8") as stream:
             for count, line in enumerate(stream):
@@ -62,7 +48,7 @@ class ParagraphPool:
                 for paragraph in json.loads(line)["paragraphs"]:
                     by_title.setdefault(paragraph["title"], {
                         "title": paragraph["title"], "paragraph_text": paragraph["paragraph_text"]})
-        return cls(list(by_title.values()), filler=filler)
+        return cls(list(by_title.values()))
 
     def sample(self, k: int, rng: random.Random, *, exclude_titles: set[str] = frozenset(),
                exclude_text: str = "") -> list[dict]:
@@ -81,47 +67,6 @@ class ParagraphPool:
             raise ValueError(f"Paragraph pool too small: needed {k}, found {len(chosen)}")
         return chosen
 
-    def related(self, k: int, rng: random.Random, *, query: str, exclude_titles: set[str] = frozenset(),
-                exclude_answers: list[str] = ()) -> list[dict]:
-        """Draw k of the ``related_top`` eligible paragraphs most similar to ``query``.
-
-        A paragraph is ineligible if its title is excluded or it mentions any excluded answer (after
-        ``normalize_answer``), so a related filler cannot restate or contradict a hop's answer. Ties keep
-        pool order, and the draw uses ``rng``, so the same query and seed give the same fillers.
-        """
-        from sklearn.feature_extraction.text import TfidfVectorizer
-
-        with self._index_lock:
-            if self._index is None:
-                vectorizer = TfidfVectorizer(stop_words="english", sublinear_tf=True)
-                matrix = vectorizer.fit_transform(
-                    f"{p['title']} {p['paragraph_text']}" for p in self.paragraphs)
-                self._index = (vectorizer, matrix)
-        vectorizer, matrix = self._index
-        scores = (matrix @ vectorizer.transform([query]).T).toarray().ravel()
-        needles = [f" {n} " for n in {normalize_answer(a) for a in exclude_answers} if n]
-        eligible = []
-        for i in sorted(range(len(self.paragraphs)), key=lambda i: -scores[i]):
-            if len(eligible) == max(self.related_top, k):
-                break
-            paragraph = self.paragraphs[i]
-            text = f" {normalize_answer(paragraph['paragraph_text'])} "
-            if paragraph["title"] in exclude_titles or any(n in text for n in needles):
-                continue
-            eligible.append(paragraph)
-        if len(eligible) < k:
-            raise ValueError(f"Paragraph pool too small: needed {k}, found {len(eligible)}")
-        return [dict(p) for p in rng.sample(eligible, k)]
-
-    def fillers(self, k: int, rng: random.Random, *, raw: dict, exclude_titles: set[str]) -> list[dict]:
-        """k filler paragraphs for one raw response, by this pool's filler strategy."""
-        if self.filler == "random":
-            return self.sample(k, rng, exclude_titles=exclude_titles, exclude_text=raw["answer"])
-        query = " ".join([raw["question"], *(p["paragraph_text"] for p in raw["supporting_paragraphs"])])
-        answers = [raw["answer"], *raw.get("answer_aliases", []),
-                   *(step["answer"] for step in raw["question_decomposition"])]
-        return self.related(k, rng, query=query, exclude_titles=exclude_titles, exclude_answers=answers)
-
 
 def assemble_candidate(raw: dict, hop_type: str, pool: ParagraphPool, rng: random.Random, *,
                        total_paragraphs: int = 20) -> SyntheticCandidate:
@@ -139,7 +84,7 @@ def assemble_candidate(raw: dict, hop_type: str, pool: ParagraphPool, rng: rando
     titles = {p["title"] for p in supporting + distractors}
     n_fill = total_paragraphs - len(supporting) - len(distractors)
     fillers = [{**p, "is_supporting": False}
-               for p in pool.fillers(max(n_fill, 0), rng, raw=raw, exclude_titles=titles)]
+               for p in pool.sample(max(n_fill, 0), rng, exclude_titles=titles, exclude_text=raw["answer"])]
 
     # Shuffle, then assign idx; remember where each supporting paragraph landed.
     tagged = [(("support", i), p) for i, p in enumerate(supporting)] + \

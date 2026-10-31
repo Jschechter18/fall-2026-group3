@@ -7,7 +7,8 @@ from pathlib import Path
 import pytest
 
 from mas_sae.data.synthetic.generation import ParagraphPool, assemble_candidate
-from test_synthetic_generation import RAW_2HOP, TOPICAL, UNRELATED
+from test_related_fillers import TOPICAL, UNRELATED
+from test_synthetic_generation import RAW_2HOP
 
 SCRIPT = Path(__file__).resolve().parents[3] / "scripts/experiments/swap_synthetic_fillers.py"
 
@@ -91,11 +92,26 @@ def test_check_refuses_changed_evidence_and_leaking_fillers(swap, run):
         swap.check(record, renamed, slots, distractors)
 
 
-def test_a_question_whose_fillers_leak_is_skipped_and_listed(swap, tmp_path):
-    # Every related (observatory) filler names this record's distractor title, as "Halden" did at scale.
-    leaky = dict(RAW_2HOP, distractors=[RAW_2HOP["distractors"][0], {
-        "title": "Refracting Telescope", "paragraph_text": "Refracting Telescope is a fictional entity."}])
-    run = make_run(tmp_path, [RAW_2HOP, leaky])
+# Every topical (observatory) paragraph names this record's distractor title, as a college "in Halden"
+# did for a question whose distractor is titled "Halden".
+NAMED = dict(RAW_2HOP, distractors=[RAW_2HOP["distractors"][0], {
+    "title": "Refracting Telescope", "paragraph_text": "Refracting Telescope is a fictional entity."}])
+
+
+def test_fillers_that_name_the_questions_entities_are_never_drawn(swap, tmp_path):
+    run = make_run(tmp_path, [RAW_2HOP, NAMED])
+    swap.main(args(run, tmp_path / "out"))
+    edited = {json.loads(l)["id"]: json.loads(l) for l in open(tmp_path / "out/accepted.jsonl")}
+    assert list(edited) == run["order"]
+    named = edited[run["order"][0]]
+    fillers = [p for p in named["paragraphs"] if not p["is_supporting"] and p["title"] not in
+               {"Selin River", "Refracting Telescope"}]
+    assert fillers and all(p["title"].startswith("Album") for p in fillers)
+    assert json.loads((tmp_path / "out/swap_report.json").read_text())["skipped"] == []
+
+
+def test_a_question_without_enough_clean_fillers_is_skipped_and_listed(swap, tmp_path):
+    run = make_run(tmp_path, [RAW_2HOP, NAMED], pool_paragraphs=TOPICAL)
     clean, bad = run["order"][1], run["order"][0]
     swap.main(args(run, tmp_path / "out"))
     assert [json.loads(l)["id"] for l in open(tmp_path / "out/accepted.jsonl")] == [clean]
@@ -103,7 +119,17 @@ def test_a_question_whose_fillers_leak_is_skipped_and_listed(swap, tmp_path):
     report = json.loads((tmp_path / "out/swap_report.json").read_text())
     assert report["records"] == 1 and [c["question_id"] for c in report["per_record"]] == [clean]
     assert [s["question_id"] for s in report["skipped"]] == [bad]
-    assert "mentions ['refracting telescope']" in report["skipped"][0]["reason"]
+    assert "Paragraph pool too small" in report["skipped"][0]["reason"]
+
+
+def test_check_skips_a_filler_whose_title_alone_names_an_answer(swap, run):
+    record = next(iter(run["records"].values()))
+    distractors = {d["title"] for d in RAW_2HOP["distractors"]}
+    slots = [i for i, p in enumerate(record["paragraphs"]) if not p["is_supporting"] and p["title"] not in distractors]
+    titled = json.loads(json.dumps(record))
+    titled["paragraphs"][slots[0]].update(title="Selin Archive", paragraph_text="A building with old maps.")
+    with pytest.raises(swap.BadQuestion, match=r"mentions \['selin'\]"):
+        swap.check(record, titled, slots, distractors)
 
 
 def test_refuses_a_run_where_every_question_is_skipped(swap, tmp_path):
@@ -120,6 +146,13 @@ def test_dataset_flag_edits_every_record_when_no_ids_are_given(swap, run, tmp_pa
     assert [json.loads(l)["id"] for l in open(tmp_path / "out/accepted.jsonl")] == in_file
     assert json.loads((tmp_path / "out/question_ids.json").read_text()) == in_file
     assert len(json.loads((tmp_path / "out/swap_report.json").read_text())["inputs_sha256"]) == 3
+
+
+def test_refuses_an_existing_output_so_the_dataset_is_never_overwritten(swap, run):
+    before = run["accepted"].read_bytes()
+    with pytest.raises(FileExistsError):
+        swap.main(args(run, run["accepted"].parent))
+    assert run["accepted"].read_bytes() == before
 
 
 def test_refuses_repeated_or_unknown_ids(swap, run, tmp_path):
