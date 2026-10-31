@@ -8,7 +8,8 @@ The outcome rules and the three analyses (primary, intention-to-treat, treated-o
 Each arm is a collection folder (``interactions.jsonl``, ``exclusions.jsonl``, ``sampled_questions.json``)
 and the Claude label run made from it (``raw_results.jsonl``, ``summary.json``). It refuses arms whose
 assigned questions, positions or candidate orders differ, labels made from other episodes, and arms
-labeled with another prompt version or model. Inputs are hashed before reading and rechecked before writing.
+labeled with any other labeling setting (``LABELING_SETTINGS``). Inputs are hashed before reading and
+rechecked before writing.
 
 Usage:
     PYTHONPATH=src python scripts/experiments/compare_paired_ablation.py \\
@@ -27,6 +28,8 @@ from mas_sae.experiments.records import read_jsonl, write_csv
 
 COLLECTION_FILES = ("interactions.jsonl", "exclusions.jsonl", "sampled_questions.json")
 LABEL_FILES = ("raw_results.jsonl", "summary.json")
+# Every label-run setting that can change a label; max_attempts only retries technical errors.
+LABELING_SETTINGS = ("prompt_version", "model_id", "client", "effort", "max_tokens", "temperature", "a2_presentation")
 
 
 def arm_paths(collection: Path, labels: Path) -> list[Path]:
@@ -47,7 +50,7 @@ def read_arm(name: str, collection: Path, labels: Path) -> dict:
                             read_jsonl(labels / "raw_results.jsonl"))
     return {"assignment": assignment, "assigned": assigned, "outcomes": outcomes,
             "episodes": by_question(interactions, f"{name} interactions"),
-            "labeling": {key: summary.get(key) for key in ("prompt_version", "model_id", "effort", "max_tokens")}}
+            "labeling": {key: summary.get(key) for key in LABELING_SETTINGS}}
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -65,9 +68,10 @@ def main(argv: list[str] | None = None) -> None:
     baseline, treated = arms["baseline"], arms["treated"]
     if baseline["assignment"] != treated["assignment"]:
         raise ValueError("the arms were assigned different questions, positions or candidate orders")
-    if baseline["labeling"]["prompt_version"] != treated["labeling"]["prompt_version"] \
-            or baseline["labeling"]["model_id"] != treated["labeling"]["model_id"]:
-        raise ValueError(f"the arms were labeled differently: {baseline['labeling']} vs {treated['labeling']}")
+    differing = [key for key in LABELING_SETTINGS if baseline["labeling"][key] != treated["labeling"][key]]
+    if differing:
+        raise ValueError(f"the arms were labeled differently ({', '.join(differing)}): "
+                         f"{baseline['labeling']} vs {treated['labeling']}")
     treated_ids = json.loads(args.treated_ids.read_text(encoding="utf-8")) if args.treated_ids else None
     assigned = baseline["assigned"]
     result = analyses(baseline["outcomes"], treated["outcomes"], assigned, treated_ids)

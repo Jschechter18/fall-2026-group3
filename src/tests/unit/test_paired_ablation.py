@@ -101,7 +101,12 @@ def cli():
     return module
 
 
-def write_arm(root: Path, labels: dict[str, str | None], excluded=(), orders=None, prompt="claude_binary_v3_candidates"):
+LABELING = {"prompt_version": "claude_binary_v3_candidates", "model_id": "opus", "client": "AdaptiveThinkingClaudeClient",
+            "effort": "medium", "max_tokens": 8000, "temperature": None, "a2_presentation": "candidates",
+            "max_attempts": 3}
+
+
+def write_arm(root: Path, labels: dict[str, str | None], excluded=(), orders=None, settings=None):
     """A collection folder and its label run: ``labels`` for collected questions, ``excluded`` by protocol."""
     collection, run = root / "collection", root / "labels"
     collection.mkdir(parents=True)
@@ -114,7 +119,7 @@ def write_arm(root: Path, labels: dict[str, str | None], excluded=(), orders=Non
          for i, q in enumerate(IDS)]))
     jsonl(run / "raw_results.jsonl", [label(q, value) for q, value in labels.items()])
     (run / "summary.json").write_text(json.dumps({"episodes_sha256": sha256_file(collection / "interactions.jsonl"),
-                                                  "prompt_version": prompt, "model_id": "opus"}))
+                                                  **LABELING, **(settings or {})}))
     return [str(collection), str(run)]
 
 
@@ -134,13 +139,24 @@ def test_cli_end_to_end(cli, tmp_path, capsys):
 
 @pytest.mark.parametrize("change, message", [
     ({"orders": {IDS[2]: "critic_first"}}, "different questions, positions or candidate orders"),
-    ({"prompt": "claude_binary_v2"}, "labeled differently"),
+    ({"settings": {"prompt_version": "claude_binary_v2"}}, r"labeled differently \(prompt_version\)"),
+    ({"settings": {"effort": "high"}}, r"labeled differently \(effort\)"),
+    ({"settings": {"max_tokens": 4000}}, r"labeled differently \(max_tokens\)"),
+    ({"settings": {"temperature": 1.0, "client": "ClaudeClient"}}, r"labeled differently \(client, temperature\)"),
 ])
 def test_cli_refuses_arms_that_do_not_pair(cli, tmp_path, change, message):
     base = write_arm(tmp_path / "base", dict.fromkeys(IDS, "agreement"))
     treated = write_arm(tmp_path / "treated", dict.fromkeys(IDS, "adoption"), **change)
     with pytest.raises(ValueError, match=message):
         cli.main(["--baseline", *base, "--treated", *treated, "--output", str(tmp_path / "out")])
+    assert not (tmp_path / "out").exists()
+
+
+def test_cli_pairs_arms_that_differ_only_in_retries_of_technical_errors(cli, tmp_path):
+    base = write_arm(tmp_path / "base", dict.fromkeys(IDS, "agreement"))
+    treated = write_arm(tmp_path / "treated", dict.fromkeys(IDS, "adoption"), settings={"max_attempts": 5})
+    cli.main(["--baseline", *base, "--treated", *treated, "--output", str(tmp_path / "out")])
+    assert json.loads((tmp_path / "out/summary.json").read_text())["primary"]["n"] == 4
 
 
 def test_cli_refuses_labels_made_from_other_episodes(cli, tmp_path):
