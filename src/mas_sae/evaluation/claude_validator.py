@@ -29,6 +29,7 @@ This module reuses ``ClaudeClient`` from ``mas_sae.models.claude`` and the
 from __future__ import annotations
 
 import csv
+import hashlib
 import json
 import re
 from functools import partial
@@ -151,6 +152,14 @@ _CANDIDATES_NOTE = (
     "listed under candidates_shown_to_solver. A2 may name a candidate by its letter; "
     "treat such a reply as the candidate it names.\n\n"
 )
+
+
+def prompt_sha256(include_question: bool = True, presentation: str | None = None) -> str:
+    """SHA-256 of the fixed prompt text behind ``prompt_version(include_question, presentation)``: the system
+    prompt, the template and the candidates note, so a prompt edited without a version bump is detectable."""
+    note = _CANDIDATES_NOTE if presentation == "candidates" else ""
+    text = "\n".join([LABELING_SYSTEM, _PROMPT_TEMPLATE, note, f"include_question={include_question}"])
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
 def candidates_shown(a1: str, c1: str, candidate_order: str) -> dict[str, str]:
