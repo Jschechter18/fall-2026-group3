@@ -24,6 +24,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import torch
 import yaml
 
 from mas_sae.causal import offline
@@ -154,6 +155,11 @@ def reference_activations(cfg: FeatureSelectionConfig, summary: dict, batch_size
     ``ref`` = its mean activation where it fires, plus its firing frequency and the 95th percentile
     of its nonzero values. Causal-replay steering clamps a feature to ``strength * ref``, so ``ref``
     is the unit strengths are expressed in. A feature that never fires has no ``ref`` and is refused.
+
+    ``latents`` has the same statistics for every latent of the SAE (``ref`` is None where it never
+    fires), plus ``rms`` (root mean square activation, zeros included) and ``decoder_norm`` (norm of
+    what one unit of the latent adds to the reconstruction): the replay draws random controls matched
+    on firing frequency and decoded contribution (rms * decoder_norm) from them.
     """
     if summary["config"]["layer"] != cfg.layer:
         raise ValueError(f"Feature selection was run on layer {summary['config']['layer']}, not {cfg.layer}.")
@@ -178,9 +184,33 @@ def reference_activations(cfg: FeatureSelectionConfig, summary: dict, batch_size
                 raise ValueError(f"{name} feature {f} never fires on {cfg.fit_partition}: it has no reference activation.")
             feats[str(f)] = {"ref": float(on.mean()), "firing_frequency": float(len(on) / len(Z)),
                              "p95": float(np.quantile(on, 0.95))}
-        out[name] = {"sae_sha256": hashes, "features": feats}
+        out[name] = {"sae_sha256": hashes, "features": feats, "latents": latent_stats(sae, X, batch_size)}
         logger.info("%s: reference activations for %d features on %d %s rows", name, len(ids), len(Z), cfg.fit_partition)
     return out
+
+
+@torch.no_grad()
+def latent_stats(sae, X: np.ndarray, batch_size: int = 512) -> dict:
+    """Per-latent statistics of ``sae`` on the rows ``X``, as lists indexed by latent id (see ``reference_activations``)."""
+    n_fire = s = s2 = 0
+    for i in range(0, len(X), batch_size):
+        Z = offline.encode(sae, X[i:i + batch_size]).astype(np.float64)
+        n_fire, s, s2 = n_fire + (Z > 0).sum(0), s + Z.sum(0), s2 + (Z ** 2).sum(0)
+    # decoders are affine, so decode(e_i) - decode(0) is latent i's decoder column in activation units;
+    # one batch of unit vectors at a time (a full identity is latent_dim^2 floats: 1 GiB at 16k latents)
+    bias = sae.decoder(torch.zeros(1, sae.latent_dim))
+    dec_norm = np.empty(sae.latent_dim)
+    for j in range(0, sae.latent_dim, batch_size):
+        k = min(batch_size, sae.latent_dim - j)
+        unit = torch.zeros(k, sae.latent_dim)
+        unit[torch.arange(k), torch.arange(j, j + k)] = 1.0
+        dec_norm[j:j + k] = (sae.decoder(unit) - bias).norm(dim=1).numpy()
+    r = lambda v: float(f"{v:.6g}")
+    return {"n_rows": len(X),
+            "firing_frequency": [r(v) for v in n_fire / len(X)],
+            "ref": [r(t / n) if n else None for t, n in zip(s, n_fire)],
+            "rms": [r(v) for v in np.sqrt(s2 / len(X))],
+            "decoder_norm": [r(v) for v in dec_norm]}
 
 
 def rank_features(probe, Z_fit: np.ndarray) -> pd.DataFrame:

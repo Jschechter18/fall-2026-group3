@@ -10,6 +10,13 @@ reference activations come from the layer's feature-selection run, and are compu
 
 (and the same with configs/feature_selection_layer25.yaml, its summary and configs/causal_steering_layer25.yaml).
 
+Edit-size-matched replays (issue #146) rescale every targeted and random edit to the same size, with random controls
+matched on firing frequency and decoded contribution. Those draws use per-latent statistics that the reference file
+has only once recomputed by this version (add --overwrite to the command above); then:
+
+    python scripts/causal_replay.py --config configs/causal_edit_size_layer25.yaml --limit 5   # check s/generation
+    python scripts/causal_replay.py --config configs/causal_edit_size_layer25.yaml            # all 517 episodes
+
     # GPU smoke test (a few episodes, real model and SAEs), then the full run
     python scripts/causal_replay.py --config configs/causal_replay_layer33.yaml --limit 5
     python scripts/causal_replay.py --config configs/causal_replay_layer33.yaml
