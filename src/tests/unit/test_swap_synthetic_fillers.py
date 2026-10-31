@@ -25,19 +25,23 @@ def write_jsonl(path, rows):
     return path
 
 
-@pytest.fixture
-def run(tmp_path):
-    """Two records built with random fillers, their provenance, a pool file and an id order."""
-    records = [assemble_candidate(RAW_2HOP, "2hop", ParagraphPool(UNRELATED), random.Random(i)) for i in range(2)]
+def make_run(tmp_path, raws, pool_paragraphs=TOPICAL + UNRELATED):
+    """One record per raw response, built with random fillers, plus provenance, a pool file and an id order."""
+    records = [assemble_candidate(raw, "2hop", ParagraphPool(UNRELATED), random.Random(i)) for i, raw in enumerate(raws)]
     provenance = [{"record_id": r["id"], "attempts": [
         {"error": "stop_reason=max_tokens", "precheck_errors": [], "raw_text": "{}"},
-        {"error": None, "precheck_errors": [], "raw_text": json.dumps(RAW_2HOP)}]} for r in records]
-    pool = write_jsonl(tmp_path / "pool.jsonl", [{"paragraphs": TOPICAL + UNRELATED}])
+        {"error": None, "precheck_errors": [], "raw_text": json.dumps(raw)}]} for r, raw in zip(records, raws)]
+    pool = write_jsonl(tmp_path / "pool.jsonl", [{"paragraphs": pool_paragraphs}])
     order = [records[1]["id"], records[0]["id"]]
     (tmp_path / "ids.json").write_text(json.dumps([{"question_id": q} for q in order]))
     return {"accepted": write_jsonl(tmp_path / "accepted.jsonl", records),
             "provenance": write_jsonl(tmp_path / "provenance.jsonl", provenance),
             "pool": pool, "ids": tmp_path / "ids.json", "records": {r["id"]: r for r in records}, "order": order}
+
+
+@pytest.fixture
+def run(tmp_path):
+    return make_run(tmp_path, [RAW_2HOP, RAW_2HOP])
 
 
 def args(run, output):
@@ -80,11 +84,42 @@ def test_check_refuses_changed_evidence_and_leaking_fillers(swap, run):
         swap.check(record, changed, slots, distractors)
     leaking = json.loads(json.dumps(record))
     leaking["paragraphs"][slots[0]]["paragraph_text"] = "The town of Selin is nearby."
-    with pytest.raises(SystemExit, match="mentions"):
+    with pytest.raises(swap.BadQuestion, match="mentions"):
         swap.check(record, leaking, slots, distractors)
     renamed = dict(json.loads(json.dumps(record)), answer="1843")
     with pytest.raises(SystemExit, match="other than the filler"):
         swap.check(record, renamed, slots, distractors)
+
+
+def test_a_question_whose_fillers_leak_is_skipped_and_listed(swap, tmp_path):
+    # Every related (observatory) filler names this record's distractor title, as "Halden" did at scale.
+    leaky = dict(RAW_2HOP, distractors=[RAW_2HOP["distractors"][0], {
+        "title": "Refracting Telescope", "paragraph_text": "Refracting Telescope is a fictional entity."}])
+    run = make_run(tmp_path, [RAW_2HOP, leaky])
+    clean, bad = run["order"][1], run["order"][0]
+    swap.main(args(run, tmp_path / "out"))
+    assert [json.loads(l)["id"] for l in open(tmp_path / "out/accepted.jsonl")] == [clean]
+    assert json.loads((tmp_path / "out/question_ids.json").read_text()) == [clean]
+    report = json.loads((tmp_path / "out/swap_report.json").read_text())
+    assert report["records"] == 1 and [c["question_id"] for c in report["per_record"]] == [clean]
+    assert [s["question_id"] for s in report["skipped"]] == [bad]
+    assert "mentions ['refracting telescope']" in report["skipped"][0]["reason"]
+
+
+def test_refuses_a_run_where_every_question_is_skipped(swap, tmp_path):
+    run = make_run(tmp_path, [RAW_2HOP, RAW_2HOP], pool_paragraphs=TOPICAL[:5])
+    with pytest.raises(SystemExit, match="every question was skipped.*Paragraph pool too small"):
+        swap.main(args(run, tmp_path / "out"))
+    assert not (tmp_path / "out").exists()
+
+
+def test_dataset_flag_edits_every_record_when_no_ids_are_given(swap, run, tmp_path):
+    swap.main(["--dataset", str(run["accepted"]), "--provenance", str(run["provenance"]),
+               "--pool", str(run["pool"]), "--seed", "42", "--output", str(tmp_path / "out")])
+    in_file = [json.loads(l)["id"] for l in open(run["accepted"])]
+    assert [json.loads(l)["id"] for l in open(tmp_path / "out/accepted.jsonl")] == in_file
+    assert json.loads((tmp_path / "out/question_ids.json").read_text()) == in_file
+    assert len(json.loads((tmp_path / "out/swap_report.json").read_text())["inputs_sha256"]) == 3
 
 
 def test_refuses_repeated_or_unknown_ids(swap, run, tmp_path):
