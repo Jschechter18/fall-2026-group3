@@ -167,8 +167,10 @@ model or inference profile.
 │   │   ├── models/               # Language-model loading and interaction
 │   │   ├── probe/                # Linear probe and interpretability (SHAP/LIME)
 │   │   └── sae/                  # Sparse-autoencoder functionality
-│   ├── shellscripts/             # Shell utility scripts
-│   └── tests/                    # Unit and integration tests
+│   └── shellscripts/             # Shell utility scripts
+├── tests/                        # Tests organized by package domain
+│   ├── fixtures/                 # Shared test data
+│   └── unit/                     # Domain-grouped unit tests
 ├── environment.yml               # Conda environment and dependencies
 ├── pyproject.toml                # Python package configuration
 ├── pytest.ini                    # Pytest configuration

@@ -10,7 +10,7 @@ from mas_sae.data.synthetic.cli import main
 
 @pytest.fixture
 def candidate():
-    path = Path(__file__).parents[1] / "fixtures/synthetic_musique/valid.json"
+    path = Path(__file__).parents[2] / "fixtures/synthetic_musique/valid.json"
     return json.loads(path.read_text())
 
 

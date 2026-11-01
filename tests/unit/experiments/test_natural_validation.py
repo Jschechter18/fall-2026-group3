@@ -22,7 +22,7 @@ from mas_sae.models import roles
 
 REPO = Path(__file__).resolve().parents[3]
 CONFIG_PATH = REPO / "configs/validation/natural_critics_gemma12b_qwen14b.yaml"
-FIXTURE = REPO / "src/tests/fixtures/qwen3_14b_chat_template.json"
+FIXTURE = REPO / "tests/fixtures/qwen3_14b_chat_template.json"
 
 
 # ---------------------------------------------------------------------------

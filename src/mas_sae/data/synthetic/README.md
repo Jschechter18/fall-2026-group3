@@ -50,7 +50,7 @@ Produce a JSON object matching `SyntheticCandidate` in `contracts.py`, including
 - Store model/prompt versions, raw responses, sources and other provenance
   separately, keyed by record ID. Extra fields are tolerated, not validated.
 
-`src/tests/fixtures/synthetic_musique/valid.json` is an annotated-by-field example
+`tests/fixtures/synthetic_musique/valid.json` is an annotated-by-field example
 with **fictional facts for testing only**, not suitable for dataset inclusion.
 
 ## Integrating a generator
@@ -350,5 +350,5 @@ literal titles from reference notation remains a separate parser limitation.
 Run focused tests:
 
 ```bash
-python -m pytest src/tests/unit/test_synthetic_musique.py -q
+python -m pytest tests/unit/data/test_synthetic_musique.py -q
 ```
