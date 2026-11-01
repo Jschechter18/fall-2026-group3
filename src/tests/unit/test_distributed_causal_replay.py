@@ -9,6 +9,7 @@ import pandas as pd
 import pytest
 
 from mas_sae.causal import distributed, replay
+from mas_sae.causal.smoke import smoke_components, tiny_features, tiny_saes
 from mas_sae.experiments.artifacts import file_facts
 
 
@@ -162,6 +163,113 @@ def test_worker_stops_before_interventions_when_its_baseline_differs(tmp_path, m
     assert len(rows) == len(question_ids)
     assert {row["experiment"] for row in rows} == {replay.BASELINE}
     assert len(conditions) > 1
+
+
+def test_worker_baseline_parity_includes_the_full_answer(tmp_path, monkeypatch):
+    preflight, question_ids, features, _, provenance = _preflight(tmp_path, n=2)
+    manifest_path = distributed.prepare_distributed_run(preflight, num_shards=1)
+    _fake_workers(monkeypatch, question_ids, features, provenance)
+    generate = replay.generate_all
+
+    def changed_answer(todo, comp, output, first, what, max_hours=None):
+        generate(todo, comp, output, first, what, max_hours)
+        if what.endswith("baseline"):
+            rows = replay.read_rows(output)
+            rows[0]["solver_attempt_2"] = "Lyon, France"
+            output.write_text("".join(json.dumps(row) + "\n" for row in rows))
+
+    monkeypatch.setattr(replay, "generate_all", changed_answer)
+    with pytest.raises(ValueError, match="solver_attempt_2"):
+        distributed.run_shard(manifest_path, 0)
+    rows = replay.read_rows(distributed.shard_directory(manifest_path, 0) / "per_row.jsonl")
+    assert len(rows) == len(question_ids)
+    assert {row["experiment"] for row in rows} == {replay.BASELINE}
+
+
+def test_worker_resume_initializes_an_empty_shard_directory(tmp_path, monkeypatch):
+    preflight, question_ids, features, conditions, provenance = _preflight(tmp_path, n=2)
+    manifest_path = distributed.prepare_distributed_run(preflight, num_shards=1)
+    _fake_workers(monkeypatch, question_ids, features, provenance)
+    root = distributed.shard_directory(manifest_path, 0)
+    root.mkdir(parents=True)
+
+    assert distributed.run_shard(manifest_path, 0, resume=True) == root
+    assert (root / "worker.json").is_file()
+    assert len(replay.read_rows(root / "per_row.jsonl")) == len(question_ids) * len(conditions)
+
+
+def test_worker_resume_rejects_a_nonempty_shard_without_identity(tmp_path, monkeypatch):
+    preflight, question_ids, features, _, provenance = _preflight(tmp_path, n=2)
+    manifest_path = distributed.prepare_distributed_run(preflight, num_shards=1)
+    _fake_workers(monkeypatch, question_ids, features, provenance)
+    root = distributed.shard_directory(manifest_path, 0)
+    root.mkdir(parents=True)
+    (root / "per_row.jsonl").write_text("")
+
+    with pytest.raises(ValueError, match="worker.json is missing from a nonempty"):
+        distributed.run_shard(manifest_path, 0, resume=True)
+
+
+def test_tiny_gemma_serial_and_two_shard_runs_are_equivalent(tmp_path, monkeypatch):
+    for name in ("interactions.jsonl", "labels.csv", "features.json"):
+        (tmp_path / name).write_text("fixture\n")
+    cfg = replay.ReplayConfig(
+        capstone_data_root=tmp_path,
+        interactions_jsonl="interactions.jsonl",
+        labels_csv="labels.csv",
+        feature_selection_summary="features.json",
+        layer=1,
+        partition="validation",
+        n_random_draws=1,
+        n_bootstrap=5,
+        n_permutations=10,
+        min_replay_label_match=1,
+        output_dir=tmp_path / "unused",
+    )
+    episodes = pd.DataFrame([
+        {
+            "question_id": f"q{i}",
+            "question": f"Question {i}?",
+            "solver_attempt_1": "Paris",
+            "critic_advocated_answer": "Lyon",
+            "critic_feedback": "The reviewer recommends Lyon.",
+            "stored_solver_attempt_2": "",
+            "stored_solver_response": "unresolved",
+            "stored_adopted": 0,
+            "a2_presentation": "feedback",
+        }
+        for i in range(3)
+    ])
+
+    def components(frame):
+        saes = {"TopK SAE": tiny_saes()["TopK SAE"]}
+        features = tiny_features(saes, n_random_draws=1)
+        paragraphs = {
+            question_id: [{"idx": 0, "title": "T", "paragraph_text": "text"}]
+            for question_id in frame.question_id
+        }
+        return smoke_components(paragraphs, cfg.layer, saes, features, max_new_tokens=2)
+
+    serial = replay.replay(cfg, episodes, components(episodes), tmp_path / "serial")
+    replay.analyse(serial)
+    preflight = replay.replay(
+        cfg, episodes, components(episodes), tmp_path / "preflight", preflight_only=True,
+    )
+    manifest_path = distributed.prepare_distributed_run(preflight, num_shards=2)
+    monkeypatch.setattr(replay, "load_episodes", lambda _: episodes.copy())
+    monkeypatch.setattr(replay, "load_components", lambda _, frame: components(frame))
+    for shard_id in range(2):
+        distributed.run_shard(manifest_path, shard_id)
+    merged = distributed.reduce_shards(manifest_path)
+
+    def stable_rows(path):
+        rows = [{key: value for key, value in row.items() if key != "seconds"}
+                for row in replay.read_rows(path / "per_row.jsonl")]
+        return sorted(rows, key=lambda row: tuple(str(value) for value in replay.key(row)))
+
+    assert stable_rows(serial) == stable_rows(merged)
+    for name in ("causal_table.csv", "targeted_vs_random.csv"):
+        assert (serial / name).read_bytes() == (merged / name).read_bytes()
 
 
 def test_prepare_and_reduce_fail_closed(tmp_path, monkeypatch):

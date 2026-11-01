@@ -226,7 +226,7 @@ def _validate_worker_baseline(rows: list[dict], preflight_rows: list[dict], ques
     preflight = {row["question_id"]: row for row in preflight_rows if row["question_id"] in wanted}
     if set(worker) != wanted or set(preflight) != wanted:
         raise ValueError("Worker baseline parity check is missing assigned episodes.")
-    fields = ("input_ids_sha256", "solver_response", "first_token_id")
+    fields = ("input_ids_sha256", "solver_attempt_2", "solver_response", "first_token_id")
     mismatches = {
         question_id: [field for field in fields if worker[question_id].get(field) != preflight[question_id].get(field)]
         for question_id in question_ids
@@ -305,7 +305,12 @@ def run_shard(manifest_path: str | Path, shard_id: int, *, resume: bool = False)
     worker = {**identity, "provenance": worker_provenance}
     root.parent.mkdir(parents=True, exist_ok=True)
     if root.exists():
-        saved = json.loads((root / "worker.json").read_text())
+        worker_path = root / "worker.json"
+        if not worker_path.exists():
+            if any(root.iterdir()):
+                raise ValueError(f"Cannot resume {root}: worker.json is missing from a nonempty shard directory.")
+            write_json_atomic(worker_path, _jsonable(worker), overwrite=False)
+        saved = json.loads(worker_path.read_text())
         if any(saved.get(key) != value for key, value in identity.items()):
             raise ValueError(f"Cannot resume {root}: worker manifest or shard changed.")
         replay.validate_provenance_identity(
