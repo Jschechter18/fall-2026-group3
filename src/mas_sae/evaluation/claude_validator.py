@@ -444,11 +444,13 @@ def _label_episode(client: ClaudeClient, episode: dict[str, Any], **settings: An
         )
 
 
-def completed_rows(output_path: Path, episodes: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
-    """Rows already in *output_path*, by episode_id, for resuming a batch over *episodes*.
+def completed_rows(output_path: Path, episodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Rows already in *output_path*, for resuming a batch over *episodes*.
 
-    Refuses episodes without a unique episode_id, a partial last row (a write cut
-    off by a hard kill), a repeated episode_id, and rows for episodes outside the batch.
+    ``validate_batch`` writes rows in episode order, so an interrupted run leaves the
+    first episodes of the batch, in order.  Anything else is refused: episodes without
+    a unique episode_id, a partial last row (a write cut off by a hard kill), and rows
+    that are not exactly the leading episodes (skipped, repeated, reordered or foreign).
     """
     ids = [ep.get("episode_id") for ep in episodes]
     if None in ids or len(set(ids)) != len(ids):
@@ -456,17 +458,13 @@ def completed_rows(output_path: Path, episodes: list[dict[str, Any]]) -> dict[st
     text = output_path.read_text(encoding="utf-8") if output_path.exists() else ""
     if text and not text.endswith("\n"):
         raise ValueError(f"{output_path} ends in a partial row; delete that last line, then resume")
-    done: dict[str, dict[str, Any]] = {}
-    for line in text.splitlines():
-        row = json.loads(line)
-        if row.get("episode_id") in done:
-            raise ValueError(f"{output_path} repeats episode_id {row['episode_id']!r}")
-        done[row.get("episode_id")] = row
-    foreign = sorted(map(str, set(done) - set(ids)))
-    if foreign:
-        raise ValueError(f"{output_path} has {len(foreign)} row(s) for episodes outside this batch "
-                         f"(e.g. {foreign[0]!r})")
-    return done
+    rows = [json.loads(line) for line in text.splitlines()]
+    for position, row in enumerate(rows):
+        expected = ids[position] if position < len(ids) else None
+        if row.get("episode_id") != expected:
+            raise ValueError(f"{output_path} row {position + 1} is {row.get('episode_id')!r}, expected "
+                             f"{expected!r}: a resumable file holds the batch's first episodes in order")
+    return rows
 
 
 def batch_counts(rows: list[dict[str, Any]]) -> dict[str, Any]:
@@ -533,9 +531,9 @@ def validate_batch(
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    done = completed_rows(output_path, episodes) if resume else {}
-    results = [done.get(ep.get("episode_id")) for ep in episodes]
-    todo = [i for i, row in enumerate(results) if row is None]
+    done = completed_rows(output_path, episodes) if resume else []
+    results: list[dict[str, Any] | None] = done + [None] * (len(episodes) - len(done))
+    todo = list(range(len(done), len(episodes)))
     label = partial(_label_episode, client, max_tokens=max_tokens, temperature=temperature,
                     max_attempts=max_attempts, include_question=include_question)
 

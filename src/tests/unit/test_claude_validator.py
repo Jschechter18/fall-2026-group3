@@ -1458,8 +1458,17 @@ class TestResume:
         assert summary["n_resumed"] == 0 and len(summary["results"]) == 3
 
     @pytest.mark.parametrize("content, message", [
-        ('{"episode_id": "q:0__natural__feedback"}\n{"episode_id": "q:0__natural__feedback"}\n', "repeats"),
-        ('{"episode_id": "other__natural__feedback"}\n', "outside this batch"),
+        ('{"episode_id": "q:0__natural__feedback"}\n{"episode_id": "q:0__natural__feedback"}\n',
+         "row 2 is 'q:0__natural__feedback', expected 'q:1"),  # repeated
+        ('{"episode_id": "other__natural__feedback"}\n', "row 1 is 'other"),  # foreign
+        ('{"episode_id": "q:1__natural__feedback"}\n', "row 1 is 'q:1"),  # first episode skipped
+        ('{"episode_id": "q:1__natural__feedback"}\n{"episode_id": "q:0__natural__feedback"}\n',
+         "row 1 is 'q:1"),  # wrong order
+        ('{"episode_id": "q:0__natural__feedback"}\n{"episode_id": "q:2__natural__feedback"}\n',
+         "row 2 is 'q:2"),  # gap after a correct start
+        ('{"episode_id": "q:0__natural__feedback"}\n{"episode_id": "q:1__natural__feedback"}\n'
+         '{"episode_id": "q:2__natural__feedback"}\n{"episode_id": "q:3__natural__feedback"}\n',
+         "row 4 is 'q:3__natural__feedback', expected None"),  # more rows than episodes
         ('{"episode_id": "q:0__natural__feedback"}\n{"episode_id": "q:1', "partial row"),
     ])
     def test_resume_refuses_rows_it_cannot_own(self, tmp_path, content, message):
