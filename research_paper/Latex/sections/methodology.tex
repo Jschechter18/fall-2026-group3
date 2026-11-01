@@ -4,8 +4,6 @@
 % Subsections still to be written by their owners:
 %   - Solver--Critic--Solver collection protocol and activation capture
 %   - Sparse autoencoder training
-%   - Linear probes (#161)
-%   - Causal interventions (#146, #154)
 
 \subsection{Behavioral labels}
 \label{sec:method-labels}
@@ -87,3 +85,265 @@ either labeled or explicitly excluded. Partitions that are not labeled stay
 in the manifest without labels and cannot be read by accident. On the
 original collection, the export joins 22,130 episodes to their nine-layer
 activations with every row index verified.
+
+\subsection{Linear probes}
+\label{sec:method-probes}
+
+\paragraph{Inputs and target.} For episode $i$ and layer $\ell$, let
+$\mathbf{x}_i^{(\ell)} \in \mathbf{R}^{2560}$ be the output of decoder layer
+$\ell$ at the final token of the Solver's revision prompt, captured during the
+prefill pass. At that point the Solver has read the Critic's recommendation but
+has not yet written A2. The target is $y_i = 1$ for Adoption and $y_i = 0$ for
+Retention. Agreement, Out, and technical exclusions are removed before fitting
+and are never counted as Retention.
+
+\paragraph{Probe.} Each layer gets its own logistic probe on standardized
+activations, $\tilde{\mathbf{x}} = (\mathbf{x} - \mu)/\sigma$, where the mean
+$\mu$ and standard deviation $\sigma$ of each unit come from the training rows.
+The probe predicts
+\begin{equation}
+  p(y = 1 \mid \mathbf{x}) =
+  \frac{1}{1 + \exp\{-(\mathbf{w}^{\top}\tilde{\mathbf{x}} + b)\}}
+  \label{eq:probe}
+\end{equation}
+and is fit by minimizing the class-weighted, $L_2$-regularized log loss
+\begin{equation}
+  \frac{1}{2}\|\mathbf{w}\|^{2}
+  + C \sum_{i} a_{y_i}\,
+  \mathcal{L}\bigl(y_i,\ \mathbf{w}^{\top}\tilde{\mathbf{x}}_i + b\bigr),
+  \qquad a_c = \frac{n}{2\,n_c},
+  \label{eq:probe-loss}
+\end{equation}
+where $\mathcal{L}$ is the logistic loss and $n_c$ is the number of training
+rows in class $c$, so both classes carry equal weight. The regularization
+strength $C \in \{10^{-3}, 10^{-2}, \ldots, 10^{2}\}$ is chosen by three-fold
+cross-validation inside the training partition, maximizing balanced accuracy,
+with ties going to the smaller $C$. The probe is then refit on all training
+rows. Folds are stratified by class and grouped by question family, so related
+variants of a question never fall on both sides of a split.
+
+\paragraph{Evaluation.} Layers are compared on the validation partition by
+balanced accuracy, $\mathrm{BA} = (\mathrm{TPR} + \mathrm{TNR})/2$, and by the
+AUROC of the score $s_i = \mathbf{w}^{\top}\tilde{\mathbf{x}}_i + b$, oriented
+so that a larger score means Adoption. Each metric has a 95\% interval from
+1{,}000 bootstrap resamples of whole question families. Every layer and
+baseline uses the same resamples, so differences between them are paired. The
+selected layer is the one with the highest validation balanced accuracy; if two
+layers tie, none is selected. Validation results are also broken down by
+dataset source, correctness cell (whether A1 and the Critic were right),
+candidate order, and hop type. A subgroup is reported only when it contains
+both classes.
+
+\paragraph{Controls.} A probe can score well by reading something other than
+the Solver's decision. Table~\ref{tab:probe-controls} lists the controls, each
+fit and scored with the same procedure. The permuted-label control follows
+Hewitt and Liang~\cite{hewitt2019control}: training labels are shuffled across
+questions, keeping the class counts, and the probe is refit and scored on the
+true validation labels. Over 100 permutations, a layer's selectivity is its
+observed metric minus the mean of this null distribution.
+
+\begin{table}[t]
+  \centering
+  \small
+  \caption{Controls for the layer-wise probes. Each is fit on the training
+  partition and scored on validation exactly like the activation probe.}
+  \label{tab:probe-controls}
+  \begin{tabular}{@{}p{0.2\linewidth}p{0.42\linewidth}p{0.32\linewidth}@{}}
+    \toprule
+    Control & Input & Rules out \\
+    \midrule
+    Visible text & TF-IDF (1--2-grams) of the question, A1, the Critic's
+      recommended answer, and the candidate order: what the Solver sees
+      & A decision readable from the prompt text alone \\
+    Metadata & One-hot candidate order, correctness cell, dataset source,
+      and hop type & Position, difficulty, or source effects \\
+    Pre-feedback & The same probe on the layer's activation at the end of
+      the first prompt, before A1 and before any feedback
+      & Question difficulty rather than a response to feedback \\
+    Permuted labels & Activations with the training labels shuffled
+      (100 permutations) & A probe flexible enough to fit any labels
+      (selectivity) \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\paragraph{Feature selection.} The same probe is fit on the latents of a sparse
+autoencoder at the selected layer. With encoder $E$ and decoder $D$, the latent
+vector is $\mathbf{z} = E(\mathbf{x}) \in \mathbf{R}^{m}$, and only latents that
+fire on the training rows are used. Because the probe is linear in standardized
+inputs, the SHAP value of latent $j$ for row $i$ is $w_j \tilde{z}_{ij}$
+\cite{lundberg2017shap}. Latents are ranked on the training rows by their mean
+absolute SHAP value,
+\begin{equation}
+  \bar{\phi}_j = |w_j| \cdot \frac{1}{n}\sum_{i=1}^{n} |\tilde{z}_{ij}|.
+  \label{eq:shap}
+\end{equation}
+The targeted set $S$ is the ten highest-ranked latents with $w_j > 0$, the
+latents whose activity pushes the probe toward Adoption. Ranking on training
+rows keeps the choice of features independent of the rows on which their
+effects are measured.
+
+\paragraph{Raw-activation basis.} To test whether the autoencoder adds anything
+beyond individual neurons~\cite{cunningham2023sparse,marks2025circuits}, the
+same selection is run on the raw activations through an identity basis,
+$E(\mathbf{x}) = \mathbf{x} - \mu$ and $D(\mathbf{z}) = \mathbf{z} + \mu$, with
+$\mu$ the training mean. Setting a coordinate of $\mathbf{z}$ to zero then
+replaces that neuron with its training mean (mean ablation), and the targeted
+set is the ten neurons the probe ranks highest toward Adoption.
+Figure~\ref{fig:alg-probes} summarizes the procedure.
+
+\begin{figure}[t]
+  \centering
+  \fbox{\begin{minipage}{0.94\linewidth}
+  \small
+  \begin{enumerate}
+    \item For each layer $\ell$: standardize $\mathbf{x}^{(\ell)}$ with training
+      statistics, choose $C$ by family-grouped inner cross-validation on the
+      training rows, refit, and score balanced accuracy and AUROC on validation
+      with family-bootstrap intervals.
+    \item Fit the controls in Table~\ref{tab:probe-controls} the same way, and
+      compute each layer's selectivity against 100 label permutations.
+    \item Select the layer $\ell^{*}$ with the highest validation balanced
+      accuracy (none if two layers tie).
+    \item For each basis at $\ell^{*}$ (each autoencoder and the raw-activation
+      basis): encode the training rows, keep the live latents, fit the probe,
+      rank the latents by Equation~\ref{eq:shap}, and take the top ten with
+      $w_j > 0$ as $S$.
+    \item Freeze $S$, the probe weights, and the matched random feature sets
+      (Section~\ref{sec:method-causal}) before any intervention is run.
+  \end{enumerate}
+  \end{minipage}}
+  \caption{Probe training and feature selection. Only the training and
+  validation partitions are read; the test and intervention partitions stay
+  sealed.}
+  \label{fig:alg-probes}
+\end{figure}
+
+\subsection{Causal interventions}
+\label{sec:method-causal}
+
+A probe shows that information is present, not that the Solver uses it. To test
+use, we replay episodes from the intervention partition, which no probe or
+feature selection has read, and change the activation where it was measured.
+For each eligible episode, the stored A1 and Critic feedback go back through
+the Solver's revision prompt with the same model, revision, prompt, and greedy
+decoding as in collection, and a new A2 is generated. The edit is applied once,
+at layer $\ell$ and the final prompt token, during the prefill. Earlier
+positions and later decoding steps are not modified. Before any edited
+condition runs, the unedited replay is checked against collection: it must
+reproduce the stored label for at least 98\% of episodes, or the run stops.
+
+\paragraph{Edits.} Let $\mathbf{z} = E(\mathbf{x})$, and let
+$\mathbf{z}_{S \leftarrow 0}$ be $\mathbf{z}$ with the latents in $S$ set to
+zero. The contribution of $S$ to the reconstruction is
+$\mathbf{c}_S = D(\mathbf{z}) - D(\mathbf{z}_{S \leftarrow 0})$.
+Table~\ref{tab:edits} lists the edits. Ablation removes $\mathbf{c}_S$, but the
+size of that change depends on how strongly the features in $S$ happen to fire.
+In our preliminary runs, effects appeared only for large edits, and targeted
+edits were no stronger than random edits of similar size. The norm-matched edit
+therefore fixes the size relative to the activation and keeps only the
+direction of $\mathbf{c}_S$:
+\begin{equation}
+  \Delta = r\,\|\mathbf{x}\|\,\frac{\mathbf{c}_S}{\|\mathbf{c}_S\|},
+  \qquad r \in \{\pm 0.1, \pm 0.25, \pm 0.5, \pm 1\},
+  \label{eq:norm-edit}
+\end{equation}
+where $r < 0$ suppresses what $S$ contributes and $r > 0$ amplifies it. Every
+feature set, autoencoder, and episode then receives an edit of the same size.
+When no latent in $S$ fires, $\mathbf{c}_S = 0$, and the edit is recorded as a
+no-op and reported separately. For the other edits, which change $\mathbf{z}$ to
+$\mathbf{z}'$, the edit is $\Delta = D(\mathbf{z}') - D(\mathbf{z})$. It is
+applied either inside the reconstruction, $\mathbf{x}' = D(\mathbf{z}) + \Delta$,
+or with the error-preserving splice, $\mathbf{x}' = \mathbf{x} + \Delta$, which
+keeps the autoencoder's reconstruction error, so that the unedited control is
+the original activation.
+
+\begin{table}[t]
+  \centering
+  \small
+  \caption{Interventions on the final-token activation. $\mathrm{ref}_j$ is the
+  mean activation of latent $j$ where it fires on the training rows;
+  $\mathbf{u}$ is a fixed random direction.}
+  \label{tab:edits}
+  \begin{tabular}{@{}p{0.2\linewidth}p{0.36\linewidth}p{0.38\linewidth}@{}}
+    \toprule
+    Edit & Change & Purpose \\
+    \midrule
+    Ablation & $z_j \leftarrow 0$ for $j \in S$ & Remove the targeted features \\
+    Steering ($s$) & $z_j \leftarrow s\,\mathrm{ref}_j$ for $j \in S$
+      & Set the features to a multiple of their typical active value \\
+    Scaling ($p$) & $z_j \leftarrow (1 + p)\,z_j$ for $j \in S$, $p \ge -1$
+      & Shrink or grow the features in proportion \\
+    Norm-matched ($r$) & Equation~\ref{eq:norm-edit}
+      & Same edit size for every feature set \\
+    Random direction ($r$) & $\mathbf{x}' = \mathbf{x} + r\,\|\mathbf{x}\|\,
+      \mathbf{u}/\|\mathbf{u}\|$ & Edit of the same size that does not use the
+      autoencoder \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\paragraph{Controls.} Each targeted edit is paired with the same edit applied
+to $K$ random feature sets of the same size. For each targeted latent, a random
+latent is drawn from the non-targeted latents that fire within a factor of 1.25
+as often on the training rows, among the 50 nearest in typical decoded
+contribution, $\mathrm{RMS}(z_j)\,\|\mathbf{d}_j\|$, where $\mathbf{d}_j$ is
+latent $j$'s decoder column. For the raw-activation basis, the decoder columns
+are unit vectors, so this matches on each neuron's standard deviation. Three
+fixed random directions add a control that does not depend on the autoencoder.
+% K = 100 for the confirmatory run (Instructor Review #6); the earlier
+% edit-size configurations used K = 5.
+
+\paragraph{Estimands and tests.} Let $Y_i(c) = 1$ when the A2 regenerated under
+condition $c$ is labeled Adoption by the rule-based labels
+(Section~\ref{sec:method-labels}), and $0$ otherwise. For a targeted condition
+$T$ and its unedited control, the effect is the paired change in the Adoption
+rate,
+\begin{equation}
+  \delta_{T} = \frac{1}{n}\sum_{i=1}^{n} \bigl[Y_i(T) - Y_i(0)\bigr],
+  \label{eq:delta}
+\end{equation}
+and the comparison that isolates the features is targeted against random,
+\begin{equation}
+  \delta_{T-R} = \frac{1}{n}\sum_{i=1}^{n}
+  \Bigl[Y_i(T) - \frac{1}{K}\sum_{k=1}^{K} Y_i(R_k)\Bigr],
+  \label{eq:targeted-vs-random}
+\end{equation}
+where $R_1, \ldots, R_K$ are the matched random sets at the same edit. Intervals
+come from 1{,}000 bootstrap resamples of questions. For $\delta_{T-R}$, a second
+interval also resamples the random sets, so it includes the uncertainty from
+which sets were drawn. The $p$-value is a two-sided paired sign-flip test,
+$p = (1 + \#\{b : |\delta^{(b)}| \ge |\delta|\})/(1 + B)$ with
+$B = 10{,}000$, where each $\delta^{(b)}$ flips the sign of every question's
+difference at random. Targeted-versus-random comparisons are Holm-adjusted
+\cite{holm1979simple} within each edit family (ablation, steering, scaling,
+norm-matched), with one test per experiment (autoencoder, feature subset, and
+splice) and edit strength. Each row also
+records the log-probability of the first generated token, a continuous measure
+beside the binary label. Figure~\ref{fig:alg-causal} summarizes the procedure.
+% #193: report Retention and third-answer rates per condition beside Adoption,
+% and add the raw-neuron and probe-direction arms, once implemented.
+
+\begin{figure}[t]
+  \centering
+  \fbox{\begin{minipage}{0.94\linewidth}
+  \small
+  \begin{enumerate}
+    \item Load the frozen targeted set $S$, the random sets $R_1, \ldots, R_K$,
+      and the autoencoder from feature selection. Nothing is fit on the
+      intervention partition.
+    \item Replay every episode without an edit; stop unless at least 98\% of
+      the regenerated A2s keep their stored label.
+    \item For each episode $i$, feature set ($S$, each $R_k$, each random
+      direction), and edit strength: at layer $\ell$ and the final prompt
+      token, replace $\mathbf{x}$ by $\mathbf{x}'$ (Table~\ref{tab:edits})
+      during the prefill, regenerate A2 greedily, label it, and record
+      $Y_i$, the first-token log-probability, and the applied edit size.
+    \item Estimate $\delta_T$ and $\delta_{T-R}$ with bootstrap intervals and
+      sign-flip $p$-values, and Holm-adjust within each edit family.
+  \end{enumerate}
+  \end{minipage}}
+  \caption{Causal replay. The edit is applied only at the position where the
+  activations, probes, and features were measured.}
+  \label{fig:alg-causal}
+\end{figure}

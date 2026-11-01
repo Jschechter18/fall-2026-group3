@@ -1,0 +1,207 @@
+{
+  "source": "results/experiments/holdout100_filler_paired/summary.json",
+  "inputs_sha256": {
+    "results/collection/synthetic_holdout100_random_fillers/train/interactions.jsonl": "3ec36c8f3907e328c6191b80ed5461f412d17f809f957e660cff0bf202b37ce8",
+    "results/collection/synthetic_holdout100_random_fillers/train/exclusions.jsonl": "e39c560608ab6e113ea5eb8cfa671a5874e5f441573924cec8941725e20d1d33",
+    "results/collection/synthetic_holdout100_random_fillers/train/sampled_questions.json": "f25139ea5100283d30213eb33c30d34883dc1fc01f2d1ebd99dbde228f796ea9",
+    "results/claude_validation/holdout100_random_fillers_opus5_run1/raw_results.jsonl": "ae0d1fef6cfe6eb289b6b595aa7d4c9bf14661802d4805a27bec5a50e3ce6db1",
+    "results/claude_validation/holdout100_random_fillers_opus5_run1/summary.json": "e99aec9488cc23a1ec034623b396e06c3b8977dec80ec74338151dd81dee1842",
+    "results/collection/synthetic_holdout100_related_fillers/train/interactions.jsonl": "75d65718206679d9eccbbfca05016829411d0704ff987e6ffd88fe096cb47ccb",
+    "results/collection/synthetic_holdout100_related_fillers/train/exclusions.jsonl": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "results/collection/synthetic_holdout100_related_fillers/train/sampled_questions.json": "f25139ea5100283d30213eb33c30d34883dc1fc01f2d1ebd99dbde228f796ea9",
+    "results/claude_validation/holdout100_related_fillers_opus5_run1/raw_results.jsonl": "b924c60069ba0b80d915967f36ee28c85cf67cd8e5911161f5135541f5d269d3",
+    "results/claude_validation/holdout100_related_fillers_opus5_run1/summary.json": "4194ad6e7eea63752914b17f99fd930472a3ef8c956c74ccca68921808309b2c"
+  },
+  "assigned": 100,
+  "labeling": {
+    "prompt_version": "claude_binary_v3_candidates",
+    "model_id": "us.anthropic.claude-opus-5",
+    "effort": "medium",
+    "max_tokens": 8000
+  },
+  "primary": {
+    "n": 100,
+    "baseline": {
+      "binary": 18,
+      "share": 0.18,
+      "ci95": [
+        0.11700131654251038,
+        0.26667536024213084
+      ]
+    },
+    "treated": {
+      "binary": 27,
+      "share": 0.27,
+      "ci95": [
+        0.1926946091766482,
+        0.3643230022623127
+      ]
+    },
+    "table": {
+      "both": 11,
+      "treated_only": 16,
+      "baseline_only": 7,
+      "neither": 66
+    },
+    "discordant": {
+      "gained": 16,
+      "lost": 7
+    },
+    "change_pp": 9.0,
+    "change_ci95_pp": [
+      -0.5170758334654011,
+      18.452963325595807
+    ],
+    "exact_mcnemar_p": 0.0931396484375
+  },
+  "intention_to_treat": {
+    "n": 100,
+    "baseline": {
+      "binary": 18,
+      "share": 0.18,
+      "ci95": [
+        0.11700131654251038,
+        0.26667536024213084
+      ]
+    },
+    "treated": {
+      "binary": 27,
+      "share": 0.27,
+      "ci95": [
+        0.1926946091766482,
+        0.3643230022623127
+      ]
+    },
+    "table": {
+      "both": 11,
+      "treated_only": 16,
+      "baseline_only": 7,
+      "neither": 66
+    },
+    "discordant": {
+      "gained": 16,
+      "lost": 7
+    },
+    "change_pp": 9.0,
+    "change_ci95_pp": [
+      -0.5170758334654011,
+      18.452963325595807
+    ],
+    "exact_mcnemar_p": 0.0931396484375
+  },
+  "technical_failures": {
+    "baseline": {},
+    "treated": {}
+  },
+  "descriptives": {
+    "baseline": {
+      "correctness_cells": {
+        "A1 right / Critic right": {
+          "agreement": 71
+        },
+        "A1 right / Critic wrong": {
+          "adoption": 2,
+          "retention": 2,
+          "agreement": 1
+        },
+        "A1 wrong / Critic right": {
+          "adoption": 5,
+          "retention": 9,
+          "agreement": 1
+        },
+        "A1 wrong / Critic wrong": {
+          "agreement": 6,
+          "out": 1
+        },
+        "no episode": {
+          "out": 2
+        }
+      },
+      "hop_types": {
+        "2hop": {
+          "retention": 2,
+          "agreement": 16
+        },
+        "3hop1": {
+          "adoption": 2,
+          "retention": 3,
+          "agreement": 10,
+          "out": 1
+        },
+        "3hop2": {
+          "adoption": 3,
+          "retention": 2,
+          "agreement": 14,
+          "out": 2
+        },
+        "4hop1": {
+          "adoption": 1,
+          "retention": 1,
+          "agreement": 10
+        },
+        "4hop2": {
+          "adoption": 1,
+          "retention": 3,
+          "agreement": 14
+        },
+        "4hop3": {
+          "agreement": 15
+        }
+      }
+    },
+    "treated": {
+      "correctness_cells": {
+        "A1 right / Critic right": {
+          "agreement": 63
+        },
+        "A1 right / Critic wrong": {
+          "adoption": 2,
+          "retention": 2,
+          "agreement": 2
+        },
+        "A1 wrong / Critic right": {
+          "adoption": 7,
+          "retention": 9,
+          "agreement": 3
+        },
+        "A1 wrong / Critic wrong": {
+          "adoption": 3,
+          "retention": 4,
+          "agreement": 5
+        }
+      },
+      "hop_types": {
+        "2hop": {
+          "adoption": 2,
+          "retention": 2,
+          "agreement": 14
+        },
+        "3hop1": {
+          "adoption": 2,
+          "retention": 3,
+          "agreement": 11
+        },
+        "3hop2": {
+          "adoption": 3,
+          "retention": 4,
+          "agreement": 14
+        },
+        "4hop1": {
+          "adoption": 3,
+          "retention": 1,
+          "agreement": 8
+        },
+        "4hop2": {
+          "adoption": 1,
+          "retention": 4,
+          "agreement": 13
+        },
+        "4hop3": {
+          "adoption": 1,
+          "retention": 1,
+          "agreement": 13
+        }
+      }
+    }
+  }
+}
