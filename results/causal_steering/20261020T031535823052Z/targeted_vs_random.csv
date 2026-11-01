@@ -1,0 +1,19 @@
+Experiment,Splice,Arm,N,Random draws,Targeted − random (pp),95% CI (questions),95% CI (questions + draws),p-value,p-value (Holm),Draw tail fraction (exploratory)
+TopK SAE,reconstruction,steer_-2,450,7,25.333333333333325,"[24.38, 26.22]","[-0.23, 52.32]",9.999000099990002e-05,0.0008999100089991002,0.5
+TopK SAE,reconstruction,steer_+2,450,7,0.0,"[0.00, 0.00]","[0.00, 0.00]",1.0,1.0,1.0
+TopK SAE,reconstruction,steer_+5,450,7,8.603174603174601,"[7.27, 9.87]","[-0.41, 20.38]",9.999000099990002e-05,0.0008999100089991002,0.625
+TopK SAE · error-preserving,error_preserving,steer_-2,450,7,25.269841269841265,"[24.28, 26.16]","[-0.22, 52.25]",9.999000099990002e-05,,0.625
+TopK SAE · error-preserving,error_preserving,steer_+2,450,7,0.0,"[0.00, 0.00]","[0.00, 0.00]",1.0,,1.0
+TopK SAE · error-preserving,error_preserving,steer_+5,450,7,8.0,"[6.76, 9.17]","[-0.57, 19.14]",9.999000099990002e-05,,0.375
+L1 SAE,reconstruction,steer_-2,450,7,-88.85714285714286,"[-91.62, -85.94]","[-91.65, -85.90]",9.999000099990002e-05,0.0008999100089991002,0.125
+L1 SAE,reconstruction,steer_+2,450,7,-15.904761904761907,"[-19.24, -12.60]","[-19.18, -12.63]",9.999000099990002e-05,0.0008999100089991002,0.125
+L1 SAE,reconstruction,steer_+5,450,7,-77.11111111111111,"[-80.44, -73.81]","[-85.84, -63.49]",9.999000099990002e-05,0.0008999100089991002,0.125
+L1 SAE · error-preserving,error_preserving,steer_-2,450,7,-88.1904761904762,"[-91.02, -85.14]","[-91.02, -85.17]",9.999000099990002e-05,,0.125
+L1 SAE · error-preserving,error_preserving,steer_+2,450,7,-4.507936507936508,"[-6.63, -2.60]","[-6.70, -2.60]",9.999000099990002e-05,,0.125
+L1 SAE · error-preserving,error_preserving,steer_+5,450,7,-79.80952380952382,"[-83.11, -76.54]","[-86.19, -70.95]",9.999000099990002e-05,,0.125
+Pretrained SAE,reconstruction,steer_-2,450,7,-0.41269841269841245,"[-1.33, 0.32]","[-1.46, 0.79]",0.4390560943905609,1.0,0.25
+Pretrained SAE,reconstruction,steer_+2,450,7,-0.06349206349206349,"[-0.57, 0.32]","[-0.57, 0.38]",1.0,1.0,0.625
+Pretrained SAE,reconstruction,steer_+5,450,7,0.12698412698412714,"[-0.48, 0.63]","[-0.79, 1.14]",0.7459254074592541,1.0,0.5
+Pretrained SAE · error-preserving,error_preserving,steer_-2,450,7,-0.5714285714285714,"[-1.40, 0.10]","[-1.43, 0.13]",0.21287871212878712,,0.125
+Pretrained SAE · error-preserving,error_preserving,steer_+2,450,7,0.09523809523809527,"[0.00, 0.22]","[0.00, 0.32]",0.25237476252374763,,1.0
+Pretrained SAE · error-preserving,error_preserving,steer_+5,450,7,0.15873015873015875,"[-0.22, 0.54]","[-0.32, 0.70]",0.5325467453254674,,0.875

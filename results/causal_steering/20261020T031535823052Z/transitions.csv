@@ -1,0 +1,396 @@
+experiment,condition,control_response,response,count
+TopK SAE,no_ablation,adopted_critic,adopted_critic,403
+TopK SAE,no_ablation,third_answer,third_answer,27
+TopK SAE,no_ablation,retained_a1,retained_a1,17
+TopK SAE,no_ablation,third_answer,unresolved,1
+TopK SAE,no_ablation,retained_a1,third_answer,1
+TopK SAE,no_ablation,retained_a1,unresolved,1
+TopK SAE,targeted_steer_-2,adopted_critic,adopted_critic,402
+TopK SAE,targeted_steer_-2,third_answer,third_answer,26
+TopK SAE,targeted_steer_-2,retained_a1,retained_a1,17
+TopK SAE,targeted_steer_-2,unresolved,third_answer,1
+TopK SAE,targeted_steer_-2,third_answer,non_answer,1
+TopK SAE,targeted_steer_-2,unresolved,retained_a1,1
+TopK SAE,targeted_steer_-2,adopted_critic,unresolved,1
+TopK SAE,targeted_steer_-2,third_answer,unresolved,1
+TopK SAE,random_steer_-2,adopted_critic,adopted_critic,2016
+TopK SAE,random_steer_-2,third_answer,third_answer,185
+TopK SAE,random_steer_-2,retained_a1,retained_a1,85
+TopK SAE,random_steer_-2,unresolved,third_answer,7
+TopK SAE,random_steer_-2,third_answer,non_answer,5
+TopK SAE,random_steer_-2,unresolved,retained_a1,2
+TopK SAE,random_steer_-2,adopted_critic,third_answer,626
+TopK SAE,random_steer_-2,third_answer,retained_a1,2
+TopK SAE,random_steer_-2,unresolved,unresolved,5
+TopK SAE,random_steer_-2,third_answer,unresolved,4
+TopK SAE,random_steer_-2,adopted_critic,unresolved,177
+TopK SAE,random_steer_-2,retained_a1,third_answer,24
+TopK SAE,random_steer_-2,retained_a1,unresolved,10
+TopK SAE,random_steer_-2,adopted_critic,non_answer,2
+TopK SAE,targeted_steer_+2,adopted_critic,adopted_critic,403
+TopK SAE,targeted_steer_+2,third_answer,third_answer,26
+TopK SAE,targeted_steer_+2,retained_a1,retained_a1,17
+TopK SAE,targeted_steer_+2,unresolved,unresolved,2
+TopK SAE,targeted_steer_+2,third_answer,retained_a1,2
+TopK SAE,random_steer_+2,adopted_critic,adopted_critic,2821
+TopK SAE,random_steer_+2,third_answer,third_answer,185
+TopK SAE,random_steer_+2,retained_a1,retained_a1,119
+TopK SAE,random_steer_+2,unresolved,unresolved,7
+TopK SAE,random_steer_+2,third_answer,non_answer,7
+TopK SAE,random_steer_+2,unresolved,third_answer,4
+TopK SAE,random_steer_+2,third_answer,retained_a1,3
+TopK SAE,random_steer_+2,unresolved,retained_a1,3
+TopK SAE,random_steer_+2,third_answer,unresolved,1
+TopK SAE,targeted_steer_+5,adopted_critic,adopted_critic,401
+TopK SAE,targeted_steer_+5,third_answer,third_answer,25
+TopK SAE,targeted_steer_+5,retained_a1,retained_a1,17
+TopK SAE,targeted_steer_+5,unresolved,third_answer,1
+TopK SAE,targeted_steer_+5,third_answer,non_answer,2
+TopK SAE,targeted_steer_+5,adopted_critic,retained_a1,1
+TopK SAE,targeted_steer_+5,third_answer,retained_a1,1
+TopK SAE,targeted_steer_+5,unresolved,unresolved,1
+TopK SAE,targeted_steer_+5,adopted_critic,unresolved,1
+TopK SAE,random_steer_+5,adopted_critic,adopted_critic,2532
+TopK SAE,random_steer_+5,third_answer,third_answer,164
+TopK SAE,random_steer_+5,retained_a1,retained_a1,103
+TopK SAE,random_steer_+5,unresolved,third_answer,6
+TopK SAE,random_steer_+5,third_answer,non_answer,17
+TopK SAE,random_steer_+5,adopted_critic,retained_a1,17
+TopK SAE,random_steer_+5,adopted_critic,non_answer,9
+TopK SAE,random_steer_+5,unresolved,unresolved,3
+TopK SAE,random_steer_+5,third_answer,retained_a1,3
+TopK SAE,random_steer_+5,unresolved,retained_a1,5
+TopK SAE,random_steer_+5,adopted_critic,unresolved,218
+TopK SAE,random_steer_+5,third_answer,unresolved,9
+TopK SAE,random_steer_+5,adopted_critic,third_answer,45
+TopK SAE,random_steer_+5,retained_a1,third_answer,4
+TopK SAE,random_steer_+5,retained_a1,unresolved,11
+TopK SAE,random_steer_+5,third_answer,adopted_critic,3
+TopK SAE,random_steer_+5,retained_a1,adopted_critic,1
+TopK SAE · error-preserving,targeted_steer_-2,adopted_critic,adopted_critic,402
+TopK SAE · error-preserving,targeted_steer_-2,third_answer,third_answer,27
+TopK SAE · error-preserving,targeted_steer_-2,retained_a1,retained_a1,18
+TopK SAE · error-preserving,targeted_steer_-2,retained_a1,third_answer,1
+TopK SAE · error-preserving,targeted_steer_-2,adopted_critic,unresolved,1
+TopK SAE · error-preserving,targeted_steer_-2,third_answer,unresolved,1
+TopK SAE · error-preserving,random_steer_-2,adopted_critic,adopted_critic,2018
+TopK SAE · error-preserving,random_steer_-2,third_answer,third_answer,184
+TopK SAE · error-preserving,random_steer_-2,retained_a1,retained_a1,90
+TopK SAE · error-preserving,random_steer_-2,third_answer,non_answer,4
+TopK SAE · error-preserving,random_steer_-2,retained_a1,unresolved,11
+TopK SAE · error-preserving,random_steer_-2,adopted_critic,third_answer,634
+TopK SAE · error-preserving,random_steer_-2,third_answer,retained_a1,4
+TopK SAE · error-preserving,random_steer_-2,retained_a1,third_answer,30
+TopK SAE · error-preserving,random_steer_-2,third_answer,unresolved,4
+TopK SAE · error-preserving,random_steer_-2,adopted_critic,unresolved,166
+TopK SAE · error-preserving,random_steer_-2,adopted_critic,non_answer,3
+TopK SAE · error-preserving,random_steer_-2,retained_a1,non_answer,2
+TopK SAE · error-preserving,targeted_steer_+2,adopted_critic,adopted_critic,403
+TopK SAE · error-preserving,targeted_steer_+2,third_answer,third_answer,26
+TopK SAE · error-preserving,targeted_steer_+2,retained_a1,retained_a1,18
+TopK SAE · error-preserving,targeted_steer_+2,third_answer,unresolved,1
+TopK SAE · error-preserving,targeted_steer_+2,retained_a1,unresolved,1
+TopK SAE · error-preserving,targeted_steer_+2,third_answer,retained_a1,1
+TopK SAE · error-preserving,random_steer_+2,adopted_critic,adopted_critic,2821
+TopK SAE · error-preserving,random_steer_+2,third_answer,third_answer,188
+TopK SAE · error-preserving,random_steer_+2,retained_a1,retained_a1,130
+TopK SAE · error-preserving,random_steer_+2,third_answer,unresolved,3
+TopK SAE · error-preserving,random_steer_+2,third_answer,retained_a1,2
+TopK SAE · error-preserving,random_steer_+2,third_answer,non_answer,3
+TopK SAE · error-preserving,random_steer_+2,retained_a1,third_answer,2
+TopK SAE · error-preserving,random_steer_+2,retained_a1,unresolved,1
+TopK SAE · error-preserving,targeted_steer_+5,adopted_critic,adopted_critic,401
+TopK SAE · error-preserving,targeted_steer_+5,third_answer,third_answer,26
+TopK SAE · error-preserving,targeted_steer_+5,retained_a1,retained_a1,18
+TopK SAE · error-preserving,targeted_steer_+5,third_answer,non_answer,2
+TopK SAE · error-preserving,targeted_steer_+5,adopted_critic,retained_a1,1
+TopK SAE · error-preserving,targeted_steer_+5,retained_a1,unresolved,1
+TopK SAE · error-preserving,targeted_steer_+5,adopted_critic,unresolved,1
+TopK SAE · error-preserving,random_steer_+5,adopted_critic,adopted_critic,2551
+TopK SAE · error-preserving,random_steer_+5,third_answer,third_answer,169
+TopK SAE · error-preserving,random_steer_+5,retained_a1,retained_a1,110
+TopK SAE · error-preserving,random_steer_+5,third_answer,non_answer,17
+TopK SAE · error-preserving,random_steer_+5,retained_a1,third_answer,6
+TopK SAE · error-preserving,random_steer_+5,adopted_critic,non_answer,8
+TopK SAE · error-preserving,random_steer_+5,adopted_critic,unresolved,204
+TopK SAE · error-preserving,random_steer_+5,retained_a1,unresolved,16
+TopK SAE · error-preserving,random_steer_+5,third_answer,retained_a1,1
+TopK SAE · error-preserving,random_steer_+5,third_answer,unresolved,6
+TopK SAE · error-preserving,random_steer_+5,adopted_critic,retained_a1,15
+TopK SAE · error-preserving,random_steer_+5,adopted_critic,third_answer,43
+TopK SAE · error-preserving,random_steer_+5,third_answer,adopted_critic,3
+TopK SAE · error-preserving,random_steer_+5,retained_a1,adopted_critic,1
+L1 SAE,no_ablation,adopted_critic,adopted_critic,403
+L1 SAE,no_ablation,third_answer,third_answer,26
+L1 SAE,no_ablation,retained_a1,retained_a1,17
+L1 SAE,no_ablation,third_answer,unresolved,1
+L1 SAE,no_ablation,third_answer,non_answer,1
+L1 SAE,no_ablation,retained_a1,third_answer,1
+L1 SAE,no_ablation,retained_a1,unresolved,1
+L1 SAE,targeted_steer_-2,adopted_critic,third_answer,313
+L1 SAE,targeted_steer_-2,adopted_critic,unresolved,87
+L1 SAE,targeted_steer_-2,third_answer,third_answer,25
+L1 SAE,targeted_steer_-2,retained_a1,third_answer,14
+L1 SAE,targeted_steer_-2,unresolved,third_answer,2
+L1 SAE,targeted_steer_-2,non_answer,third_answer,1
+L1 SAE,targeted_steer_-2,retained_a1,unresolved,3
+L1 SAE,targeted_steer_-2,adopted_critic,adopted_critic,3
+L1 SAE,targeted_steer_-2,third_answer,unresolved,2
+L1 SAE,random_steer_-2,adopted_critic,adopted_critic,2814
+L1 SAE,random_steer_-2,third_answer,third_answer,174
+L1 SAE,random_steer_-2,retained_a1,retained_a1,119
+L1 SAE,random_steer_-2,unresolved,third_answer,5
+L1 SAE,random_steer_-2,non_answer,non_answer,7
+L1 SAE,random_steer_-2,unresolved,unresolved,5
+L1 SAE,random_steer_-2,third_answer,retained_a1,7
+L1 SAE,random_steer_-2,adopted_critic,unresolved,3
+L1 SAE,random_steer_-2,third_answer,adopted_critic,6
+L1 SAE,random_steer_-2,adopted_critic,third_answer,4
+L1 SAE,random_steer_-2,unresolved,retained_a1,4
+L1 SAE,random_steer_-2,third_answer,non_answer,2
+L1 SAE,targeted_steer_+2,adopted_critic,adopted_critic,330
+L1 SAE,targeted_steer_+2,adopted_critic,unresolved,11
+L1 SAE,targeted_steer_+2,third_answer,third_answer,23
+L1 SAE,targeted_steer_+2,retained_a1,retained_a1,13
+L1 SAE,targeted_steer_+2,adopted_critic,third_answer,62
+L1 SAE,targeted_steer_+2,unresolved,unresolved,1
+L1 SAE,targeted_steer_+2,retained_a1,third_answer,3
+L1 SAE,targeted_steer_+2,non_answer,third_answer,1
+L1 SAE,targeted_steer_+2,third_answer,unresolved,4
+L1 SAE,targeted_steer_+2,retained_a1,adopted_critic,1
+L1 SAE,targeted_steer_+2,unresolved,third_answer,1
+L1 SAE,random_steer_+2,adopted_critic,adopted_critic,2817
+L1 SAE,random_steer_+2,third_answer,third_answer,175
+L1 SAE,random_steer_+2,retained_a1,retained_a1,119
+L1 SAE,random_steer_+2,unresolved,unresolved,9
+L1 SAE,random_steer_+2,third_answer,unresolved,7
+L1 SAE,random_steer_+2,non_answer,non_answer,4
+L1 SAE,random_steer_+2,unresolved,third_answer,5
+L1 SAE,random_steer_+2,non_answer,retained_a1,3
+L1 SAE,random_steer_+2,third_answer,retained_a1,4
+L1 SAE,random_steer_+2,adopted_critic,retained_a1,2
+L1 SAE,random_steer_+2,adopted_critic,unresolved,1
+L1 SAE,random_steer_+2,third_answer,non_answer,2
+L1 SAE,random_steer_+2,third_answer,adopted_critic,1
+L1 SAE,random_steer_+2,adopted_critic,third_answer,1
+L1 SAE,targeted_steer_+5,adopted_critic,third_answer,301
+L1 SAE,targeted_steer_+5,adopted_critic,unresolved,80
+L1 SAE,targeted_steer_+5,third_answer,third_answer,22
+L1 SAE,targeted_steer_+5,retained_a1,third_answer,16
+L1 SAE,targeted_steer_+5,unresolved,unresolved,1
+L1 SAE,targeted_steer_+5,adopted_critic,adopted_critic,21
+L1 SAE,targeted_steer_+5,non_answer,third_answer,1
+L1 SAE,targeted_steer_+5,third_answer,unresolved,5
+L1 SAE,targeted_steer_+5,retained_a1,retained_a1,1
+L1 SAE,targeted_steer_+5,unresolved,third_answer,1
+L1 SAE,targeted_steer_+5,adopted_critic,retained_a1,1
+L1 SAE,random_steer_+5,adopted_critic,adopted_critic,2571
+L1 SAE,random_steer_+5,third_answer,third_answer,163
+L1 SAE,random_steer_+5,retained_a1,retained_a1,105
+L1 SAE,random_steer_+5,unresolved,third_answer,6
+L1 SAE,random_steer_+5,third_answer,unresolved,16
+L1 SAE,random_steer_+5,non_answer,non_answer,3
+L1 SAE,random_steer_+5,third_answer,retained_a1,5
+L1 SAE,random_steer_+5,third_answer,adopted_critic,2
+L1 SAE,random_steer_+5,unresolved,unresolved,7
+L1 SAE,random_steer_+5,adopted_critic,third_answer,155
+L1 SAE,random_steer_+5,unresolved,retained_a1,1
+L1 SAE,random_steer_+5,adopted_critic,unresolved,78
+L1 SAE,random_steer_+5,third_answer,non_answer,3
+L1 SAE,random_steer_+5,non_answer,retained_a1,3
+L1 SAE,random_steer_+5,adopted_critic,retained_a1,16
+L1 SAE,random_steer_+5,retained_a1,adopted_critic,3
+L1 SAE,random_steer_+5,retained_a1,third_answer,10
+L1 SAE,random_steer_+5,non_answer,third_answer,1
+L1 SAE,random_steer_+5,retained_a1,unresolved,1
+L1 SAE,random_steer_+5,adopted_critic,non_answer,1
+L1 SAE · error-preserving,targeted_steer_-2,adopted_critic,third_answer,312
+L1 SAE · error-preserving,targeted_steer_-2,adopted_critic,unresolved,85
+L1 SAE · error-preserving,targeted_steer_-2,third_answer,third_answer,25
+L1 SAE · error-preserving,targeted_steer_-2,retained_a1,third_answer,16
+L1 SAE · error-preserving,targeted_steer_-2,adopted_critic,adopted_critic,6
+L1 SAE · error-preserving,targeted_steer_-2,third_answer,unresolved,3
+L1 SAE · error-preserving,targeted_steer_-2,retained_a1,unresolved,3
+L1 SAE · error-preserving,random_steer_-2,adopted_critic,adopted_critic,2817
+L1 SAE · error-preserving,random_steer_-2,third_answer,third_answer,175
+L1 SAE · error-preserving,random_steer_-2,retained_a1,retained_a1,125
+L1 SAE · error-preserving,random_steer_-2,retained_a1,third_answer,7
+L1 SAE · error-preserving,random_steer_-2,third_answer,retained_a1,7
+L1 SAE · error-preserving,random_steer_-2,third_answer,unresolved,4
+L1 SAE · error-preserving,random_steer_-2,third_answer,non_answer,7
+L1 SAE · error-preserving,random_steer_-2,adopted_critic,third_answer,3
+L1 SAE · error-preserving,random_steer_-2,adopted_critic,unresolved,1
+L1 SAE · error-preserving,random_steer_-2,third_answer,adopted_critic,3
+L1 SAE · error-preserving,random_steer_-2,retained_a1,unresolved,1
+L1 SAE · error-preserving,targeted_steer_+2,adopted_critic,adopted_critic,380
+L1 SAE · error-preserving,targeted_steer_+2,third_answer,third_answer,27
+L1 SAE · error-preserving,targeted_steer_+2,retained_a1,retained_a1,15
+L1 SAE · error-preserving,targeted_steer_+2,adopted_critic,unresolved,5
+L1 SAE · error-preserving,targeted_steer_+2,retained_a1,third_answer,3
+L1 SAE · error-preserving,targeted_steer_+2,adopted_critic,third_answer,18
+L1 SAE · error-preserving,targeted_steer_+2,retained_a1,adopted_critic,1
+L1 SAE · error-preserving,targeted_steer_+2,third_answer,unresolved,1
+L1 SAE · error-preserving,random_steer_+2,adopted_critic,adopted_critic,2809
+L1 SAE · error-preserving,random_steer_+2,third_answer,third_answer,187
+L1 SAE · error-preserving,random_steer_+2,retained_a1,retained_a1,128
+L1 SAE · error-preserving,random_steer_+2,third_answer,retained_a1,3
+L1 SAE · error-preserving,random_steer_+2,adopted_critic,third_answer,4
+L1 SAE · error-preserving,random_steer_+2,retained_a1,unresolved,5
+L1 SAE · error-preserving,random_steer_+2,adopted_critic,unresolved,4
+L1 SAE · error-preserving,random_steer_+2,adopted_critic,retained_a1,4
+L1 SAE · error-preserving,random_steer_+2,third_answer,unresolved,4
+L1 SAE · error-preserving,random_steer_+2,third_answer,non_answer,2
+L1 SAE · error-preserving,targeted_steer_+5,adopted_critic,third_answer,302
+L1 SAE · error-preserving,targeted_steer_+5,adopted_critic,unresolved,78
+L1 SAE · error-preserving,targeted_steer_+5,third_answer,third_answer,22
+L1 SAE · error-preserving,targeted_steer_+5,retained_a1,third_answer,18
+L1 SAE · error-preserving,targeted_steer_+5,third_answer,unresolved,6
+L1 SAE · error-preserving,targeted_steer_+5,adopted_critic,adopted_critic,22
+L1 SAE · error-preserving,targeted_steer_+5,retained_a1,retained_a1,1
+L1 SAE · error-preserving,targeted_steer_+5,adopted_critic,retained_a1,1
+L1 SAE · error-preserving,random_steer_+5,adopted_critic,adopted_critic,2664
+L1 SAE · error-preserving,random_steer_+5,third_answer,third_answer,173
+L1 SAE · error-preserving,random_steer_+5,retained_a1,retained_a1,118
+L1 SAE · error-preserving,random_steer_+5,third_answer,retained_a1,6
+L1 SAE · error-preserving,random_steer_+5,adopted_critic,retained_a1,12
+L1 SAE · error-preserving,random_steer_+5,retained_a1,unresolved,7
+L1 SAE · error-preserving,random_steer_+5,adopted_critic,third_answer,92
+L1 SAE · error-preserving,random_steer_+5,third_answer,non_answer,5
+L1 SAE · error-preserving,random_steer_+5,third_answer,unresolved,11
+L1 SAE · error-preserving,random_steer_+5,adopted_critic,unresolved,53
+L1 SAE · error-preserving,random_steer_+5,retained_a1,adopted_critic,3
+L1 SAE · error-preserving,random_steer_+5,retained_a1,third_answer,5
+L1 SAE · error-preserving,random_steer_+5,third_answer,adopted_critic,1
+Pretrained SAE,no_ablation,adopted_critic,adopted_critic,403
+Pretrained SAE,no_ablation,third_answer,third_answer,25
+Pretrained SAE,no_ablation,retained_a1,retained_a1,18
+Pretrained SAE,no_ablation,third_answer,non_answer,1
+Pretrained SAE,no_ablation,retained_a1,third_answer,1
+Pretrained SAE,no_ablation,third_answer,retained_a1,1
+Pretrained SAE,no_ablation,third_answer,unresolved,1
+Pretrained SAE,targeted_steer_-2,adopted_critic,adopted_critic,399
+Pretrained SAE,targeted_steer_-2,third_answer,third_answer,26
+Pretrained SAE,targeted_steer_-2,retained_a1,retained_a1,18
+Pretrained SAE,targeted_steer_-2,non_answer,non_answer,1
+Pretrained SAE,targeted_steer_-2,adopted_critic,third_answer,2
+Pretrained SAE,targeted_steer_-2,adopted_critic,unresolved,1
+Pretrained SAE,targeted_steer_-2,adopted_critic,retained_a1,1
+Pretrained SAE,targeted_steer_-2,retained_a1,third_answer,1
+Pretrained SAE,targeted_steer_-2,unresolved,unresolved,1
+Pretrained SAE,random_steer_-2,adopted_critic,adopted_critic,2804
+Pretrained SAE,random_steer_-2,third_answer,third_answer,174
+Pretrained SAE,random_steer_-2,retained_a1,retained_a1,130
+Pretrained SAE,random_steer_-2,third_answer,unresolved,3
+Pretrained SAE,random_steer_-2,adopted_critic,retained_a1,3
+Pretrained SAE,random_steer_-2,non_answer,non_answer,5
+Pretrained SAE,random_steer_-2,retained_a1,third_answer,2
+Pretrained SAE,random_steer_-2,unresolved,unresolved,5
+Pretrained SAE,random_steer_-2,retained_a1,adopted_critic,1
+Pretrained SAE,random_steer_-2,third_answer,adopted_critic,1
+Pretrained SAE,random_steer_-2,adopted_critic,unresolved,4
+Pretrained SAE,random_steer_-2,unresolved,third_answer,2
+Pretrained SAE,random_steer_-2,third_answer,non_answer,1
+Pretrained SAE,random_steer_-2,non_answer,unresolved,1
+Pretrained SAE,random_steer_-2,third_answer,retained_a1,3
+Pretrained SAE,random_steer_-2,adopted_critic,third_answer,10
+Pretrained SAE,random_steer_-2,non_answer,third_answer,1
+Pretrained SAE,targeted_steer_+2,adopted_critic,adopted_critic,402
+Pretrained SAE,targeted_steer_+2,third_answer,third_answer,24
+Pretrained SAE,targeted_steer_+2,retained_a1,retained_a1,18
+Pretrained SAE,targeted_steer_+2,non_answer,third_answer,1
+Pretrained SAE,targeted_steer_+2,adopted_critic,retained_a1,1
+Pretrained SAE,targeted_steer_+2,third_answer,retained_a1,1
+Pretrained SAE,targeted_steer_+2,retained_a1,unresolved,1
+Pretrained SAE,targeted_steer_+2,third_answer,non_answer,1
+Pretrained SAE,targeted_steer_+2,unresolved,unresolved,1
+Pretrained SAE,random_steer_+2,adopted_critic,adopted_critic,2816
+Pretrained SAE,random_steer_+2,third_answer,third_answer,177
+Pretrained SAE,random_steer_+2,retained_a1,retained_a1,131
+Pretrained SAE,random_steer_+2,non_answer,non_answer,5
+Pretrained SAE,random_steer_+2,third_answer,retained_a1,5
+Pretrained SAE,random_steer_+2,adopted_critic,unresolved,4
+Pretrained SAE,random_steer_+2,unresolved,unresolved,7
+Pretrained SAE,random_steer_+2,non_answer,retained_a1,1
+Pretrained SAE,random_steer_+2,adopted_critic,retained_a1,1
+Pretrained SAE,random_steer_+2,retained_a1,third_answer,1
+Pretrained SAE,random_steer_+2,non_answer,third_answer,1
+Pretrained SAE,random_steer_+2,retained_a1,unresolved,1
+Pretrained SAE,targeted_steer_+5,adopted_critic,adopted_critic,400
+Pretrained SAE,targeted_steer_+5,third_answer,third_answer,23
+Pretrained SAE,targeted_steer_+5,retained_a1,retained_a1,17
+Pretrained SAE,targeted_steer_+5,non_answer,non_answer,1
+Pretrained SAE,targeted_steer_+5,adopted_critic,retained_a1,1
+Pretrained SAE,targeted_steer_+5,third_answer,non_answer,3
+Pretrained SAE,targeted_steer_+5,adopted_critic,unresolved,2
+Pretrained SAE,targeted_steer_+5,retained_a1,unresolved,1
+Pretrained SAE,targeted_steer_+5,retained_a1,third_answer,1
+Pretrained SAE,targeted_steer_+5,unresolved,unresolved,1
+Pretrained SAE,random_steer_+5,adopted_critic,adopted_critic,2792
+Pretrained SAE,random_steer_+5,third_answer,third_answer,171
+Pretrained SAE,random_steer_+5,retained_a1,retained_a1,128
+Pretrained SAE,random_steer_+5,non_answer,non_answer,4
+Pretrained SAE,random_steer_+5,retained_a1,unresolved,2
+Pretrained SAE,random_steer_+5,adopted_critic,third_answer,10
+Pretrained SAE,random_steer_+5,adopted_critic,unresolved,15
+Pretrained SAE,random_steer_+5,unresolved,unresolved,7
+Pretrained SAE,random_steer_+5,adopted_critic,retained_a1,4
+Pretrained SAE,random_steer_+5,non_answer,retained_a1,2
+Pretrained SAE,random_steer_+5,third_answer,retained_a1,4
+Pretrained SAE,random_steer_+5,third_answer,unresolved,2
+Pretrained SAE,random_steer_+5,retained_a1,adopted_critic,1
+Pretrained SAE,random_steer_+5,third_answer,adopted_critic,3
+Pretrained SAE,random_steer_+5,third_answer,non_answer,2
+Pretrained SAE,random_steer_+5,retained_a1,third_answer,2
+Pretrained SAE,random_steer_+5,non_answer,third_answer,1
+Pretrained SAE · error-preserving,targeted_steer_-2,adopted_critic,adopted_critic,400
+Pretrained SAE · error-preserving,targeted_steer_-2,third_answer,third_answer,26
+Pretrained SAE · error-preserving,targeted_steer_-2,retained_a1,retained_a1,18
+Pretrained SAE · error-preserving,targeted_steer_-2,third_answer,unresolved,2
+Pretrained SAE · error-preserving,targeted_steer_-2,retained_a1,third_answer,1
+Pretrained SAE · error-preserving,targeted_steer_-2,adopted_critic,third_answer,2
+Pretrained SAE · error-preserving,targeted_steer_-2,adopted_critic,unresolved,1
+Pretrained SAE · error-preserving,random_steer_-2,adopted_critic,adopted_critic,2816
+Pretrained SAE · error-preserving,random_steer_-2,third_answer,third_answer,175
+Pretrained SAE · error-preserving,random_steer_-2,retained_a1,retained_a1,127
+Pretrained SAE · error-preserving,random_steer_-2,third_answer,unresolved,11
+Pretrained SAE · error-preserving,random_steer_-2,retained_a1,third_answer,5
+Pretrained SAE · error-preserving,random_steer_-2,third_answer,retained_a1,6
+Pretrained SAE · error-preserving,random_steer_-2,adopted_critic,third_answer,4
+Pretrained SAE · error-preserving,random_steer_-2,retained_a1,unresolved,1
+Pretrained SAE · error-preserving,random_steer_-2,third_answer,adopted_critic,2
+Pretrained SAE · error-preserving,random_steer_-2,third_answer,non_answer,2
+Pretrained SAE · error-preserving,random_steer_-2,adopted_critic,unresolved,1
+Pretrained SAE · error-preserving,targeted_steer_+2,adopted_critic,adopted_critic,403
+Pretrained SAE · error-preserving,targeted_steer_+2,third_answer,third_answer,27
+Pretrained SAE · error-preserving,targeted_steer_+2,retained_a1,retained_a1,18
+Pretrained SAE · error-preserving,targeted_steer_+2,retained_a1,unresolved,1
+Pretrained SAE · error-preserving,targeted_steer_+2,third_answer,retained_a1,1
+Pretrained SAE · error-preserving,random_steer_+2,adopted_critic,adopted_critic,2818
+Pretrained SAE · error-preserving,random_steer_+2,third_answer,third_answer,186
+Pretrained SAE · error-preserving,random_steer_+2,retained_a1,retained_a1,129
+Pretrained SAE · error-preserving,random_steer_+2,retained_a1,third_answer,3
+Pretrained SAE · error-preserving,random_steer_+2,third_answer,retained_a1,7
+Pretrained SAE · error-preserving,random_steer_+2,adopted_critic,retained_a1,1
+Pretrained SAE · error-preserving,random_steer_+2,adopted_critic,unresolved,1
+Pretrained SAE · error-preserving,random_steer_+2,third_answer,unresolved,3
+Pretrained SAE · error-preserving,random_steer_+2,adopted_critic,third_answer,1
+Pretrained SAE · error-preserving,random_steer_+2,retained_a1,unresolved,1
+Pretrained SAE · error-preserving,targeted_steer_+5,adopted_critic,adopted_critic,402
+Pretrained SAE · error-preserving,targeted_steer_+5,third_answer,third_answer,25
+Pretrained SAE · error-preserving,targeted_steer_+5,retained_a1,retained_a1,18
+Pretrained SAE · error-preserving,targeted_steer_+5,adopted_critic,retained_a1,1
+Pretrained SAE · error-preserving,targeted_steer_+5,third_answer,non_answer,2
+Pretrained SAE · error-preserving,targeted_steer_+5,retained_a1,unresolved,1
+Pretrained SAE · error-preserving,targeted_steer_+5,third_answer,unresolved,1
+Pretrained SAE · error-preserving,random_steer_+5,adopted_critic,adopted_critic,2808
+Pretrained SAE · error-preserving,random_steer_+5,third_answer,third_answer,178
+Pretrained SAE · error-preserving,random_steer_+5,retained_a1,retained_a1,126
+Pretrained SAE · error-preserving,random_steer_+5,third_answer,unresolved,8
+Pretrained SAE · error-preserving,random_steer_+5,adopted_critic,unresolved,7
+Pretrained SAE · error-preserving,random_steer_+5,third_answer,retained_a1,8
+Pretrained SAE · error-preserving,random_steer_+5,adopted_critic,retained_a1,4
+Pretrained SAE · error-preserving,random_steer_+5,retained_a1,adopted_critic,1
+Pretrained SAE · error-preserving,random_steer_+5,adopted_critic,third_answer,2
+Pretrained SAE · error-preserving,random_steer_+5,retained_a1,unresolved,4
+Pretrained SAE · error-preserving,random_steer_+5,third_answer,non_answer,2
+Pretrained SAE · error-preserving,random_steer_+5,retained_a1,third_answer,2
