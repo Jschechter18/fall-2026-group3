@@ -1,15 +1,18 @@
 from __future__ import annotations
 
+from contextlib import contextmanager
 from datetime import datetime, timezone
 import csv
 import fcntl
 import hashlib
 import json
+import os
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 import shlex
 import subprocess
 import sys
+import tempfile
 from typing import Literal
 
 
@@ -109,6 +112,41 @@ def sha256_file(path: str | Path) -> str:
         return hashlib.file_digest(file, "sha256").hexdigest()
 
 
+def file_facts(
+    root: str | Path,
+    *,
+    exclude_names: set[str] | frozenset[str] = frozenset(),
+) -> dict[str, dict[str, object]]:
+    """Return stable sizes and hashes for every completed file below ``root``.
+
+    Temporary path components are ignored so callers can checksum a durable
+    artifact directory while it is being assembled. Domain-specific commit or
+    summary files can be omitted with ``exclude_names``.
+    """
+    root = Path(root)
+    return {
+        str(path.relative_to(root)): {"size": path.stat().st_size, "sha256": sha256_file(path)}
+        for path in sorted(root.rglob("*"))
+        if path.is_file()
+        and path.name not in exclude_names
+        and not any(part.endswith(".tmp") for part in path.relative_to(root).parts)
+    }
+
+
+@contextmanager
+def staged_output(destination: str | Path):
+    """Build a directory privately and publish it with one atomic rename."""
+    destination = Path(destination)
+    ensure_output_available(destination)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix=f".{destination.name}-", dir=destination.parent) as temporary:
+        root = Path(temporary) / "bundle"
+        root.mkdir()
+        yield root
+        ensure_output_available(destination)
+        root.rename(destination)
+
+
 def get_git_provenance() -> dict[str, object]:
     """Snapshot the working tree before creating any run artifacts."""
     try:
@@ -168,15 +206,36 @@ def ensure_output_available(output_dir: str | Path) -> None:
         )
 
 
-def write_json_atomic(path: Path, data: dict[str, object]) -> None:
-    """Write JSON through a temporary file and rename it into place."""
-    temporary_path = path.with_suffix(".json.tmp")
+def write_json_atomic(
+    path: Path, data: dict[str, object], *, overwrite: bool = True,
+) -> None:
+    """Publish complete JSON atomically; optionally refuse existing destinations.
 
-    with temporary_path.open("w", encoding="utf-8") as file:
-        json.dump(data, file, indent=2)
-        file.write("\n")
+    The parent directory must exist. With ``overwrite=False``, a same-directory
+    temporary file is linked into place so even a concurrent creator cannot be
+    overwritten. Existing callers retain replacement behavior by default.
+    """
+    if overwrite:
+        temporary_path = path.with_suffix(".json.tmp")
+        file = temporary_path.open("w", encoding="utf-8")
+    else:
+        ensure_output_available(path)
+        file = tempfile.NamedTemporaryFile(
+            mode="w", encoding="utf-8", dir=path.parent,
+            prefix=f".{path.name}.", suffix=".tmp", delete=False,
+        )
+        temporary_path = Path(file.name)
 
-    temporary_path.replace(path)
+    try:
+        with file:
+            json.dump(data, file, indent=2)
+            file.write("\n")
+        if overwrite:
+            temporary_path.replace(path)
+        else:
+            os.link(temporary_path, path)
+    finally:
+        temporary_path.unlink(missing_ok=True)
 
 
 def build_manifest(

@@ -8,6 +8,7 @@ import pytest
 
 from mas_sae.data.production import write_manifest
 from mas_sae.evaluation.behavior_labels import V012_QC, classify_candidate, write_labels
+from mas_sae.experiments.artifacts import sha256_file
 from mas_sae.evaluation import feedback_audit
 from mas_sae.evaluation.feedback_audit import (
     audit_counts,
@@ -121,6 +122,8 @@ def _write_run(tmp_path, rows_by_partition):
                     f.write(json.dumps(clean) + "\n")
     write_labels(labels_dir / "labels.csv", all_rows)
     write_manifest(labels_dir / "split_manifest.csv", manifest)
+    hashes = {str(p): sha256_file(p) for p in results.glob("*/interactions.jsonl")}
+    (labels_dir / "counts.json").write_text(json.dumps({"source_files_sha256": hashes}))
     return results, labels_dir
 
 

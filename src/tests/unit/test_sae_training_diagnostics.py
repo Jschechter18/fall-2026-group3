@@ -49,6 +49,7 @@ def test_training_writes_diagnostics_and_frozen_feature_artifact(
         layer=33,
         results_root=tmp_path / "results",
         project_root=tmp_path,
+        evaluate_test=True,
     )
     run = result.run_directory
     assert asdict(hp) == original_hp
@@ -91,7 +92,8 @@ def test_training_writes_diagnostics_and_frozen_feature_artifact(
     )
 
 
-def test_training_cli_delegates_to_shared_trainer(tmp_path, monkeypatch):
+@pytest.mark.parametrize("evaluate_test", [False, True])
+def test_training_cli_delegates_to_shared_trainer(tmp_path, monkeypatch, evaluate_test):
     script = Path(__file__).resolve().parents[3] / "scripts" / "sae" / "train_sae.py"
     spec = importlib.util.spec_from_file_location("train_sae_cli", script)
     module = importlib.util.module_from_spec(spec)
@@ -106,10 +108,11 @@ def test_training_cli_delegates_to_shared_trainer(tmp_path, monkeypatch):
     monkeypatch.setattr(sys, "argv", [
         str(script), "--run-name", "fixture", "--layer", "33",
         "--sparsity-mode", "topk", "--top-k", "2",
-    ])
+    ] + (["--evaluate-test"] if evaluate_test else []))
     module.main()
     assert len(calls) == 1
     args = calls[0]
+    assert args["evaluate_test"] is evaluate_test
     assert args["hp"].sparsity_mode == "topk"
     assert args["hp"].top_k == 2
     assert args["activation_location"] == Path("data/activations/fixture/layer_33")

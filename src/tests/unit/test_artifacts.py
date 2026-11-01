@@ -183,6 +183,42 @@ def test_ensure_output_available_rejects_existing_path(tmp_path) -> None:
         artifacts.ensure_output_available(output_dir)
 
 
+def test_write_json_atomic_creates_without_overwriting(tmp_path):
+    path = tmp_path / "manifest.json"
+    artifacts.write_json_atomic(path, {"run": "first"}, overwrite=False)
+    original = path.read_bytes()
+    with pytest.raises(FileExistsError):
+        artifacts.write_json_atomic(path, {"run": "second"}, overwrite=False)
+    assert path.read_bytes() == original
+    assert json.loads(original) == {"run": "first"}
+    assert list(tmp_path.iterdir()) == [path]
+    # Replacement remains the default for existing callers updating manifests.
+    artifacts.write_json_atomic(path, {"run": "second"})
+    assert json.loads(path.read_text()) == {"run": "second"}
+
+
+def test_write_json_atomic_preserves_concurrent_destination(tmp_path, monkeypatch):
+    path = tmp_path / "manifest.json"
+    original_link = artifacts.os.link
+
+    def competing_creator(source, destination):
+        destination.write_text('"created by another process"\n')
+        return original_link(source, destination)
+
+    monkeypatch.setattr(artifacts.os, "link", competing_creator)
+    with pytest.raises(FileExistsError):
+        artifacts.write_json_atomic(path, {"run": "ours"}, overwrite=False)
+    assert json.loads(path.read_text()) == "created by another process"
+    assert list(tmp_path.iterdir()) == [path]
+
+
+def test_write_json_atomic_does_not_publish_failed_serialization(tmp_path):
+    path = tmp_path / "manifest.json"
+    with pytest.raises(TypeError):
+        artifacts.write_json_atomic(path, {"invalid": object()}, overwrite=False)
+    assert list(tmp_path.iterdir()) == []
+
+
 def test_get_package_version(monkeypatch) -> None:
     monkeypatch.setattr(
         artifacts,

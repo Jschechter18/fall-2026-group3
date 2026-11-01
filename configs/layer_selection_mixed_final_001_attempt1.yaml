@@ -1,0 +1,29 @@
+# Pre-feedback control for configs/layer_selection_mixed_final_001.yaml (#191): identical, except the
+# activations are taken before A1, when the Solver has not seen the Critic. What these probes predict
+# comes from the question and the Solver's prior state (difficulty, confidence), not from the feedback;
+# the attempt2 probes have to beat them to show feedback-related structure.
+capstone_data_root: .
+activations_dir: artifacts/collection/mixed_final_001/prepared/activations/mixed_final_001
+results_dir: artifacts/collection/mixed_final_001/prepared/results/mixed_final_001
+labels_csv: results/behavior/mixed_final_001_claude_probe/labels.csv
+manifest_csv: results/behavior/mixed_final_001_claude_probe/split_manifest.csv
+excluded_episodes_file: results/behavior/mixed_final_001_claude_probe/excluded_episodes.json
+index_column: full_index
+source_splits: [train, validation]
+target_labels: [adoption, retention]
+label_column: behavior_label
+group_column: split_group_id
+layers: [4, 8, 17, 25, 29, 30, 31, 32, 33]
+activation_file: "{split}_attempt1.pt"                                # before A1, before any feedback
+protocol: holdout
+fit_partition: train
+eval_partition: validation
+text_fields: []
+breakdown_fields: [dataset_source, correctness_cell, candidate_order, hop_group]
+seed: 42
+c_grid: [0.001, 0.01, 0.1, 1.0, 10.0, 100.0]
+inner_folds: 3
+n_bootstrap: 1000
+n_permutations: 100                                   # as in the attempt2 config (~10 h of CPU)
+permutation_layers: all
+output_dir: results/layer_selection_mixed_final_001_attempt1

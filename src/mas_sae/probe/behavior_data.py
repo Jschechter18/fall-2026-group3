@@ -26,9 +26,15 @@ import numpy as np
 import pandas as pd
 
 from mas_sae.data.production import PARTITIONS, PURPOSE_PARTITION
+from mas_sae.evaluation.paired_ablation import correctness_cell
 
 # The partition rules live in mas_sae.data.production; sealed = what only `evaluate`/`intervene` may read.
 SEALED_PARTITIONS = frozenset({PURPOSE_PARTITION["evaluate"], PURPOSE_PARTITION["intervene"]})
+
+# Episode fields kept as ``meta_<field>`` for grouping and breakdowns; None when a run does not record
+# one (runs before the distributed collection have no split_group_id, dataset_source or hop_group).
+# ``correctness_cell`` is derived from the Solver A1 and Critic correctness flags.
+META_FIELDS = ("split_group_id", "dataset_source", "hop_group", "candidate_order")
 
 
 class AlignmentError(RuntimeError):
@@ -44,6 +50,9 @@ class Columns:
     response: str = "solver_response"
     episode_id: str = "episode_id"
     question_id: str = "question_id"
+    # behavior label column (e.g. Claude's behavior_label); when set, select_partitions enforces the
+    # binary contract: eligible rows carry only the two target labels, each with its own target value
+    label: str | None = None
 
 
 def read_jsonl(path: Path) -> list[dict]:
@@ -121,6 +130,8 @@ def build_episode_table(
                     "source_activation_index", qid),
                 "ep_episode_id": r.get("episode_id"),
                 "ep_question_id": r.get("question_id"),
+                **{f"meta_{f}": r.get(f) for f in META_FIELDS},
+                "meta_correctness_cell": correctness_cell(r) if "solver_attempt_1_correct" in r else None,
             }
             for f in text_fields:
                 row[f"text_{f}"] = "" if r.get(f) is None else str(r[f])
@@ -190,7 +201,11 @@ def align_episodes(
         raise AlignmentError(
             f"labels.csv shares neither '{cols.episode_id}' nor '{cols.question_id}' with "
             f"interactions.jsonl. labels columns: {list(labels.columns)[:12]}")
-    lab_cols = [lab_key, cols.target, cols.eligible] + ([cols.response] if cols.response in labels else [])
+    if cols.label is not None and cols.label not in labels:
+        raise AlignmentError(f"labels.csv has no '{cols.label}' column, so the binary contract cannot be "
+                             f"checked. labels columns: {list(labels.columns)[:12]}")
+    lab_cols = ([lab_key, cols.target, cols.eligible] + ([cols.response] if cols.response in labels else [])
+                + ([cols.label] if cols.label is not None else []))
     try:
         df = episodes.merge(labels[lab_cols], left_on=ep_key, right_on=lab_key,
                             how="left", validate="one_to_one", indicator="_in_labels")
@@ -275,21 +290,66 @@ def target_names(series: pd.Series, positive: str = "adopted_critic", negative: 
     return series.astype(str)
 
 
+def check_binary_contract(df: pd.DataFrame, cols: Columns, class_names: tuple[str, str]) -> None:
+    """Eligible rows may carry only the two target labels: ``class_names[0]`` with target 1 and
+    ``class_names[1]`` with target 0. Agreement, third answers, Out and technical failures must be
+    ineligible; turning one into the negative class would change what the probe measures."""
+    if cols.label is None:
+        return
+    positive, negative = class_names
+    labels = df[cols.label].astype(str)
+    other = df[~labels.isin([positive, negative])]
+    if len(other):
+        raise AlignmentError(
+            f"{len(other)} eligible row(s) have label(s) {sorted(other[cols.label].astype(str).unique())} "
+            f"({_examples(other['ep_question_id'])}). Only {positive!r} (target 1) and {negative!r} (target 0) "
+            "may enter the binary target; every other outcome must be ineligible.")
+    expected = np.where(labels == positive, 1.0, 0.0)
+    wrong = df[pd.to_numeric(df[cols.target], errors="coerce").to_numpy() != expected]
+    if len(wrong):
+        raise AlignmentError(
+            f"{len(wrong)} eligible row(s) have a {cols.target} that disagrees with their label "
+            f"(e.g. {wrong['ep_question_id'].iloc[0]}: {wrong[cols.label].iloc[0]!r} with "
+            f"{cols.target}={wrong[cols.target].iloc[0]!r}).")
+
+
+def episode_groups(df: pd.DataFrame, column: str | None) -> tuple[np.ndarray, str]:
+    """The unit no fold, holdout or bootstrap may split, and its name.
+
+    ``column`` (``split_group_id``) keeps related variants of one question family together. A run
+    that records it for no episode falls back to the question id; one that records it for only some
+    episodes raises, since a partial grouping would let families leak across folds.
+    """
+    questions = df["ep_question_id"].astype(str).to_numpy()
+    meta = f"meta_{column}"
+    if column in (None, "question_id") or meta not in df or df[meta].isna().all():
+        return questions, "question_id"
+    missing = df[meta].isna()
+    if missing.any():
+        raise AlignmentError(f"{int(missing.sum())} of {len(df)} episodes have no {column} "
+                             f"({_examples(df.loc[missing, 'ep_question_id'])}) while the others do.")
+    return df[meta].astype(str).to_numpy(), column
+
+
 def select_partitions(
-    df: pd.DataFrame, cols: Columns, partitions: list[str], allow_sealed: bool = False
+    df: pd.DataFrame, cols: Columns, partitions: list[str], allow_sealed: bool = False,
+    class_names: tuple[str, str] = ("adopted_critic", "not_adopted"),
 ) -> tuple[pd.DataFrame, dict]:
     """Rows in the requested partitions that are eligible for the primary target.
 
     ``test`` and ``intervention`` are sealed during development: requesting them raises.
+    ``class_names`` are the readable names of target 1 and target 0; with ``cols.label`` they are also
+    the only labels an eligible row may carry (``check_binary_contract``).
     """
     sealed = SEALED_PARTITIONS & set(partitions)
     if sealed and not allow_sealed:
         raise PermissionError(
-            f"Partition(s) {sorted(sealed)} are sealed (test is scored once after the freeze; "
-            "intervention is for the causal stage). Do not use them to fit, tune or select anything.")
+            f"Partition(s) {sorted(sealed)} are sealed (test only compares completed SAE versions to choose "
+            "the one carried forward; intervention is for the causal stage). Do not use them to fit or tune anything.")
     in_part = df[df[cols.partition].astype(str).isin(partitions)]
     out = in_part[as_bool(in_part[cols.eligible])].reset_index(drop=True)
-    out["target_name"] = target_names(out[cols.target])
+    check_binary_contract(out, cols, class_names)
+    out["target_name"] = target_names(out[cols.target], *class_names)
     for p in partitions:
         if not (out[cols.partition].astype(str) == p).any():
             raise AlignmentError(f"No eligible_primary rows in partition '{p}'.")

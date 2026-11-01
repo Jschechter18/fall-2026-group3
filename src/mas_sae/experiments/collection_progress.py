@@ -39,6 +39,7 @@ IDENTITY_KEYS = (
     "config_sha256",
     "manifest_sha256",
     "dataset_revision",
+    "dataset_file_sha256",
     "model_revisions",
     "git_commit",
     "git_diff_sha256",
@@ -60,12 +61,19 @@ def progress_dir(activation_root: str | Path, run_name: str, source_split: str) 
 
 
 def manifest_sha256(sampled_questions: list[dict[str, Any]]) -> str:
-    """Digest of the ordered question list, including split assignment."""
+    """Digest of the ordered question list, including split assignment.
+
+    A recorded candidate order is part of the digest, so a resume cannot
+    show a question's candidates in another order. Manifests without one
+    keep their original digest.
+    """
     return sha256_json([
         {
             "question_id": str(entry["question_id"]),
             "experiment_split": entry.get("experiment_split"),
             "hop_group": entry["hop_group"],
+            **({"candidate_order": entry["candidate_order"]}
+               if "candidate_order" in entry else {}),
         }
         for entry in sampled_questions
     ])
@@ -243,6 +251,14 @@ def merge_chunks(
             f"Cannot finalise: committed chunks cover {position}/{len(question_ids)} questions."
         )
 
+    return merge_checkpoint_paths(paths, question_ids=question_ids, candidate_sites=candidate_sites)
+
+
+def merge_checkpoint_paths(paths, *, question_ids, candidate_sites):
+    """Merge ordered checkpoints across workers using the same index reconstruction."""
+    membership = [qid for path in paths for qid in json.loads((path / "metadata.json").read_text())["question_ids"]]
+    if membership != question_ids or len(set(question_ids)) != len(question_ids):
+        raise ValueError("Checkpoint membership does not cover the ordered questions exactly once")
     records: list[dict[str, Any]] = []
     exclusions: list[dict[str, Any]] = []
     attempt1: dict[str, list[torch.Tensor]] = {site: [] for site in candidate_sites}

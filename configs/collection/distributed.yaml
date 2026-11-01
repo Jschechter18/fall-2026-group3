@@ -1,0 +1,81 @@
+# Mixed MuSiQue + synthetic collection for ten machines (one chunk per machine).
+# Prepare once with --num-chunks 10; output.chunk_size is checkpoint batch size.
+# Retains the existing model, collection, intervention and split settings.
+# Confirm intervention/split proportions and synthetic release readiness before preparation.
+# Local MuSiQue downloads contain JSONL despite their .json names: stage copies
+# as data/MuSiQue/clean/{train,validation}.jsonl for the suffix-based input loader.
+# Local snapshot versions below identify these files, not a verified Hub revision.
+# MuSiQue-style IDs supply hops, including synthetic IDs.
+# Use hop_field to override hops with explicit record metadata.
+# Explicit related variants use a common globally qualified split_group_id.
+# Paths are read during prepare only; manifest workers need no source downloads.
+roles:
+  solver:
+    id: google/gemma-3-4b-it
+    revision: 093f9f388b31de276ce2de164bdc2081324b9767
+    loader: gemma3
+    dtype: bfloat16
+    device: cuda:0
+    generation:
+      max_new_tokens: 64
+      do_sample: false
+  critic:
+    id: Qwen/Qwen3-4B-Instruct-2507
+    revision: cdbee75f17c01a7cc42f958dc650907174af0554
+    loader: qwen3
+    dtype: bfloat16
+    device: cuda:0
+    generation:
+      max_new_tokens: 1024
+      do_sample: false
+  validator:
+    id: google/gemma-3-4b-it
+    revision: 093f9f388b31de276ce2de164bdc2081324b9767
+    loader: gemma3
+    dtype: bfloat16
+    device: cuda:0
+    generation:
+      max_new_tokens: 4
+      do_sample: false
+dataset:
+  inputs:
+  - source: musique
+    version: clean-local-v1
+    source_split: train
+    path: data/MuSiQue/clean/train.jsonl
+  - source: musique
+    version: clean-local-v1
+    source_split: validation
+    path: data/MuSiQue/clean/validation.jsonl
+  - source: synthetic
+    version: opus5-v3-full-001
+    path: data/MuSiQue/synthetic/runs/opus5-v3-full-001/generation/accepted.jsonl
+  intervention:
+    fraction: 0.1
+    seed: 42
+  split:
+    proportions:
+      train: 0.8
+      validation: 0.1
+      test: 0.1
+    seed: 43
+collection:
+  protocol_version: v2
+  active_conditions:
+  - natural
+  a2_presentations:
+  - candidates
+  layers:
+  - 4
+  - 8
+  - 17
+  - 25
+  - 29
+  - 30
+  - 31
+  - 32
+  - 33
+  seed: 42
+output:
+  run_name: mixed_collection_10m_001
+  chunk_size: 50

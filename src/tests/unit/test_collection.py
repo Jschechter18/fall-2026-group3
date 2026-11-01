@@ -1,3 +1,4 @@
+import json
 import logging
 from unittest.mock import Mock
 
@@ -7,6 +8,7 @@ import torch
 from mas_sae.agents.critic import CriticBlindAnswerError
 from mas_sae.experiments import collection
 from mas_sae.experiments.controlled_targets import ControlledTargetError
+from mas_sae.experiments.pipeline import CriticRecommendationError
 
 
 SITES = [
@@ -420,8 +422,9 @@ def test_collect_examples_forwards_decomposition_and_target_flag(
     [
         CriticBlindAnswerError("no usable blind answer"),
         ControlledTargetError("q2", ["type incompatible"]),
+        CriticRecommendationError("q2: no recommendation"),
     ],
-    ids=["blind_answer", "controlled_target"],
+    ids=["blind_answer", "controlled_target", "no_recommendation"],
 )
 def test_collect_examples_skips_question_on_expected_treatment_error(
     monkeypatch, caplog, error
@@ -523,3 +526,92 @@ def test_collect_examples_defaults_to_heuristic_target(monkeypatch) -> None:
     )
 
     assert mock_run_question.call_args.kwargs["type_checked_target"] is False
+
+
+def test_recommendation_failure_is_recorded_as_its_own_stage(monkeypatch) -> None:
+    monkeypatch.setattr(collection, "run_question", Mock(
+        side_effect=[CriticRecommendationError("q1: no recommendation")]))
+    result = collection.collect_examples(
+        examples=[{"id": "q1", "question": "Q1", "paragraphs": [], "answer": "A"}],
+        source_split="train", model=object(), solver=Mock(), critic=Mock(),
+        validator=Mock(), candidate_sites=SITES, base_seed=42,
+        a2_presentations=["candidates"], candidate_orders={"q1": "a1_first"},
+    )
+    assert result["records"] == []
+    [exclusion] = result["exclusions"]
+    assert exclusion["stage"] == "critic_recommendation"
+    assert exclusion["critic_exists"] is True and exclusion["a2_exists"] is False
+
+
+def test_collect_examples_forwards_each_question_candidate_order(monkeypatch) -> None:
+    mock_run_question = Mock(side_effect=[make_result("q1"), make_result("q2")])
+    monkeypatch.setattr(collection, "run_question", mock_run_question)
+    examples = [{"id": q, "question": q, "paragraphs": [], "answer": "A"} for q in ("q1", "q2")]
+    collection.collect_examples(
+        examples=examples, source_split="train", model=object(), solver=Mock(),
+        critic=Mock(), validator=Mock(), candidate_sites=SITES, base_seed=42,
+        a2_presentations=["feedback", "candidates"],
+        candidate_orders={"q1": "a1_first", "q2": "critic_first"},
+    )
+    assert [(c.kwargs["a2_presentations"], c.kwargs["candidate_order"])
+            for c in mock_run_question.call_args_list] == [
+        (["feedback", "candidates"], "a1_first"),
+        (["feedback", "candidates"], "critic_first"),
+    ]
+
+
+def test_candidates_need_an_order_for_every_question(monkeypatch) -> None:
+    monkeypatch.setattr(collection, "run_question", Mock(side_effect=AssertionError))
+    with pytest.raises(ValueError, match="candidate_orders is missing"):
+        collection.collect_examples(
+            examples=[{"id": "q1", "question": "Q", "paragraphs": [], "answer": "A"}],
+            source_split="train", model=object(), solver=Mock(), critic=Mock(),
+            validator=Mock(), candidate_sites=SITES, base_seed=42,
+            a2_presentations=["candidates"], candidate_orders={},
+        )
+
+
+def test_select_questions_assigns_candidate_orders_before_generation(monkeypatch) -> None:
+    examples = [{"id": f"2hop__{i}_{i}"} for i in range(6)] + [{"id": f"3hop1__{i}_{i}_{i}"} for i in range(4)]
+    monkeypatch.setattr(collection, "sample_musique_examples", Mock(return_value=examples))
+    config = {"source_split": "train", "num_questions": 10, "sampling": {"strategy": "random"}}
+
+    selection = collection.select_questions(config, default_seed=42, a2_presentations=["candidates"])
+
+    orders = selection["candidate_orders"]
+    assert set(orders) == {e["id"] for e in examples}
+    # balanced within each hop group
+    for group, size in (("2hop", 6), ("3hop1", 4)):
+        assigned = [o for q, o in orders.items() if q.startswith(group + "__")]
+        assert assigned.count("a1_first") == assigned.count("critic_first") == size // 2
+    assert [e["candidate_order"] for e in selection["sampled_questions"]] == [orders[e["id"]] for e in examples]
+    assert collection.select_questions(config, default_seed=42, a2_presentations=["candidates"])["candidate_orders"] == orders
+    # without the candidates presentation nothing changes
+    plain = collection.select_questions(config, default_seed=42)
+    assert plain["candidate_orders"] is None
+    assert "candidate_order" not in plain["sampled_questions"][0]
+
+
+def test_select_questions_first_n_with_candidates_still_writes_a_manifest(monkeypatch) -> None:
+    monkeypatch.setattr(collection, "load_musique_examples", Mock(return_value=[{"id": "2hop__1_2"}, {"id": "2hop__3_4"}]))
+    selection = collection.select_questions(
+        {"source_split": "train", "num_questions": 2}, default_seed=42, a2_presentations=["candidates"])
+    assert [e["candidate_order"] for e in selection["sampled_questions"]] == [
+        selection["candidate_orders"]["2hop__1_2"], selection["candidate_orders"]["2hop__3_4"]]
+
+
+def test_select_questions_listed_loads_exactly_the_file(monkeypatch, tmp_path) -> None:
+    ids = ["2hop__3_4", "2hop__1_2"]
+    (tmp_path / "ids.json").write_text(json.dumps(ids))
+    by_id = Mock(return_value=[{"id": q} for q in ids])
+    monkeypatch.setattr(collection, "load_musique_examples_by_id", by_id)
+    monkeypatch.setattr(collection, "sample_musique_examples", Mock(side_effect=AssertionError))
+    config = {"source_split": "train", "num_questions": 2, "revision": "abc",
+              "sampling": {"strategy": "listed", "question_ids_file": str(tmp_path / "ids.json")}}
+
+    selection = collection.select_questions(config, default_seed=42)
+
+    by_id.assert_called_once_with("train", ids, revision="abc")
+    assert [e["question_id"] for e in selection["sampled_questions"]] == ids
+    with pytest.raises(ValueError, match="lists 2 questions"):
+        collection.select_questions({**config, "num_questions": 3}, default_seed=42)

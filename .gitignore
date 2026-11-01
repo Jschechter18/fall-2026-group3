@@ -1,3 +1,8 @@
+# environment
+.env
+venv/
+env/
+
 # Data
 /data/
 
@@ -62,6 +67,9 @@ results/sae/musique/runs/*/*/checkpoints/
 # Causal replay per-row JSONL (s3://dats-capstone/shared/group3/results/causal_replay/)
 /results/causal_replay/*/per_row.jsonl
 
+# PR #153 label build output (rebuild with final_labels.py; see its README)
+/results/experiments/candidate_final_labels_20261027/output/
+
 /logs/
 
 # Tuning and continuation checkpoints
@@ -70,6 +78,7 @@ results/sae/musique/runs/*/*/checkpoints/
 # Large artifacts mirrored to s3://dats-capstone/shared/group3/
 results/sae/pretrained/
 results/causal_replay/*/per_row.jsonl
+results/causal_steering/*/per_row.jsonl
 *.pt
 
 # Detailed SAE per-feature artifacts (archive under the matching S3 results/sae/ path)
@@ -78,3 +87,7 @@ results/causal_replay/*/per_row.jsonl
 /results/sae/**/baseline_counts.json
 /results/sae/**/post_intervention_counts.json
 /results/sae/**/feature_frequencies.json
+
+# Examples
+examples/claude/artifacts/
+artifacts/*

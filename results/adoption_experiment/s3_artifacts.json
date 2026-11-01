@@ -1,0 +1,61 @@
+{
+  "description": "Per-row adoption experiment files kept in S3 instead of Git (PR #138). Download with the commands in README.md and check each sha256 before use.",
+  "s3_prefix": "s3://dats-capstone/shared/group3/results/adoption_experiment",
+  "git_commit_last_tracked": "e9ab6520d5b8ed84dfcde9aea6b25a0786a004ab",
+  "files": [
+    {
+      "path": "results/adoption_experiment/anonymization_100q/episodes.jsonl",
+      "bytes": 18287261,
+      "sha256": "37f927879cee8c74cb86cc086f4245406a3002ed19ee5642d65270e685df1a00",
+      "s3_uri": "s3://dats-capstone/shared/group3/results/adoption_experiment/anonymization_100q/episodes.jsonl"
+    },
+    {
+      "path": "results/adoption_experiment/anonymization_100q/results.csv",
+      "bytes": 17318840,
+      "sha256": "ff02ef846b1554ef07607bfe49be5a09860de8b4b2946757512fc3142ef3c6bf",
+      "s3_uri": "s3://dats-capstone/shared/group3/results/adoption_experiment/anonymization_100q/results.csv"
+    },
+    {
+      "path": "results/adoption_experiment/verification_100q/episodes.jsonl",
+      "bytes": 6956353,
+      "sha256": "071dc1f78dfa164ba42137ddce5292f01fbb282a858dcd28d58b99cfd878c7a4",
+      "s3_uri": "s3://dats-capstone/shared/group3/results/adoption_experiment/verification_100q/episodes.jsonl"
+    },
+    {
+      "path": "results/adoption_experiment/verification_100q/results.csv",
+      "bytes": 6512735,
+      "sha256": "162999e80da7c08ea4d81d3c02c8949b66b4eade8e299772270cc3f573ac1e7c",
+      "s3_uri": "s3://dats-capstone/shared/group3/results/adoption_experiment/verification_100q/results.csv"
+    },
+    {
+      "path": "results/adoption_experiment/verification_100q/comparisons.csv",
+      "bytes": 3243225,
+      "sha256": "30979e7e37ce86f589fceddc92173593e06b400ae36e911477e2be38d2405472",
+      "s3_uri": "s3://dats-capstone/shared/group3/results/adoption_experiment/verification_100q/comparisons.csv"
+    },
+    {
+      "path": "results/adoption_experiment/adoption_results/episodes.jsonl",
+      "bytes": 6172545,
+      "sha256": "79bc9d53a419f99a026ada25ab2d60f8fb258ba06410a88b7d45fb4ff2c518e8",
+      "s3_uri": "s3://dats-capstone/shared/group3/results/adoption_experiment/adoption_results/episodes.jsonl"
+    },
+    {
+      "path": "results/adoption_experiment/randomized_order_100q/episodes.jsonl",
+      "bytes": 4577372,
+      "sha256": "593a335ea738deb11d385436999be0327f434a5698910a924701c6aced245a04",
+      "s3_uri": "s3://dats-capstone/shared/group3/results/adoption_experiment/randomized_order_100q/episodes.jsonl"
+    },
+    {
+      "path": "results/adoption_experiment/randomized_order_100q/results.csv",
+      "bytes": 4332425,
+      "sha256": "41830a63f4d30f85f302110e19790e446f6372d0211fe9a7c2b00ac3f3043cfb",
+      "s3_uri": "s3://dats-capstone/shared/group3/results/adoption_experiment/randomized_order_100q/results.csv"
+    },
+    {
+      "path": "results/adoption_experiment/controlled_100q/episodes.jsonl",
+      "bytes": 3456341,
+      "sha256": "c7656cd6c0c521b43690cdd27fcbdd07186948a87a3ec9add9c63c0bf659e9a7",
+      "s3_uri": "s3://dats-capstone/shared/group3/results/adoption_experiment/controlled_100q/episodes.jsonl"
+    }
+  ]
+}

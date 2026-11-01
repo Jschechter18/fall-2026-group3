@@ -1,5 +1,22 @@
 """Causal replay (issue #90): regenerate Solver A2 with SAE ablations at the configured layer and write the table.
 
+Steering (issue #139) runs the same replay with each feature set clamped to s * ref instead of zeroed. The
+reference activations come from the layer's feature-selection run, and are computed once per layer first:
+
+    python scripts/feature_reference_activations.py --config configs/feature_selection_layer33.yaml \
+        --summary results/feature_selection/20261016T003252665105Z/feature_selection_summary.json
+    python scripts/causal_replay.py --config configs/causal_steering_layer33.yaml --limit 5    # check s/generation
+    python scripts/causal_replay.py --config configs/causal_steering_layer33.yaml
+
+(and the same with configs/feature_selection_layer25.yaml, its summary and configs/causal_steering_layer25.yaml).
+
+Edit-size-matched replays (issue #146) rescale every targeted and random edit to the same size, with random controls
+matched on firing frequency and decoded contribution. Those draws use per-latent statistics that the reference file
+has only once recomputed by this version (add --overwrite to the command above); then:
+
+    python scripts/causal_replay.py --config configs/causal_edit_size_layer25.yaml --limit 5   # check s/generation
+    python scripts/causal_replay.py --config configs/causal_edit_size_layer25.yaml            # all 517 episodes
+
     # GPU smoke test (a few episodes, real model and SAEs), then the full run
     python scripts/causal_replay.py --config configs/causal_replay_layer33.yaml --limit 5
     python scripts/causal_replay.py --config configs/causal_replay_layer33.yaml
@@ -51,7 +68,7 @@ def main() -> None:
             from mas_sae.utils.versioning import create_versioned_run_dir
             episodes = replay.load_episodes(cfg)
             saes = tiny_saes()
-            comp = smoke_components(replay.load_paragraphs(episodes, cfg.musique_revision), cfg.layer, saes,
+            comp = smoke_components(replay.load_paragraphs(episodes, cfg.musique_revision, cfg.capstone_data_root / cfg.contexts_jsonl if cfg.contexts_jsonl else None), cfg.layer, saes,
                                     tiny_features(saes, n_random_draws=cfg.n_random_draws))
             run_dir = args.resume or create_versioned_run_dir(cfg.output_dir)
             replay.replay(cfg, episodes, comp, run_dir, args.config, args.preflight_only)

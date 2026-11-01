@@ -1,0 +1,71 @@
+\section{Experiments}
+\label{sec:experiments}
+
+% Subsections still to be written by their owners:
+%   - SAE training and evaluation
+%   - Layer-wise probes and baselines
+%   - Causal intervention design
+
+\subsection{From free-form feedback to candidate presentation}
+\label{sec:exp-protocol}
+
+The first collection used a free-form protocol: the Solver revised its
+answer after reading the Critic's full feedback text. The same questions and
+models were then collected again with the candidate presentation, in which
+the Solver chooses between its first answer and the Critic's recommendation,
+shown as two labeled options. We compare the Adoption share of the binary
+cohort under the two protocols. Because the earlier collection was labeled
+with an earlier rule set, we report it with both its own rules and the
+LLM-derived labels.
+
+\subsection{Candidate-order control}
+\label{sec:exp-order}
+
+In the candidate presentation, the Solver sees its own first answer and the
+Critic's recommendation as two labeled options. Each question is assigned
+one of two orders before generation, either A1 first or Critic first. The
+assignment is seeded and balanced within each hop group, so it is
+independent of the question's content and outcome. We compare the Adoption
+share of the binary cohort between the two orders in every partition, with
+95\% Wilson intervals. A difference would show that answer position, rather
+than the content of the feedback, influences the Solver's choice.
+
+\subsection{Synthetic-question pilot}
+\label{sec:exp-synthetic}
+
+To enlarge the Adoption and Retention cohort, we generated synthetic
+multi-hop questions in the MuSiQue format with Claude Opus~5. Each question
+comes with its supporting paragraphs, three generated distractor
+paragraphs, and filler paragraphs drawn from MuSiQue. Before adding them to
+the training data, we ran a pilot to check whether they produce feedback
+behavior comparable to MuSiQue.
+
+The pilot collected 100 synthetic questions with the same models, protocol,
+candidate presentation, and decoding settings as the MuSiQue collection. As
+a control, we took 100 MuSiQue questions from the frozen training partition
+(seed 20261030), matched to the pilot's hop mix: 34 two-hop, 20 \textit{3hop1},
+13 \textit{3hop2}, 10 \textit{4hop1}, 9 \textit{4hop2}, and 14 \textit{4hop3}
+questions. Both groups were labeled with the same LLM labeler and settings
+(Section~\ref{sec:method-labels}). We also measured where the two groups
+differ: A1 and Critic accuracy, whether a lexical retriever ranks the
+supporting paragraphs above the rest, whether wrong answers come from a
+non-supporting paragraph, and how often the Critic refuses.
+
+\subsection{Paired filler ablation}
+\label{sec:exp-fillers}
+
+The pilot suggested that the filler paragraphs, drawn at random from
+MuSiQue, rarely compete with the evidence. To test this directly, we rebuilt
+the same 100 synthetic questions with only the filler paragraphs replaced.
+Each filler is swapped, in place, for a paragraph drawn (with a fixed seed)
+from the 20 eligible MuSiQue paragraphs most similar to the question and its
+supporting paragraphs (TF-IDF). Every
+question, answer, alias, decomposition, supporting paragraph, and generated
+distractor is unchanged. A filler that mentions any hop's answer or alias is
+excluded, so a replacement cannot restate or contradict the evidence.
+
+Both conditions are collected in the same environment, in the original
+question order, so per-question seeds and candidate orders are identical
+and the fillers are the only difference. The comparison is paired: for each
+question, we record whether its label changes between the original and the
+related fillers.

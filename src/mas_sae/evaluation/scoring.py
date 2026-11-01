@@ -53,6 +53,30 @@ def answer_matches(
     )
 
 
+def score_revision(
+    answer: str,
+    previous_answer: str,
+    recommendation: str,
+    gold: str,
+    aliases: Iterable[str] = (),
+    *,
+    accept_gold_aliases: bool = False,
+) -> dict[str, bool]:
+    """Score final correctness, recommendation adoption and A1 retention.
+
+    Callers choose whether gold aliases count as adoption. Controlled experiments
+    enable this for the correct-correction arm; Natural experiments enable it
+    when the recommendation matches gold. Adoption and retention may overlap.
+    """
+    aliases = (aliases,) if isinstance(aliases, str) else tuple(aliases)
+    adoption_aliases = (gold, *aliases) if accept_gold_aliases else ()
+    return {
+        "a2_correct": answer_matches(answer, gold, aliases),
+        "adopted_target": answer_matches(answer, recommendation, adoption_aliases),
+        "retained_a1": answer_matches(answer, previous_answer),
+    }
+
+
 def interaction_labels(
     attempt1: str,
     attempt2: str,

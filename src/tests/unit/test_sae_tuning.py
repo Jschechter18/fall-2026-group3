@@ -65,6 +65,24 @@ def test_expansion_preserves_pairs_and_defaults(config):
     assert config == original
 
 
+def test_training_skips_existing_test_set_by_default(setup, monkeypatch):
+    original_load = torch.load
+
+    def load(path, *args, **kwargs):
+        assert Path(path).name != "test.pt", "Default training must not read the test set."
+        return original_load(path, *args, **kwargs)
+
+    monkeypatch.setattr(torch, "load", load)
+    result = training.train_sae(
+        Hyperparameters(epochs=1, latent_dim=6, batch_size=3), **setup,
+    )
+    assert "test" not in result.metrics
+    history = json.loads((result.run_directory / "history.json").read_text())
+    assert history["test_loss"] is None
+    manifest = json.loads((result.run_directory / "manifest.json").read_text())
+    assert "test" not in manifest["activation_files"]
+
+
 @pytest.mark.parametrize("group", [
     {"name": "bad", "grid": {"lr": []}},
     {"name": "bad", "fixed": {"lr": 0.1}, "grid": {"lr": [0.2]}},
@@ -118,7 +136,7 @@ def test_continuation_matches_uninterrupted_training(setup, mode, aux_coefficien
                          sparsity_mode=mode, inactivity_window_examples=8,
                          aux_coefficient=aux_coefficient, aux_k=2, aux_dead_window_examples=2,
                          early_stopping_min_delta=0.0001)
-    full = training.train_sae(hp, **setup)
+    full = training.train_sae(hp, **setup, evaluate_test=True)
     trial = training.train_sae(replace(hp, epochs=1), **setup,
                                evaluate_test=False, register_version=False)
     assert "test" not in trial.metrics
@@ -334,6 +352,8 @@ def test_failure_is_recorded(setup, config, monkeypatch):
     ["--finish-run", "run"], ["--epochs", "3"],
     ["--hp-tune", "--config", "config.yaml", "--layer", "33"],
     ["--hp-tune", "--config", "config.yaml", "--finish-run", "run", "--epochs", "3"],
+    ["--hp-tune", "--config", "config.yaml", "--evaluate-test"],
+    ["--finish-run", "run", "--epochs", "3", "--evaluate-test"],
 ])
 def test_cli_rejects_incompatible_modes(args, monkeypatch):
     script = Path(__file__).resolve().parents[3] / "scripts/sae/train_sae.py"

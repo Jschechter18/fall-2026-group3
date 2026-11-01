@@ -1,5 +1,8 @@
 """Train one SAE, run a tuning study, or finish a validation-only trial.
 
+Single runs skip test evaluation unless --evaluate-test is supplied. They are
+registered as completed models; use tuning trials for later --finish-run continuation.
+Finishing a selected trial evaluates the test set when test.pt exists.
 
 python scripts/sae/train_sae.py \
   --hp-tune \
@@ -28,6 +31,9 @@ def main():
     parser.add_argument("--layer", type=int)
     parser.add_argument("--sparsity-mode", choices=["topk", "l1"])
     parser.add_argument("--top-k", type=int)
+    parser.add_argument("--evaluate-test", action="store_true",
+                        help="Evaluate the test set for a single run after model selection is complete. "
+                             "Finishing a trial evaluates it automatically.")
     args = parser.parse_args()
     project_root = Path(__file__).resolve().parents[2]
 
@@ -39,6 +45,8 @@ def main():
         parser.error("--finish-run and --epochs must be provided together.")
     single_settings = (args.run_name, args.layer, args.sparsity_mode, args.top_k)
     if args.hp_tune or args.finish_run is not None:
+        if args.evaluate_test:
+            parser.error("--evaluate-test is for single-run training only; finishing evaluates the test set automatically.")
         if any(value is not None for value in single_settings):
             parser.error("Tuning and continuation use saved settings, not single-run overrides.")
         if args.hp_tune and args.finish_run is not None:
@@ -84,6 +92,7 @@ def main():
             activation_run_name=args.run_name, layer=args.layer,
             results_root=project_root / "results" / "sae" / "musique",
             project_root=project_root,
+            evaluate_test=args.evaluate_test,
         )
     print(f"Checkpoint saved to {result.checkpoint_path}")
 

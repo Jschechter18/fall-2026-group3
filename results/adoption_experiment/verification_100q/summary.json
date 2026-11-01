@@ -1,0 +1,291 @@
+{
+  "protocol": "adoption_evidence_verification_v1",
+  "conditions": {
+    "original": {
+      "plausible_incorrect": {
+        "completed": 34,
+        "skipped": 66,
+        "skip_reasons": {
+          "skipped_requires_correct_a1": 45,
+          "skipped_target_generation_failed": 14,
+          "skipped_a1_not_answer": 7
+        },
+        "responses": {
+          "adopted_critic": 33,
+          "retained_a1": 1
+        },
+        "adopted_target": 33,
+        "adoption_rate": 0.9705882352941176,
+        "retained_a1": 1,
+        "a2_correct": 1,
+        "corrected": 0,
+        "harmed": 33,
+        "reached_token_budget": 0,
+        "by_hop": {
+          "2hop": {
+            "completed": 8,
+            "adopted_target": 8,
+            "retained_a1": 0,
+            "a2_correct": 0
+          },
+          "3hop": {
+            "completed": 11,
+            "adopted_target": 11,
+            "retained_a1": 0,
+            "a2_correct": 0
+          },
+          "4hop": {
+            "completed": 15,
+            "adopted_target": 14,
+            "retained_a1": 1,
+            "a2_correct": 1
+          }
+        }
+      },
+      "obvious_incorrect": {
+        "completed": 19,
+        "skipped": 81,
+        "skip_reasons": {
+          "skipped_target_generation_failed": 29,
+          "skipped_requires_correct_a1": 45,
+          "skipped_a1_not_answer": 7
+        },
+        "responses": {
+          "adopted_critic": 18,
+          "third_answer": 1
+        },
+        "adopted_target": 18,
+        "adoption_rate": 0.9473684210526315,
+        "retained_a1": 0,
+        "a2_correct": 0,
+        "corrected": 0,
+        "harmed": 19,
+        "reached_token_budget": 0,
+        "by_hop": {
+          "2hop": {
+            "completed": 3,
+            "adopted_target": 2,
+            "retained_a1": 0,
+            "a2_correct": 0
+          },
+          "3hop": {
+            "completed": 6,
+            "adopted_target": 6,
+            "retained_a1": 0,
+            "a2_correct": 0
+          },
+          "4hop": {
+            "completed": 10,
+            "adopted_target": 10,
+            "retained_a1": 0,
+            "a2_correct": 0
+          }
+        }
+      },
+      "correct_correction": {
+        "completed": 45,
+        "skipped": 55,
+        "skip_reasons": {
+          "skipped_requires_incorrect_a1": 48,
+          "skipped_a1_not_answer": 7
+        },
+        "responses": {
+          "adopted_critic": 37,
+          "retained_a1": 3,
+          "third_answer": 2,
+          "unresolved": 3
+        },
+        "adopted_target": 38,
+        "adoption_rate": 0.8444444444444444,
+        "retained_a1": 3,
+        "a2_correct": 38,
+        "corrected": 38,
+        "harmed": 0,
+        "reached_token_budget": 0,
+        "by_hop": {
+          "2hop": {
+            "completed": 15,
+            "adopted_target": 14,
+            "retained_a1": 1,
+            "a2_correct": 14
+          },
+          "3hop": {
+            "completed": 17,
+            "adopted_target": 13,
+            "retained_a1": 2,
+            "a2_correct": 13
+          },
+          "4hop": {
+            "completed": 13,
+            "adopted_target": 11,
+            "retained_a1": 0,
+            "a2_correct": 11
+          }
+        }
+      }
+    },
+    "evidence_verification": {
+      "plausible_incorrect": {
+        "completed": 34,
+        "skipped": 66,
+        "skip_reasons": {
+          "skipped_requires_correct_a1": 45,
+          "skipped_target_generation_failed": 14,
+          "skipped_a1_not_answer": 7
+        },
+        "responses": {
+          "adopted_critic": 31,
+          "third_answer": 1,
+          "retained_a1": 2
+        },
+        "adopted_target": 31,
+        "adoption_rate": 0.9117647058823529,
+        "retained_a1": 2,
+        "a2_correct": 2,
+        "corrected": 0,
+        "harmed": 32,
+        "reached_token_budget": 0,
+        "by_hop": {
+          "2hop": {
+            "completed": 8,
+            "adopted_target": 7,
+            "retained_a1": 1,
+            "a2_correct": 1
+          },
+          "3hop": {
+            "completed": 11,
+            "adopted_target": 10,
+            "retained_a1": 1,
+            "a2_correct": 1
+          },
+          "4hop": {
+            "completed": 15,
+            "adopted_target": 14,
+            "retained_a1": 0,
+            "a2_correct": 0
+          }
+        }
+      },
+      "obvious_incorrect": {
+        "completed": 19,
+        "skipped": 81,
+        "skip_reasons": {
+          "skipped_target_generation_failed": 29,
+          "skipped_requires_correct_a1": 45,
+          "skipped_a1_not_answer": 7
+        },
+        "responses": {
+          "adopted_critic": 17,
+          "retained_a1": 2
+        },
+        "adopted_target": 17,
+        "adoption_rate": 0.8947368421052632,
+        "retained_a1": 2,
+        "a2_correct": 2,
+        "corrected": 0,
+        "harmed": 17,
+        "reached_token_budget": 0,
+        "by_hop": {
+          "2hop": {
+            "completed": 3,
+            "adopted_target": 3,
+            "retained_a1": 0,
+            "a2_correct": 0
+          },
+          "3hop": {
+            "completed": 6,
+            "adopted_target": 5,
+            "retained_a1": 1,
+            "a2_correct": 1
+          },
+          "4hop": {
+            "completed": 10,
+            "adopted_target": 9,
+            "retained_a1": 1,
+            "a2_correct": 1
+          }
+        }
+      },
+      "correct_correction": {
+        "completed": 45,
+        "skipped": 55,
+        "skip_reasons": {
+          "skipped_requires_incorrect_a1": 48,
+          "skipped_a1_not_answer": 7
+        },
+        "responses": {
+          "adopted_critic": 37,
+          "retained_a1": 4,
+          "unresolved": 3,
+          "third_answer": 1
+        },
+        "adopted_target": 38,
+        "adoption_rate": 0.8444444444444444,
+        "retained_a1": 4,
+        "a2_correct": 38,
+        "corrected": 38,
+        "harmed": 0,
+        "reached_token_budget": 0,
+        "by_hop": {
+          "2hop": {
+            "completed": 15,
+            "adopted_target": 13,
+            "retained_a1": 2,
+            "a2_correct": 13
+          },
+          "3hop": {
+            "completed": 17,
+            "adopted_target": 14,
+            "retained_a1": 2,
+            "a2_correct": 14
+          },
+          "4hop": {
+            "completed": 13,
+            "adopted_target": 11,
+            "retained_a1": 0,
+            "a2_correct": 11
+          }
+        }
+      }
+    }
+  },
+  "paired_comparisons": {
+    "plausible_incorrect": {
+      "completed_pairs": 34,
+      "original_adopted": 33,
+      "verification_adopted": 31,
+      "original_retained": 1,
+      "verification_retained": 2,
+      "adopted_to_retained": 2,
+      "retained_to_adopted": 1,
+      "accuracy_gains": 2,
+      "accuracy_losses": 1,
+      "original_matches_source_a2": 34
+    },
+    "obvious_incorrect": {
+      "completed_pairs": 19,
+      "original_adopted": 18,
+      "verification_adopted": 17,
+      "original_retained": 0,
+      "verification_retained": 2,
+      "adopted_to_retained": 2,
+      "retained_to_adopted": 0,
+      "accuracy_gains": 2,
+      "accuracy_losses": 0,
+      "original_matches_source_a2": 19
+    },
+    "correct_correction": {
+      "completed_pairs": 45,
+      "original_adopted": 38,
+      "verification_adopted": 38,
+      "original_retained": 3,
+      "verification_retained": 4,
+      "adopted_to_retained": 1,
+      "retained_to_adopted": 0,
+      "accuracy_gains": 1,
+      "accuracy_losses": 1,
+      "original_matches_source_a2": 45
+    }
+  },
+  "note": "Same saved feedback and A1 under both instructions. All completed trials remain in denominators. Scores use existing automatic answer matching. Source skips are preserved; no new targets are generated."
+}

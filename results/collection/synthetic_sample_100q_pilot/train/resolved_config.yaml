@@ -1,0 +1,146 @@
+roles:
+  solver:
+    id: google/gemma-3-4b-it
+    revision: 093f9f388b31de276ce2de164bdc2081324b9767
+    loader: gemma3
+    dtype: bfloat16
+    device: cuda:0
+    generation:
+      max_new_tokens: 64
+      do_sample: false
+  critic:
+    id: Qwen/Qwen3-4B-Instruct-2507
+    revision: cdbee75f17c01a7cc42f958dc650907174af0554
+    loader: qwen3
+    dtype: bfloat16
+    device: cuda:0
+    generation:
+      max_new_tokens: 1024
+      do_sample: false
+  validator:
+    id: google/gemma-3-4b-it
+    revision: 093f9f388b31de276ce2de164bdc2081324b9767
+    loader: gemma3
+    dtype: bfloat16
+    device: cuda:0
+    generation:
+      max_new_tokens: 4
+      do_sample: false
+dataset:
+  path: data/MuSiQue/synthetic/runs/sample/20261030T173616Z_review30_8cfe1443/accepted.jsonl
+  source_split: train
+  num_questions: 100
+  sampling:
+    strategy: stratified
+    seed: 42
+    hop_proportions:
+      2hop: 0.34
+      3hop: 0.33
+      4hop: 0.33
+collection:
+  protocol_version: v2
+  active_conditions:
+  - natural
+  a2_presentations:
+  - candidates
+  layers:
+  - 4
+  - 8
+  - 17
+  - 25
+  - 29
+  - 30
+  - 31
+  - 32
+  - 33
+  seed: 42
+output:
+  run_name: synthetic_sample_100q_pilot
+  chunk_size: 10
+provenance:
+  created_at_utc: '2026-10-30T22:19:39.794567+00:00'
+  git_commit: 01dba292eb544ab392dc16aedb8324027c9fffbc
+  model_revision: unknown
+  dataset_id: /home/ubuntu/capstone/fall-2026-group3/data/MuSiQue/synthetic/runs/sample/20261030T173616Z_review30_8cfe1443/accepted.jsonl
+  dataset_file_sha256: 5f07a07d6579fd3acc3685dcb54d5e7c5f12b14ab1e64be9e0d21dd16891ab73
+  roles:
+    solver:
+      model_id: google/gemma-3-4b-it
+      requested_revision: 093f9f388b31de276ce2de164bdc2081324b9767
+      resolved_revision: null
+      architecture: &id001
+      - Gemma3ForConditionalGeneration
+      loader: gemma3
+      dtype: torch.bfloat16
+      device: cuda:0
+      device_map: null
+      requested_placement: cuda:0
+      quantization: null
+      generation:
+        do_sample: false
+        max_new_tokens: 64
+      chat_template_kwargs: {}
+    critic:
+      model_id: Qwen/Qwen3-4B-Instruct-2507
+      requested_revision: cdbee75f17c01a7cc42f958dc650907174af0554
+      resolved_revision: null
+      architecture:
+      - Qwen3ForCausalLM
+      loader: qwen3
+      dtype: torch.bfloat16
+      device: cuda:0
+      device_map: null
+      requested_placement: cuda:0
+      quantization: null
+      generation:
+        do_sample: false
+        max_new_tokens: 1024
+      chat_template_kwargs: {}
+    validator:
+      model_id: google/gemma-3-4b-it
+      requested_revision: 093f9f388b31de276ce2de164bdc2081324b9767
+      resolved_revision: null
+      architecture: *id001
+      loader: gemma3
+      dtype: torch.bfloat16
+      device: cuda:0
+      device_map: null
+      requested_placement: cuda:0
+      quantization: null
+      generation:
+        do_sample: false
+        max_new_tokens: 4
+      chat_template_kwargs: {}
+  environment:
+    git_dirty: true
+    cuda_version: '13.4'
+    gpus:
+    - NVIDIA A10G
+  active_conditions:
+  - natural
+  a2_presentations:
+  - candidates
+  prompt_sha256:
+    solver_candidates: d8600c2913f501ff925207c1858d159fd28c9d10de0f75438d19342ca02ede90
+  package_versions:
+    torch: 2.13.0
+    transformers: 5.21.0
+    datasets: 5.1.0
+  protocol_version: v2
+  capabilities:
+    blind_then_compare: true
+    controlled_as_own_conclusion: true
+    type_checked_target: true
+  prompt_versions:
+    solver_solve: SOLVE_PROMPT_V1
+    solver_revise: REVISE_PROMPT_V1
+    solver_candidates: CANDIDATE_PROMPT
+    critic_natural: NATURAL_BLIND_PROMPT+NATURAL_COMPARE_PROMPT
+    critic_controlled: CONTROLLED_OWN_CONCLUSION_PROMPT
+    critic_distractor: DISTRACTOR_PROMPT
+    validator: VALIDATE_PROMPT
+  generation:
+    do_sample: null
+    solver_max_new_tokens: 64
+    critic_max_new_tokens: 1024
+    validator_max_new_tokens: 4

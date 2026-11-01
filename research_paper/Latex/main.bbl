@@ -1,0 +1,63 @@
+\begin{thebibliography}{1}
+
+\bibitem{alain2016probes}
+Guillaume Alain and Yoshua Bengio.
+\newblock Understanding intermediate layers using linear classifier probes.
+\newblock {\em arXiv preprint arXiv:1610.01644}, 2016.
+
+\bibitem{cunningham2023sparse}
+Hoagy Cunningham, Aidan Ewart, Logan Riggs, Robert Huben, and Lee Sharkey.
+\newblock Sparse autoencoders find highly interpretable features in language
+  models.
+\newblock {\em arXiv preprint arXiv:2309.08600}, 2023.
+
+\bibitem{du2024debate}
+Yilun Du, Shuang Li, Antonio Torralba, Joshua~B. Tenenbaum, and Igor Mordatch.
+\newblock Improving factuality and reasoning in language models through
+  multiagent debate.
+\newblock In {\em International Conference on Machine Learning}, 2024.
+\newblock arXiv:2305.14325.
+
+\bibitem{gao2025scaling}
+Leo Gao, Tom Dupr{\'e}~la Tour, Henk Tillman, Gabriel Goh, Rajan Troll, Alec
+  Radford, Ilya Sutskever, Jan Leike, and Jeffrey Wu.
+\newblock Scaling and evaluating sparse autoencoders.
+\newblock In {\em International Conference on Learning Representations}, 2025.
+\newblock arXiv:2406.04093.
+
+\bibitem{hewitt2019control}
+John Hewitt and Percy Liang.
+\newblock Designing and interpreting probes with control tasks.
+\newblock In {\em Proceedings of EMNLP-IJCNLP}, pages 2733--2743, 2019.
+
+\bibitem{huang2024selfcorrect}
+Jie Huang, Xinyun Chen, Swaroop Mishra, Huaixiu~Steven Zheng, Adams~Wei Yu,
+  Xinying Song, and Denny Zhou.
+\newblock Large language models cannot self-correct reasoning yet.
+\newblock In {\em International Conference on Learning Representations}, 2024.
+\newblock arXiv:2310.01798.
+
+\bibitem{marks2025circuits}
+Samuel Marks, Can Rager, Eric~J. Michaud, Yonatan Belinkov, David Bau, and
+  Aaron Mueller.
+\newblock Sparse feature circuits: Discovering and editing interpretable causal
+  graphs in language models.
+\newblock In {\em International Conference on Learning Representations}, 2025.
+\newblock arXiv:2403.19647.
+
+\bibitem{sharma2024sycophancy}
+Mrinank Sharma, Meg Tong, Tomasz Korbak, David Duvenaud, Amanda Askell,
+  Samuel~R. Bowman, Newton Cheng, Esin Durmus, Zac Hatfield-Dodds, Scott~R.
+  Johnston, Shauna Kravec, Timothy Maxwell, Sam McCandlish, Kamal Ndousse,
+  Oliver Rausch, Nicholas Schiefer, Da~Yan, Miranda Zhang, and Ethan Perez.
+\newblock Towards understanding sycophancy in language models.
+\newblock In {\em International Conference on Learning Representations}, 2024.
+\newblock arXiv:2310.13548.
+
+\bibitem{trivedi2022musique}
+Harsh Trivedi, Niranjan Balasubramanian, Tushar Khot, and Ashish Sabharwal.
+\newblock Musique: Multihop questions via single-hop question composition.
+\newblock {\em Transactions of the Association for Computational Linguistics},
+  10:539--554, 2022.
+
+\end{thebibliography}

@@ -1,0 +1,56 @@
+# Pilot of the candidates presentation: 300 train-partition questions, both A2
+# presentations from the same A1 and Critic output. "feedback" is the original
+# revise prompt with the full Critic feedback; "candidates" shows A1 and the
+# recommendation as labeled candidates in a seeded, hop-balanced order that is
+# recorded in sampled_questions.json before anything is generated.
+#
+# Questions: configs/collection/v3/pilot_question_ids.json, written by
+#     scripts/select_partition_questions.py --package <behavior_v012_official_20261011>
+#         --partition train --num-questions 300 --seed 20261023 --exclude <files>
+# Hop-proportional; no in_development_data, QC, review, throwaway-run or PR #138
+# sample question (pilot_question_ids.provenance.json lists the files and hashes).
+# The production run collects these questions again under its own run name.
+
+roles:
+  solver:
+    id: google/gemma-3-4b-it
+    revision: 093f9f388b31de276ce2de164bdc2081324b9767
+    loader: gemma3
+    dtype: bfloat16
+    device: cuda:0
+    generation: {max_new_tokens: 64, do_sample: false}
+
+  critic:
+    id: Qwen/Qwen3-4B-Instruct-2507
+    revision: cdbee75f17c01a7cc42f958dc650907174af0554
+    loader: qwen3
+    dtype: bfloat16
+    device: cuda:0
+    generation: {max_new_tokens: 1024, do_sample: false}
+
+  validator:
+    id: google/gemma-3-4b-it
+    revision: 093f9f388b31de276ce2de164bdc2081324b9767
+    loader: gemma3
+    dtype: bfloat16
+    device: cuda:0
+    generation: {max_new_tokens: 4, do_sample: false}
+
+dataset:
+  revision: c8f4f8c9465fb69d31a8eae894c3fd509c4ca321
+  source_split: train
+  num_questions: 300
+  sampling:
+    strategy: listed
+    question_ids_file: configs/collection/v3/pilot_question_ids.json
+
+collection:
+  protocol_version: v2
+  active_conditions: [natural]
+  a2_presentations: [feedback, candidates]
+  layers: [4, 8, 17, 25, 29, 30, 31, 32, 33]
+  seed: 42
+
+output:
+  run_name: natural_4b_candidates_pilot_300q
+  chunk_size: 50
