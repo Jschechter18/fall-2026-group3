@@ -3,7 +3,10 @@
 Uses the same aligned rows as layer selection (official full9 export, Behavior v0.1.2 labels,
 eligible_primary rows; test and intervention are never read):
 
-  1. Encode the real layer activations with each SAE (custom TopK/L1 and pretrained Gemma Scope).
+  1. Encode the real layer activations with each SAE (custom TopK/L1 and pretrained Gemma Scope), and
+     optionally with the raw activations themselves (kind `activations`, an ActivationBasis): the
+     control the SAEs are compared against, selected by the same rule, mean-ablated, with std-matched
+     random controls and the probe's full direction saved for the causal replay.
   2. Fit a class-weighted logistic probe on TRAIN SAE features (C by inner grouped CV on train).
   3. Rank features on TRAIN by mean |SHAP| (exact for a linear model on standardized inputs:
      |coef| * mean |standardized value|). Ranking on train keeps feature choice independent of
@@ -36,9 +39,62 @@ from mas_sae.utils.versioning import create_versioned_run_dir
 
 logger = logging.getLogger(__name__)
 
-ACCEPT = "adopted_critic"
 CODE_DIRS = ("src", "scripts", "configs")
 PATH_KEYS = ("capstone_data_root", "activations_dir", "results_dir", "labels_csv", "manifest_csv")
+# custom = our TopK/L1 checkpoint run; gemma_scope = pretrained JumpReLU; activations = the raw layer
+# activations as an identity basis (ActivationBasis), the control the SAEs are compared against
+SAE_KINDS = ("custom", "gemma_scope", "activations")
+TARGETED_RULE = "top n_targeted by mean |SHAP| on the fit partition with coefficient toward target 1 > 0"
+SIGNED_RULE = "top n_targeted by mean |SHAP| on the fit partition, either sign (ablation-only sensitivity)"
+
+
+class _Shift(torch.nn.Module):
+    def __init__(self, shift: torch.Tensor):
+        super().__init__()
+        self.register_buffer("shift", shift)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return x + self.shift
+
+
+class ActivationBasis(torch.nn.Module):
+    """Raw activations as a pseudo-SAE: latent i is neuron i minus its mean on the fit rows.
+
+    ``encoder(x) = x - mean`` and ``decoder(z) = z + mean``, so zeroing a latent sets that neuron to
+    its mean (mean ablation, not zero ablation) and leaves every other neuron as it was. Latents are
+    signed and dense, so they have no firing frequency or positive reference activation: random
+    controls are matched on per-neuron std instead.
+    """
+    kind = "activations"
+
+    def __init__(self, mean):
+        super().__init__()
+        mean = torch.as_tensor(np.asarray(mean, dtype=np.float32))
+        self.encoder, self.decoder = _Shift(-mean), _Shift(mean)
+        self.input_dim = self.latent_dim = int(mean.numel())
+
+
+def is_activation_basis(sae) -> bool:
+    return getattr(sae, "kind", None) == ActivationBasis.kind
+
+
+def ensure_center(spec: dict, root: Path, X_fit: np.ndarray) -> np.ndarray:
+    """The fit-row mean of an ``activations`` basis, written to ``spec['path']`` if it is missing.
+
+    An existing file must equal the mean of these rows: a center from other rows or another layer
+    would silently change what mean ablation means, so a mismatch raises."""
+    path = root / spec["path"]
+    mean = X_fit.mean(axis=0, dtype=np.float64).astype(np.float32)
+    if path.exists():
+        saved = np.load(path)
+        if saved.shape != mean.shape or not np.allclose(saved, mean, rtol=0, atol=1e-5):
+            raise ValueError(f"{path} is not the mean of these fit rows (max |difference| "
+                             f"{float(np.max(np.abs(saved - mean))) if saved.shape == mean.shape else 'shape'}); "
+                             "it was computed on other data. Remove it to recompute.")
+        return saved
+    path.parent.mkdir(parents=True, exist_ok=True)
+    np.save(path, mean)
+    return mean
 
 
 @dataclass
@@ -52,13 +108,19 @@ class FeatureSelectionConfig:
     index_column: str = "full_index"
     # question_id -> reason; collected episodes deliberately left out of a label package
     excluded_episodes: dict = field(default_factory=dict)
+    excluded_episodes_file: str | None = None
     target_column: str = "primary_target"
     eligible_column: str = "eligible_primary"
+    # binary contract and grouping, as in LayerSelectionConfig
+    target_labels: list | None = None
+    label_column: str | None = None
+    group_column: str | None = "split_group_id"
     layer: int = 33
     activation_file: str = "{split}_attempt2.pt"
     fit_partition: str = "train"
     eval_partition: str = "validation"
-    # name -> {kind: custom | gemma_scope, path: <run dir> | <Gemma Scope SAE folder>}
+    # name -> {kind: custom | gemma_scope | activations,
+    #          path: <run dir> | <Gemma Scope SAE folder> | <center .npy, written on the first run>}
     saes: dict = field(default_factory=dict)
     n_targeted: int = 10                 # top acceptance-promoting features ablated together
     n_random_draws: int = 50             # frequency-matched random control sets
@@ -84,8 +146,8 @@ class FeatureSelectionConfig:
                 raw[k] = Path(raw[k])
         cfg = cls(**raw)
         for name, spec in cfg.saes.items():
-            if spec.get("kind") not in {"custom", "gemma_scope"} or "path" not in spec:
-                raise ValueError(f"SAE {name!r} needs kind: custom|gemma_scope and a path.")
+            if spec.get("kind") not in SAE_KINDS or "path" not in spec:
+                raise ValueError(f"SAE {name!r} needs kind: {'|'.join(SAE_KINDS)} and a path.")
         return cfg
 
     def layer_selection_config(self) -> ls.LayerSelectionConfig:
@@ -93,8 +155,10 @@ class FeatureSelectionConfig:
             capstone_data_root=self.capstone_data_root, activations_dir=self.activations_dir,
             results_dir=self.results_dir, labels_csv=self.labels_csv, manifest_csv=self.manifest_csv,
             index_column=self.index_column, excluded_episodes=self.excluded_episodes,
+            excluded_episodes_file=self.excluded_episodes_file,
             layers=[self.layer], activation_file=self.activation_file,
             target_column=self.target_column, eligible_column=self.eligible_column,
+            target_labels=self.target_labels, label_column=self.label_column, group_column=self.group_column,
             protocol="holdout", fit_partition=self.fit_partition, eval_partition=self.eval_partition,
             text_fields=[], seed=self.seed)
 
@@ -102,6 +166,10 @@ class FeatureSelectionConfig:
 def load_sae(spec: dict, root: Path, layer: int):
     """(sae, description) for a custom checkpoint run directory or a Gemma Scope folder."""
     path = root / spec["path"]
+    if spec["kind"] == "activations":
+        sae = ActivationBasis(np.load(path))
+        return sae, {"kind": "activations", "path": str(spec["path"]), "latent_dim": sae.latent_dim,
+                     "ablation": "mean (latent = neuron - fit-row mean)"}
     if spec["kind"] == "custom":
         from mas_sae.sae.callbacks.checkpointing import load_sae_checkpoint
         sae = load_sae_checkpoint(path / "checkpoints" / "best_checkpoint.pt")
@@ -114,6 +182,8 @@ def load_sae(spec: dict, root: Path, layer: int):
 
 def sae_files(spec: dict, root: Path) -> list[Path]:
     path = root / spec["path"]
+    if spec["kind"] == "activations":
+        return [path]
     if spec["kind"] == "custom":
         return [path / "checkpoints" / "best_checkpoint.pt"]
     return [path / "config.json", path / "params.safetensors"]
@@ -174,11 +244,16 @@ def reference_activations(cfg: FeatureSelectionConfig, summary: dict, batch_size
         hashes = {str(p.relative_to(root)): sha256_file(p) for p in sae_files(cfg.saes[name], root)}
         if hashes != summary["provenance"]["sae_sha256"].get(name):
             raise ValueError(f"SAE {name!r} files differ from the ones feature selection used.")
-        ids = sorted({int(f) for f in s["targeted_features"]} | {int(f) for d in s["random_control_draws"] for f in d})
+        ids = sorted({int(f) for f in s["targeted_features"]} | {int(f) for d in s["random_control_draws"] for f in d}
+                     | {int(f) for f in s.get("targeted_features_signed", [])})
         sae = load_sae(cfg.saes[name], root, cfg.layer)[0].eval()
         Z = np.concatenate([offline.encode(sae, X[i:i + batch_size])[:, ids] for i in range(0, len(X), batch_size)])
         feats = {}
         for j, f in enumerate(ids):
+            if is_activation_basis(sae):   # signed, dense: no firing frequency or positive ref
+                feats[str(f)] = {"mean": float(sae.decoder.shift[f]), "std": float(Z[:, j].std()),
+                                 "p95_abs": float(np.quantile(np.abs(Z[:, j]), 0.95))}
+                continue
             on = Z[:, j][Z[:, j] > 0]
             if not len(on):
                 raise ValueError(f"{name} feature {f} never fires on {cfg.fit_partition}: it has no reference activation.")
@@ -191,7 +266,23 @@ def reference_activations(cfg: FeatureSelectionConfig, summary: dict, batch_size
 
 @torch.no_grad()
 def latent_stats(sae, X: np.ndarray, batch_size: int = 512) -> dict:
-    """Per-latent statistics of ``sae`` on the rows ``X``, as lists indexed by latent id (see ``reference_activations``)."""
+    """Per-latent statistics of ``sae`` on the rows ``X``, as lists indexed by latent id (see ``reference_activations``).
+
+    For an ``ActivationBasis`` the latents are centered neurons: ``firing_frequency`` and ``ref`` are
+    None (undefined for signed, dense values), ``rms`` is the per-neuron std on these rows and
+    ``decoder_norm`` is 1, so a contribution match is a match on std.
+    """
+    r = lambda v: float(f"{v:.6g}")
+    if is_activation_basis(sae):
+        s = s2 = 0
+        for i in range(0, len(X), batch_size):
+            Z = offline.encode(sae, X[i:i + batch_size]).astype(np.float64)
+            s, s2 = s + Z.sum(0), s2 + (Z ** 2).sum(0)
+        return {"n_rows": len(X), "basis": ActivationBasis.kind, "firing_frequency": None, "ref": None,
+                "mean": [r(v) for v in sae.decoder.shift.numpy()],
+                "rms": [r(v) for v in np.sqrt(s2 / len(X))],
+                "std": [r(v) for v in np.sqrt(np.maximum(s2 / len(X) - (s / len(X)) ** 2, 0))],
+                "decoder_norm": [1.0] * sae.latent_dim}
     n_fire = s = s2 = 0
     for i in range(0, len(X), batch_size):
         Z = offline.encode(sae, X[i:i + batch_size]).astype(np.float64)
@@ -205,7 +296,6 @@ def latent_stats(sae, X: np.ndarray, batch_size: int = 512) -> dict:
         unit = torch.zeros(k, sae.latent_dim)
         unit[torch.arange(k), torch.arange(j, j + k)] = 1.0
         dec_norm[j:j + k] = (sae.decoder(unit) - bias).norm(dim=1).numpy()
-    r = lambda v: float(f"{v:.6g}")
     return {"n_rows": len(X),
             "firing_frequency": [r(v) for v in n_fire / len(X)],
             "ref": [r(t / n) if n else None for t, n in zip(s, n_fire)],
@@ -213,8 +303,11 @@ def latent_stats(sae, X: np.ndarray, batch_size: int = 512) -> dict:
             "decoder_norm": [r(v) for v in dec_norm]}
 
 
-def rank_features(probe, Z_fit: np.ndarray) -> pd.DataFrame:
-    """Per-feature coefficient (toward ACCEPT, standardized units) and mean |SHAP| on ``Z_fit``."""
+def rank_features(probe, Z_fit: np.ndarray, signed: bool = False) -> pd.DataFrame:
+    """Per-feature coefficient (toward target 1, standardized units) and mean |SHAP| on ``Z_fit``.
+
+    ``signed`` latents (an ActivationBasis) have no firing frequency: that column is NaN and the
+    per-latent std on the fit rows is given instead."""
     scaler, clf = probe.named_steps["scale"], probe.named_steps["clf"]
     sign = 1.0 if clf.classes_[1] == 1 else -1.0           # binary coef_ points toward classes_[1]
     coef = sign * clf.coef_[0]
@@ -223,36 +316,60 @@ def rank_features(probe, Z_fit: np.ndarray) -> pd.DataFrame:
         "feature": np.arange(Z_fit.shape[1]),
         "coef_toward_accept": coef,
         "mean_abs_shap": np.abs(coef) * np.abs(std).mean(axis=0),
-        "train_firing_frequency": (Z_fit > 0).mean(axis=0),
+        "train_firing_frequency": np.full(Z_fit.shape[1], np.nan) if signed else (Z_fit > 0).mean(axis=0),
+        **({"train_std": Z_fit.std(axis=0)} if signed else {}),
     })
 
 
-def analyse_sae(name, sae, X_fit, y_fit, g_fit, X_eval, y_eval, g_eval, readout, cfg) -> dict:
+def probe_direction(model, live: np.ndarray, sae: ActivationBasis, X_fit, y_fit) -> dict:
+    """The raw-activation probe as one direction in activation space, for the causal replay: ``w``,
+    ``b`` with ``X @ w + b`` = the probe's score toward target 1 (zero weight on constant neurons),
+    and the difference in class means on the fit rows."""
+    w_live, b = ls.raw_unit_weights(model, 1)              # in centered-latent units
+    center = sae.decoder.shift.numpy().astype(np.float64)
+    w = np.zeros(sae.latent_dim)
+    w[live] = w_live
+    return {"w": w, "b": np.float64(b - w_live @ center[live]), "center": center,
+            "diff_means": X_fit[y_fit == 1].mean(0, dtype=np.float64) - X_fit[y_fit == 0].mean(0, dtype=np.float64)}
+
+
+def analyse_sae(name, sae, X_fit, y_fit, g_fit, X_eval, y_eval, g_eval, readout, cfg, q_eval=None) -> dict:
+    """``g_fit``/``g_eval`` are the groups no fold or bootstrap splits (families); ``q_eval`` are the
+    evaluation question ids for the paired statistics (one row each), clustered by ``g_eval`` when they differ."""
+    raw = is_activation_basis(sae)
     Z_fit, Z_eval = offline.encode(sae, X_fit), offline.encode(sae, X_eval)
     freq = (Z_fit > 0).mean(axis=0)
-    live = np.flatnonzero(freq > 0)
-    logger.info("%s: %d of %d features fire on train", name, len(live), Z_fit.shape[1])
+    spread = Z_fit.std(axis=0)
+    live = np.flatnonzero(spread > 0) if raw else np.flatnonzero(freq > 0)
+    logger.info("%s: %d of %d features %s on train", name, len(live), Z_fit.shape[1], "vary" if raw else "fire")
+    q_eval = g_eval if q_eval is None else np.asarray(q_eval)
+    clusters = None if np.array_equal(q_eval, g_eval) else g_eval
 
     # ---- feature-selection probe (fit and rank on train, score on validation)
     model, C, n_conv = ls._fit_counting_warnings(
         lambda c: ls._activation_model(c, cfg.seed), Z_fit[:, live], y_fit, g_fit, cfg)
     pred = model.predict(Z_eval[:, live])
     boot = grouped_bootstrap_indices(g_eval, cfg.n_bootstrap, cfg.seed)
-    ranking = rank_features(model, Z_fit[:, live])
+    ranking = rank_features(model, Z_fit[:, live], signed=raw)
     ranking["feature"] = live
     ranking = ranking.sort_values("mean_abs_shap", ascending=False).reset_index(drop=True)
     promote = ranking[ranking.coef_toward_accept > 0]
     targeted = promote["feature"].head(cfg.n_targeted).astype(int).tolist()
+    signed = ranking.head(cfg.n_targeted)
+    targeted_signed = signed["feature"].astype(int).tolist()
 
     # ---- offline causal proxy on validation
     recon = offline.decode(sae, Z_eval)
     p_control = offline.p_accept(readout, recon)
     p_targeted = offline.p_accept(readout, offline.decode(sae, offline.ablate(Z_eval, targeted)))
-    draws = offline.frequency_matched_controls(freq, targeted, cfg.n_random_draws, cfg.seed)
+    # raw neurons all "fire" (signed, dense), so their controls are matched on std alone
+    draws = (offline.contribution_matched_controls(np.ones_like(spread), spread, targeted, cfg.n_random_draws, cfg.seed)
+             if raw else offline.frequency_matched_controls(freq, targeted, cfg.n_random_draws, cfg.seed))
     p_random_draws = np.stack([offline.p_accept(readout, offline.decode(sae, offline.ablate(Z_eval, d)))
                                for d in draws])
     p_random = p_random_draws.mean(axis=0)
-    stats = lambda p: offline.paired_effect(p, p_control, g_eval, cfg.n_bootstrap, cfg.n_permutations, cfg.seed)
+    stats = lambda p: offline.paired_effect(p, p_control, q_eval, cfg.n_bootstrap, cfg.n_permutations, cfg.seed,
+                                            clusters)
 
     # Sensitivity: keep the SAE's reconstruction error (x + decode(z_ablated) - decode(z)), so the
     # control is the original activation and only the ablated features change.
@@ -261,21 +378,28 @@ def analyse_sae(name, sae, X_fit, y_fit, g_fit, X_eval, y_eval, g_eval, readout,
     p_t_err = offline.p_accept(readout, offline.decode(sae, offline.ablate(Z_eval, targeted)) + err)
     p_r_err = np.stack([offline.p_accept(readout, offline.decode(sae, offline.ablate(Z_eval, d)) + err)
                         for d in draws]).mean(axis=0)
-    sens = lambda p: offline.paired_effect(p, p_orig, g_eval, cfg.n_bootstrap, cfg.n_permutations, cfg.seed)
+    sens = lambda p: offline.paired_effect(p, p_orig, q_eval, cfg.n_bootstrap, cfg.n_permutations, cfg.seed,
+                                           clusters)
 
     fve = 1 - float(((X_eval - recon) ** 2).sum() / ((X_eval - X_eval.mean(0)) ** 2).sum())
     return {
         "ranking": ranking,
+        "direction": probe_direction(model, live, sae, X_fit, y_fit) if raw else None,
         "per_row": {f"{name}__no_ablation": p_control, f"{name}__random_ablation": p_random,
                     f"{name}__targeted_ablation": p_targeted},
         "summary": {
             "live_features_on_train": int(len(live)), "latent_dim": int(Z_fit.shape[1]),
-            "mean_active_features_eval": float((Z_eval > 0).sum(1).mean()),
+            "mean_active_features_eval": None if raw else float((Z_eval > 0).sum(1).mean()),
             "variance_explained_eval": fve,
             "probe": {"chosen_C": C, "n_convergence_warnings": n_conv,
                       "balanced_accuracy_eval": balanced_accuracy(y_eval, pred),
                       "ci95": list(bootstrap_ci(y_eval, pred, boot))},
+            "selection_rules": {"targeted_features": TARGETED_RULE, "targeted_features_signed": SIGNED_RULE,
+                                "random_control_draws": "matched on per-neuron std" if raw
+                                else "matched on training firing frequency"},
             "targeted_features": targeted,
+            "targeted_features_signed": targeted_signed,
+            "targeted_signed_coefficient_signs": [int(np.sign(c)) for c in signed["coef_toward_accept"]],
             "random_control_draws": draws,
             "conditions": {
                 "no_ablation": {"acceptance_pct": 100 * float(p_control.mean())},
@@ -318,30 +442,41 @@ def results_table(observed_pct: float, readout_pct: float, sae_summaries: dict) 
 def run(cfg: FeatureSelectionConfig, config_path: Path | None = None) -> Path:
     if not cfg.saes:
         raise ValueError("Configure at least one SAE under `saes`.")
-    prov = provenance(cfg, config_path)                    # before any run artifacts are written
-    selected, diag, cols = ls.load_inputs(cfg.layer_selection_config())
+    ls_cfg = cfg.layer_selection_config()
+    selected, diag, cols = ls.load_inputs(ls_cfg)
     root = Path(cfg.capstone_data_root)
     X = bd.load_layer_matrix(selected, root / cfg.activations_dir / f"layer_{cfg.layer:02d}", cfg.activation_file)
-    y = (selected["target_name"] == ACCEPT).astype(int).to_numpy()
-    groups = selected["ep_question_id"].astype(str).to_numpy()
+    y = (selected["target_name"] == ls_cfg.class_names[0]).astype(int).to_numpy()
+    groups, _ = bd.episode_groups(selected, cfg.group_column)
+    questions = selected["ep_question_id"].astype(str).to_numpy()
     part = selected[cols.partition].astype(str).to_numpy()
     fit, ev = part == cfg.fit_partition, part == cfg.eval_partition
     logger.info("rows: %d fit / %d eval; layer %d activations %s", fit.sum(), ev.sum(), cfg.layer, X.shape)
+    for spec in cfg.saes.values():                         # fit-row centers exist before they are hashed
+        if spec["kind"] == "activations":
+            ensure_center(spec, root, X[fit])
+    prov = provenance(cfg, config_path)                    # before any run artifacts are written
 
     readout, readout_c = offline.fit_readout(X[fit], y[fit], groups[fit], cfg.c_grid, cfg.inner_folds, cfg.seed)
     p_orig = offline.p_accept(readout, X[ev])
     readout_pred = (p_orig >= 0.5).astype(int)
 
     run_dir = create_versioned_run_dir(cfg.output_dir)
-    summaries, per_row = {}, {"question_id": groups[ev], "accepted_observed": y[ev], "readout_original": p_orig}
+    summaries, per_row = {}, {"question_id": questions[ev], "accepted_observed": y[ev], "readout_original": p_orig}
     for name, spec in cfg.saes.items():
         sae, info = load_sae(spec, root, cfg.layer)
-        res = analyse_sae(name, sae, X[fit], y[fit], groups[fit], X[ev], y[ev], groups[ev], readout, cfg)
+        res = analyse_sae(name, sae, X[fit], y[fit], groups[fit], X[ev], y[ev], groups[ev], readout, cfg,
+                          q_eval=questions[ev])
         res["ranking"].assign(rank=np.arange(1, len(res["ranking"]) + 1)).pipe(
             lambda r: pd.concat([r[r.coef_toward_accept > 0].head(cfg.n_top_report).assign(direction="promotes_accept"),
                                  r[r.coef_toward_accept < 0].head(cfg.n_top_report).assign(direction="promotes_not_accept")])
         ).to_csv(run_dir / f"top_features_{name}.csv", index=False)
+        res["ranking"].to_csv(run_dir / f"ranking_{name}.csv", index=False)   # the full signed ranking
         summaries[name] = {"sae": info, **res["summary"]}
+        if res["direction"] is not None:
+            path = run_dir / f"probe_direction_layer{cfg.layer:02d}_{name.replace(' ', '_')}.npz"
+            np.savez(path, layer=np.int64(cfg.layer), **res["direction"])
+            summaries[name]["probe_direction"] = {"file": path.name, "sha256": sha256_file(path)}
         per_row.update(res["per_row"])
         logger.info("%s done: probe BA %.3f", name, res["summary"]["probe"]["balanced_accuracy_eval"])
 

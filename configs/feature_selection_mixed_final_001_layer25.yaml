@@ -1,0 +1,37 @@
+# Feature selection on mixed_final_001 with Claude labels, layer 25 (#191): the raw activations as a
+# basis (top neurons by the same rule as the SAE features, mean ablation, std-matched controls, plus
+# the full probe direction), the control the SAEs are compared against.
+# Same inputs and contract as configs/layer_selection_mixed_final_001.yaml. Fit and rank on train,
+# measure on validation; test and intervention are never read.
+# The interaction-trained TopK and L1 SAEs on this data come from #192; add them under saes when they exist.
+capstone_data_root: .
+activations_dir: artifacts/collection/mixed_final_001/prepared/activations/mixed_final_001
+results_dir: artifacts/collection/mixed_final_001/prepared/results/mixed_final_001
+labels_csv: results/behavior/mixed_final_001_claude_probe/labels.csv
+manifest_csv: results/behavior/mixed_final_001_claude_probe/split_manifest.csv
+excluded_episodes_file: results/behavior/mixed_final_001_claude_probe/excluded_episodes.json
+index_column: full_index
+target_labels: [adoption, retention]
+label_column: behavior_label
+group_column: split_group_id
+layer: 25
+activation_file: "{split}_attempt2.pt"
+fit_partition: train
+eval_partition: validation
+saes:
+  Raw activations:
+    kind: activations
+    path: results/feature_selection_mixed_final_001/centers/raw_layer25.npy   # fit-row mean, written on the first run
+  # https://huggingface.co/google/gemma-scope-2-4b-it/tree/main/resid_post_all/layer_25_width_16k_l0_big
+  Pretrained SAE:
+    kind: gemma_scope
+    path: results/sae/pretrained/gemma-scope-2-4b-it/resid_post_all/layer_25_width_16k_l0_big
+n_targeted: 10
+n_random_draws: 100                  # >=100 for the confirmatory comparison (Instructor Review #6)
+n_top_report: 25
+seed: 42
+c_grid: [0.001, 0.01, 0.1, 1.0, 10.0]
+inner_folds: 3
+n_bootstrap: 1000
+n_permutations: 10000
+output_dir: results/feature_selection_mixed_final_001

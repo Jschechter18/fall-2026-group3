@@ -152,18 +152,27 @@ def p_accept(readout: Pipeline, X: np.ndarray) -> np.ndarray:
 # ----------------------------------------------------------------------------- statistics
 
 def paired_effect(outcome: np.ndarray, reference: np.ndarray, groups: np.ndarray,
-                  n_bootstrap: int, n_permutations: int, seed: int) -> dict:
+                  n_bootstrap: int, n_permutations: int, seed: int, clusters: np.ndarray | None = None) -> dict:
     """Difference in mean outcome (condition - reference) on the same rows, in percentage points,
-    with a question-grouped paired bootstrap 95% CI and a two-sided paired sign-flip p-value."""
+    with a question-grouped paired bootstrap 95% CI and a two-sided paired sign-flip p-value.
+
+    ``clusters`` (e.g. question families) makes both cluster-level: whole clusters are resampled and
+    each cluster's rows flip sign together, since related questions are not independent. Without it
+    the result is unchanged from the question-level version."""
     d = np.asarray(outcome, float) - np.asarray(reference, float)
     groups = np.asarray(groups)
     if len(np.unique(groups)) != len(groups):
         raise ValueError("paired_effect expects one row per question.")
-    boot = grouped_bootstrap_indices(groups, n_bootstrap, seed)
+    units = groups if clusters is None else np.asarray(clusters)
+    boot = grouped_bootstrap_indices(units, n_bootstrap, seed)
     means = np.array([d[i].mean() for i in boot])
     rng = np.random.default_rng(seed)
     observed = d.mean()
-    null = (rng.choice([-1.0, 1.0], size=(n_permutations, len(d))) * d).mean(axis=1)
+    if clusters is None:
+        null = (rng.choice([-1.0, 1.0], size=(n_permutations, len(d))) * d).mean(axis=1)
+    else:
+        uniq, inverse = np.unique(units, return_inverse=True)
+        null = (rng.choice([-1.0, 1.0], size=(n_permutations, len(uniq)))[:, inverse] * d).mean(axis=1)
     p = (1 + np.sum(np.abs(null) >= abs(observed) - 1e-15)) / (1 + n_permutations)
     return {"delta_pp": 100 * float(observed),
             "ci95_pp": [100 * float(np.quantile(means, 0.025)), 100 * float(np.quantile(means, 0.975))],

@@ -1,0 +1,46 @@
+# Layer selection on the mixed MuSiQue + synthetic collection mixed_final_001 with Claude labels (#191).
+# Fit on `train`, rank on `validation`; test and intervention rows are never read.
+# Target: Adoption (1) vs Retention (0) only. Agreement, third answers, Out and technical failures are
+# ineligible and refused if they appear as eligible (label_column check).
+# Inputs, after `distributed_collection.py merge` + `split` and the Claude probe package
+# (scripts/run_claude_validation.py per partition, then scripts/export_final_labels_for_probes.py
+#  --layout partitioned --output results/behavior/mixed_final_001_claude_probe):
+#   artifacts/collection/mixed_final_001/prepared/{activations,results}/mixed_final_001/
+capstone_data_root: .
+activations_dir: artifacts/collection/mixed_final_001/prepared/activations/mixed_final_001   # <dir>/layer_NN/{split}_attempt2.pt
+results_dir: artifacts/collection/mixed_final_001/prepared/results/mixed_final_001           # <dir>/{split}/interactions.jsonl
+labels_csv: results/behavior/mixed_final_001_claude_probe/labels.csv
+manifest_csv: results/behavior/mixed_final_001_claude_probe/split_manifest.csv
+excluded_episodes_file: results/behavior/mixed_final_001_claude_probe/excluded_episodes.json
+index_column: full_index
+source_splits: [train, validation]                                    # partition folders
+target_labels: [adoption, retention]                                  # target 1, target 0
+label_column: behavior_label
+group_column: split_group_id                                          # related variants never split
+layers: [4, 8, 17, 25, 29, 30, 31, 32, 33]
+activation_file: "{split}_attempt2.pt"                                # before A2, after the feedback
+protocol: holdout
+fit_partition: train
+eval_partition: validation
+# Only what the Solver sees in the candidates prompt (no critic_feedback, which it never reads).
+text_fields:
+  - question
+  - solver_attempt_1
+  - critic_advocated_answer
+  - candidate_order
+# Bounds what correctness, position and source alone predict (no label-derived fields).
+metadata_baseline_fields: [candidate_order, correctness_cell, dataset_source, hop_group]
+breakdown_fields: [dataset_source, correctness_cell, candidate_order, hop_group]
+seed: 42
+c_grid: [0.001, 0.01, 0.1, 1.0, 10.0, 100.0]          # tuned INSIDE the train rows (inner grouped CV)
+inner_folds: 3
+n_bootstrap: 1000
+# Label-shuffle control on every layer (selectivity; smallest p = 1/101). Each permutation refits the
+# tuned probe: about 40 s per layer at this size, so ~10 h of CPU for 9 layers. Override for a quick check.
+n_permutations: 100
+permutation_layers: all
+# Memory: only eligible (Adoption/Retention) rows are kept, about 29k train + validation rows,
+# ~0.3 GB per layer and ~2.7 GB for all 9 (plus one full partition tensor, ~0.75 GB, while it is read).
+# labels.csv has no solver_response: only Adoption/Retention are eligible, so a response breakdown would
+# repeat the target. Third answers are reported from the interaction records and the replay's own labels.
+output_dir: results/layer_selection_mixed_final_001
