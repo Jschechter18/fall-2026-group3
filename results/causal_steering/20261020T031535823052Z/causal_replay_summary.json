@@ -1,0 +1,2609 @@
+{
+  "n_episodes_complete": 450,
+  "n_episodes_planned": 450,
+  "n_generations": 66600,
+  "intervention": {
+    "name": "final_prompt_token_prefill_only",
+    "description": "The layer output at the final prompt token of the A2 prefill is replaced; earlier positions and decode-step computations at this layer are not. This is not the final layer (or the depth is unknown), so the change also alters that position's keys and values in later layers, which every decode step attends to: the answer can change even when the first token does not.",
+    "edits": {
+      "ablation": "chosen features set to 0",
+      "steering": "chosen feature f set to s * ref_f (ref_f: mean activation where f fires on the feature-selection fit partition)"
+    },
+    "arms": [
+      "steer_-2",
+      "steer_+2",
+      "steer_+5"
+    ],
+    "splices": {
+      "reconstruction": "decode(z')",
+      "error_preserving": "x + decode(z') - decode(z)"
+    }
+  },
+  "validated": true,
+  "replay_check": {
+    "n_episodes": 450,
+    "n_planned": 450,
+    "mismatch_counts": {
+      "exact_match": 450
+    },
+    "a2_exact_match_rate": 1.0,
+    "solver_response_match_rate": 1.0,
+    "n_prompt_hashes_compared": 0,
+    "stored_acceptance_pct": 89.55555555555556,
+    "replayed_acceptance_pct": 89.55555555555556,
+    "criterion": {
+      "min_label_match": 0.98,
+      "max_prompt_differences": 0
+    },
+    "passed": true,
+    "failures": []
+  },
+  "effects": {
+    "TopK SAE__random_steer_-2": {
+      "delta_pp": -25.555555555555546,
+      "ci95_pp": [
+        -26.380952380952372,
+        -24.698412698412692
+      ],
+      "p_value": 9.999000099990002e-05
+    },
+    "TopK SAE__targeted_steer_-2": {
+      "delta_pp": -0.2222222222222222,
+      "ci95_pp": [
+        -0.6666666666666667,
+        0.0
+      ],
+      "p_value": 1.0
+    },
+    "TopK SAE__random_steer_+2": {
+      "delta_pp": 0.0,
+      "ci95_pp": [
+        0.0,
+        0.0
+      ],
+      "p_value": 1.0
+    },
+    "TopK SAE__targeted_steer_+2": {
+      "delta_pp": 0.0,
+      "ci95_pp": [
+        0.0,
+        0.0
+      ],
+      "p_value": 1.0
+    },
+    "TopK SAE__random_steer_+5": {
+      "delta_pp": -9.047619047619046,
+      "ci95_pp": [
+        -10.253968253968253,
+        -7.841269841269841
+      ],
+      "p_value": 9.999000099990002e-05
+    },
+    "TopK SAE__targeted_steer_+5": {
+      "delta_pp": -0.4444444444444444,
+      "ci95_pp": [
+        -1.1111111111111112,
+        0.0
+      ],
+      "p_value": 0.5002499750024998
+    },
+    "TopK SAE \u00b7 error-preserving__random_steer_-2": {
+      "delta_pp": -25.492063492063483,
+      "ci95_pp": [
+        -26.28650793650793,
+        -24.634920634920626
+      ],
+      "p_value": 9.999000099990002e-05
+    },
+    "TopK SAE \u00b7 error-preserving__targeted_steer_-2": {
+      "delta_pp": -0.2222222222222222,
+      "ci95_pp": [
+        -0.6666666666666667,
+        0.0
+      ],
+      "p_value": 1.0
+    },
+    "TopK SAE \u00b7 error-preserving__random_steer_+2": {
+      "delta_pp": 0.0,
+      "ci95_pp": [
+        0.0,
+        0.0
+      ],
+      "p_value": 1.0
+    },
+    "TopK SAE \u00b7 error-preserving__targeted_steer_+2": {
+      "delta_pp": 0.0,
+      "ci95_pp": [
+        0.0,
+        0.0
+      ],
+      "p_value": 1.0
+    },
+    "TopK SAE \u00b7 error-preserving__random_steer_+5": {
+      "delta_pp": -8.444444444444445,
+      "ci95_pp": [
+        -9.587301587301585,
+        -7.3015873015873005
+      ],
+      "p_value": 9.999000099990002e-05
+    },
+    "TopK SAE \u00b7 error-preserving__targeted_steer_+5": {
+      "delta_pp": -0.4444444444444444,
+      "ci95_pp": [
+        -1.1111111111111112,
+        0.0
+      ],
+      "p_value": 0.5002499750024998
+    },
+    "L1 SAE__random_steer_-2": {
+      "delta_pp": -0.031746031746031786,
+      "ci95_pp": [
+        -0.41269841269841273,
+        0.44523809523809454
+      ],
+      "p_value": 1.0
+    },
+    "L1 SAE__targeted_steer_-2": {
+      "delta_pp": -88.88888888888889,
+      "ci95_pp": [
+        -91.77777777777779,
+        -85.77777777777777
+      ],
+      "p_value": 9.999000099990002e-05
+    },
+    "L1 SAE__random_steer_+2": {
+      "delta_pp": -0.09523809523809526,
+      "ci95_pp": [
+        -0.2857142857142857,
+        0.06349206349206346
+      ],
+      "p_value": 0.49955004499550043
+    },
+    "L1 SAE__targeted_steer_+2": {
+      "delta_pp": -16.0,
+      "ci95_pp": [
+        -19.333333333333332,
+        -12.666666666666668
+      ],
+      "p_value": 9.999000099990002e-05
+    },
+    "L1 SAE__random_steer_+5": {
+      "delta_pp": -7.7777777777777795,
+      "ci95_pp": [
+        -8.793650793650794,
+        -6.730158730158732
+      ],
+      "p_value": 9.999000099990002e-05
+    },
+    "L1 SAE__targeted_steer_+5": {
+      "delta_pp": -84.88888888888889,
+      "ci95_pp": [
+        -88.22222222222223,
+        -81.55555555555556
+      ],
+      "p_value": 9.999000099990002e-05
+    },
+    "L1 SAE \u00b7 error-preserving__random_steer_-2": {
+      "delta_pp": -0.031746031746031765,
+      "ci95_pp": [
+        -0.25396825396825395,
+        0.2222222222222222
+      ],
+      "p_value": 1.0
+    },
+    "L1 SAE \u00b7 error-preserving__targeted_steer_-2": {
+      "delta_pp": -88.22222222222223,
+      "ci95_pp": [
+        -91.11111111111111,
+        -85.11111111111111
+      ],
+      "p_value": 9.999000099990002e-05
+    },
+    "L1 SAE \u00b7 error-preserving__random_steer_+2": {
+      "delta_pp": -0.38095238095238093,
+      "ci95_pp": [
+        -0.8888888888888887,
+        -0.03174603174603176
+      ],
+      "p_value": 0.1222877712228777
+    },
+    "L1 SAE \u00b7 error-preserving__targeted_steer_+2": {
+      "delta_pp": -4.888888888888889,
+      "ci95_pp": [
+        -7.111111111111111,
+        -2.888888888888889
+      ],
+      "p_value": 9.999000099990002e-05
+    },
+    "L1 SAE \u00b7 error-preserving__random_steer_+5": {
+      "delta_pp": -4.857142857142858,
+      "ci95_pp": [
+        -5.936507936507938,
+        -3.9682539682539693
+      ],
+      "p_value": 9.999000099990002e-05
+    },
+    "L1 SAE \u00b7 error-preserving__targeted_steer_+5": {
+      "delta_pp": -84.66666666666667,
+      "ci95_pp": [
+        -88.0,
+        -81.55555555555556
+      ],
+      "p_value": 9.999000099990002e-05
+    },
+    "Pretrained SAE__random_steer_-2": {
+      "delta_pp": -0.4761904761904764,
+      "ci95_pp": [
+        -0.7936507936507939,
+        -0.22222222222222232
+      ],
+      "p_value": 0.001999800019998
+    },
+    "Pretrained SAE__targeted_steer_-2": {
+      "delta_pp": -0.8888888888888888,
+      "ci95_pp": [
+        -1.7777777777777777,
+        -0.2222222222222222
+      ],
+      "p_value": 0.1257874212578742
+    },
+    "Pretrained SAE__random_steer_+2": {
+      "delta_pp": -0.15873015873015872,
+      "ci95_pp": [
+        -0.4444444444444444,
+        0.0
+      ],
+      "p_value": 0.5002499750024998
+    },
+    "Pretrained SAE__targeted_steer_+2": {
+      "delta_pp": -0.2222222222222222,
+      "ci95_pp": [
+        -0.6666666666666667,
+        0.0
+      ],
+      "p_value": 1.0
+    },
+    "Pretrained SAE__random_steer_+5": {
+      "delta_pp": -0.7936507936507938,
+      "ci95_pp": [
+        -1.396825396825397,
+        -0.25396825396825407
+      ],
+      "p_value": 0.0034996500349965005
+    },
+    "Pretrained SAE__targeted_steer_+5": {
+      "delta_pp": -0.6666666666666667,
+      "ci95_pp": [
+        -1.5555555555555556,
+        0.0
+      ],
+      "p_value": 0.2538746125387461
+    },
+    "Pretrained SAE \u00b7 error-preserving__random_steer_-2": {
+      "delta_pp": -0.09523809523809529,
+      "ci95_pp": [
+        -0.25396825396825407,
+        0.09523809523809522
+      ],
+      "p_value": 0.5358464153584641
+    },
+    "Pretrained SAE \u00b7 error-preserving__targeted_steer_-2": {
+      "delta_pp": -0.6666666666666667,
+      "ci95_pp": [
+        -1.5555555555555556,
+        0.0
+      ],
+      "p_value": 0.2542745725427457
+    },
+    "Pretrained SAE \u00b7 error-preserving__random_steer_+2": {
+      "delta_pp": -0.09523809523809527,
+      "ci95_pp": [
+        -0.22222222222222232,
+        0.0
+      ],
+      "p_value": 0.25237476252374763
+    },
+    "Pretrained SAE \u00b7 error-preserving__targeted_steer_+2": {
+      "delta_pp": 0.0,
+      "ci95_pp": [
+        0.0,
+        0.0
+      ],
+      "p_value": 1.0
+    },
+    "Pretrained SAE \u00b7 error-preserving__random_steer_+5": {
+      "delta_pp": -0.380952380952381,
+      "ci95_pp": [
+        -0.7936507936507936,
+        -0.06349206349206353
+      ],
+      "p_value": 0.033096690330966905
+    },
+    "Pretrained SAE \u00b7 error-preserving__targeted_steer_+5": {
+      "delta_pp": -0.2222222222222222,
+      "ci95_pp": [
+        -0.6666666666666667,
+        0.0
+      ],
+      "p_value": 1.0
+    }
+  },
+  "targeted_vs_random": [
+    {
+      "experiment": "TopK SAE",
+      "splice": "reconstruction",
+      "arm": "steer_-2",
+      "delta_pp": 25.333333333333325,
+      "ci95_pp": [
+        24.38015873015872,
+        26.222222222222214
+      ],
+      "p_value": 9.999000099990002e-05,
+      "ci95_pp_questions_and_draws": [
+        -0.2261904761904771,
+        52.32063492063492
+      ],
+      "n_random_draws": 7,
+      "targeted_vs_control_pp": -0.2222222222222222,
+      "random_draw_vs_control_pp": [
+        -0.2222222222222222,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -89.33333333333333,
+        -89.33333333333333
+      ],
+      "draw_tail_fraction": 0.5,
+      "p_value_holm": 0.0008999100089991002
+    },
+    {
+      "experiment": "TopK SAE",
+      "splice": "reconstruction",
+      "arm": "steer_+2",
+      "delta_pp": 0.0,
+      "ci95_pp": [
+        0.0,
+        0.0
+      ],
+      "p_value": 1.0,
+      "ci95_pp_questions_and_draws": [
+        0.0,
+        0.0
+      ],
+      "n_random_draws": 7,
+      "targeted_vs_control_pp": 0.0,
+      "random_draw_vs_control_pp": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "draw_tail_fraction": 1.0,
+      "p_value_holm": 1.0
+    },
+    {
+      "experiment": "TopK SAE",
+      "splice": "reconstruction",
+      "arm": "steer_+5",
+      "delta_pp": 8.603174603174601,
+      "ci95_pp": [
+        7.269841269841268,
+        9.873015873015872
+      ],
+      "p_value": 9.999000099990002e-05,
+      "ci95_pp_questions_and_draws": [
+        -0.412698412698409,
+        20.38174603174604
+      ],
+      "n_random_draws": 7,
+      "targeted_vs_control_pp": -0.4444444444444444,
+      "random_draw_vs_control_pp": [
+        -0.4444444444444444,
+        -0.6666666666666667,
+        0.0,
+        -0.2222222222222222,
+        0.0,
+        -24.666666666666668,
+        -37.333333333333336
+      ],
+      "draw_tail_fraction": 0.625,
+      "p_value_holm": 0.0008999100089991002
+    },
+    {
+      "experiment": "TopK SAE \u00b7 error-preserving",
+      "splice": "error_preserving",
+      "arm": "steer_-2",
+      "delta_pp": 25.269841269841265,
+      "ci95_pp": [
+        24.284920634920624,
+        26.158730158730148
+      ],
+      "p_value": 9.999000099990002e-05,
+      "ci95_pp_questions_and_draws": [
+        -0.22222222222222365,
+        52.254761904761914
+      ],
+      "n_random_draws": 7,
+      "targeted_vs_control_pp": -0.2222222222222222,
+      "random_draw_vs_control_pp": [
+        -0.2222222222222222,
+        0.0,
+        -0.2222222222222222,
+        0.0,
+        0.0,
+        -89.11111111111111,
+        -88.88888888888889
+      ],
+      "draw_tail_fraction": 0.625
+    },
+    {
+      "experiment": "TopK SAE \u00b7 error-preserving",
+      "splice": "error_preserving",
+      "arm": "steer_+2",
+      "delta_pp": 0.0,
+      "ci95_pp": [
+        0.0,
+        0.0
+      ],
+      "p_value": 1.0,
+      "ci95_pp_questions_and_draws": [
+        0.0,
+        0.0
+      ],
+      "n_random_draws": 7,
+      "targeted_vs_control_pp": 0.0,
+      "random_draw_vs_control_pp": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "draw_tail_fraction": 1.0
+    },
+    {
+      "experiment": "TopK SAE \u00b7 error-preserving",
+      "splice": "error_preserving",
+      "arm": "steer_+5",
+      "delta_pp": 8.0,
+      "ci95_pp": [
+        6.761904761904762,
+        9.174603174603172
+      ],
+      "p_value": 9.999000099990002e-05,
+      "ci95_pp_questions_and_draws": [
+        -0.5714285714285672,
+        19.143650793650792
+      ],
+      "n_random_draws": 7,
+      "targeted_vs_control_pp": -0.4444444444444444,
+      "random_draw_vs_control_pp": [
+        -0.2222222222222222,
+        -0.2222222222222222,
+        0.0,
+        0.0,
+        0.0,
+        -23.555555555555554,
+        -35.11111111111111
+      ],
+      "draw_tail_fraction": 0.375
+    },
+    {
+      "experiment": "L1 SAE",
+      "splice": "reconstruction",
+      "arm": "steer_-2",
+      "delta_pp": -88.85714285714286,
+      "ci95_pp": [
+        -91.61984126984127,
+        -85.93650793650795
+      ],
+      "p_value": 9.999000099990002e-05,
+      "ci95_pp_questions_and_draws": [
+        -91.65079365079364,
+        -85.90396825396826
+      ],
+      "n_random_draws": 7,
+      "targeted_vs_control_pp": -88.88888888888889,
+      "random_draw_vs_control_pp": [
+        0.0,
+        -0.2222222222222222,
+        0.0,
+        0.2222222222222222,
+        -0.4444444444444444,
+        0.2222222222222222,
+        0.0
+      ],
+      "draw_tail_fraction": 0.125,
+      "p_value_holm": 0.0008999100089991002
+    },
+    {
+      "experiment": "L1 SAE",
+      "splice": "reconstruction",
+      "arm": "steer_+2",
+      "delta_pp": -15.904761904761907,
+      "ci95_pp": [
+        -19.23809523809524,
+        -12.603174603174605
+      ],
+      "p_value": 9.999000099990002e-05,
+      "ci95_pp_questions_and_draws": [
+        -19.17619047619047,
+        -12.634920634920633
+      ],
+      "n_random_draws": 7,
+      "targeted_vs_control_pp": -16.0,
+      "random_draw_vs_control_pp": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -0.4444444444444444,
+        0.0,
+        -0.2222222222222222
+      ],
+      "draw_tail_fraction": 0.125,
+      "p_value_holm": 0.0008999100089991002
+    },
+    {
+      "experiment": "L1 SAE",
+      "splice": "reconstruction",
+      "arm": "steer_+5",
+      "delta_pp": -77.11111111111111,
+      "ci95_pp": [
+        -80.44444444444444,
+        -73.8095238095238
+      ],
+      "p_value": 9.999000099990002e-05,
+      "ci95_pp_questions_and_draws": [
+        -85.84206349206349,
+        -63.48888888888888
+      ],
+      "n_random_draws": 7,
+      "targeted_vs_control_pp": -84.88888888888889,
+      "random_draw_vs_control_pp": [
+        0.0,
+        -0.2222222222222222,
+        -3.7777777777777777,
+        -0.8888888888888888,
+        -45.111111111111114,
+        -1.1111111111111112,
+        -3.3333333333333335
+      ],
+      "draw_tail_fraction": 0.125,
+      "p_value_holm": 0.0008999100089991002
+    },
+    {
+      "experiment": "L1 SAE \u00b7 error-preserving",
+      "splice": "error_preserving",
+      "arm": "steer_-2",
+      "delta_pp": -88.1904761904762,
+      "ci95_pp": [
+        -91.01666666666667,
+        -85.14126984126985
+      ],
+      "p_value": 9.999000099990002e-05,
+      "ci95_pp_questions_and_draws": [
+        -91.01587301587301,
+        -85.17222222222223
+      ],
+      "n_random_draws": 7,
+      "targeted_vs_control_pp": -88.22222222222223,
+      "random_draw_vs_control_pp": [
+        0.0,
+        -0.4444444444444444,
+        0.2222222222222222,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "draw_tail_fraction": 0.125
+    },
+    {
+      "experiment": "L1 SAE \u00b7 error-preserving",
+      "splice": "error_preserving",
+      "arm": "steer_+2",
+      "delta_pp": -4.507936507936508,
+      "ci95_pp": [
+        -6.6349206349206336,
+        -2.6015873015873034
+      ],
+      "p_value": 9.999000099990002e-05,
+      "ci95_pp_questions_and_draws": [
+        -6.698412698412692,
+        -2.601587301587296
+      ],
+      "n_random_draws": 7,
+      "targeted_vs_control_pp": -4.888888888888889,
+      "random_draw_vs_control_pp": [
+        -0.2222222222222222,
+        -0.2222222222222222,
+        -0.6666666666666667,
+        -0.4444444444444444,
+        -0.4444444444444444,
+        0.0,
+        -0.6666666666666667
+      ],
+      "draw_tail_fraction": 0.125
+    },
+    {
+      "experiment": "L1 SAE \u00b7 error-preserving",
+      "splice": "error_preserving",
+      "arm": "steer_+5",
+      "delta_pp": -79.80952380952382,
+      "ci95_pp": [
+        -83.11190476190477,
+        -76.53968253968254
+      ],
+      "p_value": 9.999000099990002e-05,
+      "ci95_pp_questions_and_draws": [
+        -86.19047619047619,
+        -70.95238095238095
+      ],
+      "n_random_draws": 7,
+      "targeted_vs_control_pp": -84.66666666666667,
+      "random_draw_vs_control_pp": [
+        -0.4444444444444444,
+        -0.4444444444444444,
+        -1.7777777777777777,
+        -0.4444444444444444,
+        -27.333333333333332,
+        -0.8888888888888888,
+        -2.666666666666667
+      ],
+      "draw_tail_fraction": 0.125
+    },
+    {
+      "experiment": "Pretrained SAE",
+      "splice": "reconstruction",
+      "arm": "steer_-2",
+      "delta_pp": -0.41269841269841245,
+      "ci95_pp": [
+        -1.3333333333333335,
+        0.3174603174603177
+      ],
+      "p_value": 0.4390560943905609,
+      "ci95_pp_questions_and_draws": [
+        -1.4603174603174618,
+        0.7944444444444411
+      ],
+      "n_random_draws": 7,
+      "targeted_vs_control_pp": -0.8888888888888888,
+      "random_draw_vs_control_pp": [
+        -0.2222222222222222,
+        0.2222222222222222,
+        -0.2222222222222222,
+        -0.2222222222222222,
+        -2.666666666666667,
+        -0.2222222222222222,
+        0.0
+      ],
+      "draw_tail_fraction": 0.25,
+      "p_value_holm": 1.0
+    },
+    {
+      "experiment": "Pretrained SAE",
+      "splice": "reconstruction",
+      "arm": "steer_+2",
+      "delta_pp": -0.06349206349206349,
+      "ci95_pp": [
+        -0.5714285714285714,
+        0.31746031746031744
+      ],
+      "p_value": 1.0,
+      "ci95_pp_questions_and_draws": [
+        -0.5714285714285672,
+        0.3809523809523818
+      ],
+      "n_random_draws": 7,
+      "targeted_vs_control_pp": -0.2222222222222222,
+      "random_draw_vs_control_pp": [
+        -0.2222222222222222,
+        -0.4444444444444444,
+        -0.2222222222222222,
+        0.0,
+        0.0,
+        0.0,
+        -0.2222222222222222
+      ],
+      "draw_tail_fraction": 0.625,
+      "p_value_holm": 1.0
+    },
+    {
+      "experiment": "Pretrained SAE",
+      "splice": "reconstruction",
+      "arm": "steer_+5",
+      "delta_pp": 0.12698412698412714,
+      "ci95_pp": [
+        -0.47619047619047605,
+        0.634920634920635
+      ],
+      "p_value": 0.7459254074592541,
+      "ci95_pp_questions_and_draws": [
+        -0.7944444444444523,
+        1.1428571428571348
+      ],
+      "n_random_draws": 7,
+      "targeted_vs_control_pp": -0.6666666666666667,
+      "random_draw_vs_control_pp": [
+        -0.6666666666666667,
+        -2.666666666666667,
+        -1.5555555555555556,
+        -0.2222222222222222,
+        0.0,
+        -0.2222222222222222,
+        -0.2222222222222222
+      ],
+      "draw_tail_fraction": 0.5,
+      "p_value_holm": 1.0
+    },
+    {
+      "experiment": "Pretrained SAE \u00b7 error-preserving",
+      "splice": "error_preserving",
+      "arm": "steer_-2",
+      "delta_pp": -0.5714285714285714,
+      "ci95_pp": [
+        -1.3976190476190475,
+        0.09523809523809527
+      ],
+      "p_value": 0.21287871212878712,
+      "ci95_pp_questions_and_draws": [
+        -1.4285714285714346,
+        0.12698412698413097
+      ],
+      "n_random_draws": 7,
+      "targeted_vs_control_pp": -0.6666666666666667,
+      "random_draw_vs_control_pp": [
+        0.0,
+        -0.4444444444444444,
+        0.0,
+        0.0,
+        -0.2222222222222222,
+        0.0,
+        0.0
+      ],
+      "draw_tail_fraction": 0.125
+    },
+    {
+      "experiment": "Pretrained SAE \u00b7 error-preserving",
+      "splice": "error_preserving",
+      "arm": "steer_+2",
+      "delta_pp": 0.09523809523809527,
+      "ci95_pp": [
+        0.0,
+        0.22222222222222232
+      ],
+      "p_value": 0.25237476252374763,
+      "ci95_pp_questions_and_draws": [
+        0.0,
+        0.3182539682539771
+      ],
+      "n_random_draws": 7,
+      "targeted_vs_control_pp": 0.0,
+      "random_draw_vs_control_pp": [
+        0.0,
+        -0.4444444444444444,
+        -0.2222222222222222,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "draw_tail_fraction": 1.0
+    },
+    {
+      "experiment": "Pretrained SAE \u00b7 error-preserving",
+      "splice": "error_preserving",
+      "arm": "steer_+5",
+      "delta_pp": 0.15873015873015875,
+      "ci95_pp": [
+        -0.22222222222222213,
+        0.5396825396825398
+      ],
+      "p_value": 0.5325467453254674,
+      "ci95_pp_questions_and_draws": [
+        -0.31746031746031633,
+        0.6992063492063484
+      ],
+      "n_random_draws": 7,
+      "targeted_vs_control_pp": -0.2222222222222222,
+      "random_draw_vs_control_pp": [
+        -0.2222222222222222,
+        -1.3333333333333335,
+        -0.4444444444444444,
+        -0.2222222222222222,
+        -0.2222222222222222,
+        0.0,
+        -0.2222222222222222
+      ],
+      "draw_tail_fraction": 0.875
+    }
+  ],
+  "dose_response": [
+    {
+      "Experiment": "TopK SAE",
+      "Splice": "reconstruction",
+      "Arm": "steer_-2",
+      "Strength (\u00d7 ref)": -2.0,
+      "N": 450,
+      "Targeted acceptance (%)": 89.33333333333333,
+      "Targeted \u0394 vs. control (pp)": -0.2222222222222222,
+      "Random acceptance (%)": 64.0,
+      "Random \u0394 vs. control (pp)": -25.555555555555546,
+      "Targeted \u2212 random (pp)": 25.333333333333325
+    },
+    {
+      "Experiment": "TopK SAE",
+      "Splice": "reconstruction",
+      "Arm": "steer_+2",
+      "Strength (\u00d7 ref)": 2.0,
+      "N": 450,
+      "Targeted acceptance (%)": 89.55555555555556,
+      "Targeted \u0394 vs. control (pp)": 0.0,
+      "Random acceptance (%)": 89.55555555555556,
+      "Random \u0394 vs. control (pp)": 0.0,
+      "Targeted \u2212 random (pp)": 0.0
+    },
+    {
+      "Experiment": "TopK SAE",
+      "Splice": "reconstruction",
+      "Arm": "steer_+5",
+      "Strength (\u00d7 ref)": 5.0,
+      "N": 450,
+      "Targeted acceptance (%)": 89.11111111111111,
+      "Targeted \u0394 vs. control (pp)": -0.4444444444444444,
+      "Random acceptance (%)": 80.5079365079365,
+      "Random \u0394 vs. control (pp)": -9.047619047619046,
+      "Targeted \u2212 random (pp)": 8.603174603174601
+    },
+    {
+      "Experiment": "TopK SAE \u00b7 error-preserving",
+      "Splice": "error_preserving",
+      "Arm": "steer_-2",
+      "Strength (\u00d7 ref)": -2.0,
+      "N": 450,
+      "Targeted acceptance (%)": 89.33333333333333,
+      "Targeted \u0394 vs. control (pp)": -0.2222222222222222,
+      "Random acceptance (%)": 64.06349206349206,
+      "Random \u0394 vs. control (pp)": -25.492063492063483,
+      "Targeted \u2212 random (pp)": 25.269841269841265
+    },
+    {
+      "Experiment": "TopK SAE \u00b7 error-preserving",
+      "Splice": "error_preserving",
+      "Arm": "steer_+2",
+      "Strength (\u00d7 ref)": 2.0,
+      "N": 450,
+      "Targeted acceptance (%)": 89.55555555555556,
+      "Targeted \u0394 vs. control (pp)": 0.0,
+      "Random acceptance (%)": 89.55555555555556,
+      "Random \u0394 vs. control (pp)": 0.0,
+      "Targeted \u2212 random (pp)": 0.0
+    },
+    {
+      "Experiment": "TopK SAE \u00b7 error-preserving",
+      "Splice": "error_preserving",
+      "Arm": "steer_+5",
+      "Strength (\u00d7 ref)": 5.0,
+      "N": 450,
+      "Targeted acceptance (%)": 89.11111111111111,
+      "Targeted \u0394 vs. control (pp)": -0.4444444444444444,
+      "Random acceptance (%)": 81.11111111111111,
+      "Random \u0394 vs. control (pp)": -8.444444444444445,
+      "Targeted \u2212 random (pp)": 8.0
+    },
+    {
+      "Experiment": "L1 SAE",
+      "Splice": "reconstruction",
+      "Arm": "steer_-2",
+      "Strength (\u00d7 ref)": -2.0,
+      "N": 450,
+      "Targeted acceptance (%)": 0.6666666666666667,
+      "Targeted \u0394 vs. control (pp)": -88.88888888888889,
+      "Random acceptance (%)": 89.52380952380953,
+      "Random \u0394 vs. control (pp)": -0.031746031746031786,
+      "Targeted \u2212 random (pp)": -88.85714285714286
+    },
+    {
+      "Experiment": "L1 SAE",
+      "Splice": "reconstruction",
+      "Arm": "steer_+2",
+      "Strength (\u00d7 ref)": 2.0,
+      "N": 450,
+      "Targeted acceptance (%)": 73.55555555555556,
+      "Targeted \u0394 vs. control (pp)": -16.0,
+      "Random acceptance (%)": 89.46031746031747,
+      "Random \u0394 vs. control (pp)": -0.09523809523809526,
+      "Targeted \u2212 random (pp)": -15.904761904761907
+    },
+    {
+      "Experiment": "L1 SAE",
+      "Splice": "reconstruction",
+      "Arm": "steer_+5",
+      "Strength (\u00d7 ref)": 5.0,
+      "N": 450,
+      "Targeted acceptance (%)": 4.666666666666667,
+      "Targeted \u0394 vs. control (pp)": -84.88888888888889,
+      "Random acceptance (%)": 81.77777777777779,
+      "Random \u0394 vs. control (pp)": -7.7777777777777795,
+      "Targeted \u2212 random (pp)": -77.11111111111111
+    },
+    {
+      "Experiment": "L1 SAE \u00b7 error-preserving",
+      "Splice": "error_preserving",
+      "Arm": "steer_-2",
+      "Strength (\u00d7 ref)": -2.0,
+      "N": 450,
+      "Targeted acceptance (%)": 1.3333333333333335,
+      "Targeted \u0394 vs. control (pp)": -88.22222222222223,
+      "Random acceptance (%)": 89.52380952380953,
+      "Random \u0394 vs. control (pp)": -0.031746031746031765,
+      "Targeted \u2212 random (pp)": -88.1904761904762
+    },
+    {
+      "Experiment": "L1 SAE \u00b7 error-preserving",
+      "Splice": "error_preserving",
+      "Arm": "steer_+2",
+      "Strength (\u00d7 ref)": 2.0,
+      "N": 450,
+      "Targeted acceptance (%)": 84.66666666666667,
+      "Targeted \u0394 vs. control (pp)": -4.888888888888889,
+      "Random acceptance (%)": 89.17460317460318,
+      "Random \u0394 vs. control (pp)": -0.38095238095238093,
+      "Targeted \u2212 random (pp)": -4.507936507936508
+    },
+    {
+      "Experiment": "L1 SAE \u00b7 error-preserving",
+      "Splice": "error_preserving",
+      "Arm": "steer_+5",
+      "Strength (\u00d7 ref)": 5.0,
+      "N": 450,
+      "Targeted acceptance (%)": 4.888888888888889,
+      "Targeted \u0394 vs. control (pp)": -84.66666666666667,
+      "Random acceptance (%)": 84.6984126984127,
+      "Random \u0394 vs. control (pp)": -4.857142857142858,
+      "Targeted \u2212 random (pp)": -79.80952380952382
+    },
+    {
+      "Experiment": "Pretrained SAE",
+      "Splice": "reconstruction",
+      "Arm": "steer_-2",
+      "Strength (\u00d7 ref)": -2.0,
+      "N": 450,
+      "Targeted acceptance (%)": 88.66666666666667,
+      "Targeted \u0394 vs. control (pp)": -0.8888888888888888,
+      "Random acceptance (%)": 89.07936507936508,
+      "Random \u0394 vs. control (pp)": -0.4761904761904764,
+      "Targeted \u2212 random (pp)": -0.41269841269841245
+    },
+    {
+      "Experiment": "Pretrained SAE",
+      "Splice": "reconstruction",
+      "Arm": "steer_+2",
+      "Strength (\u00d7 ref)": 2.0,
+      "N": 450,
+      "Targeted acceptance (%)": 89.33333333333333,
+      "Targeted \u0394 vs. control (pp)": -0.2222222222222222,
+      "Random acceptance (%)": 89.39682539682539,
+      "Random \u0394 vs. control (pp)": -0.15873015873015872,
+      "Targeted \u2212 random (pp)": -0.06349206349206349
+    },
+    {
+      "Experiment": "Pretrained SAE",
+      "Splice": "reconstruction",
+      "Arm": "steer_+5",
+      "Strength (\u00d7 ref)": 5.0,
+      "N": 450,
+      "Targeted acceptance (%)": 88.88888888888889,
+      "Targeted \u0394 vs. control (pp)": -0.6666666666666667,
+      "Random acceptance (%)": 88.76190476190476,
+      "Random \u0394 vs. control (pp)": -0.7936507936507938,
+      "Targeted \u2212 random (pp)": 0.12698412698412714
+    },
+    {
+      "Experiment": "Pretrained SAE \u00b7 error-preserving",
+      "Splice": "error_preserving",
+      "Arm": "steer_-2",
+      "Strength (\u00d7 ref)": -2.0,
+      "N": 450,
+      "Targeted acceptance (%)": 88.88888888888889,
+      "Targeted \u0394 vs. control (pp)": -0.6666666666666667,
+      "Random acceptance (%)": 89.46031746031747,
+      "Random \u0394 vs. control (pp)": -0.09523809523809529,
+      "Targeted \u2212 random (pp)": -0.5714285714285714
+    },
+    {
+      "Experiment": "Pretrained SAE \u00b7 error-preserving",
+      "Splice": "error_preserving",
+      "Arm": "steer_+2",
+      "Strength (\u00d7 ref)": 2.0,
+      "N": 450,
+      "Targeted acceptance (%)": 89.55555555555556,
+      "Targeted \u0394 vs. control (pp)": 0.0,
+      "Random acceptance (%)": 89.46031746031747,
+      "Random \u0394 vs. control (pp)": -0.09523809523809527,
+      "Targeted \u2212 random (pp)": 0.09523809523809527
+    },
+    {
+      "Experiment": "Pretrained SAE \u00b7 error-preserving",
+      "Splice": "error_preserving",
+      "Arm": "steer_+5",
+      "Strength (\u00d7 ref)": 5.0,
+      "N": 450,
+      "Targeted acceptance (%)": 89.33333333333333,
+      "Targeted \u0394 vs. control (pp)": -0.2222222222222222,
+      "Random acceptance (%)": 89.17460317460318,
+      "Random \u0394 vs. control (pp)": -0.380952380952381,
+      "Targeted \u2212 random (pp)": 0.15873015873015875
+    }
+  ],
+  "steering_bidirectional": [
+    {
+      "Experiment": "TopK SAE",
+      "Splice": "reconstruction",
+      "Strength (\u00d7 ref)": 2.0,
+      "N": 450,
+      "Targeted \u0394(+s) \u2212 \u0394(\u2212s) (pp)": 0.2222222222222222,
+      "Random \u0394(+s) \u2212 \u0394(\u2212s) (pp)": 25.555555555555546,
+      "Targeted \u2212 random (pp)": -25.333333333333325,
+      "95% CI": "[-26.22, -24.38]",
+      "p-value": 9.999000099990002e-05
+    },
+    {
+      "Experiment": "TopK SAE \u00b7 error-preserving",
+      "Splice": "error_preserving",
+      "Strength (\u00d7 ref)": 2.0,
+      "N": 450,
+      "Targeted \u0394(+s) \u2212 \u0394(\u2212s) (pp)": 0.2222222222222222,
+      "Random \u0394(+s) \u2212 \u0394(\u2212s) (pp)": 25.492063492063483,
+      "Targeted \u2212 random (pp)": -25.269841269841265,
+      "95% CI": "[-26.16, -24.28]",
+      "p-value": 9.999000099990002e-05
+    },
+    {
+      "Experiment": "L1 SAE",
+      "Splice": "reconstruction",
+      "Strength (\u00d7 ref)": 2.0,
+      "N": 450,
+      "Targeted \u0394(+s) \u2212 \u0394(\u2212s) (pp)": 72.88888888888889,
+      "Random \u0394(+s) \u2212 \u0394(\u2212s) (pp)": -0.06349206349206349,
+      "Targeted \u2212 random (pp)": 72.95238095238096,
+      "95% CI": "[68.82, 76.83]",
+      "p-value": 9.999000099990002e-05
+    },
+    {
+      "Experiment": "L1 SAE \u00b7 error-preserving",
+      "Splice": "error_preserving",
+      "Strength (\u00d7 ref)": 2.0,
+      "N": 450,
+      "Targeted \u0394(+s) \u2212 \u0394(\u2212s) (pp)": 83.33333333333334,
+      "Random \u0394(+s) \u2212 \u0394(\u2212s) (pp)": -0.3492063492063492,
+      "Targeted \u2212 random (pp)": 83.68253968253968,
+      "95% CI": "[80.25, 86.92]",
+      "p-value": 9.999000099990002e-05
+    },
+    {
+      "Experiment": "Pretrained SAE",
+      "Splice": "reconstruction",
+      "Strength (\u00d7 ref)": 2.0,
+      "N": 450,
+      "Targeted \u0394(+s) \u2212 \u0394(\u2212s) (pp)": 0.6666666666666667,
+      "Random \u0394(+s) \u2212 \u0394(\u2212s) (pp)": 0.3174603174603176,
+      "Targeted \u2212 random (pp)": 0.34920634920634913,
+      "95% CI": "[-0.73, 1.49]",
+      "p-value": 0.5943405659434057
+    },
+    {
+      "Experiment": "Pretrained SAE \u00b7 error-preserving",
+      "Splice": "error_preserving",
+      "Strength (\u00d7 ref)": 2.0,
+      "N": 450,
+      "Targeted \u0394(+s) \u2212 \u0394(\u2212s) (pp)": 0.6666666666666667,
+      "Random \u0394(+s) \u2212 \u0394(\u2212s) (pp)": 2.4671622769447922e-17,
+      "Targeted \u2212 random (pp)": 0.6666666666666667,
+      "95% CI": "[-0.06, 1.56]",
+      "p-value": 0.18438156184381563
+    }
+  ],
+  "multiple_comparisons": "Confirmatory families: targeted minus mean random edit with the reconstruction splice, one test per SAE for ablation, and one per SAE and strength for steering, each family Holm-adjusted separately (p_value_holm). These p-values are conditional on the random draws used; ci95_pp_questions_and_draws also resamples the draws, a broader source of uncertainty. draw_tail_fraction is a descriptive tail fraction, not a test: the probe-selected targeted set and the frequency-matched random sets are not shown to be exchangeable under a null. Error-preserving, per-condition, per-draw, dose-response, bidirectional and diagnostic results are sensitivity / exploratory and not adjusted.",
+  "reconstruction_damage": [
+    {
+      "Experiment": "TopK SAE",
+      "N": 450,
+      "Plain replay acceptance (%)": 89.55555555555556,
+      "Reconstruction-only acceptance (%)": 89.55555555555556,
+      "\u0394 (pp)": 0.0,
+      "95% CI for \u0394": "[0.00, 0.00]",
+      "p-value": 1.0,
+      "Answer changed vs. control (%)": 1.1111111111111112,
+      "Label changed vs. control (%)": 0.6666666666666667,
+      "First token changed vs. control (%)": 1.1111111111111112,
+      "\u0394 log p(control's first token)": -0.003998826711084449,
+      "95% CI for \u0394 log p": "[-0.015, 0.003]",
+      "Mean reconstruction error (rel. to |x|)": 0.048035707440641194
+    },
+    {
+      "Experiment": "L1 SAE",
+      "N": 450,
+      "Plain replay acceptance (%)": 89.55555555555556,
+      "Reconstruction-only acceptance (%)": 89.55555555555556,
+      "\u0394 (pp)": 0.0,
+      "95% CI for \u0394": "[0.00, 0.00]",
+      "p-value": 1.0,
+      "Answer changed vs. control (%)": 2.0,
+      "Label changed vs. control (%)": 0.8888888888888888,
+      "First token changed vs. control (%)": 2.0,
+      "\u0394 log p(control's first token)": -0.046153928510051984,
+      "95% CI for \u0394 log p": "[-0.082, -0.013]",
+      "Mean reconstruction error (rel. to |x|)": 0.05733338541454739
+    },
+    {
+      "Experiment": "Pretrained SAE",
+      "N": 450,
+      "Plain replay acceptance (%)": 89.55555555555556,
+      "Reconstruction-only acceptance (%)": 89.55555555555556,
+      "\u0394 (pp)": 0.0,
+      "95% CI for \u0394": "[0.00, 0.00]",
+      "p-value": 1.0,
+      "Answer changed vs. control (%)": 2.0,
+      "Label changed vs. control (%)": 0.8888888888888888,
+      "First token changed vs. control (%)": 1.7777777777777777,
+      "\u0394 log p(control's first token)": -0.043288739513094594,
+      "95% CI for \u0394 log p": "[-0.093, -0.009]",
+      "Mean reconstruction error (rel. to |x|)": 0.12539303772979313
+    }
+  ],
+  "diagnostics": [
+    {
+      "Experiment": "Baseline",
+      "Condition": "No SAE (replayed A2)",
+      "Generations": 450,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 0.0
+    },
+    {
+      "Experiment": "TopK SAE",
+      "Condition": "No ablation",
+      "Generations": 450,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 0.0,
+      "Answer changed vs. control (%)": 1.1111111111111112,
+      "Label changed vs. control (%)": 0.6666666666666667,
+      "First token changed vs. control (%)": 1.1111111111111112,
+      "\u0394 log p(control's first token)": -0.003998826711084449,
+      "95% CI for \u0394 log p": "[-0.015, 0.003]",
+      "Edited features all inactive before the edit (%)": null,
+      "Mean edited features active before the edit": null,
+      "Mean edit norm (rel. to |x|)": null,
+      "Mean reconstruction error (rel. to |x|)": 0.048035707440641194
+    },
+    {
+      "Experiment": "TopK SAE",
+      "Condition": "Targeted steer (-2\u00d7 ref)",
+      "Generations": 450,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 0.0,
+      "Answer changed vs. control (%)": 2.666666666666667,
+      "Label changed vs. control (%)": 1.1111111111111112,
+      "First token changed vs. control (%)": 2.4444444444444446,
+      "\u0394 log p(control's first token)": -0.053545916059776,
+      "95% CI for \u0394 log p": "[-0.092, -0.023]",
+      "Edited features all inactive before the edit (%)": 0.0,
+      "Mean edited features active before the edit": 8.551111111111112,
+      "Mean edit norm (rel. to |x|)": 0.11253121082981428,
+      "Mean reconstruction error (rel. to |x|)": 0.048035707440641194
+    },
+    {
+      "Experiment": "TopK SAE",
+      "Condition": "Random steer (-2\u00d7 ref)",
+      "Generations": 3150,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 0.5714285714285714,
+      "Answer changed vs. control (%)": 29.714285714285715,
+      "Label changed vs. control (%)": 27.269841269841272,
+      "First token changed vs. control (%)": 29.746031746031747,
+      "\u0394 log p(control's first token)": -4.964969444888459,
+      "95% CI for \u0394 log p": "[-5.103, -4.834]",
+      "Edited features all inactive before the edit (%)": 0.0,
+      "Mean edited features active before the edit": 8.351746031746032,
+      "Mean edit norm (rel. to |x|)": 0.8201912830911932,
+      "Mean reconstruction error (rel. to |x|)": 0.048035707440641194
+    },
+    {
+      "Experiment": "TopK SAE",
+      "Condition": "Targeted steer (+2\u00d7 ref)",
+      "Generations": 450,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 0.0,
+      "Answer changed vs. control (%)": 0.8888888888888888,
+      "Label changed vs. control (%)": 0.4444444444444444,
+      "First token changed vs. control (%)": 0.8888888888888888,
+      "\u0394 log p(control's first token)": -0.002499797699885641,
+      "95% CI for \u0394 log p": "[-0.010, 0.005]",
+      "Edited features all inactive before the edit (%)": 0.0,
+      "Mean edited features active before the edit": 8.551111111111112,
+      "Mean edit norm (rel. to |x|)": 0.046102921950320404,
+      "Mean reconstruction error (rel. to |x|)": 0.048035707440641194
+    },
+    {
+      "Experiment": "TopK SAE",
+      "Condition": "Random steer (+2\u00d7 ref)",
+      "Generations": 3150,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 0.0,
+      "Answer changed vs. control (%)": 1.5238095238095237,
+      "Label changed vs. control (%)": 0.5714285714285714,
+      "First token changed vs. control (%)": 1.5238095238095237,
+      "\u0394 log p(control's first token)": -0.03154814671663919,
+      "95% CI for \u0394 log p": "[-0.047, -0.016]",
+      "Edited features all inactive before the edit (%)": 0.0,
+      "Mean edited features active before the edit": 8.351746031746032,
+      "Mean edit norm (rel. to |x|)": 0.2810716299109516,
+      "Mean reconstruction error (rel. to |x|)": 0.048035707440641194
+    },
+    {
+      "Experiment": "TopK SAE",
+      "Condition": "Targeted steer (+5\u00d7 ref)",
+      "Generations": 450,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 0.0,
+      "Answer changed vs. control (%)": 2.0,
+      "Label changed vs. control (%)": 1.3333333333333335,
+      "First token changed vs. control (%)": 2.0,
+      "\u0394 log p(control's first token)": -0.0461900989671911,
+      "95% CI for \u0394 log p": "[-0.088, -0.013]",
+      "Edited features all inactive before the edit (%)": 0.0,
+      "Mean edited features active before the edit": 8.551111111111112,
+      "Mean edit norm (rel. to |x|)": 0.15935743586884604,
+      "Mean reconstruction error (rel. to |x|)": 0.048035707440641194
+    },
+    {
+      "Experiment": "TopK SAE",
+      "Condition": "Random steer (+5\u00d7 ref)",
+      "Generations": 3150,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 0.09523809523809523,
+      "Answer changed vs. control (%)": 15.492063492063494,
+      "Label changed vs. control (%)": 11.047619047619047,
+      "First token changed vs. control (%)": 15.428571428571427,
+      "\u0394 log p(control's first token)": -0.659251156183536,
+      "95% CI for \u0394 log p": "[-0.754, -0.572]",
+      "Edited features all inactive before the edit (%)": 0.0,
+      "Mean edited features active before the edit": 8.351746031746032,
+      "Mean edit norm (rel. to |x|)": 1.1020984203025461,
+      "Mean reconstruction error (rel. to |x|)": 0.048035707440641194
+    },
+    {
+      "Experiment": "TopK SAE \u00b7 error-preserving",
+      "Condition": "Targeted steer (-2\u00d7 ref)",
+      "Generations": 450,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 0.0,
+      "Answer changed vs. control (%)": 2.666666666666667,
+      "Label changed vs. control (%)": 0.6666666666666667,
+      "First token changed vs. control (%)": 2.4444444444444446,
+      "\u0394 log p(control's first token)": -0.04829175114943974,
+      "95% CI for \u0394 log p": "[-0.085, -0.019]",
+      "Edited features all inactive before the edit (%)": 0.0,
+      "Mean edited features active before the edit": 8.551111111111112,
+      "Mean edit norm (rel. to |x|)": 0.11253121082981428,
+      "Mean reconstruction error (rel. to |x|)": 0.048035707440641194
+    },
+    {
+      "Experiment": "TopK SAE \u00b7 error-preserving",
+      "Condition": "Random steer (-2\u00d7 ref)",
+      "Generations": 3150,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 0.7301587301587302,
+      "Answer changed vs. control (%)": 29.841269841269842,
+      "Label changed vs. control (%)": 27.23809523809524,
+      "First token changed vs. control (%)": 29.968253968253965,
+      "\u0394 log p(control's first token)": -4.854545432329738,
+      "95% CI for \u0394 log p": "[-4.991, -4.722]",
+      "Edited features all inactive before the edit (%)": 0.0,
+      "Mean edited features active before the edit": 8.351746031746032,
+      "Mean edit norm (rel. to |x|)": 0.8201912830911932,
+      "Mean reconstruction error (rel. to |x|)": 0.048035707440641194
+    },
+    {
+      "Experiment": "TopK SAE \u00b7 error-preserving",
+      "Condition": "Targeted steer (+2\u00d7 ref)",
+      "Generations": 450,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 0.0,
+      "Answer changed vs. control (%)": 1.1111111111111112,
+      "Label changed vs. control (%)": 0.6666666666666667,
+      "First token changed vs. control (%)": 1.1111111111111112,
+      "\u0394 log p(control's first token)": -0.014558907235840038,
+      "95% CI for \u0394 log p": "[-0.034, 0.000]",
+      "Edited features all inactive before the edit (%)": 0.0,
+      "Mean edited features active before the edit": 8.551111111111112,
+      "Mean edit norm (rel. to |x|)": 0.046102921950320404,
+      "Mean reconstruction error (rel. to |x|)": 0.048035707440641194
+    },
+    {
+      "Experiment": "TopK SAE \u00b7 error-preserving",
+      "Condition": "Random steer (+2\u00d7 ref)",
+      "Generations": 3150,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 0.0,
+      "Answer changed vs. control (%)": 1.492063492063492,
+      "Label changed vs. control (%)": 0.3492063492063492,
+      "First token changed vs. control (%)": 1.492063492063492,
+      "\u0394 log p(control's first token)": -0.0340045518760068,
+      "95% CI for \u0394 log p": "[-0.051, -0.018]",
+      "Edited features all inactive before the edit (%)": 0.0,
+      "Mean edited features active before the edit": 8.351746031746032,
+      "Mean edit norm (rel. to |x|)": 0.2810716299109516,
+      "Mean reconstruction error (rel. to |x|)": 0.048035707440641194
+    },
+    {
+      "Experiment": "TopK SAE \u00b7 error-preserving",
+      "Condition": "Targeted steer (+5\u00d7 ref)",
+      "Generations": 450,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 0.0,
+      "Answer changed vs. control (%)": 2.0,
+      "Label changed vs. control (%)": 1.1111111111111112,
+      "First token changed vs. control (%)": 2.0,
+      "\u0394 log p(control's first token)": -0.04867525956085048,
+      "95% CI for \u0394 log p": "[-0.093, -0.012]",
+      "Edited features all inactive before the edit (%)": 0.0,
+      "Mean edited features active before the edit": 8.551111111111112,
+      "Mean edit norm (rel. to |x|)": 0.15935743586884604,
+      "Mean reconstruction error (rel. to |x|)": 0.048035707440641194
+    },
+    {
+      "Experiment": "TopK SAE \u00b7 error-preserving",
+      "Condition": "Random steer (+5\u00d7 ref)",
+      "Generations": 3150,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 0.12698412698412698,
+      "Answer changed vs. control (%)": 15.079365079365079,
+      "Label changed vs. control (%)": 10.158730158730158,
+      "First token changed vs. control (%)": 15.015873015873016,
+      "\u0394 log p(control's first token)": -0.6026872167727518,
+      "95% CI for \u0394 log p": "[-0.690, -0.520]",
+      "Edited features all inactive before the edit (%)": 0.0,
+      "Mean edited features active before the edit": 8.351746031746032,
+      "Mean edit norm (rel. to |x|)": 1.1020984203025461,
+      "Mean reconstruction error (rel. to |x|)": 0.048035707440641194
+    },
+    {
+      "Experiment": "L1 SAE",
+      "Condition": "No ablation",
+      "Generations": 450,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 0.0,
+      "Answer changed vs. control (%)": 2.0,
+      "Label changed vs. control (%)": 0.8888888888888888,
+      "First token changed vs. control (%)": 2.0,
+      "\u0394 log p(control's first token)": -0.046153928510051984,
+      "95% CI for \u0394 log p": "[-0.082, -0.013]",
+      "Edited features all inactive before the edit (%)": null,
+      "Mean edited features active before the edit": null,
+      "Mean edit norm (rel. to |x|)": null,
+      "Mean reconstruction error (rel. to |x|)": 0.05733338541454739
+    },
+    {
+      "Experiment": "L1 SAE",
+      "Condition": "Targeted steer (-2\u00d7 ref)",
+      "Generations": 450,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 0.8888888888888888,
+      "Answer changed vs. control (%)": 99.77777777777777,
+      "Label changed vs. control (%)": 93.77777777777779,
+      "First token changed vs. control (%)": 100.0,
+      "\u0394 log p(control's first token)": -15.722864285376778,
+      "95% CI for \u0394 log p": "[-16.108, -15.325]",
+      "Edited features all inactive before the edit (%)": 0.0,
+      "Mean edited features active before the edit": 2.8088888888888888,
+      "Mean edit norm (rel. to |x|)": 2.825491976208157,
+      "Mean reconstruction error (rel. to |x|)": 0.05733338541454739
+    },
+    {
+      "Experiment": "L1 SAE",
+      "Condition": "Random steer (-2\u00d7 ref)",
+      "Generations": 3150,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 0.0,
+      "Answer changed vs. control (%)": 2.2857142857142856,
+      "Label changed vs. control (%)": 0.9841269841269842,
+      "First token changed vs. control (%)": 2.158730158730159,
+      "\u0394 log p(control's first token)": -0.052195451042230945,
+      "95% CI for \u0394 log p": "[-0.083, -0.026]",
+      "Edited features all inactive before the edit (%)": 32.12698412698413,
+      "Mean edited features active before the edit": 1.14,
+      "Mean edit norm (rel. to |x|)": 0.07603263242613702,
+      "Mean reconstruction error (rel. to |x|)": 0.05733338541454739
+    },
+    {
+      "Experiment": "L1 SAE",
+      "Condition": "Targeted steer (+2\u00d7 ref)",
+      "Generations": 450,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 0.0,
+      "Answer changed vs. control (%)": 21.555555555555557,
+      "Label changed vs. control (%)": 18.444444444444443,
+      "First token changed vs. control (%)": 21.555555555555557,
+      "\u0394 log p(control's first token)": -0.8611767520623349,
+      "95% CI for \u0394 log p": "[-1.039, -0.672]",
+      "Edited features all inactive before the edit (%)": 0.0,
+      "Mean edited features active before the edit": 2.8088888888888888,
+      "Mean edit norm (rel. to |x|)": 0.9767190464337667,
+      "Mean reconstruction error (rel. to |x|)": 0.05733338541454739
+    },
+    {
+      "Experiment": "L1 SAE",
+      "Condition": "Random steer (+2\u00d7 ref)",
+      "Generations": 3150,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 0.031746031746031744,
+      "Answer changed vs. control (%)": 2.253968253968254,
+      "Label changed vs. control (%)": 0.8253968253968255,
+      "First token changed vs. control (%)": 2.1904761904761907,
+      "\u0394 log p(control's first token)": -0.05788939413895895,
+      "95% CI for \u0394 log p": "[-0.091, -0.030]",
+      "Edited features all inactive before the edit (%)": 32.12698412698413,
+      "Mean edited features active before the edit": 1.14,
+      "Mean edit norm (rel. to |x|)": 0.06905582264657058,
+      "Mean reconstruction error (rel. to |x|)": 0.05733338541454739
+    },
+    {
+      "Experiment": "L1 SAE",
+      "Condition": "Targeted steer (+5\u00d7 ref)",
+      "Generations": 450,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 0.2222222222222222,
+      "Answer changed vs. control (%)": 94.66666666666667,
+      "Label changed vs. control (%)": 90.0,
+      "First token changed vs. control (%)": 94.66666666666667,
+      "\u0394 log p(control's first token)": -8.21758242166828,
+      "95% CI for \u0394 log p": "[-8.726, -7.754]",
+      "Edited features all inactive before the edit (%)": 0.0,
+      "Mean edited features active before the edit": 2.8088888888888888,
+      "Mean edit norm (rel. to |x|)": 3.821375534799364,
+      "Mean reconstruction error (rel. to |x|)": 0.05733338541454739
+    },
+    {
+      "Experiment": "L1 SAE",
+      "Condition": "Random steer (+5\u00d7 ref)",
+      "Generations": 3150,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 0.2857142857142857,
+      "Answer changed vs. control (%)": 12.920634920634921,
+      "Label changed vs. control (%)": 9.555555555555555,
+      "First token changed vs. control (%)": 12.793650793650793,
+      "\u0394 log p(control's first token)": -0.7540217492085619,
+      "95% CI for \u0394 log p": "[-0.907, -0.622]",
+      "Edited features all inactive before the edit (%)": 32.12698412698413,
+      "Mean edited features active before the edit": 1.14,
+      "Mean edit norm (rel. to |x|)": 0.17614912170975927,
+      "Mean reconstruction error (rel. to |x|)": 0.05733338541454739
+    },
+    {
+      "Experiment": "L1 SAE \u00b7 error-preserving",
+      "Condition": "Targeted steer (-2\u00d7 ref)",
+      "Generations": 450,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 2.2222222222222223,
+      "Answer changed vs. control (%)": 99.33333333333333,
+      "Label changed vs. control (%)": 93.11111111111111,
+      "First token changed vs. control (%)": 100.0,
+      "\u0394 log p(control's first token)": -15.254461268192012,
+      "95% CI for \u0394 log p": "[-15.626, -14.861]",
+      "Edited features all inactive before the edit (%)": 0.0,
+      "Mean edited features active before the edit": 2.8088888888888888,
+      "Mean edit norm (rel. to |x|)": 2.825491976208157,
+      "Mean reconstruction error (rel. to |x|)": 0.05733338541454739
+    },
+    {
+      "Experiment": "L1 SAE \u00b7 error-preserving",
+      "Condition": "Random steer (-2\u00d7 ref)",
+      "Generations": 3150,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 0.0,
+      "Answer changed vs. control (%)": 2.2222222222222223,
+      "Label changed vs. control (%)": 1.0476190476190477,
+      "First token changed vs. control (%)": 2.253968253968254,
+      "\u0394 log p(control's first token)": -0.05664858927636601,
+      "95% CI for \u0394 log p": "[-0.097, -0.028]",
+      "Edited features all inactive before the edit (%)": 32.12698412698413,
+      "Mean edited features active before the edit": 1.14,
+      "Mean edit norm (rel. to |x|)": 0.07603263242613702,
+      "Mean reconstruction error (rel. to |x|)": 0.05733338541454739
+    },
+    {
+      "Experiment": "L1 SAE \u00b7 error-preserving",
+      "Condition": "Targeted steer (+2\u00d7 ref)",
+      "Generations": 450,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 0.0,
+      "Answer changed vs. control (%)": 9.777777777777779,
+      "Label changed vs. control (%)": 6.222222222222222,
+      "First token changed vs. control (%)": 9.777777777777779,
+      "\u0394 log p(control's first token)": -0.37543171850542345,
+      "95% CI for \u0394 log p": "[-0.505, -0.256]",
+      "Edited features all inactive before the edit (%)": 0.0,
+      "Mean edited features active before the edit": 2.8088888888888888,
+      "Mean edit norm (rel. to |x|)": 0.9767190464337667,
+      "Mean reconstruction error (rel. to |x|)": 0.05733338541454739
+    },
+    {
+      "Experiment": "L1 SAE \u00b7 error-preserving",
+      "Condition": "Random steer (+2\u00d7 ref)",
+      "Generations": 3150,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 0.0,
+      "Answer changed vs. control (%)": 2.2222222222222223,
+      "Label changed vs. control (%)": 0.8253968253968255,
+      "First token changed vs. control (%)": 2.0952380952380953,
+      "\u0394 log p(control's first token)": -0.06426771975342632,
+      "95% CI for \u0394 log p": "[-0.113, -0.029]",
+      "Edited features all inactive before the edit (%)": 32.12698412698413,
+      "Mean edited features active before the edit": 1.14,
+      "Mean edit norm (rel. to |x|)": 0.06905582264657058,
+      "Mean reconstruction error (rel. to |x|)": 0.05733338541454739
+    },
+    {
+      "Experiment": "L1 SAE \u00b7 error-preserving",
+      "Condition": "Targeted steer (+5\u00d7 ref)",
+      "Generations": 450,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 0.2222222222222222,
+      "Answer changed vs. control (%)": 94.44444444444444,
+      "Label changed vs. control (%)": 90.0,
+      "First token changed vs. control (%)": 94.44444444444444,
+      "\u0394 log p(control's first token)": -7.596799839544376,
+      "95% CI for \u0394 log p": "[-8.063, -7.160]",
+      "Edited features all inactive before the edit (%)": 0.0,
+      "Mean edited features active before the edit": 2.8088888888888888,
+      "Mean edit norm (rel. to |x|)": 3.821375534799364,
+      "Mean reconstruction error (rel. to |x|)": 0.05733338541454739
+    },
+    {
+      "Experiment": "L1 SAE \u00b7 error-preserving",
+      "Condition": "Random steer (+5\u00d7 ref)",
+      "Generations": 3150,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 0.19047619047619047,
+      "Answer changed vs. control (%)": 9.523809523809524,
+      "Label changed vs. control (%)": 6.190476190476191,
+      "First token changed vs. control (%)": 9.333333333333334,
+      "\u0394 log p(control's first token)": -0.5299730155362932,
+      "95% CI for \u0394 log p": "[-0.671, -0.406]",
+      "Edited features all inactive before the edit (%)": 32.12698412698413,
+      "Mean edited features active before the edit": 1.14,
+      "Mean edit norm (rel. to |x|)": 0.17614912170975927,
+      "Mean reconstruction error (rel. to |x|)": 0.05733338541454739
+    },
+    {
+      "Experiment": "Pretrained SAE",
+      "Condition": "No ablation",
+      "Generations": 450,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 0.0,
+      "Answer changed vs. control (%)": 2.0,
+      "Label changed vs. control (%)": 0.8888888888888888,
+      "First token changed vs. control (%)": 1.7777777777777777,
+      "\u0394 log p(control's first token)": -0.043288739513094594,
+      "95% CI for \u0394 log p": "[-0.093, -0.009]",
+      "Edited features all inactive before the edit (%)": null,
+      "Mean edited features active before the edit": null,
+      "Mean edit norm (rel. to |x|)": null,
+      "Mean reconstruction error (rel. to |x|)": 0.12539303772979313
+    },
+    {
+      "Experiment": "Pretrained SAE",
+      "Condition": "Targeted steer (-2\u00d7 ref)",
+      "Generations": 450,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 0.0,
+      "Answer changed vs. control (%)": 2.666666666666667,
+      "Label changed vs. control (%)": 1.1111111111111112,
+      "First token changed vs. control (%)": 2.888888888888889,
+      "\u0394 log p(control's first token)": -0.0743335114149497,
+      "95% CI for \u0394 log p": "[-0.117, -0.040]",
+      "Edited features all inactive before the edit (%)": 0.0,
+      "Mean edited features active before the edit": 5.346666666666667,
+      "Mean edit norm (rel. to |x|)": 0.1859114010963175,
+      "Mean reconstruction error (rel. to |x|)": 0.12539303772979313
+    },
+    {
+      "Experiment": "Pretrained SAE",
+      "Condition": "Random steer (-2\u00d7 ref)",
+      "Generations": 3150,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 0.0,
+      "Answer changed vs. control (%)": 2.4761904761904763,
+      "Label changed vs. control (%)": 1.0158730158730158,
+      "First token changed vs. control (%)": 18.158730158730158,
+      "\u0394 log p(control's first token)": -1.9232353380513156,
+      "95% CI for \u0394 log p": "[-2.084, -1.763]",
+      "Edited features all inactive before the edit (%)": 0.31746031746031744,
+      "Mean edited features active before the edit": 4.4806349206349205,
+      "Mean edit norm (rel. to |x|)": 0.11290744022244499,
+      "Mean reconstruction error (rel. to |x|)": 0.12539303772979313
+    },
+    {
+      "Experiment": "Pretrained SAE",
+      "Condition": "Targeted steer (+2\u00d7 ref)",
+      "Generations": 450,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 0.0,
+      "Answer changed vs. control (%)": 2.4444444444444446,
+      "Label changed vs. control (%)": 1.1111111111111112,
+      "First token changed vs. control (%)": 2.0,
+      "\u0394 log p(control's first token)": -0.03560814220494662,
+      "95% CI for \u0394 log p": "[-0.068, -0.011]",
+      "Edited features all inactive before the edit (%)": 0.0,
+      "Mean edited features active before the edit": 5.346666666666667,
+      "Mean edit norm (rel. to |x|)": 0.06958621446043253,
+      "Mean reconstruction error (rel. to |x|)": 0.12539303772979313
+    },
+    {
+      "Experiment": "Pretrained SAE",
+      "Condition": "Random steer (+2\u00d7 ref)",
+      "Generations": 3150,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 0.0,
+      "Answer changed vs. control (%)": 1.650793650793651,
+      "Label changed vs. control (%)": 0.4444444444444444,
+      "First token changed vs. control (%)": 1.5555555555555556,
+      "\u0394 log p(control's first token)": -0.041424172181086516,
+      "95% CI for \u0394 log p": "[-0.066, -0.020]",
+      "Edited features all inactive before the edit (%)": 0.31746031746031744,
+      "Mean edited features active before the edit": 4.4806349206349205,
+      "Mean edit norm (rel. to |x|)": 0.06549069884336657,
+      "Mean reconstruction error (rel. to |x|)": 0.12539303772979313
+    },
+    {
+      "Experiment": "Pretrained SAE",
+      "Condition": "Targeted steer (+5\u00d7 ref)",
+      "Generations": 450,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 0.0,
+      "Answer changed vs. control (%)": 5.333333333333334,
+      "Label changed vs. control (%)": 1.7777777777777777,
+      "First token changed vs. control (%)": 5.111111111111112,
+      "\u0394 log p(control's first token)": -0.31142209662930725,
+      "95% CI for \u0394 log p": "[-0.472, -0.169]",
+      "Edited features all inactive before the edit (%)": 0.0,
+      "Mean edited features active before the edit": 5.346666666666667,
+      "Mean edit norm (rel. to |x|)": 0.24728529645337,
+      "Mean reconstruction error (rel. to |x|)": 0.12539303772979313
+    },
+    {
+      "Experiment": "Pretrained SAE",
+      "Condition": "Random steer (+5\u00d7 ref)",
+      "Generations": 3150,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 0.0,
+      "Answer changed vs. control (%)": 4.253968253968254,
+      "Label changed vs. control (%)": 1.5238095238095237,
+      "First token changed vs. control (%)": 4.1269841269841265,
+      "\u0394 log p(control's first token)": -0.20214201917548666,
+      "95% CI for \u0394 log p": "[-0.292, -0.123]",
+      "Edited features all inactive before the edit (%)": 0.31746031746031744,
+      "Mean edited features active before the edit": 4.4806349206349205,
+      "Mean edit norm (rel. to |x|)": 0.19332675472374947,
+      "Mean reconstruction error (rel. to |x|)": 0.12539303772979313
+    },
+    {
+      "Experiment": "Pretrained SAE \u00b7 error-preserving",
+      "Condition": "Targeted steer (-2\u00d7 ref)",
+      "Generations": 450,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 0.0,
+      "Answer changed vs. control (%)": 3.5555555555555554,
+      "Label changed vs. control (%)": 1.3333333333333335,
+      "First token changed vs. control (%)": 3.3333333333333335,
+      "\u0394 log p(control's first token)": -0.057626922318109716,
+      "95% CI for \u0394 log p": "[-0.090, -0.031]",
+      "Edited features all inactive before the edit (%)": 0.0,
+      "Mean edited features active before the edit": 5.346666666666667,
+      "Mean edit norm (rel. to |x|)": 0.1859114010963175,
+      "Mean reconstruction error (rel. to |x|)": 0.12539303772979313
+    },
+    {
+      "Experiment": "Pretrained SAE \u00b7 error-preserving",
+      "Condition": "Random steer (-2\u00d7 ref)",
+      "Generations": 3150,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 0.0,
+      "Answer changed vs. control (%)": 2.6984126984126986,
+      "Label changed vs. control (%)": 1.0158730158730158,
+      "First token changed vs. control (%)": 13.80952380952381,
+      "\u0394 log p(control's first token)": -1.3467539758037703,
+      "95% CI for \u0394 log p": "[-1.454, -1.241]",
+      "Edited features all inactive before the edit (%)": 0.31746031746031744,
+      "Mean edited features active before the edit": 4.4806349206349205,
+      "Mean edit norm (rel. to |x|)": 0.11290744022244499,
+      "Mean reconstruction error (rel. to |x|)": 0.12539303772979313
+    },
+    {
+      "Experiment": "Pretrained SAE \u00b7 error-preserving",
+      "Condition": "Targeted steer (+2\u00d7 ref)",
+      "Generations": 450,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 0.0,
+      "Answer changed vs. control (%)": 1.7777777777777777,
+      "Label changed vs. control (%)": 0.4444444444444444,
+      "First token changed vs. control (%)": 1.5555555555555556,
+      "\u0394 log p(control's first token)": -0.02131198236837253,
+      "95% CI for \u0394 log p": "[-0.043, -0.003]",
+      "Edited features all inactive before the edit (%)": 0.0,
+      "Mean edited features active before the edit": 5.346666666666667,
+      "Mean edit norm (rel. to |x|)": 0.06958621446043253,
+      "Mean reconstruction error (rel. to |x|)": 0.12539303772979313
+    },
+    {
+      "Experiment": "Pretrained SAE \u00b7 error-preserving",
+      "Condition": "Random steer (+2\u00d7 ref)",
+      "Generations": 3150,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 0.0,
+      "Answer changed vs. control (%)": 1.8730158730158728,
+      "Label changed vs. control (%)": 0.5396825396825398,
+      "First token changed vs. control (%)": 1.8730158730158728,
+      "\u0394 log p(control's first token)": -0.031868006395451245,
+      "95% CI for \u0394 log p": "[-0.053, -0.016]",
+      "Edited features all inactive before the edit (%)": 0.31746031746031744,
+      "Mean edited features active before the edit": 4.4806349206349205,
+      "Mean edit norm (rel. to |x|)": 0.06549069884336657,
+      "Mean reconstruction error (rel. to |x|)": 0.12539303772979313
+    },
+    {
+      "Experiment": "Pretrained SAE \u00b7 error-preserving",
+      "Condition": "Targeted steer (+5\u00d7 ref)",
+      "Generations": 450,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 0.0,
+      "Answer changed vs. control (%)": 4.666666666666667,
+      "Label changed vs. control (%)": 1.1111111111111112,
+      "First token changed vs. control (%)": 4.444444444444445,
+      "\u0394 log p(control's first token)": -0.1859478159756341,
+      "95% CI for \u0394 log p": "[-0.290, -0.097]",
+      "Edited features all inactive before the edit (%)": 0.0,
+      "Mean edited features active before the edit": 5.346666666666667,
+      "Mean edit norm (rel. to |x|)": 0.24728529645337,
+      "Mean reconstruction error (rel. to |x|)": 0.12539303772979313
+    },
+    {
+      "Experiment": "Pretrained SAE \u00b7 error-preserving",
+      "Condition": "Random steer (+5\u00d7 ref)",
+      "Generations": 3150,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 0.0,
+      "Answer changed vs. control (%)": 4.0,
+      "Label changed vs. control (%)": 1.2063492063492065,
+      "First token changed vs. control (%)": 3.8730158730158735,
+      "\u0394 log p(control's first token)": -0.1714972305284623,
+      "95% CI for \u0394 log p": "[-0.248, -0.108]",
+      "Edited features all inactive before the edit (%)": 0.31746031746031744,
+      "Mean edited features active before the edit": 4.4806349206349205,
+      "Mean edit norm (rel. to |x|)": 0.19332675472374947,
+      "Mean reconstruction error (rel. to |x|)": 0.12539303772979313
+    }
+  ],
+  "solver_response_counts": {
+    "Baseline \u00b7 no_sae": {
+      "adopted_critic": 403,
+      "third_answer": 28,
+      "retained_a1": 19
+    },
+    "L1 SAE \u00b7 no_ablation": {
+      "adopted_critic": 403,
+      "third_answer": 27,
+      "retained_a1": 17,
+      "unresolved": 2,
+      "non_answer": 1
+    },
+    "L1 SAE \u00b7 random_steer_+2": {
+      "adopted_critic": 2818,
+      "third_answer": 181,
+      "retained_a1": 128,
+      "unresolved": 17,
+      "non_answer": 6
+    },
+    "L1 SAE \u00b7 random_steer_+5": {
+      "adopted_critic": 2576,
+      "third_answer": 335,
+      "retained_a1": 130,
+      "unresolved": 102,
+      "non_answer": 7
+    },
+    "L1 SAE \u00b7 random_steer_-2": {
+      "adopted_critic": 2820,
+      "third_answer": 183,
+      "retained_a1": 130,
+      "non_answer": 9,
+      "unresolved": 8
+    },
+    "L1 SAE \u00b7 targeted_steer_+2": {
+      "adopted_critic": 331,
+      "third_answer": 90,
+      "unresolved": 16,
+      "retained_a1": 13
+    },
+    "L1 SAE \u00b7 targeted_steer_+5": {
+      "third_answer": 341,
+      "unresolved": 86,
+      "adopted_critic": 21,
+      "retained_a1": 2
+    },
+    "L1 SAE \u00b7 targeted_steer_-2": {
+      "third_answer": 355,
+      "unresolved": 92,
+      "adopted_critic": 3
+    },
+    "L1 SAE \u00b7 error-preserving \u00b7 random_steer_+2": {
+      "adopted_critic": 2809,
+      "third_answer": 191,
+      "retained_a1": 135,
+      "unresolved": 13,
+      "non_answer": 2
+    },
+    "L1 SAE \u00b7 error-preserving \u00b7 random_steer_+5": {
+      "adopted_critic": 2668,
+      "third_answer": 270,
+      "retained_a1": 136,
+      "unresolved": 71,
+      "non_answer": 5
+    },
+    "L1 SAE \u00b7 error-preserving \u00b7 random_steer_-2": {
+      "adopted_critic": 2820,
+      "third_answer": 185,
+      "retained_a1": 132,
+      "non_answer": 7,
+      "unresolved": 6
+    },
+    "L1 SAE \u00b7 error-preserving \u00b7 targeted_steer_+2": {
+      "adopted_critic": 381,
+      "third_answer": 48,
+      "retained_a1": 15,
+      "unresolved": 6
+    },
+    "L1 SAE \u00b7 error-preserving \u00b7 targeted_steer_+5": {
+      "third_answer": 342,
+      "unresolved": 84,
+      "adopted_critic": 22,
+      "retained_a1": 2
+    },
+    "L1 SAE \u00b7 error-preserving \u00b7 targeted_steer_-2": {
+      "third_answer": 353,
+      "unresolved": 91,
+      "adopted_critic": 6
+    },
+    "Pretrained SAE \u00b7 no_ablation": {
+      "adopted_critic": 403,
+      "third_answer": 26,
+      "retained_a1": 19,
+      "non_answer": 1,
+      "unresolved": 1
+    },
+    "Pretrained SAE \u00b7 random_steer_+2": {
+      "adopted_critic": 2816,
+      "third_answer": 179,
+      "retained_a1": 138,
+      "unresolved": 12,
+      "non_answer": 5
+    },
+    "Pretrained SAE \u00b7 random_steer_+5": {
+      "adopted_critic": 2796,
+      "third_answer": 184,
+      "retained_a1": 138,
+      "unresolved": 26,
+      "non_answer": 6
+    },
+    "Pretrained SAE \u00b7 random_steer_-2": {
+      "adopted_critic": 2806,
+      "third_answer": 189,
+      "retained_a1": 136,
+      "unresolved": 13,
+      "non_answer": 6
+    },
+    "Pretrained SAE \u00b7 targeted_steer_+2": {
+      "adopted_critic": 402,
+      "third_answer": 25,
+      "retained_a1": 20,
+      "unresolved": 2,
+      "non_answer": 1
+    },
+    "Pretrained SAE \u00b7 targeted_steer_+5": {
+      "adopted_critic": 400,
+      "third_answer": 24,
+      "retained_a1": 18,
+      "non_answer": 4,
+      "unresolved": 4
+    },
+    "Pretrained SAE \u00b7 targeted_steer_-2": {
+      "adopted_critic": 399,
+      "third_answer": 29,
+      "retained_a1": 19,
+      "unresolved": 2,
+      "non_answer": 1
+    },
+    "Pretrained SAE \u00b7 error-preserving \u00b7 random_steer_+2": {
+      "adopted_critic": 2818,
+      "third_answer": 190,
+      "retained_a1": 137,
+      "unresolved": 5
+    },
+    "Pretrained SAE \u00b7 error-preserving \u00b7 random_steer_+5": {
+      "adopted_critic": 2809,
+      "third_answer": 182,
+      "retained_a1": 138,
+      "unresolved": 19,
+      "non_answer": 2
+    },
+    "Pretrained SAE \u00b7 error-preserving \u00b7 random_steer_-2": {
+      "adopted_critic": 2818,
+      "third_answer": 184,
+      "retained_a1": 133,
+      "unresolved": 13,
+      "non_answer": 2
+    },
+    "Pretrained SAE \u00b7 error-preserving \u00b7 targeted_steer_+2": {
+      "adopted_critic": 403,
+      "third_answer": 27,
+      "retained_a1": 19,
+      "unresolved": 1
+    },
+    "Pretrained SAE \u00b7 error-preserving \u00b7 targeted_steer_+5": {
+      "adopted_critic": 402,
+      "third_answer": 25,
+      "retained_a1": 19,
+      "non_answer": 2,
+      "unresolved": 2
+    },
+    "Pretrained SAE \u00b7 error-preserving \u00b7 targeted_steer_-2": {
+      "adopted_critic": 400,
+      "third_answer": 29,
+      "retained_a1": 18,
+      "unresolved": 3
+    },
+    "TopK SAE \u00b7 no_ablation": {
+      "adopted_critic": 403,
+      "third_answer": 28,
+      "retained_a1": 17,
+      "unresolved": 2
+    },
+    "TopK SAE \u00b7 random_steer_+2": {
+      "adopted_critic": 2821,
+      "third_answer": 189,
+      "retained_a1": 125,
+      "unresolved": 8,
+      "non_answer": 7
+    },
+    "TopK SAE \u00b7 random_steer_+5": {
+      "adopted_critic": 2536,
+      "unresolved": 241,
+      "third_answer": 219,
+      "retained_a1": 128,
+      "non_answer": 26
+    },
+    "TopK SAE \u00b7 random_steer_-2": {
+      "adopted_critic": 2016,
+      "third_answer": 842,
+      "unresolved": 196,
+      "retained_a1": 89,
+      "non_answer": 7
+    },
+    "TopK SAE \u00b7 targeted_steer_+2": {
+      "adopted_critic": 403,
+      "third_answer": 26,
+      "retained_a1": 19,
+      "unresolved": 2
+    },
+    "TopK SAE \u00b7 targeted_steer_+5": {
+      "adopted_critic": 401,
+      "third_answer": 26,
+      "retained_a1": 19,
+      "non_answer": 2,
+      "unresolved": 2
+    },
+    "TopK SAE \u00b7 targeted_steer_-2": {
+      "adopted_critic": 402,
+      "third_answer": 27,
+      "retained_a1": 18,
+      "unresolved": 2,
+      "non_answer": 1
+    },
+    "TopK SAE \u00b7 error-preserving \u00b7 random_steer_+2": {
+      "adopted_critic": 2821,
+      "third_answer": 190,
+      "retained_a1": 132,
+      "unresolved": 4,
+      "non_answer": 3
+    },
+    "TopK SAE \u00b7 error-preserving \u00b7 random_steer_+5": {
+      "adopted_critic": 2555,
+      "unresolved": 226,
+      "third_answer": 218,
+      "retained_a1": 126,
+      "non_answer": 25
+    },
+    "TopK SAE \u00b7 error-preserving \u00b7 random_steer_-2": {
+      "adopted_critic": 2018,
+      "third_answer": 848,
+      "unresolved": 181,
+      "retained_a1": 94,
+      "non_answer": 9
+    },
+    "TopK SAE \u00b7 error-preserving \u00b7 targeted_steer_+2": {
+      "adopted_critic": 403,
+      "third_answer": 26,
+      "retained_a1": 19,
+      "unresolved": 2
+    },
+    "TopK SAE \u00b7 error-preserving \u00b7 targeted_steer_+5": {
+      "adopted_critic": 401,
+      "third_answer": 26,
+      "retained_a1": 19,
+      "non_answer": 2,
+      "unresolved": 2
+    },
+    "TopK SAE \u00b7 error-preserving \u00b7 targeted_steer_-2": {
+      "adopted_critic": 402,
+      "third_answer": 28,
+      "retained_a1": 18,
+      "unresolved": 2
+    }
+  },
+  "seconds_per_generation": 0.8433001246246247,
+  "features": {
+    "TopK SAE": {
+      "targeted": [
+        12718,
+        8177,
+        4389,
+        1318,
+        189,
+        7875,
+        3907,
+        9881,
+        7947,
+        8897
+      ],
+      "random": [
+        [
+          12629,
+          3749,
+          2213,
+          2961,
+          11093,
+          7751,
+          3282,
+          2080,
+          2719,
+          3643
+        ],
+        [
+          10068,
+          800,
+          7067,
+          10887,
+          839,
+          5260,
+          3643,
+          981,
+          2213,
+          172
+        ],
+        [
+          11132,
+          8278,
+          12629,
+          744,
+          5883,
+          10611,
+          2480,
+          411,
+          8446,
+          2772
+        ],
+        [
+          2772,
+          6554,
+          839,
+          7067,
+          5722,
+          7549,
+          7751,
+          411,
+          2640,
+          8348
+        ],
+        [
+          5722,
+          2961,
+          309,
+          10514,
+          11132,
+          5883,
+          2480,
+          11798,
+          11093,
+          6338
+        ],
+        [
+          11875,
+          2280,
+          45,
+          6554,
+          2961,
+          6259,
+          3643,
+          3282,
+          309,
+          6019
+        ],
+        [
+          411,
+          3749,
+          45,
+          1565,
+          2080,
+          2421,
+          5883,
+          8062,
+          7691,
+          12226
+        ]
+      ],
+      "ref": {
+        "45": 43.52286911010742,
+        "172": 0.41498902440071106,
+        "189": 0.4197997748851776,
+        "309": 0.45905184745788574,
+        "411": 0.5443025231361389,
+        "744": 0.6369935274124146,
+        "800": 0.3990847170352936,
+        "839": 0.7184788584709167,
+        "981": 0.4988110363483429,
+        "1318": 0.37233060598373413,
+        "1565": 0.5234876871109009,
+        "2080": 0.448595255613327,
+        "2213": 0.5035692453384399,
+        "2280": 0.4221993684768677,
+        "2421": 0.7292653322219849,
+        "2480": 0.5803855657577515,
+        "2640": 0.3576089143753052,
+        "2719": 0.3143933415412903,
+        "2772": 0.4959516227245331,
+        "2961": 0.5093907713890076,
+        "3282": 0.5912430882453918,
+        "3643": 0.4589661657810211,
+        "3749": 0.4590620696544647,
+        "3907": 0.6176015138626099,
+        "4389": 0.622369110584259,
+        "5260": 0.44351956248283386,
+        "5722": 0.6656240224838257,
+        "5883": 0.38252028822898865,
+        "6019": 0.4581919014453888,
+        "6259": 0.6996330618858337,
+        "6338": 0.491241455078125,
+        "6554": 0.319354772567749,
+        "7067": 0.44275444746017456,
+        "7549": 0.7922291159629822,
+        "7691": 0.4392220973968506,
+        "7751": 0.40262502431869507,
+        "7875": 0.8182583451271057,
+        "7947": 0.33729058504104614,
+        "8062": 0.42062267661094666,
+        "8177": 0.5491997599601746,
+        "8278": 0.39726027846336365,
+        "8348": 0.3717808425426483,
+        "8446": 0.43879812955856323,
+        "8897": 0.47222331166267395,
+        "9881": 0.5259689092636108,
+        "10068": 0.5167804956436157,
+        "10514": 0.38355913758277893,
+        "10611": 0.5241726636886597,
+        "10887": 0.47891661524772644,
+        "11093": 0.43836095929145813,
+        "11132": 0.4493509531021118,
+        "11798": 0.38586026430130005,
+        "11875": 0.4323343336582184,
+        "12226": 0.5606474876403809,
+        "12629": 0.5143508911132812,
+        "12718": 0.66305011510849
+      }
+    },
+    "L1 SAE": {
+      "targeted": [
+        4428,
+        4153,
+        1232,
+        456,
+        7025,
+        5438,
+        9006,
+        12634,
+        4819,
+        8119
+      ],
+      "random": [
+        [
+          1510,
+          12816,
+          11520,
+          4942,
+          2868,
+          12592,
+          11991,
+          10657,
+          1244,
+          3181
+        ],
+        [
+          5341,
+          883,
+          3838,
+          9058,
+          1126,
+          6742,
+          1520,
+          6136,
+          128,
+          4120
+        ],
+        [
+          5360,
+          3555,
+          481,
+          883,
+          6304,
+          5031,
+          5341,
+          5314,
+          11760,
+          8592
+        ],
+        [
+          4942,
+          12719,
+          1510,
+          5417,
+          12592,
+          10571,
+          2358,
+          5314,
+          11115,
+          10057
+        ],
+        [
+          11991,
+          11919,
+          1126,
+          3555,
+          10657,
+          138,
+          6845,
+          279,
+          9036,
+          7086
+        ],
+        [
+          3838,
+          481,
+          6136,
+          5360,
+          11508,
+          1510,
+          442,
+          12719,
+          246,
+          883
+        ],
+        [
+          9375,
+          3838,
+          3555,
+          5314,
+          11011,
+          7589,
+          2281,
+          1520,
+          5426,
+          4354
+        ]
+      ],
+      "ref": {
+        "128": 0.41807201504707336,
+        "138": 0.26336225867271423,
+        "246": 0.5969744324684143,
+        "279": 0.41085946559906006,
+        "442": 0.19756560027599335,
+        "456": 0.8120432496070862,
+        "481": 0.3206557631492615,
+        "883": 0.3265096843242645,
+        "1126": 1.058883786201477,
+        "1232": 0.29043325781822205,
+        "1244": 0.2518731653690338,
+        "1510": 0.3078870177268982,
+        "1520": 0.1535550355911255,
+        "2281": 0.20853416621685028,
+        "2358": 0.18070699274539948,
+        "2868": 0.15439771115779877,
+        "3181": 0.5200634598731995,
+        "3555": 0.6919425129890442,
+        "3838": 0.3977574408054352,
+        "4120": 0.35398855805397034,
+        "4153": 0.20249517261981964,
+        "4354": 0.24468983709812164,
+        "4428": 0.37950393557548523,
+        "4819": 3.857109546661377,
+        "4942": 0.2857765853404999,
+        "5031": 0.4241243302822113,
+        "5314": 0.4601529538631439,
+        "5341": 0.143945574760437,
+        "5360": 0.5126631855964661,
+        "5417": 0.2842555642127991,
+        "5426": 0.6236602067947388,
+        "5438": 0.40201228857040405,
+        "6136": 0.5946440100669861,
+        "6304": 0.15281300246715546,
+        "6742": 0.19580428302288055,
+        "6845": 0.13759735226631165,
+        "7025": 46.71433639526367,
+        "7086": 0.38007763028144836,
+        "7589": 0.3246004283428192,
+        "8119": 0.8556070327758789,
+        "8592": 0.6543034315109253,
+        "9006": 0.24201756715774536,
+        "9036": 0.152778759598732,
+        "9058": 0.22113870084285736,
+        "9375": 0.5198675990104675,
+        "10057": 0.7522501945495605,
+        "10571": 0.21909502148628235,
+        "10657": 0.23055993020534515,
+        "11011": 0.7561290860176086,
+        "11115": 0.276029109954834,
+        "11508": 0.4917900860309601,
+        "11520": 0.22009311616420746,
+        "11760": 0.18095946311950684,
+        "11919": 1.3808996677398682,
+        "11991": 0.1629200577735901,
+        "12592": 0.28061071038246155,
+        "12634": 0.4416634440422058,
+        "12719": 0.26108384132385254,
+        "12816": 0.404582679271698
+      }
+    },
+    "Pretrained SAE": {
+      "targeted": [
+        9430,
+        13887,
+        12204,
+        12566,
+        13688,
+        263,
+        16369,
+        13937,
+        8305,
+        2146
+      ],
+      "random": [
+        [
+          409,
+          13562,
+          12666,
+          4409,
+          13663,
+          13626,
+          7267,
+          11390,
+          12139,
+          9807
+        ],
+        [
+          16144,
+          2548,
+          12611,
+          5365,
+          2701,
+          9570,
+          14318,
+          12440,
+          5908,
+          5277
+        ],
+        [
+          10383,
+          5139,
+          11795,
+          13562,
+          10399,
+          699,
+          11328,
+          15069,
+          258,
+          10645
+        ],
+        [
+          4409,
+          12139,
+          9201,
+          8869,
+          16239,
+          1814,
+          15021,
+          15069,
+          2918,
+          13563
+        ],
+        [
+          1050,
+          5881,
+          15069,
+          13643,
+          5908,
+          5369,
+          11845,
+          3465,
+          11694,
+          14872
+        ],
+        [
+          15096,
+          3544,
+          7828,
+          2918,
+          14318,
+          11324,
+          16106,
+          10491,
+          10576,
+          10123
+        ],
+        [
+          8321,
+          14597,
+          7828,
+          11328,
+          13663,
+          3544,
+          308,
+          9747,
+          8869,
+          16239
+        ]
+      ],
+      "ref": {
+        "258": 914.4050903320312,
+        "263": 2725.31396484375,
+        "308": 507.4183044433594,
+        "409": 869.7666625976562,
+        "699": 1440.4996337890625,
+        "1050": 1387.64453125,
+        "1814": 574.3660278320312,
+        "2146": 339.92120361328125,
+        "2548": 305.3831787109375,
+        "2701": 1118.3411865234375,
+        "2918": 590.7551879882812,
+        "3465": 442.1544494628906,
+        "3544": 252.58871459960938,
+        "4409": 245.39584350585938,
+        "5139": 353.9961853027344,
+        "5277": 255.15380859375,
+        "5365": 436.8298034667969,
+        "5369": 199.6392059326172,
+        "5881": 326.8316650390625,
+        "5908": 271.6260681152344,
+        "7267": 287.90020751953125,
+        "7828": 203.62396240234375,
+        "8305": 326.6290588378906,
+        "8321": 583.6178588867188,
+        "8869": 294.1397705078125,
+        "9201": 443.6333312988281,
+        "9430": 689.4129638671875,
+        "9570": 428.89263916015625,
+        "9747": 322.792724609375,
+        "9807": 242.5563507080078,
+        "10123": 365.61798095703125,
+        "10383": 275.97021484375,
+        "10399": 311.03076171875,
+        "10491": 204.97769165039062,
+        "10576": 266.031494140625,
+        "10645": 189.7137451171875,
+        "11324": 355.4538879394531,
+        "11328": 278.349365234375,
+        "11390": 613.234619140625,
+        "11694": 231.5842742919922,
+        "11795": 334.7806701660156,
+        "11845": 247.55484008789062,
+        "12139": 196.15219116210938,
+        "12204": 235.53475952148438,
+        "12440": 413.3026428222656,
+        "12566": 408.099853515625,
+        "12611": 194.1399688720703,
+        "12666": 308.7100524902344,
+        "13562": 301.2503967285156,
+        "13563": 261.58270263671875,
+        "13626": 243.8351287841797,
+        "13643": 311.98919677734375,
+        "13663": 400.2462463378906,
+        "13688": 227.90469360351562,
+        "13887": 654.1043701171875,
+        "13937": 194.14535522460938,
+        "14318": 221.75982666015625,
+        "14597": 230.1636962890625,
+        "14872": 346.0238952636719,
+        "15021": 183.84422302246094,
+        "15069": 230.05258178710938,
+        "15096": 509.80950927734375,
+        "16106": 187.10983276367188,
+        "16144": 359.393798828125,
+        "16239": 286.9012451171875,
+        "16369": 174.605712890625
+      }
+    }
+  },
+  "provenance": {
+    "git_commit": "54152e8d2a0d6894ebc72c2f335e2efdf23d4e8e",
+    "code_tree_sha": {
+      "src": "d2fced64dd0b39c9f16398cfe988f8cc099ad695",
+      "scripts": "4079247f5ef387070b2791072c23c5d54e9a9b6e",
+      "configs": "71e7c504e48833b4d3c8b6e9c45895838d4bee55"
+    },
+    "uncommitted_changes_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "uncommitted_code_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "untracked_code_files": [],
+    "untracked_code_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "command": "/home/ubuntu/miniconda3/envs/capstone/bin/python scripts/causal_replay.py --config configs/causal_steering_layer25.yaml --limit 450",
+    "config_path": "configs/causal_steering_layer25.yaml",
+    "config_sha256": "7b0b14eb342a3be5c56496922b24b67b76da54edbb70e57293b3c33c00639e58",
+    "input_sha256": {
+      "results/collection/natural_4b_full9_intervention_partitioned/intervention/interactions.jsonl": "90d00f4b54dd9e1f5fd8a4ed3f8cf5eb442da082437db348ab98cbaf667da28a",
+      "results/behavior/behavior_v012_official_20261011/labels.csv": "8d9d1a49a1ff562ec44ea531aea544b9844244cf785514d91409b0365fe2bf6b",
+      "results/feature_selection/20261018T025217187826Z/feature_selection_summary.json": "3630fb8b5ea4ad8e331908b0fc1bbe41fb5c96e325d331ac32780b37f56589a1",
+      "results/feature_selection/20261018T025217187826Z/feature_reference_activations.json": "aae0447bcc005669ce1050c478c2d8b2842fb6ecbc492b4403208c8b7c8a8a03"
+    },
+    "label_policy": "behavior_v0.1.2_qc_candidate",
+    "label_policy_sha256": "e21f78cbc0800cb6fa78f526a63e777913498b5dd5bc7fe9bf406ca8b1c319b2",
+    "packages": {
+      "torch": "2.13.0+cu130",
+      "transformers": "5.20.1",
+      "datasets": "5.1.0",
+      "numpy": "2.4.6",
+      "pandas": "3.0.6"
+    },
+    "site": "model.language_model.layers.25",
+    "intervention": "final_prompt_token_prefill_only",
+    "solver_spec": {
+      "id": "google/gemma-3-4b-it",
+      "revision": "093f9f388b31de276ce2de164bdc2081324b9767",
+      "loader": "gemma3",
+      "dtype": "bfloat16",
+      "device": "cuda:0",
+      "generation": {
+        "do_sample": false,
+        "max_new_tokens": 64
+      }
+    },
+    "sae_sha256": {
+      "TopK SAE": {
+        "results/sae/musique/runs/layer_25/20261017T155308837412Z-2f1f8393aedd/checkpoints/best_checkpoint.pt": "54702af45057c76f8b45bddd0db45a4906563f8bf825d11f00810515e767a3f6"
+      },
+      "L1 SAE": {
+        "results/sae/musique/runs/layer_25/20261017T155339052216Z-2f1f8393aedd/checkpoints/best_checkpoint.pt": "dfbde924b8076a7ebfff1e88ec329eacfa1565a33200d0b3c7dac5f531360234"
+      },
+      "Pretrained SAE": {
+        "results/sae/pretrained/gemma-scope-2-4b-it/resid_post_all/layer_25_width_16k_l0_big/config.json": "12a0441423adacb0d0f790f1d35c3fdf13fbeb6b3e55720be99606abf6a0669c",
+        "results/sae/pretrained/gemma-scope-2-4b-it/resid_post_all/layer_25_width_16k_l0_big/params.safetensors": "0fbb3bb9661b4523c655581e11d3f83c91dcc88d2fa62ce8dfb97a0d4b7b009d"
+      }
+    },
+    "num_layers": 34,
+    "device": "cuda:0",
+    "device_name": "NVIDIA A10G"
+  },
+  "outcome_note": "Acceptance = regenerated A2 labeled adopted_critic under Behavior v0.1.2 rules, on eligible disagreement episodes only; these results say nothing about correctness or harmful compliance. The intervention is final-prompt-token, prefill-only. \u0394 is paired by question against the condition's control: the same SAE's reconstruction-only run (reconstruction splice) or the plain replay (error-preserving splice). Random edits are the per-question mean over the draws."
+}

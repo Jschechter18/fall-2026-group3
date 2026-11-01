@@ -1,0 +1,45 @@
+Experiment,Condition,Outcome,N,Acceptance Rate (%),Δ vs. SAE Control (pp),95% CI for Δ,p-value
+Baseline,No SAE (stored A2),observed,450,89.55555555555556,,,
+Baseline,No SAE (replayed A2),regenerated,450,89.55555555555556,,,
+TopK SAE,No ablation,regenerated,450,88.0,Reference,,
+TopK SAE,Random steer (-2× ref),regenerated,450,84.50793650793652,-3.492063492063492,"[-4.64, -2.41]",9.999000099990002e-05
+TopK SAE,Targeted steer (-2× ref),regenerated,450,86.8888888888889,-1.1111111111111112,"[-2.01, -0.22]",0.0643935606439356
+TopK SAE,Random steer (+2× ref),regenerated,450,87.20634920634922,-0.7936507936507936,"[-1.49, -0.22]",0.017698230176982303
+TopK SAE,Targeted steer (+2× ref),regenerated,450,87.55555555555556,-0.4444444444444444,"[-1.56, 0.44]",0.6834316568343166
+TopK SAE,Random steer (+5× ref),regenerated,450,73.36507936507935,-14.634920634920636,"[-16.86, -12.79]",9.999000099990002e-05
+TopK SAE,Targeted steer (+5× ref),regenerated,450,73.11111111111111,-14.888888888888888,"[-18.44, -11.77]",9.999000099990002e-05
+TopK SAE · error-preserving,No ablation (= plain replay),regenerated,450,89.55555555555556,Reference,,
+TopK SAE · error-preserving,Random steer (-2× ref),regenerated,450,87.26984126984128,-2.2857142857142865,"[-2.98, -1.62]",9.999000099990002e-05
+TopK SAE · error-preserving,Targeted steer (-2× ref),regenerated,450,89.55555555555556,0.0,"[-0.67, 0.67]",1.0
+TopK SAE · error-preserving,Random steer (+2× ref),regenerated,450,89.46031746031747,-0.09523809523809527,"[-0.22, 0.00]",0.25037496250374963
+TopK SAE · error-preserving,Targeted steer (+2× ref),regenerated,450,89.33333333333333,-0.2222222222222222,"[-0.67, 0.00]",1.0
+TopK SAE · error-preserving,Random steer (+5× ref),regenerated,450,77.71428571428571,-11.841269841269842,"[-13.43, -10.29]",9.999000099990002e-05
+TopK SAE · error-preserving,Targeted steer (+5× ref),regenerated,450,79.55555555555556,-10.0,"[-13.11, -7.11]",9.999000099990002e-05
+L1 SAE,No ablation,regenerated,450,87.1111111111111,Reference,,
+L1 SAE,Random steer (-2× ref),regenerated,450,86.50793650793652,-0.6031746031746033,"[-1.33, -0.03]",0.0790920907909209
+L1 SAE,Targeted steer (-2× ref),regenerated,450,52.44444444444445,-34.66666666666667,"[-39.33, -30.22]",9.999000099990002e-05
+L1 SAE,Random steer (+2× ref),regenerated,450,86.57142857142857,-0.5396825396825397,"[-1.33, 0.03]",0.1394860513948605
+L1 SAE,Targeted steer (+2× ref),regenerated,450,77.77777777777779,-9.333333333333334,"[-12.22, -6.66]",9.999000099990002e-05
+L1 SAE,Random steer (+5× ref),regenerated,450,80.60317460317461,-6.507936507936507,"[-8.13, -5.14]",9.999000099990002e-05
+L1 SAE,Targeted steer (+5× ref),regenerated,450,29.333333333333332,-57.77777777777777,"[-62.44, -53.11]",9.999000099990002e-05
+L1 SAE · error-preserving,No ablation (= plain replay),regenerated,450,89.55555555555556,Reference,,
+L1 SAE · error-preserving,Random steer (-2× ref),regenerated,450,89.52380952380953,-0.03174603174603176,"[-0.19, 0.16]",1.0
+L1 SAE · error-preserving,Targeted steer (-2× ref),regenerated,450,56.00000000000001,-33.55555555555556,"[-38.22, -29.11]",9.999000099990002e-05
+L1 SAE · error-preserving,Random steer (+2× ref),regenerated,450,89.46031746031747,-0.09523809523809523,"[-0.32, 0.06]",0.49705029497050296
+L1 SAE · error-preserving,Targeted steer (+2× ref),regenerated,450,85.77777777777777,-3.7777777777777777,"[-5.78, -1.99]",0.00019998000199980003
+L1 SAE · error-preserving,Random steer (+5× ref),regenerated,450,87.68253968253968,-1.8730158730158735,"[-2.54, -1.27]",9.999000099990002e-05
+L1 SAE · error-preserving,Targeted steer (+5× ref),regenerated,450,30.88888888888889,-58.666666666666664,"[-63.34, -54.22]",9.999000099990002e-05
+Pretrained SAE,No ablation,regenerated,450,89.55555555555556,Reference,,
+Pretrained SAE,Random steer (-2× ref),regenerated,450,87.71428571428571,-1.8412698412698418,"[-2.54, -1.27]",9.999000099990002e-05
+Pretrained SAE,Targeted steer (-2× ref),regenerated,450,89.33333333333333,-0.2222222222222222,"[-0.67, 0.00]",1.0
+Pretrained SAE,Random steer (+2× ref),regenerated,450,89.11111111111111,-0.4444444444444444,"[-0.83, -0.13]",0.013298670132986702
+Pretrained SAE,Targeted steer (+2× ref),regenerated,450,89.33333333333333,-0.2222222222222222,"[-0.89, 0.00]",1.0
+Pretrained SAE,Random steer (+5× ref),regenerated,450,76.47619047619047,-13.079365079365079,"[-14.73, -11.37]",9.999000099990002e-05
+Pretrained SAE,Targeted steer (+5× ref),regenerated,450,75.33333333333333,-14.222222222222221,"[-17.33, -11.11]",9.999000099990002e-05
+Pretrained SAE · error-preserving,No ablation (= plain replay),regenerated,450,89.55555555555556,Reference,,
+Pretrained SAE · error-preserving,Random steer (-2× ref),regenerated,450,89.4920634920635,-0.06349206349206353,"[-0.22, 0.10]",0.692930706929307
+Pretrained SAE · error-preserving,Targeted steer (-2× ref),regenerated,450,89.55555555555556,0.0,"[0.00, 0.00]",1.0
+Pretrained SAE · error-preserving,Random steer (+2× ref),regenerated,450,89.4920634920635,-0.06349206349206353,"[-0.19, 0.06]",0.6279372062793721
+Pretrained SAE · error-preserving,Targeted steer (+2× ref),regenerated,450,89.55555555555556,0.0,"[0.00, 0.00]",1.0
+Pretrained SAE · error-preserving,Random steer (+5× ref),regenerated,450,87.93650793650792,-1.6190476190476193,"[-2.25, -1.05]",9.999000099990002e-05
+Pretrained SAE · error-preserving,Targeted steer (+5× ref),regenerated,450,89.55555555555556,0.0,"[0.00, 0.00]",1.0
