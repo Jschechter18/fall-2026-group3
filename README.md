@@ -4,6 +4,7 @@ Master's Data Science Capstone project.
 
 Distributed collection: [workflow guide](docs/distributed_collection.md) and
 [two-EC2 smoke-test commands](docs/distributed_collection_smoke_test.md).
+Distributed causal replay: [map-reduce workflow](docs/distributed_causal_replay.md).
 
 ## Messages for Professor/AI Reviewer:
 

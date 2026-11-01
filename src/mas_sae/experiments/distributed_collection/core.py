@@ -1,13 +1,11 @@
 """Local collection, merge, and export. AWS CLI handles file transport."""
-from contextlib import contextmanager
 import json
 from pathlib import Path
-import tempfile
 
 from mas_sae.data.partition_adapter import canonical_partitions, build_collected_manifest, write_run_tables
 from mas_sae.data.production import export_partition_activations, write_partitions
 from mas_sae.experiments import collection_progress as progress
-from mas_sae.experiments.artifacts import ensure_output_available, sha256_file, write_json_atomic
+from mas_sae.experiments.artifacts import file_facts, staged_output, write_json_atomic
 from mas_sae.experiments.collection import collect_examples
 from mas_sae.experiments.collection_artifacts import save_collection_artifacts
 from mas_sae.experiments.conditions import OMITTED
@@ -32,9 +30,7 @@ def chunk_directory(manifest_path, chunk):
 
 
 def _file_facts(root):
-    return {str(p.relative_to(root)): {"size": p.stat().st_size, "sha256": sha256_file(p)}
-            for p in sorted(root.rglob("*")) if p.is_file() and p.name not in {"complete.json", "collection.json"}
-            and not any(part.endswith(".tmp") for part in p.relative_to(root).parts)}
+    return file_facts(root, exclude_names={"complete.json", "collection.json"})
 
 
 def _check_completed(root, manifest, chunk):
@@ -96,20 +92,6 @@ def collect_manifest_chunks(manifest_path, manifest, chunks, *, config, resolved
             raise ValueError("Work chunk is incomplete")
         write_json_atomic(root/"complete.json", {"manifest_sha256": manifest["manifest_sha256"],
             "chunk_id": chunk["chunk_id"], "experiment": experiment, "files": _file_facts(root)}, overwrite=False)
-
-
-@contextmanager
-def staged_output(destination):
-    """Publish activations and records together by renaming their single parent."""
-    destination = Path(destination)
-    ensure_output_available(destination)
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory(prefix=f".{destination.name}-", dir=destination.parent) as tmp:
-        root = Path(tmp)/"bundle"
-        root.mkdir()
-        yield root
-        ensure_output_available(destination)
-        root.rename(destination)
 
 
 def merge_run(manifest_path):

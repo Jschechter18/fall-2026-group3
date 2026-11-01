@@ -8,7 +8,7 @@ import pandas as pd
 import pytest
 import torch
 
-from mas_sae.causal import offline, replay
+from mas_sae.causal import distributed, offline, replay
 from mas_sae.causal.smoke import smoke_components, tiny_features, tiny_saes
 from mas_sae.evaluation import behavior_labels as bl
 
@@ -472,6 +472,30 @@ def test_preflight_then_resume_runs_the_sae_conditions_once_the_check_passes(tmp
     replay.analyse(run_dir)
     s = json.loads((run_dir / "causal_replay_summary.json").read_text())
     assert s["validated"] and s["intervention"]["name"] == replay.INTERVENTION
+
+
+def test_distributed_replay_matches_serial_scientific_rows(tmp_path, monkeypatch):
+    """Distribution changes placement, not generation or row semantics."""
+    cfg, episodes, comp = _smoke(tmp_path)
+    cfg = dataclasses.replace(cfg, on_replay_check_fail="stop", n_bootstrap=10, n_permutations=20)
+    comp = _faithful(comp)
+    preflight = tmp_path / "preflight"
+    replay.replay(cfg, episodes, comp, preflight, preflight_only=True)
+    manifest = distributed.prepare_distributed_run(preflight, num_shards=2)
+    monkeypatch.setattr(replay, "load_components", lambda worker_cfg, worker_episodes: comp)
+    distributed.run_shard(manifest, 0)
+    distributed.run_shard(manifest, 1)
+    merged = distributed.reduce_shards(manifest)
+
+    serial = tmp_path / "serial"
+    replay.replay(cfg, episodes, comp, serial)
+    replay.analyse(serial)
+    without_timing = lambda rows: {
+        replay.key(row): {k: v for k, v in row.items() if k != "seconds"} for row in rows
+    }
+    assert without_timing(replay.read_rows(merged / "per_row.jsonl")) \
+        == without_timing(replay.read_rows(serial / "per_row.jsonl"))
+    assert (merged / "causal_table.csv").read_text() == (serial / "causal_table.csv").read_text()
 
 
 @pytest.mark.parametrize("replayed, response, prompt_ok, kind", [
