@@ -43,6 +43,10 @@ control for the norm-matched edits: fixed random unit directions at the same edi
 ``targeted_subsets`` adds named subsets of an SAE's targeted set (e.g. one feature alone), each its own
 experiment with its own matched draws.
 
+Raw activations (``kind: activations``, #191) run as one more basis: latent i is neuron i minus its fit-row
+mean, so ablation is mean ablation. Neurons are signed and dense, so their contribution-matched controls are
+matched on per-neuron std alone (as in feature selection) and they cannot be steered.
+
 Conditions per episode:
   Baseline       no SAE: plain replay; checked against the stored A2 before any SAE run (replay check)
   per SAE        no ablation (reconstruction only), then for ablation (if ``ablation``) and each steering
@@ -129,7 +133,7 @@ class ReplayConfig:
     contexts_jsonl: str | None = None              # exact collected payloads for mixed datasets
     label_policy: str = "v0.1.2-qc"               # legacy default; candidates use v0.2.0-candidate
     partition: str = "intervention"
-    # name -> {kind: custom | gemma_scope, path: ...}; must be SAEs of the feature-selection run
+    # name -> {kind: custom | gemma_scope | activations, path: ...}; must be SAEs of the feature-selection run
     saes: dict = field(default_factory=dict)
     n_random_draws: int = 5
     reconstruction: bool = True                      # run the reconstruction splice
@@ -173,9 +177,10 @@ class ReplayConfig:
         cfg = cls(**raw)
         if cfg.label_policy not in bl.POLICIES:
             raise ValueError(f"Unknown label_policy {cfg.label_policy!r}")
+        from mas_sae.probe.feature_selection import SAE_KINDS
         for name, spec in cfg.saes.items():
-            if name == BASELINE or spec.get("kind") not in {"custom", "gemma_scope"} or "path" not in spec:
-                raise ValueError(f"SAE {name!r} needs kind: custom|gemma_scope and a path.")
+            if name == BASELINE or spec.get("kind") not in SAE_KINDS or "path" not in spec:
+                raise ValueError(f"SAE {name!r} needs kind: {'|'.join(SAE_KINDS)} and a path.")
         if type(cfg.layer) is not int or cfg.layer < 0:
             raise ValueError("layer must be a nonnegative integer.")
         if cfg.limit is not None and (type(cfg.limit) is not int or cfg.limit <= 0):
@@ -199,6 +204,10 @@ class ReplayConfig:
             raise ValueError("Nothing to run: set ablation: true or some steer_strengths, scale_fractions or edit_norms.")
         if s and not cfg.feature_reference:
             raise ValueError("steer_strengths needs feature_reference (scripts/feature_reference_activations.py).")
+        raw_bases = [name for name, spec in cfg.saes.items() if spec["kind"] == "activations"]
+        if s and raw_bases:
+            raise ValueError(f"steer_strengths clamp features to a multiple of their typical positive activation; "
+                             f"raw neurons ({raw_bases}) are signed and have none. Use edit_norms or scale_fractions.")
         if type(cfg.random_directions) is not int or cfg.random_directions < 0:
             raise ValueError("random_directions must be a nonnegative integer.")
         if cfg.random_directions and not (cfg.edit_norms and cfg.error_preserving):
@@ -493,14 +502,17 @@ def feature_sets(cfg: ReplayConfig, sae_hashes: dict) -> dict:
         for name, f in out.items():
             if cfg.random_controls == "contribution":
                 lat = latents[name]
-                freq = np.asarray(lat["firing_frequency"], float)
-                contribution = np.asarray(lat["rms"], float) * np.asarray(lat["decoder_norm"], float)
+                raw = cfg.saes[name]["kind"] == "activations"
+                # raw neurons all "fire" (signed, dense), so, as in feature selection, they are matched on std alone
+                contribution = np.asarray(lat["std" if raw else "rms"], float) * np.asarray(lat["decoder_norm"], float)
+                freq = np.ones_like(contribution) if raw else np.asarray(lat["firing_frequency"], float)
                 draw = lambda t: offline.contribution_matched_controls(freq, contribution, t, cfg.n_random_draws,
                                                                        cfg.seed, exclude=f["targeted"])
                 for g in (f, *f.get("subsets", {}).values()):
                     g["random"] = draw(g["targeted"])
                     g["match"] = offline.match_quality(freq, contribution, g["targeted"], g["random"])
-                refs[name] = {str(i): v for i, v in enumerate(lat["ref"]) if v is not None}
+                if not raw:
+                    refs[name] = {str(i): v for i, v in enumerate(lat["ref"]) if v is not None}
             if cfg.steer_strengths:
                 sets = [f, *f.get("subsets", {}).values()]
                 ids = {str(i) for s in sets for i in [*s["targeted"], *(i for d in s["random"] for i in d)]}
@@ -527,9 +539,15 @@ def reference_activations(cfg: ReplayConfig, sae_hashes: dict) -> tuple[dict, di
             raise ValueError(f"SAE {name!r} is not in {cfg.feature_reference}.")
         if ref["saes"][name]["sae_sha256"] != sae_hashes[name]:
             raise ValueError(f"SAE {name!r} files differ from the ones the reference activations used.")
-        out[name] = {i: v["ref"] for i, v in ref["saes"][name]["features"].items()}
-        if "latents" in ref["saes"][name]:
-            latents[name] = ref["saes"][name]["latents"]
+        raw = cfg.saes[name]["kind"] == "activations"
+        lat = ref["saes"][name].get("latents")
+        if lat is not None and raw != (lat.get("basis") == "activations"):
+            raise ValueError(f"{cfg.feature_reference} has {'SAE' if raw else 'raw-activation'} statistics "
+                             f"for {name!r}, but the config says kind {cfg.saes[name]['kind']}.")
+        # raw neurons (#191) are signed and dense, so they have no positive reference activation
+        out[name] = {} if raw else {i: v["ref"] for i, v in ref["saes"][name]["features"].items()}
+        if lat is not None:
+            latents[name] = lat
         elif cfg.random_controls == "contribution":
             raise ValueError(f"{cfg.feature_reference} has no per-latent statistics for {name!r}; recompute it "
                              "with scripts/feature_reference_activations.py --overwrite.")
