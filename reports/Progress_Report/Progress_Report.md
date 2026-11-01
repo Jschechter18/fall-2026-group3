@@ -91,7 +91,7 @@
 
 ---
 
-## Date: Week 7 - 10 06 Year
+## Date: Week 7 - 10 06 2026
 
 - Topics of discussion
   - Finish linear probing
@@ -102,62 +102,64 @@
 
 - Action Items:
 
-* [ ] Complete entirety of experimental pipeline
-* [ ] Train a sparse, useful SAE using the 2 different regularization methods (top k and l1)
-* [ ] Implement linear probes for both tasks
-* [ ] Implement causality pipeline
-* [ ] For layer 33 (for inital results), find features to experiment on and run causality experiment
-* [ ] Prepare preliminary results presentation
+* [x] Complete entirety of experimental pipeline (collection, SAE, probes, causal replay: #51, #99, #118, #128)
+* [x] Train a sparse, useful SAE using the 2 different regularization methods (top k and l1) (#99, #118, #127)
+* [x] Implement linear probes for both tasks (#51)
+* [x] Implement causality pipeline (#128)
+* [x] For layer 33 (for inital results), find features to experiment on and run causality experiment (#120, #135)
+* [x] Prepare preliminary results presentation (#133, #142)
 
 ---
 
-## Date: Week 8 - 10 13 Year
+## Date: Week 8 - 10 13 2026
 
 - Topics of discussion
   - NO CLASS
 
 - Action Items:
 
-* [ ] Finish training SAE with the 2 training methods
-* [ ] Finish feature selection
-* [ ] Finish linear probing
-* [ ] Finish causality pipeline
-* [ ] Run causality pipeline
-* [ ] Finish preliminary presentation
+* [x] Finish training SAE with the 2 training methods (#118, #127)
+* [x] Finish feature selection (#120; layer 25 in #134)
+* [x] Finish linear probing (#51)
+* [x] Finish causality pipeline (#128)
+* [x] Run causality pipeline (layers 25 and 33: #134, #135)
+* [x] Finish preliminary presentation (#133, #142)
 
 ---
 
-## Date: Week 9 - 10 20 Year
+## Date: Week 9 - 10 20 2026
 
 - Topics of discussion
   - Preliminary Presentation day
-  - Item2
-  - Item3
+  - Instructor feedback: which layer holds the information, interpretability of the features, algorithm-style
+    explanations, the math, SHAP, closer evaluation of causality, Solver bias
 
 - Action Items:
 
-* [ ] Action Item 1
-* [ ] Action Item 2
-* [ ] Action Item 3
-* [ ] Action Item 4
-* [ ] Action Item 5
+* [x] Layer 25 and 33 causal replay results (#134, #135)
+* [x] Feature steering in the causal replay (#140)
+* [x] Investigate whether the causal effect is feature-specific: edit-size confound found (#146)
+* [x] Adoption feedback pilot (#138)
+* [x] Train, validation and test in one activation export; labeled-candidates A2 presentation (#147, #148, #149)
 
 ---
 
-## Date: Week 10 - Month Day Year
+## Date: Week 10 - 10 27 2026
 
 - Topics of discussion
-  - Item1
-  - Item2
-  - Item3
+  - Instructor Review #6 (#150): causal effects track edit size, not feature identity; no report yet
+  - Candidates collection labels, Claude-based labels, synthetic data, and the full mixed collection
 
 - Action Items:
 
-* [ ] Action Item 1
-* [ ] Action Item 2
-* [ ] Action Item 3
-* [ ] Action Item 4
-* [ ] Action Item 5
+* [x] Final candidate behavior labels (#153) and the Claude behavioral validator (#164, #186)
+* [x] Start the LaTeX paper (#169) with the labeling methodology and synthetic pilot (#182)
+* [x] Synthetic question generator and related fillers (#163, #184); paired filler ablation (#183)
+* [x] Edit-size-matched interventions in the causal replay (#152)
+* [x] Prepare and launch the 10-machine mixed collection `mixed_final_001` (#189, #190)
+* [ ] Norm-matched causal runs with feature 7025/8023 subsets and >=100 random draws (#146)
+* [ ] Retrain probes on Adoption vs Retention with the raw-activation control (#191, #193)
+* [ ] Train new SAEs on the mixed collection (#192)
 
 ---
 
