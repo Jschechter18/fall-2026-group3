@@ -1,0 +1,10 @@
+{
+  "name": "warmup_control",
+  "strategy": "none",
+  "warmup_steps": 250,
+  "seed": 42,
+  "target_learning_rates": [
+    0.0003
+  ],
+  "warmup_start_factor": 0.1
+}

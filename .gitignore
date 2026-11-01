@@ -88,7 +88,6 @@ results/causal_steering/*/per_row.jsonl
 /results/sae/**/post_intervention_counts.json
 /results/sae/**/feature_frequencies.json
 
-
 # Examples
 examples/claude/artifacts/
 artifacts/*

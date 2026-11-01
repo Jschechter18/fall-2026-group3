@@ -1,0 +1,10 @@
+{
+  "name": "bricken_warmup",
+  "strategy": "bricken",
+  "warmup_steps": 250,
+  "seed": 42,
+  "target_learning_rates": [
+    0.0003
+  ],
+  "warmup_start_factor": 0.1
+}

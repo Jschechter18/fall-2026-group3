@@ -20,6 +20,7 @@ class Hyperparameters:
     sparsity_mode: str = "l1"
     top_k: int | None = 512
     sparsity_coefficient: float = 0.1
+    weight_l2_coefficient: float = 0.0
     inactivity_window_examples: int = 10000
 
     tied_initialization: bool = True
@@ -45,7 +46,7 @@ def validate_hyperparameters(hp: Hyperparameters) -> None:
         raise ValueError("train_shuffle must be a boolean.")
     if type(hp.tied_initialization) is not bool:
         raise ValueError("tied_initialization must be a boolean.")
-    for name in ("lr", "sparsity_coefficient", "aux_coefficient", "early_stopping_min_delta"):
+    for name in ("lr", "sparsity_coefficient", "aux_coefficient", "weight_l2_coefficient", "early_stopping_min_delta"):
         value = getattr(hp, name)
         if type(value) not in (int, float) or not math.isfinite(value):
             raise ValueError(f"{name} must be a finite number.")
@@ -53,6 +54,8 @@ def validate_hyperparameters(hp: Hyperparameters) -> None:
         raise ValueError("lr must be positive and sparsity_coefficient nonnegative.")
     if hp.aux_coefficient < 0:
         raise ValueError("aux_coefficient must be nonnegative.")
+    if hp.weight_l2_coefficient < 0:
+        raise ValueError("weight_l2_coefficient must be nonnegative.")
     if hp.early_stopping_min_delta < 0:
         raise ValueError("early_stopping_min_delta must be nonnegative.")
     if hp.aux_coefficient > 0:

@@ -4,7 +4,7 @@ Single runs skip test evaluation unless --evaluate-test is supplied. They are
 registered as completed models; use tuning trials for later --finish-run continuation.
 Finishing a selected trial evaluates the test set when test.pt exists.
 
-python scripts/train_sae.py \
+python scripts/sae/train_sae.py \
   --hp-tune \
   --config configs/sae_hp_tuning/layer_33.yaml \
   --dry-run
@@ -35,7 +35,7 @@ def main():
                         help="Evaluate the test set for a single run after model selection is complete. "
                              "Finishing a trial evaluates it automatically.")
     args = parser.parse_args()
-    project_root = Path(__file__).resolve().parents[1]
+    project_root = Path(__file__).resolve().parents[2]
 
     if args.hp_tune != (args.config is not None):
         parser.error("--hp-tune and --config must be provided together.")

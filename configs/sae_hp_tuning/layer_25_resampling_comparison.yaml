@@ -1,0 +1,22 @@
+# One source dictionary; seeds vary continuation order and replacement sampling.
+source_trial: results/sae/musique/tuning/layer_25/20261022T192642968946Z-635354750790/trials/trial_0001
+output_dir: results/sae/musique/resampling/layer_25/aux00625_warmup_comparison
+additional_epochs: 20
+resampling_budget: 512
+positive_fraction: 0.01
+warmup_start_factor: 0.1
+seeds: [42]
+branches:
+  - name: control
+    strategy: none
+  - name: warmup_control
+    strategy: none
+    warmup_steps: 250
+  - name: residual
+    strategy: residual
+  - name: residual_warmup
+    strategy: residual
+    warmup_steps: 250
+  - name: bricken_warmup
+    strategy: bricken
+    warmup_steps: 250

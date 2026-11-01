@@ -31,8 +31,8 @@ results/sae/musique/
 ## Run a study
 
 ```bash
-python scripts/train_sae.py --hp-tune --config configs/sae_hp_tuning/hp_sweep.yaml --dry-run
-python scripts/train_sae.py --hp-tune --config configs/sae_hp_tuning/hp_sweep.yaml
+python scripts/sae/train_sae.py --hp-tune --config configs/sae_hp_tuning/hp_sweep.yaml --dry-run
+python scripts/sae/train_sae.py --hp-tune --config configs/sae_hp_tuning/hp_sweep.yaml
 ```
 
 `--hp-tune` and `--config` require each other. The YAML owns the activation run,
@@ -84,7 +84,7 @@ run after reviewing the results.
 ## Finish a chosen trial
 
 ```bash
-python scripts/train_sae.py \
+python scripts/sae/train_sae.py \
   --finish-run results/sae/musique/tuning/layer_33/<study_id>/trials/trial_0001 \
   --epochs 400
 ```
@@ -117,3 +117,51 @@ Existing validation-only runs created under the old layout remain supported;
 trials without study metadata continue in place. Existing artifacts are not
 migrated automatically. Older checkpoints without `last_checkpoint.pt` cannot
 be resumed through this workflow.
+
+## Optional post-training refinement
+
+Refinement forks a completed, validation-only TopK source's **last training
+checkpoint**, retaining Adam state, inactivity counters, normalization, and AuxK.
+It runs separately from normal training and does not modify or register the source.
+The source must include `config.json` and `checkpoints/last_checkpoint.pt`;
+when present, its manifest must report `completed`.
+
+Copy `configs/sae_refinement/layer_25_residual_warmup.yaml`, set the source and a
+new output directory, then run from the repository root:
+
+```bash
+PYTHONPATH=src python scripts/sae/refine_sae.py --config configs/sae_refinement/layer_25_residual_warmup.yaml --dry-run
+PYTHONPATH=src python scripts/sae/refine_sae.py --config configs/sae_refinement/layer_25_residual_warmup.yaml
+```
+
+The default comparison uses matched warmup-control and residual-warmup branches:
+512 replacements, 1% positive calibration, 250 updates ramping from 10% of the
+inherited learning rate, and 20 additional epochs. Plateau scheduling and early
+stopping are disabled. Only train and validation activations are loaded.
+Continuation seeds are not independent source-training seeds.
+
+After interruption, use the same config and add `--resume`. Recovery restores the
+last committed epoch, optimizer, activity counters, warmup, RNGs, and loader order;
+an interrupted epoch is replayed. Replacement is not repeated for a committed
+branch. A branch interrupted before its first commit restarts from the source.
+Changed config, source checkpoint/config, activation files, or device type is
+rejected. GPU arithmetic is not guaranteed bitwise reproducible. Historical
+experiment directories without the new resume state cannot be resumed.
+
+Review `comparison.md`, `comparison.json`, per-epoch firing counts, and validation
+reconstruction before selecting. Set reconstruction tolerances before comparing
+runs; increased activity alone does not establish interpretability. Final-epoch
+checkpoints preserve the tested protocol; no automatic promotion occurs.
+
+Record the selected checkpoint explicitly (it must appear in the comparison):
+
+```bash
+PYTHONPATH=src python scripts/sae/refine_sae.py --config configs/sae_refinement/layer_25_residual_warmup.yaml --select-checkpoint results/sae/musique/refinement/layer_25/residual_warmup/seed_42/residual_warmup/final_checkpoint.pt
+```
+
+`selection.json` records checkpoint hashes and source lineage. Resuming regenerates
+comparison artifacts but leaves this explicit selection record intact. Pass its
+checkpoint path to downstream consumers using `load_sae_checkpoint`; rerun feature
+selection and causal analysis because refinement changes the dictionary. The
+legacy `scripts/sae/experiment_sae_resampling.py` uses the same engine and retains its
+old `source_trial` configs and branch artifact names.

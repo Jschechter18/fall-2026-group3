@@ -72,7 +72,7 @@ def test_create_run_directory_uses_reusable_run_metadata(
     monkeypatch.setattr(
         artifacts,
         "get_run_command",
-        lambda: "python scripts/train_sae.py",
+        lambda: "python scripts/sae/train_sae.py",
     )
 
     run_directory = artifacts.create_sae_run_directory(
@@ -95,7 +95,7 @@ def test_create_run_directory_uses_reusable_run_metadata(
     assert manifest["run_name"] == "sae-l64"
     assert manifest["layer"] == 8
     assert manifest["created_at"] == timestamp.isoformat()
-    assert manifest["command"] == "python scripts/train_sae.py"
+    assert manifest["command"] == "python scripts/sae/train_sae.py"
     assert manifest["status"] == "running"
     assert manifest["error_message"] == ""
     assert (run_directory / "checkpoints").is_dir()
@@ -107,12 +107,12 @@ def test_get_run_command_quotes_arguments(monkeypatch) -> None:
     monkeypatch.setattr(
         artifacts.sys,
         "argv",
-        ["scripts/train_sae.py", "--run-name", "test run"],
+        ["scripts/sae/train_sae.py", "--run-name", "test run"],
     )
 
     command = artifacts.get_run_command()
 
-    assert command == "/usr/bin/python scripts/train_sae.py --run-name 'test run'"
+    assert command == "/usr/bin/python scripts/sae/train_sae.py --run-name 'test run'"
 
 
 def test_write_run_config(tmp_path) -> None:
