@@ -11,7 +11,7 @@ import pytest
 from mas_sae.experiments.records import write_jsonl
 from mas_sae.probe import behavior_data as bd
 
-SCRIPTS = Path(__file__).resolve().parents[3] / "scripts"
+SCRIPTS = Path(__file__).resolve().parents[3] / "scripts/probe"
 
 
 def _load(name):

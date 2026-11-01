@@ -6,7 +6,7 @@ error (retries).  Writes the combined probe-ready outputs and a summary:
     summary.json, binary_labels.csv, exclusions.jsonl, excluded_episodes.json
 
 Usage:
-    PYTHONPATH=src python scripts/summarize_claude_validation.py \\
+    PYTHONPATH=src python scripts/evaluation/summarize_claude_validation.py \\
         --runs results/claude_validation/natural_hop100_seed20261029_run1 \\
                results/claude_validation/natural_hop100_seed20261029_retry1 \\
                results/claude_validation/natural_topup400_to500_seed20261029_run1 \\

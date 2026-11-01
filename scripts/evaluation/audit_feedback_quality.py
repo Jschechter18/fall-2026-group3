@@ -19,7 +19,7 @@ settings and the code of the parser, matching and rules, so any change to
 them invalidates the freeze.
 
 Usage:
-    PYTHONPATH=src python scripts/audit_feedback_quality.py \\
+    PYTHONPATH=src python scripts/evaluation/audit_feedback_quality.py \\
         --results ~/capstone-artifacts/natural_4b_full/results \\
         --labels ~/capstone-artifacts/behavior_v012_official_20261011_release \\
         --partition train \\

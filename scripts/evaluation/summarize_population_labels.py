@@ -9,7 +9,7 @@ hypothetical partition balance if Claude's Adoption/Retention were added to PR #
 PR #153's labels are never modified.
 
 Usage:
-    PYTHONPATH=src python scripts/summarize_population_labels.py \\
+    PYTHONPATH=src python scripts/evaluation/summarize_population_labels.py \\
         --selection results/claude_validation/samples/candidates_train_out_population/selection.json \\
         --runs results/claude_validation/candidates_pilot250_opus5_run1 \\
                results/claude_validation/candidates_train_out_population_opus5_run1 \\

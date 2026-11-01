@@ -115,7 +115,7 @@ error in provenance. Values are not coerced. Exhaustion is a record failure;
 unexpected programming errors remain fatal to the batch.
 
 ```bash
-PYTHONPATH=src python scripts/generate_synthetic_musique.py --n 6 --seed 0
+PYTHONPATH=src python scripts/data/generate_synthetic_musique.py --n 6 --seed 0
 ```
 
 This makes paid API calls using `.env` credentials. Opus 5 is the default;
@@ -134,7 +134,7 @@ which concurrent duplicate wins are not guaranteed reproducible.
 The full-run settings are saved in `configs/synthetic/opus5_v3_full.yaml`:
 
 ```bash
-PYTHONPATH=src python scripts/generate_synthetic_musique.py \
+PYTHONPATH=src python scripts/data/generate_synthetic_musique.py \
   --config configs/synthetic/opus5_v3_full.yaml
 ```
 
@@ -145,7 +145,7 @@ use the CLI names with underscores (for example, `target_per_hop`). Unknown keys
 and invalid types are rejected. Explicit CLI flags override config values:
 
 ```bash
-PYTHONPATH=src python scripts/generate_synthetic_musique.py \
+PYTHONPATH=src python scripts/data/generate_synthetic_musique.py \
   --config configs/synthetic/opus5_v3_full.yaml \
   --target-per-hop 5 --max-requests-per-hop 10 --concurrency 16 \
   --output-dir data/MuSiQue/synthetic/runs/config-smoke-001/generation
@@ -160,7 +160,7 @@ Resolved generation and transport settings are recorded in the run summary.
 For five accepted questions per subtype, with at most ten requests per subtype:
 
 ```bash
-PYTHONPATH=src python scripts/generate_synthetic_musique.py \
+PYTHONPATH=src python scripts/data/generate_synthetic_musique.py \
   --target-per-hop 5 --max-requests-per-hop 10 --concurrency 16 --seed 42 \
   --dedup-original data/MuSiQue/clean/train.json data/MuSiQue/clean/validation.json
 ```
@@ -288,14 +288,14 @@ job after running requests are drained. No automatic resume is implemented.
 For an existing run, first inspect the plan without making API calls:
 
 ```bash
-PYTHONPATH=src python scripts/audit_synthetic_dataset.py path/to/run/accepted.jsonl \
+PYTHONPATH=src python scripts/data/audit_synthetic_dataset.py path/to/run/accepted.jsonl \
   --output-dir path/to/run/dataset_audit_plan --dry-run
 ```
 
 Then launch a real audit in a different, new directory (paid calls):
 
 ```bash
-PYTHONPATH=src python scripts/audit_synthetic_dataset.py path/to/run/accepted.jsonl \
+PYTHONPATH=src python scripts/data/audit_synthetic_dataset.py path/to/run/accepted.jsonl \
   --output-dir path/to/run/dataset_audit
 ```
 
@@ -311,7 +311,7 @@ plumbing and output contracts, not live model judgment or throughput.
 From the repository root with the project environment activated:
 
 ```bash
-PYTHONPATH=src python scripts/validate_synthetic_musique.py candidates.jsonl \
+PYTHONPATH=src python scripts/data/validate_synthetic_musique.py candidates.jsonl \
   --original data/MuSiQue/clean/train.json data/MuSiQue/clean/validation.json \
   --index data/MuSiQue/synthetic/question_index.sqlite
 ```

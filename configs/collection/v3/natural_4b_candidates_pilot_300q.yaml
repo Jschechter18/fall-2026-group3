@@ -5,7 +5,7 @@
 # recorded in sampled_questions.json before anything is generated.
 #
 # Questions: configs/collection/v3/pilot_question_ids.json, written by
-#     scripts/select_partition_questions.py --package <behavior_v012_official_20261011>
+#     scripts/data/select_partition_questions.py --package <behavior_v012_official_20261011>
 #         --partition train --num-questions 300 --seed 20261023 --exclude <files>
 # Hop-proportional; no in_development_data, QC, review, throwaway-run or PR #138
 # sample question (pilot_question_ids.provenance.json lists the files and hashes).

@@ -17,7 +17,7 @@ partitions disagree with the frozen ``--partitions`` file, which is the authorit
 membership; every selected question is re-checked to be frozen ``train``.
 
 Usage:
-    PYTHONPATH=src python scripts/sample_candidate_pilot.py \\
+    PYTHONPATH=src python scripts/evaluation/sample_candidate_pilot.py \\
         --run results/collection/natural_4b_full9_candidates \\
         --partitions results/behavior/behavior_v012_official_20261011/partitions.csv \\
         --labels <dir>/final_labels.jsonl \\

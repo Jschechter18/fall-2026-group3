@@ -17,7 +17,7 @@ A collected episode whose question has no frozen partition (two in the candidate
 manifest. It is written to ``excluded_episodes.json`` with its reason, for the loader's ``excluded_episodes``.
 
 Usage, the candidates run (its 202 collection failures are frozen questions without an episode):
-    PYTHONPATH=src python scripts/export_final_labels_for_probes.py \\
+    PYTHONPATH=src python scripts/probe/export_final_labels_for_probes.py \\
         --labels <build>/final_labels.jsonl \\
         --counts results/experiments/candidate_final_labels_20261027/counts.json \\
         --full-results results/collection/natural_4b_full9_candidates \\
@@ -36,7 +36,7 @@ collected episode of a labeled partition needs exactly one Claude row with the s
 activation index; a technical failure is written to ``excluded_episodes.json`` with its reason, and
 partitions no run labels (test, intervention) stay in the manifest without labels::
 
-    PYTHONPATH=src python scripts/export_final_labels_for_probes.py \\
+    PYTHONPATH=src python scripts/probe/export_final_labels_for_probes.py \\
         --claude-runs <claude_labels>/train <claude_labels>/validation \\
         --full-results <prepared>/results/<run> --layout partitioned --output <new folder>
 """

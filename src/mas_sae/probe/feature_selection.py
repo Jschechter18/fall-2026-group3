@@ -15,7 +15,7 @@ eligible_primary rows; test and intervention are never read):
   5. Offline causal proxy on VALIDATION (see mas_sae.causal.offline): no ablation / random /
      targeted ablation of the top acceptance-promoting features, read by a raw-activation probe.
 
-Entry point: ``scripts/feature_selection.py``.
+Entry point: ``scripts/probe/feature_selection.py``.
 """
 
 from __future__ import annotations
@@ -99,7 +99,7 @@ def ensure_center(spec: dict, root: Path, X_fit: np.ndarray) -> np.ndarray:
 
 @dataclass
 class FeatureSelectionConfig:
-    # Data paths have no defaults: they come from the config passed to scripts/feature_selection.py.
+    # Data paths have no defaults: they come from the config passed to scripts/probe/feature_selection.py.
     capstone_data_root: Path
     activations_dir: str
     results_dir: str

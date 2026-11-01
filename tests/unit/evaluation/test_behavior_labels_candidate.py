@@ -308,7 +308,7 @@ def test_candidate_labels_round_trip_through_labels_csv(tmp_path):
 
 
 def load_script():
-    spec = importlib.util.spec_from_file_location("prepare_behavior_v01", Path("scripts/prepare_behavior_v01.py"))
+    spec = importlib.util.spec_from_file_location("prepare_behavior_v01", Path("scripts/evaluation/prepare_behavior_v01.py"))
     script = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(script)
     return script

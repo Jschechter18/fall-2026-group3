@@ -11,7 +11,7 @@ in the approved format. The team reference labels are keyed by the old plain IDs
 new episodes (they were never applied anyway).
 
 Usage:
-    PYTHONPATH=src python scripts/build_final_labels_partitioned.py \\
+    PYTHONPATH=src python scripts/evaluation/build_final_labels_partitioned.py \\
         --partitions <prepared>/partitions.csv \\
         --runs <prepared>/results/<run> <prepared>/results/<run>_intervention \\
         --output <dir>
@@ -26,7 +26,7 @@ from mas_sae.data.production import read_partitions
 from mas_sae.experiments.artifacts import ensure_output_available, sha256_file
 from mas_sae.experiments.records import read_jsonl
 
-POLICY_DIR = Path(__file__).resolve().parents[1] / "results/experiments/candidate_final_labels_20261027"
+POLICY_DIR = Path(__file__).resolve().parents[2] / "results/experiments/candidate_final_labels_20261027"
 RULE_FILES = ("final_labels.py", "proposal_snapshot.py")
 RUN_FILES = ("interactions.jsonl", "exclusions.jsonl")
 

@@ -16,7 +16,7 @@ under its own run name. Before anything is written, every question's partition
 in the package manifest is checked against the committed frozen mapping
 (``--frozen-partitions``); a package built under a different assignment is refused.
 
-    PYTHONPATH=src python scripts/export_partition_activations.py \\
+    PYTHONPATH=src python scripts/activations/export_partition_activations.py \\
         --package /home/ubuntu/capstone-artifacts/<package folder> \\
         --source-results /home/ubuntu/capstone-artifacts/natural_4b_full/results \\
         --source-activations /home/ubuntu/capstone-artifacts/natural_4b_full/data \\
@@ -48,7 +48,7 @@ from mas_sae.experiments.artifacts import (
 )
 
 # The frozen question-to-partition mapping this repository's runs are bound to.
-FROZEN_PARTITIONS = (Path(__file__).resolve().parents[1] / "results" / "behavior"
+FROZEN_PARTITIONS = (Path(__file__).resolve().parents[2] / "results" / "behavior"
                      / "behavior_v011_split80_10_10_20261006" / PARTITIONS_FILE)
 
 

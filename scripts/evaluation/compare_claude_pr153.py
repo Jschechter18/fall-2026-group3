@@ -9,7 +9,7 @@ own labels. Every disagreement goes to ``disagreements.csv`` for human adjudicat
 is a reference, not ground truth.
 
 Usage:
-    PYTHONPATH=src python scripts/compare_claude_pr153.py \\
+    PYTHONPATH=src python scripts/evaluation/compare_claude_pr153.py \\
         --run results/claude_validation/candidates_pilot250_run1 \\
         --selection results/claude_validation/samples/candidates_pilot250_seed20261029/selection.json \\
         --output results/claude_validation/candidates_pilot250_comparison \\

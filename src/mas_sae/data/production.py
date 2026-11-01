@@ -566,7 +566,7 @@ def load_labeled_rows(results_dir, package_dir, *, partitions=None, layout="lega
 
     ``results_dir`` holds ``train/`` and ``validation/`` folders, each with an
     ``interactions.jsonl`` (full run or layer scan). ``package_dir`` is the
-    folder written by ``scripts/prepare_behavior_v01.py``.
+    folder written by ``scripts/evaluation/prepare_behavior_v01.py``.
     Set ``layout="partitioned"`` for distributed results, whose folders come
     from run_layout.json. Labels are still supplied separately; optional
     episode IDs must match, and the manifest remains the partition authority.

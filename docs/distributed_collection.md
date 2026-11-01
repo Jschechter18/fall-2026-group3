@@ -31,7 +31,7 @@ in the example are starting values, not a new agreed research protocol.
 
 ```bash
 export PYTHONPATH=src
-python scripts/distributed_collection.py prepare \
+python scripts/activations/distributed_collection.py prepare \
   --config configs/collection/distributed.yaml --num-chunks 8 \
   --output artifacts/collection/mixed_collection/manifest.json
 ```
@@ -82,7 +82,7 @@ files are unnecessary: the manifest contains the exact question payloads.
 Assign non-overlapping work chunk IDs manually.
 
 ```bash
-python scripts/collect_activations.py \
+python scripts/activations/collect_activations.py \
   --config configs/collection/distributed.yaml \
   --manifest artifacts/collection/mixed_collection/manifest.json \
   --chunk 0 1 2 3
@@ -123,7 +123,7 @@ or foreign chunk directories instead of choosing a result.
 Download all completed chunks beside the manifest, preserving directory names:
 
 ```bash
-python scripts/distributed_collection.py merge \
+python scripts/activations/distributed_collection.py merge \
   --manifest artifacts/collection/mixed_collection/manifest.json
 ```
 
@@ -145,7 +145,7 @@ an SAE training run. Checksums detect changes between merge and split.
 ## Freeze later partitions and export
 
 ```bash
-python scripts/distributed_collection.py split \
+python scripts/activations/distributed_collection.py split \
   --manifest artifacts/collection/mixed_collection/manifest.json \
   --config configs/collection/distributed.yaml
 ```
@@ -191,12 +191,12 @@ has stopped. No reader hooks or multi-tree publication recovery are required.
 Generate labels against each final run, retaining existing label rules:
 
 ```bash
-python scripts/prepare_behavior_v01.py \
+python scripts/evaluation/prepare_behavior_v01.py \
   --full-results artifacts/collection/mixed_collection/prepared/results/mixed_collection \
   --layout partitioned --label-policy v0.2.0-candidate \
   --output artifacts/collection/mixed_collection/labels
 
-python scripts/prepare_behavior_v01.py \
+python scripts/evaluation/prepare_behavior_v01.py \
   --full-results artifacts/collection/mixed_collection/prepared/results/mixed_collection_intervention \
   --layout partitioned --label-policy v0.2.0-candidate \
   --output artifacts/collection/mixed_collection/intervention-labels

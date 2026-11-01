@@ -35,7 +35,7 @@ from mas_sae.models.claude import ClaudeResult
 
 def _load_cli():
     """scripts/ is not on the test path, so load the CLI by file like the other script tests."""
-    path = Path(__file__).resolve().parents[3] / "scripts" / "run_claude_validation.py"
+    path = Path(__file__).resolve().parents[3] / "scripts/evaluation/run_claude_validation.py"
     spec = importlib.util.spec_from_file_location("run_claude_validation", path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

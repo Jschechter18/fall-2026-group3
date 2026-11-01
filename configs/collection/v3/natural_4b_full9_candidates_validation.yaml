@@ -5,7 +5,7 @@
 # Start only after the pilot (natural_4b_candidates_pilot_300q.yaml) passes.
 #
 # Partitions are not assigned here. After collecting, build the package with
-# scripts/prepare_behavior_v01.py --frozen-partitions, which keeps every
+# scripts/evaluation/prepare_behavior_v01.py --frozen-partitions, which keeps every
 # question's recorded partition and rebuilds only the activation indices.
 # sampling.strategy random over the whole split selects it in a seeded
 # shuffled order. Resumable: rerun with --resume after interruption.

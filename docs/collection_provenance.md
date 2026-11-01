@@ -36,8 +36,8 @@ remain supported.
 | `results/collection/<run>/<split>/interactions.jsonl` | `collection_artifacts.py` | The episode records (S3 for the production run). |
 | `data/activations/<run>/_progress/<split>/provenance.json` | `collection_progress.py` | The run identity used by `--resume`. For the production run this file is committed as `results/collection/natural_4b_full/<split>_provenance.json`. |
 | `data/activations/<run>/_progress/<split>/chunk_XXXXXXXX/` | `collection_progress.py` | Per-chunk `metadata.json`, `records.jsonl`, `exclusions.jsonl`, `activations.pt` until the run is merged. |
-| `results/collection/<export run>/export_summary.json` | `scripts/export_partition_activations.py` | Commit, manifest and labels hashes, frozen-partition path and hash, layers, counts, file hashes of a partition export. |
-| `results/sae/musique/runs/layer_NN/<run id>/manifest.json` | `scripts/train_sae.py` | SAE training provenance, including sha256 of the activation files used. |
+| `results/collection/<export run>/export_summary.json` | `scripts/activations/export_partition_activations.py` | Commit, manifest and labels hashes, frozen-partition path and hash, layers, counts, file hashes of a partition export. |
+| `results/sae/musique/runs/layer_NN/<run id>/manifest.json` | `scripts/sae/train_sae.py` | SAE training provenance, including sha256 of the activation files used. |
 
 ## Legacy resume identity (`provenance.json`)
 

@@ -18,7 +18,7 @@ Each intervention edits a set S of features of z = encode(x) at that position, g
 Δ = decode(z') - decode(z):
   ablation           z'_S = 0
   steering (s)       z'_f = s * ref_f, where ref_f is f's mean activation where it fires on the
-                     feature-selection fit partition (``scripts/feature_reference_activations.py``):
+                     feature-selection fit partition (``scripts/causal/feature_reference_activations.py``):
                      s > 0 pushes the features up, s < 0 below zero, a value these SAEs' latents never take
                      (ablation is s = 0)
   scaling (p)        z'_S = (1 + p) * z_S, p >= -1: p < 0 shrinks the features (p = -1 is ablation), p > 0
@@ -62,7 +62,7 @@ continues marked unvalidated). Generations are appended to ``per_row.jsonl`` as 
 interrupted run resumes where it stopped and ``analyse`` can be run on a partial run at any time. A
 resume must use the same inputs, code, environment and episode order as the run it continues (it
 may only add episodes), and an unfinished last line from an interrupted write is cut off before
-appending. Entry point: ``scripts/causal_replay.py``.
+appending. Entry point: ``scripts/causal/causal_replay.py``.
 """
 
 from __future__ import annotations
@@ -118,7 +118,7 @@ TABLE_COLUMNS = ["Experiment", "Condition", "Outcome", "N", "Acceptance Rate (%)
 
 @dataclass
 class ReplayConfig:
-    # Data paths have no defaults: they come from the config passed to scripts/causal_replay.py.
+    # Data paths have no defaults: they come from the config passed to scripts/causal/causal_replay.py.
     capstone_data_root: Path
     interactions_jsonl: str
     labels_csv: str
@@ -209,7 +209,7 @@ class ReplayConfig:
         if not (cfg.ablation or s or cfg.scale_fractions or cfg.edit_norms):
             raise ValueError("Nothing to run: set ablation: true or some steer_strengths, scale_fractions or edit_norms.")
         if s and not cfg.feature_reference:
-            raise ValueError("steer_strengths needs feature_reference (scripts/feature_reference_activations.py).")
+            raise ValueError("steer_strengths needs feature_reference (scripts/causal/feature_reference_activations.py).")
         if type(cfg.random_directions) is not int or cfg.random_directions < 0:
             raise ValueError("random_directions must be a nonnegative integer.")
         if cfg.random_directions and not (cfg.edit_norms and cfg.error_preserving):
@@ -543,7 +543,7 @@ def reference_activations(cfg: ReplayConfig, sae_hashes: dict) -> tuple[dict, di
             latents[name] = ref["saes"][name]["latents"]
         elif cfg.random_controls == "contribution":
             raise ValueError(f"{cfg.feature_reference} has no per-latent statistics for {name!r}; recompute it "
-                             "with scripts/feature_reference_activations.py --overwrite.")
+                             "with scripts/causal/feature_reference_activations.py --overwrite.")
     return out, latents
 
 

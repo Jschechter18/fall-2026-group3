@@ -57,7 +57,7 @@ The rows are shuffled and are not a random sample of the data, so do not expect 
 ## When both annotators are done
 
 ```bash
-PYTHONPATH=src python scripts/qc_agreement.py annotator_a.csv annotator_b.csv --output agreement.json
+PYTHONPATH=src python scripts/evaluation/qc_agreement.py annotator_a.csv annotator_b.csv --output agreement.json
 ```
 
 This reports, for each field, how many rows both of you completed, the share you agreed on, Cohen's kappa, and the IDs of the rows where you disagreed. Blank rows are not counted as agreement. Resolve disagreements together in a separate file that records who decided and why; do not overwrite either person's original answers.

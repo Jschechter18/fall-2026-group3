@@ -6,7 +6,7 @@
 # Full ablation is kept as the unscaled estimand.
 #
 # First add per-latent statistics to the reference file (it keeps the same per-feature values):
-#   python scripts/feature_reference_activations.py --config configs/feature_selection_layer33.yaml \
+#   python scripts/causal/feature_reference_activations.py --config configs/feature_selection_layer33.yaml \
 #       --summary results/feature_selection/20261016T003252665105Z/feature_selection_summary.json --overwrite
 #
 # L1 decomposition: feature 8023 fires on ~100% of fit-partition rows with a mean activation of ~46, far above

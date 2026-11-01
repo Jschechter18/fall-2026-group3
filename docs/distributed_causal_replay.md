@@ -56,7 +56,7 @@ input and checkpoint paths resolve identically.
 On the coordinator, use the existing replay entry point:
 
 ```bash
-python scripts/causal_replay.py \
+python scripts/causal/causal_replay.py \
   --config configs/causal_edit_size_layer33.yaml \
   --preflight-only
 ```
@@ -68,7 +68,7 @@ Preparation refuses a failed, incomplete, or modified preflight.
 ## 2. Freeze the map shards
 
 ```bash
-python scripts/distributed_causal_replay.py prepare \
+python scripts/causal/distributed_causal_replay.py prepare \
   --preflight-run "$PREFLIGHT_RUN" \
   --num-shards 4
 ```
@@ -107,7 +107,7 @@ aws s3 sync "$S3_RUN_URI/" "$LOCAL_RUN/" \
 Worker 0 runs:
 
 ```bash
-CUDA_VISIBLE_DEVICES=0 python scripts/distributed_causal_replay.py map \
+CUDA_VISIBLE_DEVICES=0 python scripts/causal/distributed_causal_replay.py map \
   --manifest "$LOCAL_RUN/distributed/manifest.json" \
   --shard 0 \
   --resume
@@ -152,7 +152,7 @@ aws s3 sync "$S3_RUN_URI/distributed/shards/" \
 Then reduce locally:
 
 ```bash
-python scripts/distributed_causal_replay.py reduce \
+python scripts/causal/distributed_causal_replay.py reduce \
   --manifest "$PREFLIGHT_RUN/distributed/manifest.json"
 ```
 

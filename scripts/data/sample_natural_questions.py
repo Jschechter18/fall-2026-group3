@@ -13,13 +13,13 @@ across ``adoption_experiment.stratum`` (hop x A1 correct x Critic correct, with
 cohort is never labeled twice.
 
 Usage:
-    PYTHONPATH=src python scripts/sample_natural_questions.py \\
+    PYTHONPATH=src python scripts/data/sample_natural_questions.py \\
         --interactions results/collection/natural_4b_full9_partitioned/train/interactions.jsonl \\
         --exclude results/adoption_experiment/sample_100q/sampled_episodes.jsonl \\
         --output results/claude_validation/samples/natural_hop100_seed20261029
 
     # grow that cohort to 500
-    PYTHONPATH=src python scripts/sample_natural_questions.py \\
+    PYTHONPATH=src python scripts/data/sample_natural_questions.py \\
         --interactions results/collection/natural_4b_full9_partitioned/train/interactions.jsonl \\
         --exclude results/adoption_experiment/sample_100q/sampled_episodes.jsonl \\
         --cohort results/claude_validation/samples/natural_hop100_seed20261029/sampled_episodes.jsonl \\

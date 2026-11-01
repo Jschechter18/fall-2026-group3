@@ -23,7 +23,7 @@ data/activations/<run>/layer_NN/<source_split>_attempt2.pt   # one row per episo
 data/activations/<run>/layer_NN/<source_split>.pt            # attempt1 rows, then attempt2 rows
 ```
 
-The third file is the SAE-facing tensor; `scripts/train_sae.py` reads it as unlabeled rows (train / validation / test). Every file is written through `ActivationStore` and read back to verify the round trip before the run is marked finished (`collection_artifacts.py`).
+The third file is the SAE-facing tensor; `scripts/sae/train_sae.py` reads it as unlabeled rows (train / validation / test). Every file is written through `ActivationStore` and read back to verify the round trip before the run is marked finished (`collection_artifacts.py`).
 
 While a legacy run is in progress, chunks live under `data/activations/<run>/_progress/<source_split>/chunk_XXXXXXXX/` with their own `records.jsonl` and `activations.pt`; `merge_chunks` concatenates them in order and assigns the global indices below.
 Manifest workers checkpoint under `<run-directory>/chunks/<work-id>/chunk_XXXXXXXX/`;
@@ -61,7 +61,7 @@ package manifest maps each question to its research partition and its original
 full-run/layer-scan indices. Historical exports retain `source_activation_index`
 so their existing readers can verify the original address.
 
-`scripts/export_partition_activations.py` gathers tensors by partition. An
+`scripts/activations/export_partition_activations.py` gathers tensors by partition. An
 intervention export contains baseline episodes and tensors under its own run
 name; causal replay later regenerates A2 live.
 
@@ -76,10 +76,10 @@ Editable source: `docs/diagrams/data_split_workflow.drawio`. The overall experim
 
 | Consumer | Reads | Uses the indices? |
 |---|---|---|
-| SAE training (`scripts/train_sae.py`, `sae/dataloader.py`) | `layer_NN/{train,validation,test}.pt` of an exported run | No: unlabeled rows, A1 and A2 together |
+| SAE training (`scripts/sae/train_sae.py`, `sae/dataloader.py`) | `layer_NN/{train,validation,test}.pt` of an exported run | No: unlabeled rows, A1 and A2 together |
 | Probes (`production.load_labeled_rows` + `load_production_activations`) | `labels.csv`, the manifest, `layer_NN/<split>_attempt{1,2}.pt` | Yes: manifest index must equal the record index, with purpose gating (`fit`, `tune`, `evaluate`, `intervene`) |
 | Layer-selection probe (PR #51) | exported partition runs through the same loader | Yes |
 | Causal stage | separate intervention episodes, matching labels, and saved contexts for mixed datasets; re-runs the Solver live | Indices not needed: the hook runs at generation time |
-| Alignment checks (`experiments/alignment.py`, `scripts/validate_pilot_activations.py`) | records and tensors | Yes |
+| Alignment checks (`experiments/alignment.py`, `scripts/activations/validate_pilot_activations.py`) | records and tensors | Yes |
 
 Use `attempt=2` rows for feedback-uptake questions and `attempt=1` rows for the "before feedback" control; never mix a row from `<split>.pt` with an index meant for the per-attempt files.

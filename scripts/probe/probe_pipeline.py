@@ -8,7 +8,7 @@ mas_sae.probe.{data,model,interpretability} so it can also be reused by the
 activation-selection probe script.
 
 Run from the repo root with the `capstone` conda env active:
-    python scripts/probe_pipeline.py
+    python scripts/probe/probe_pipeline.py
 """
 
 import json

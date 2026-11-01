@@ -5,9 +5,9 @@ replay draws contribution-matched random controls from (``random_controls: contr
 
 The result is written next to the summary it comes from, so each layer has its own:
 
-    python scripts/feature_reference_activations.py --config configs/feature_selection_layer33.yaml \
+    python scripts/causal/feature_reference_activations.py --config configs/feature_selection_layer33.yaml \
         --summary results/feature_selection/20261016T003252665105Z/feature_selection_summary.json
-    python scripts/feature_reference_activations.py --config configs/feature_selection_layer25.yaml \
+    python scripts/causal/feature_reference_activations.py --config configs/feature_selection_layer25.yaml \
         --summary results/feature_selection/20261018T025217187826Z/feature_selection_summary.json
 """
 

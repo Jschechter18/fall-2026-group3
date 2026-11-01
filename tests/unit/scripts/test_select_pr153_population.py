@@ -11,7 +11,7 @@ from mas_sae.experiments.records import write_jsonl
 
 
 def _load():
-    path = Path(__file__).resolve().parents[3] / "scripts" / "select_pr153_population.py"
+    path = Path(__file__).resolve().parents[3] / "scripts/evaluation/select_pr153_population.py"
     spec = importlib.util.spec_from_file_location("select_pr153_population", path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

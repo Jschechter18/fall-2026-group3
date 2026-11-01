@@ -3,7 +3,7 @@
 # Target: Adoption (1) vs Retention (0) only. Agreement, third answers, Out and technical failures are
 # ineligible and refused if they appear as eligible (label_column check).
 # Inputs, after `distributed_collection.py merge` + `split` and the Claude probe package
-# (scripts/run_claude_validation.py per partition, then scripts/export_final_labels_for_probes.py
+# (scripts/evaluation/run_claude_validation.py per partition, then scripts/probe/export_final_labels_for_probes.py
 #  --layout partitioned --output results/behavior/mixed_final_001_claude_probe):
 #   artifacts/collection/mixed_final_001/prepared/{activations,results}/mixed_final_001/
 capstone_data_root: .

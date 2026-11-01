@@ -5,7 +5,7 @@
 # natural_4b_full9_validation.yaml under the same run_name.
 #
 # Partitions are not assigned here. After collecting, build the package with
-#     scripts/prepare_behavior_v01.py --full-results <...>/natural_4b_full9/results \
+#     scripts/evaluation/prepare_behavior_v01.py --full-results <...>/natural_4b_full9/results \
 #         --frozen-partitions results/behavior/behavior_v011_split80_10_10_20261006/partitions.csv
 # which keeps every question's recorded partition and rebuilds only the
 # activation indices. The historical experiment_split block is deliberately

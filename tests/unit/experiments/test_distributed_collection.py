@@ -282,7 +282,7 @@ def test_manifest_tampering_and_multiple_presentations_fail_before_collection(tm
 def test_collection_entrypoint_loads_models_once_for_all_assigned_chunks(tmp_path, monkeypatch):
     import importlib.util
     from types import SimpleNamespace
-    spec = importlib.util.spec_from_file_location("collection_entry", Path(__file__).resolve().parents[3]/"scripts/collect_activations.py")
+    spec = importlib.util.spec_from_file_location("collection_entry", Path(__file__).resolve().parents[3]/"scripts/activations/collect_activations.py")
     entry = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(entry)
     config = make_config(tmp_path)

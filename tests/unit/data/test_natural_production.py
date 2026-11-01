@@ -180,7 +180,7 @@ def test_blind_raw_generation_survives_artifact_roundtrip(monkeypatch, tmp_path)
 def test_collection_script_rejects_bad_solver_sites_before_generation(monkeypatch):
     import importlib.util
     from pathlib import Path
-    spec = importlib.util.spec_from_file_location("collect_script", Path("scripts/collect_activations.py"))
+    spec = importlib.util.spec_from_file_location("collect_script", Path("scripts/activations/collect_activations.py"))
     script = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(script)
     def role(model, loader):

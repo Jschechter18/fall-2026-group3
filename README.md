@@ -154,6 +154,13 @@ model or inference profile.
 │   └── references/               # Reference PDFs for the literature review
 ├── results/                      # Experimental outputs and results
 ├── scripts/                      # Executable Python entry-point scripts
+│   ├── activations/              # Activation collection and export workflows
+│   ├── causal/                   # Causal replay and intervention workflows
+│   ├── data/                     # Dataset preparation and validation
+│   ├── evaluation/               # Labeling, QC, summaries, and plots
+│   ├── experiments/              # Experiment-specific entry points
+│   ├── probe/                    # Probe training and feature selection
+│   └── sae/                      # SAE training and refinement
 ├── src/
 │   ├── component/                # Reusable, non-pipeline components
 │   ├── docs/                     # Project documentation
@@ -382,7 +389,7 @@ python -m ipykernel install --user \
 After activating the Conda environment and installing the project, run the following command from the repository root:
 
 ```bash
-python scripts/get_musique_dataset.py
+python scripts/data/get_musique_dataset.py
 ```
 
 ## Activation Collection
@@ -397,12 +404,12 @@ membership is reserved upfront, and its baselines are included in collection.
 The following commands and paths describe the supported legacy collection path.
 Run from the repository root:
 
-    python scripts/collect_activations.py --config configs/collection/v1/smoke_train.yaml
+    python scripts/activations/collect_activations.py --config configs/collection/v1/smoke_train.yaml
 
 To run 100 existing synthetic sample questions through the solver–critic pipeline:
 
 ```bash
-PYTHONPATH=src python scripts/collect_activations.py \
+PYTHONPATH=src python scripts/activations/collect_activations.py \
   --config configs/collection/synthetic_sample_100q_pilot.yaml
 ```
 
@@ -483,7 +490,7 @@ on Linux/macOS so simultaneous runs do not duplicate headers or lose rows.
 
 Here `<split>` is the MuSiQue source split (train or validation), which mixes
 the research partitions. For SAE and probe work use an exported partition run
-instead: `scripts/export_partition_activations.py` writes the same layout under
+instead: `scripts/activations/export_partition_activations.py` writes the same layout under
 a new run name with the partition (train, validation, test) in place of the
 source split, following the frozen `split_manifest.csv`. See
 `docs/behavior_v01.md`, section "Keeping evaluation honest".

@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-SCRIPT = Path(__file__).resolve().parents[3] / "scripts/plot_synthetic_pilot.py"
+SCRIPT = Path(__file__).resolve().parents[3] / "scripts/evaluation/plot_synthetic_pilot.py"
 
 
 @pytest.fixture

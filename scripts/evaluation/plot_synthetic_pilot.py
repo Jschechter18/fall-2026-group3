@@ -14,7 +14,7 @@ Refuses a question labeled twice, a question that is both labeled and excluded, 
 labeling errors (they are not behavior and must be retried first).
 
 Usage:
-    python scripts/plot_synthetic_pilot.py \\
+    python scripts/evaluation/plot_synthetic_pilot.py \\
         --cohort "Synthetic, random fillers" results/claude_validation/pilot174_synthetic100_opus5_run1/raw_results.jsonl \\
         --cohort "Synthetic, related fillers" results/claude_validation/pilot174_related_fillers99_opus5_run1/raw_results.jsonl \\
                  results/collection/synthetic_sample_100q_related_fillers/train/exclusions.jsonl \\

@@ -10,7 +10,7 @@ reads) and ``selection.json`` (population definition, PR #153 label/reason/flags
 input hashes and the sampled file's sha256).
 
 Usage:
-    PYTHONPATH=src python scripts/select_pr153_population.py \\
+    PYTHONPATH=src python scripts/evaluation/select_pr153_population.py \\
         --run results/collection/natural_4b_full9_candidates \\
         --partitions results/behavior/behavior_v012_official_20261011/partitions.csv \\
         --labels <dir>/final_labels.jsonl --label out --partition train \\

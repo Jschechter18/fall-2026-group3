@@ -17,7 +17,7 @@ target), a text-only baseline (what the Solver sees) and an optional metadata ba
 same way, label-shuffle controls give each layer's selectivity, and ties (or nothing beating chance)
 produce NO recommendation. Holdout runs save each layer's probe in raw activation units.
 
-Entry point: ``scripts/layer_selection.py``.
+Entry point: ``scripts/probe/layer_selection.py``.
 """
 
 from __future__ import annotations

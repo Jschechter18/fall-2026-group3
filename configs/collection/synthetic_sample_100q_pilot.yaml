@@ -1,4 +1,4 @@
-# Run from the repository root with scripts/collect_activations.py.
+# Run from the repository root with scripts/activations/collect_activations.py.
 # Existing synthetic records; no question generation or Bedrock calls.
 # source_split is an output label; dataset.path supplies all questions.
 # 34 two-hop, 33 three-hop, 33 four-hop questions, seed 42.

@@ -30,7 +30,7 @@ def exported(tmp_path, monkeypatch):
 def label_run(results, output, monkeypatch):
     monkeypatch.setattr("sys.argv", ["prepare_behavior_v01.py", "--full-results", str(results),
         "--layout", "partitioned", "--label-policy", "v0.2.0-candidate", "--output", str(output)])
-    runpy.run_path(str(Path(__file__).resolve().parents[3]/"scripts/prepare_behavior_v01.py"), run_name="__main__")
+    runpy.run_path(str(Path(__file__).resolve().parents[3]/"scripts/evaluation/prepare_behavior_v01.py"), run_name="__main__")
 
 
 def test_exported_tensors_and_all_index_fields_match_actual_questions(exported):

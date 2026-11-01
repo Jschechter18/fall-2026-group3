@@ -1,4 +1,4 @@
-# CPU smoke test of the causal replay (scripts/causal_replay.py --smoke): real validation episodes,
+# CPU smoke test of the causal replay (scripts/causal/causal_replay.py --smoke): real validation episodes,
 # labels and MuSiQue paragraphs; tiny random model and SAEs, so the numbers mean nothing.
 # Everything else matches configs/causal_replay_layer33.yaml.
 capstone_data_root: .

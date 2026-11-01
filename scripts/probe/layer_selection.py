@@ -2,8 +2,8 @@
 
 Uses the official full nine-layer export and Behavior v0.1.2 labels:
 
-    python scripts/layer_selection.py --config configs/layer_selection_full9.yaml --inspect   # FIRST
-    python scripts/layer_selection.py --config configs/layer_selection_full9.yaml             # fit train, rank validation
+    python scripts/probe/layer_selection.py --config configs/layer_selection_full9.yaml --inspect   # FIRST
+    python scripts/probe/layer_selection.py --config configs/layer_selection_full9.yaml             # fit train, rank validation
 """
 
 import argparse

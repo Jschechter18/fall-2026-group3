@@ -13,7 +13,7 @@ from mas_sae.experiments.distributed_collection import core  # noqa: E402
 from mas_sae.experiments.records import read_jsonl, write_jsonl  # noqa: E402
 from test_distributed_collection import collect, fixture_collector, make_config, prepare  # noqa: E402
 
-SCRIPT = Path(__file__).resolve().parents[3] / "scripts/build_final_labels_partitioned.py"
+SCRIPT = Path(__file__).resolve().parents[3] / "scripts/evaluation/build_final_labels_partitioned.py"
 
 
 def _load():
@@ -124,8 +124,8 @@ def test_probe_package_from_the_partitioned_labels(build, prepared, tmp_path):
 
     build.main(_args(prepared, tmp_path / "labels"))
     ordinary = prepared / "results/fixture"
-    spec = importlib.util.spec_from_file_location("export_final_labels_for_probes",
-                                                  SCRIPT.parent / "export_final_labels_for_probes.py")
+    exporter = Path(__file__).resolve().parents[3] / "scripts/probe/export_final_labels_for_probes.py"
+    spec = importlib.util.spec_from_file_location("export_final_labels_for_probes", exporter)
     export = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(export)
     export.main(["--labels", str(tmp_path / "labels/final_labels.jsonl"), "--counts", str(tmp_path / "labels/counts.json"),
@@ -146,8 +146,8 @@ CLASSES = ("adoption", "retention", "agreement", "out")
 
 
 def _exporter():
-    spec = importlib.util.spec_from_file_location("export_final_labels_for_probes",
-                                                  SCRIPT.parent / "export_final_labels_for_probes.py")
+    exporter = Path(__file__).resolve().parents[3] / "scripts/probe/export_final_labels_for_probes.py"
+    spec = importlib.util.spec_from_file_location("export_final_labels_for_probes", exporter)
     export = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(export)
     return export

@@ -1,7 +1,7 @@
 # Causal steering (issue #139): the causal replay of configs/causal_replay_layer25.yaml, but instead of
 # zeroing the #89 features, each targeted / random feature set is clamped to s * ref at the final prompt
 # token of the A2 prefill, with ref the feature's mean activation where it fires on the feature-selection
-# train partition (scripts/feature_reference_activations.py writes it next to the summary). s > 0 pushes
+# train partition (scripts/causal/feature_reference_activations.py writes it next to the summary). s > 0 pushes
 # the features up, s < 0 below zero; ablation (s = 0) was the earlier run, so it is not repeated here.
 # Per episode: plain replay + 3 reconstruction-only controls + 3 strengths x (targeted + 7 random draws)
 # x 3 SAEs x 2 splices = 148 generations, about 17.9 h for 517 episodes at the

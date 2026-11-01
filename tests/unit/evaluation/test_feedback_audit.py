@@ -128,7 +128,7 @@ def _write_run(tmp_path, rows_by_partition):
 
 
 def _run(*args):
-    return subprocess.run([sys.executable, str(REPO / "scripts/audit_feedback_quality.py"), *args],
+    return subprocess.run([sys.executable, str(REPO / "scripts/evaluation/audit_feedback_quality.py"), *args],
                           capture_output=True, text=True, env={"PYTHONPATH": str(REPO / "src")})
 
 

@@ -8,7 +8,7 @@ Writes three things into a new folder:
 
 The collection run folders are only read, never changed.
 
-    PYTHONPATH=src python scripts/prepare_behavior_v01.py \\
+    PYTHONPATH=src python scripts/evaluation/prepare_behavior_v01.py \\
         --artifacts /home/ubuntu/capstone-artifacts \\
         --output /home/ubuntu/capstone-artifacts/<new folder> \\
         --train-proportion 0.8 --test-proportion 0.1 --intervention-proportion 0.1 \\
@@ -20,7 +20,7 @@ train / test / intervention with the proportions given here. The team agreed
 0.8 / 0.1 / 0.1 with seed 42 on 2026-10-06. That cut was made once; the result
 is the committed ``partitions.csv`` and every later run keeps it:
 
-    PYTHONPATH=src python scripts/prepare_behavior_v01.py \\
+    PYTHONPATH=src python scripts/evaluation/prepare_behavior_v01.py \\
         --full-results <artifacts>/<rerun>/results \\
         --output <artifacts>/<new folder> \\
         --frozen-partitions results/behavior/behavior_v011_split80_10_10_20261006/partitions.csv \\

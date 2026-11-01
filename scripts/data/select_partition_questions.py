@@ -6,7 +6,7 @@ committed frozen mapping. Questions flagged ``in_development_data`` are never
 drawn, and neither is any MuSiQue id found in an ``--exclude`` file (any
 format: QC packets, review keys, earlier sample lists).
 
-    PYTHONPATH=src python scripts/select_partition_questions.py \\
+    PYTHONPATH=src python scripts/data/select_partition_questions.py \\
         --package /home/ubuntu/capstone-artifacts/behavior_v012_official_20261011 \\
         --partition train --num-questions 300 --seed 20261023 \\
         --exclude <files with question ids already used> \\
@@ -27,7 +27,7 @@ from mas_sae.data.production import (
 )
 from mas_sae.experiments.artifacts import ensure_output_available, sha256_file, write_json_atomic
 
-FROZEN_PARTITIONS = (Path(__file__).resolve().parents[1] / "results" / "behavior"
+FROZEN_PARTITIONS = (Path(__file__).resolve().parents[2] / "results" / "behavior"
                      / "behavior_v011_split80_10_10_20261006" / PARTITIONS_FILE)
 
 

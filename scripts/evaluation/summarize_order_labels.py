@@ -9,7 +9,7 @@ string match against the gold answer, so it is approximate. The per-partition to
 reproduce ``counts.json`` exactly. Labels and partitions are read, never written.
 
 Usage:
-    PYTHONPATH=src python scripts/summarize_order_labels.py \\
+    PYTHONPATH=src python scripts/evaluation/summarize_order_labels.py \\
         --run results/collection/natural_4b_full9_candidates \\
         --partitions results/behavior/behavior_v012_official_20261011/partitions.csv \\
         --labels <dir>/final_labels.jsonl \\

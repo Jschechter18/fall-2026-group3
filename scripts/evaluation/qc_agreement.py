@@ -1,6 +1,6 @@
 """Measure agreement between two annotators on the blind QC packet.
 
-    PYTHONPATH=src python scripts/qc_agreement.py annotator_a.csv annotator_b.csv \\
+    PYTHONPATH=src python scripts/evaluation/qc_agreement.py annotator_a.csv annotator_b.csv \\
         --output agreement.json
 
 Only rows that both annotators completed are compared. Disagreements are

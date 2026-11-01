@@ -540,7 +540,7 @@ def test_defaults_and_entry_point_use_the_official_full9_export():
         assert "behavior_v012_official_20261011" in c.labels_csv
         assert "behavior_v012_official_20261011" in c.manifest_csv
         assert (c.protocol, c.fit_partition, c.eval_partition) == ("holdout", "train", "validation")
-    assert "layer_selection_full9.yaml" in (repo / "scripts/layer_selection.py").read_text()
+    assert "layer_selection_full9.yaml" in (repo / "scripts/probe/layer_selection.py").read_text()
     assert not list((repo / "configs").glob("layer_selection_scan*.yaml"))
 
 

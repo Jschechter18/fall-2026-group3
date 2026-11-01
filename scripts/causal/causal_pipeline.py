@@ -16,7 +16,7 @@ it re-encodes the reconstructed activation and asks the trained probe for a deci
 of continuing a real generation. 
 
 Run from the repo root with the `capstone` conda env active:
-    python scripts/causal_pipeline.py
+    python scripts/causal/causal_pipeline.py
 """
 
 import json

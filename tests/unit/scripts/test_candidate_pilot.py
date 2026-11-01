@@ -1,4 +1,4 @@
-"""Tests for the 250-episode candidates pilot selection (scripts/sample_candidate_pilot.py)."""
+"""Tests for the 250-episode candidates pilot selection (scripts/evaluation/sample_candidate_pilot.py)."""
 
 import hashlib
 import importlib.util
@@ -11,7 +11,7 @@ from mas_sae.experiments.records import write_jsonl
 
 
 def _load():
-    path = Path(__file__).resolve().parents[3] / "scripts" / "sample_candidate_pilot.py"
+    path = Path(__file__).resolve().parents[3] / "scripts/evaluation/sample_candidate_pilot.py"
     spec = importlib.util.spec_from_file_location("sample_candidate_pilot", path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -132,7 +132,7 @@ def test_end_to_end_selection_is_frozen_train_and_hashed(tmp_path):
 
 
 def _load_compare():
-    path = Path(__file__).resolve().parents[3] / "scripts" / "compare_claude_pr153.py"
+    path = Path(__file__).resolve().parents[3] / "scripts/evaluation/compare_claude_pr153.py"
     spec = importlib.util.spec_from_file_location("compare_claude_pr153", path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

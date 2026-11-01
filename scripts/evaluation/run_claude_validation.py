@@ -22,14 +22,14 @@ Requires AWS Bedrock credentials in ``.env`` (see README).  Use ``--dry-run``
 to preview without making API calls.
 
 Usage:
-    PYTHONPATH=src python scripts/run_claude_validation.py \\
+    PYTHONPATH=src python scripts/evaluation/run_claude_validation.py \\
         --episodes results/collection/natural_4b_full9_partitioned/train/interactions.jsonl \\
         --output results/claude_validation/pilot_10 \\
         --limit 10 \\
         --dry-run
 
     # Real pilot (after authorization):
-    PYTHONPATH=src python scripts/run_claude_validation.py \\
+    PYTHONPATH=src python scripts/evaluation/run_claude_validation.py \\
         --episodes results/collection/natural_4b_full9_partitioned/train/interactions.jsonl \\
         --output results/claude_validation/pilot_10 \\
         --limit 10

@@ -3,10 +3,10 @@
 Steering (issue #139) runs the same replay with each feature set clamped to s * ref instead of zeroed. The
 reference activations come from the layer's feature-selection run, and are computed once per layer first:
 
-    python scripts/feature_reference_activations.py --config configs/feature_selection_layer33.yaml \
+    python scripts/causal/feature_reference_activations.py --config configs/feature_selection_layer33.yaml \
         --summary results/feature_selection/20261016T003252665105Z/feature_selection_summary.json
-    python scripts/causal_replay.py --config configs/causal_steering_layer33.yaml --limit 5    # check s/generation
-    python scripts/causal_replay.py --config configs/causal_steering_layer33.yaml
+    python scripts/causal/causal_replay.py --config configs/causal_steering_layer33.yaml --limit 5    # check s/generation
+    python scripts/causal/causal_replay.py --config configs/causal_steering_layer33.yaml
 
 (and the same with configs/feature_selection_layer25.yaml, its summary and configs/causal_steering_layer25.yaml).
 
@@ -14,23 +14,23 @@ Edit-size-matched replays (issue #146) rescale every targeted and random edit to
 matched on firing frequency and decoded contribution. Those draws use per-latent statistics that the reference file
 has only once recomputed by this version (add --overwrite to the command above); then:
 
-    python scripts/causal_replay.py --config configs/causal_edit_size_layer25.yaml --limit 5   # check s/generation
-    python scripts/causal_replay.py --config configs/causal_edit_size_layer25.yaml            # all 517 episodes
+    python scripts/causal/causal_replay.py --config configs/causal_edit_size_layer25.yaml --limit 5   # check s/generation
+    python scripts/causal/causal_replay.py --config configs/causal_edit_size_layer25.yaml            # all 517 episodes
 
     # GPU smoke test (a few episodes, real model and SAEs), then the full run
-    python scripts/causal_replay.py --config configs/causal_replay_layer33.yaml --limit 5
-    python scripts/causal_replay.py --config configs/causal_replay_layer33.yaml
+    python scripts/causal/causal_replay.py --config configs/causal_replay_layer33.yaml --limit 5
+    python scripts/causal/causal_replay.py --config configs/causal_replay_layer33.yaml
 
     # plain replays of every episode and the replay check only (replay_check.json), before the SAE conditions;
     # the full run starts with the same step, and --resume continues from it
-    python scripts/causal_replay.py --config configs/causal_replay_layer33.yaml --preflight-only
+    python scripts/causal/causal_replay.py --config configs/causal_replay_layer33.yaml --preflight-only
 
     # continue an interrupted run, or rebuild the table from whatever has been generated so far
-    python scripts/causal_replay.py --config configs/causal_replay_layer33.yaml --resume results/causal_replay/<run>
-    python scripts/causal_replay.py --analyse-only results/causal_replay/<run>
+    python scripts/causal/causal_replay.py --config configs/causal_replay_layer33.yaml --resume results/causal_replay/<run>
+    python scripts/causal/causal_replay.py --analyse-only results/causal_replay/<run>
 
     # CPU smoke test: real episodes and labels, tiny random model and SAEs (checks outputs, not numbers)
-    python scripts/causal_replay.py --config configs/causal_replay_smoke_validation.yaml --smoke
+    python scripts/causal/causal_replay.py --config configs/causal_replay_smoke_validation.yaml --smoke
 """
 
 import argparse

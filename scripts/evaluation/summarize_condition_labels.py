@@ -6,7 +6,7 @@ file (same sha256). Reports, per condition, Claude's four-class counts and the R
 Adoption+Retention with a 95% Wilson interval, next to the old lexical counts.
 
 Usage:
-    PYTHONPATH=src python scripts/summarize_condition_labels.py \\
+    PYTHONPATH=src python scripts/evaluation/summarize_condition_labels.py \\
         --manifest results/claude_validation/samples/adoption_conditions_80q/manifest.json \\
         --runs-root results/claude_validation/adoption_conditions_80q_opus5 \\
         --output results/claude_validation/adoption_conditions_80q_opus5_summary

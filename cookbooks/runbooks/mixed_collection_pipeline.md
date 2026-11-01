@@ -29,7 +29,7 @@ The Claude labeling CLI permits train and validation only. Test and intervention
 
 Run commands from the repository root in the capstone environment. Start a tmux session before long GPU or labeling work.
 
-Code prerequisite: use one integrated checkout containing the distributed and Claude labeling implementations from main, plus this branch’s synthetic code and mixed config. The inspected synthetic branch lacks scripts/distributed_collection.py. Resolve integration before preparing the production manifest.
+Code prerequisite: use one integrated checkout containing the distributed and Claude labeling implementations from main, plus this branch’s synthetic code and mixed config. The inspected synthetic branch lacks scripts/activations/distributed_collection.py. Resolve integration before preparing the production manifest.
 
 ```bash
 tmux new -s mixed-collection
@@ -54,8 +54,8 @@ aws sts get-caller-identity --profile school
 Repeat these exports on every machine or new shell. Empty lowercase credential variables prevent load_dotenv() from supplying old explicit credentials; boto3 then uses the normal profile chain. Successful STS identity does not by itself establish Bedrock model permission.
 
 ```bash
-test -f scripts/distributed_collection.py
-test -f scripts/run_claude_validation.py
+test -f scripts/activations/distributed_collection.py
+test -f scripts/evaluation/run_claude_validation.py
 test -f "$COLLECTION_CONFIG"
 git rev-parse HEAD
 ```
@@ -166,7 +166,7 @@ Do not prepare while accepted.jsonl is still being written. The manifest freezes
 
 ```bash
 # Paid calls. Run once on the generation machine, in tmux.
-python -u scripts/generate_synthetic_musique.py \
+python -u scripts/data/generate_synthetic_musique.py \
   --config configs/synthetic/opus5_v3_full.yaml
 
 # Upload only after the run has stopped writing.
@@ -189,7 +189,7 @@ aws s3 sync \
 # Only if either original input is missing:
 if [ ! -f data/MuSiQue/clean/train.json ] || \
    [ ! -f data/MuSiQue/clean/validation.json ]; then
-  python scripts/get_musique_dataset.py
+  python scripts/data/get_musique_dataset.py
 fi
 cp data/MuSiQue/clean/train.json data/MuSiQue/clean/train.jsonl
 cp data/MuSiQue/clean/validation.json data/MuSiQue/clean/validation.jsonl
@@ -208,7 +208,7 @@ The coordinator needs all three input files. GPU workers only need the resulting
 mkdir -p "$RUN_DIR"
 cp "$COLLECTION_CONFIG" "$RUN_DIR/collection.yaml"
 
-python scripts/distributed_collection.py prepare \
+python scripts/activations/distributed_collection.py prepare \
   --config "$RUN_DIR/collection.yaml" \
   --num-chunks 8 \
   --output "$RUN_DIR/manifest.json"
@@ -272,7 +272,7 @@ OWNED_CHUNKS=(0 1 2 3)
 ## Run the same collection command on each worker
 
 ```bash
-python -u scripts/collect_activations.py \
+python -u scripts/activations/collect_activations.py \
   --config "$RUN_DIR/collection.yaml" \
   --manifest "$RUN_DIR/manifest.json" \
   --chunk "${OWNED_CHUNKS[@]}"
@@ -283,7 +283,7 @@ Models load once per invocation. The worker runs Solver A1, the configured natur
 ## If that worker is interrupted
 
 ```bash
-python -u scripts/collect_activations.py \
+python -u scripts/activations/collect_activations.py \
   --config "$RUN_DIR/collection.yaml" \
   --manifest "$RUN_DIR/manifest.json" \
   --chunk "${OWNED_CHUNKS[@]}" \
@@ -337,10 +337,10 @@ Marker presence is a quick readiness check, not validation. The merge command ch
 This is the second kind of merge: it reunites collected worker results, not source question files.
 
 ```bash
-python scripts/distributed_collection.py merge \
+python scripts/activations/distributed_collection.py merge \
   --manifest "$RUN_DIR/manifest.json"
 
-python scripts/distributed_collection.py split \
+python scripts/activations/distributed_collection.py split \
   --manifest "$RUN_DIR/manifest.json" \
   --config "$RUN_DIR/collection.yaml"
 ```
@@ -386,7 +386,7 @@ Use page 2’s refreshed school profile setup. The labels below explicitly reque
 ## Preview ten train episodes: no API calls
 
 ```bash
-python scripts/run_claude_validation.py \
+python scripts/evaluation/run_claude_validation.py \
   --episodes "$RUN_DIR/prepared/results/$COLLECTION_RUN/train/interactions.jsonl" \
   --partition train --model-id us.anthropic.claude-opus-5 \
   --effort medium --max-tokens 8000 \
@@ -398,7 +398,7 @@ python scripts/run_claude_validation.py \
 
 ```bash
 for partition in train validation; do
-  python -u scripts/run_claude_validation.py \
+  python -u scripts/evaluation/run_claude_validation.py \
     --episodes "$RUN_DIR/prepared/results/$COLLECTION_RUN/$partition/interactions.jsonl" \
     --partition "$partition" \
     --model-id us.anthropic.claude-opus-5 \
@@ -434,14 +434,14 @@ Check n_episodes, label_counts, n_technical_errors, error_reasons, label_sources
 ## Retry technical failures from a finished train run
 
 ```bash
-python -u scripts/run_claude_validation.py \
+python -u scripts/evaluation/run_claude_validation.py \
   --episodes "$RUN_DIR/prepared/results/$COLLECTION_RUN/train/interactions.jsonl" \
   --partition train --model-id us.anthropic.claude-opus-5 \
   --effort medium --max-tokens 8000 \
   --retry-technical-errors-from "$RUN_DIR/claude_labels/train" \
   --output "$RUN_DIR/claude_labels/train_retry_001"
 
-python scripts/summarize_claude_validation.py \
+python scripts/evaluation/summarize_claude_validation.py \
   --runs "$RUN_DIR/claude_labels/train" \
          "$RUN_DIR/claude_labels/train_retry_001" \
   --output "$RUN_DIR/claude_labels/train_combined"

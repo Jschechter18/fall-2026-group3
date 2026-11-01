@@ -1,7 +1,7 @@
 # Paired filler ablation of synthetic_sample_100q_pilot (#174): the same 100 questions, evidence and
 # generated distractors, with only the filler paragraphs replaced by related ones
 # (scripts/experiments/swap_synthetic_fillers.py, seed 42).
-# Run from the repository root with scripts/collect_activations.py. No question generation or Bedrock calls.
+# Run from the repository root with scripts/activations/collect_activations.py. No question generation or Bedrock calls.
 # The questions are listed in the original pilot's order, so per-question seeds and candidate orders match it.
 # Everything below the dataset block is identical to configs/collection/synthetic_sample_100q_pilot.yaml.
 roles:

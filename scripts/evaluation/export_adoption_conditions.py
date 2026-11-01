@@ -11,7 +11,7 @@ assignment for randomized rows. The old lexical outcome per episode (``adopted_t
 Runs in the full project environment (the reused module imports the agents).
 
 Usage:
-    PYTHONPATH=src python scripts/export_adoption_conditions.py \\
+    PYTHONPATH=src python scripts/evaluation/export_adoption_conditions.py \\
         --results-root results/adoption_experiment \\
         --output results/claude_validation/samples/adoption_conditions_80q
 """

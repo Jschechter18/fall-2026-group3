@@ -9,7 +9,7 @@ import pytest
 from mas_sae.evaluation.claude_agreement import label_distribution, wilson
 from mas_sae.experiments.records import write_jsonl
 
-SCRIPTS = Path(__file__).resolve().parents[3] / "scripts"
+SCRIPTS = Path(__file__).resolve().parents[3] / "scripts/evaluation"
 
 
 def _load(name):
