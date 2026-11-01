@@ -1,0 +1,240 @@
+{
+  "source": "results/experiments/v1_relation_competitors_paired/summary.json",
+  "inputs_sha256": {
+    "results/collection/synthetic_sample_100q_related_fillers/train/interactions.jsonl": "9bcdd1b86625878434ee221e6a0fafd475f0830e99310e91784a0f18d1b90732",
+    "results/collection/synthetic_sample_100q_related_fillers/train/exclusions.jsonl": "cc54132bfc51578bc16b767aab2e10a65cc227941bad081ce880ac2e4d1a47a9",
+    "results/collection/synthetic_sample_100q_related_fillers/train/sampled_questions.json": "1c59c0eb947a485a41176d53d95f33ace1016fabbcf26b6ebe93280078f51555",
+    "results/claude_validation/pilot174_related_fillers99_opus5_run1/raw_results.jsonl": "eec3bcb5036d7c005c1f786bfb763dfe665b23730165ab1f7a44e3b2e228df82",
+    "results/claude_validation/pilot174_related_fillers99_opus5_run1/summary.json": "6da9331a5b856c37dfa4fa9683f725eaf2b8bb69e63dccde1a92092d7a009dfd",
+    "results/collection/synthetic_sample_100q_relation_competitors/train/interactions.jsonl": "08c36a65300ef8380414646b2d8a6395ad5b0a6b3bfab460ffa7929b748431ba",
+    "results/collection/synthetic_sample_100q_relation_competitors/train/exclusions.jsonl": "6e6c60e28a7a450cab6186057cc89b7727db9b9cfe4f2524113d668d66396bac",
+    "results/collection/synthetic_sample_100q_relation_competitors/train/sampled_questions.json": "1c59c0eb947a485a41176d53d95f33ace1016fabbcf26b6ebe93280078f51555",
+    "results/claude_validation/pilot156_relation_competitors99_opus5_run1/raw_results.jsonl": "626d041e49ef34ee8dbda295d706a703206fe83c023a0f14be332e040953ef50",
+    "results/claude_validation/pilot156_relation_competitors99_opus5_run1/summary.json": "35e818f7413fa9d175f345d6e4399f920598bd8a121bff44e0d1a119c5577a75",
+    "data/MuSiQue/synthetic/runs/ablation/pilot100_relation_competitors_seed42/final/treated_question_ids.json": "10fb4e2f5eaa5de065a6654af10ae49b85f2fccdef8760771a71f93dc68de731"
+  },
+  "assigned": 100,
+  "labeling": {
+    "prompt_version": "claude_binary_v3_candidates",
+    "model_id": "us.anthropic.claude-opus-5",
+    "effort": "medium",
+    "max_tokens": 8000
+  },
+  "primary": {
+    "n": 100,
+    "baseline": {
+      "binary": 35,
+      "share": 0.35,
+      "ci95": [
+        0.2636410465347802,
+        0.4474573957080203
+      ]
+    },
+    "treated": {
+      "binary": 25,
+      "share": 0.25,
+      "ci95": [
+        0.1754509400372426,
+        0.3430464637007583
+      ]
+    },
+    "table": {
+      "both": 21,
+      "treated_only": 4,
+      "baseline_only": 14,
+      "neither": 61
+    },
+    "discordant": {
+      "gained": 4,
+      "lost": 14
+    },
+    "change_pp": -10.0,
+    "change_ci95_pp": [
+      -18.239406021838978,
+      -1.649779951705925
+    ],
+    "exact_mcnemar_p": 0.0308837890625
+  },
+  "intention_to_treat": {
+    "n": 100,
+    "baseline": {
+      "binary": 35,
+      "share": 0.35,
+      "ci95": [
+        0.2636410465347802,
+        0.4474573957080203
+      ]
+    },
+    "treated": {
+      "binary": 25,
+      "share": 0.25,
+      "ci95": [
+        0.1754509400372426,
+        0.3430464637007583
+      ]
+    },
+    "table": {
+      "both": 21,
+      "treated_only": 4,
+      "baseline_only": 14,
+      "neither": 61
+    },
+    "discordant": {
+      "gained": 4,
+      "lost": 14
+    },
+    "change_pp": -10.0,
+    "change_ci95_pp": [
+      -18.239406021838978,
+      -1.649779951705925
+    ],
+    "exact_mcnemar_p": 0.0308837890625
+  },
+  "treated_only": {
+    "n": 95,
+    "baseline": {
+      "binary": 33,
+      "share": 0.3473684210526316,
+      "ci95": [
+        0.2592458386299087,
+        0.4473554304713605
+      ]
+    },
+    "treated": {
+      "binary": 23,
+      "share": 0.24210526315789474,
+      "ci95": [
+        0.1670872321759837,
+        0.3371700845813331
+      ]
+    },
+    "table": {
+      "both": 19,
+      "treated_only": 4,
+      "baseline_only": 14,
+      "neither": 58
+    },
+    "discordant": {
+      "gained": 4,
+      "lost": 14
+    },
+    "change_pp": -10.526315789473685,
+    "change_ci95_pp": [
+      -19.17926753904662,
+      -1.74326272857125
+    ],
+    "exact_mcnemar_p": 0.0308837890625
+  },
+  "technical_failures": {
+    "baseline": {},
+    "treated": {}
+  },
+  "descriptives": {
+    "baseline": {
+      "correctness_cells": {
+        "A1 right / Critic right": {
+          "agreement": 59
+        },
+        "A1 right / Critic wrong": {
+          "adoption": 4,
+          "retention": 1
+        },
+        "A1 wrong / Critic right": {
+          "adoption": 13,
+          "retention": 14,
+          "agreement": 2
+        },
+        "A1 wrong / Critic wrong": {
+          "adoption": 1,
+          "retention": 2,
+          "agreement": 3
+        },
+        "no episode": {
+          "out": 1
+        }
+      },
+      "hop_types": {
+        "2hop": {
+          "adoption": 9,
+          "retention": 6,
+          "agreement": 19
+        },
+        "3hop1": {
+          "adoption": 5,
+          "retention": 4,
+          "agreement": 10,
+          "out": 1
+        },
+        "3hop2": {
+          "adoption": 3,
+          "retention": 5,
+          "agreement": 5
+        },
+        "4hop1": {
+          "agreement": 10
+        },
+        "4hop2": {
+          "adoption": 1,
+          "retention": 1,
+          "agreement": 7
+        },
+        "4hop3": {
+          "retention": 1,
+          "agreement": 13
+        }
+      }
+    },
+    "treated": {
+      "correctness_cells": {
+        "A1 right / Critic right": {
+          "agreement": 71
+        },
+        "A1 right / Critic wrong": {
+          "adoption": 1
+        },
+        "A1 wrong / Critic right": {
+          "adoption": 12,
+          "retention": 9
+        },
+        "A1 wrong / Critic wrong": {
+          "adoption": 1,
+          "retention": 2,
+          "agreement": 3
+        },
+        "no episode": {
+          "out": 1
+        }
+      },
+      "hop_types": {
+        "2hop": {
+          "adoption": 9,
+          "retention": 4,
+          "agreement": 21
+        },
+        "3hop1": {
+          "adoption": 2,
+          "retention": 2,
+          "agreement": 15,
+          "out": 1
+        },
+        "3hop2": {
+          "adoption": 2,
+          "retention": 3,
+          "agreement": 8
+        },
+        "4hop1": {
+          "agreement": 10
+        },
+        "4hop2": {
+          "adoption": 1,
+          "retention": 1,
+          "agreement": 7
+        },
+        "4hop3": {
+          "retention": 1,
+          "agreement": 13
+        }
+      }
+    }
+  }
+}
