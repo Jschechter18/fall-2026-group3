@@ -78,6 +78,7 @@ results/sae/musique/runs/*/*/checkpoints/
 # Large artifacts mirrored to s3://dats-capstone/shared/group3/
 results/sae/pretrained/
 results/causal_replay/*/per_row.jsonl
+results/causal_steering/*/per_row.jsonl
 *.pt
 
 # Detailed SAE per-feature artifacts (archive under the matching S3 results/sae/ path)
