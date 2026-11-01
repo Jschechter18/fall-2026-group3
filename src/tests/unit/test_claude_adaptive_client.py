@@ -71,3 +71,11 @@ def test_validator_omits_temperature_for_claude5(tmp_path):
     row = validate_episode(client, episode, temperature=None, max_tokens=8000)
     assert row["behavior_label"] == "adoption" and row["claude_model"] == "claude-opus-5-5"
     assert "temperature" not in json.loads(runtime.invoke_model.call_args.kwargs["body"])
+
+
+def test_transport_config_reaches_the_bedrock_client():
+    from botocore.config import Config
+    session = MagicMock()
+    config = Config(max_pool_connections=8)
+    AdaptiveThinkingClaudeClient(session, model_id="us.anthropic.claude-opus-5-5", config=config)
+    assert session.client.call_args.kwargs["config"] is config

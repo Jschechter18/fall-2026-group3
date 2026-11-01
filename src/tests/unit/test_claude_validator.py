@@ -10,6 +10,7 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
+from botocore.exceptions import ClientError
 
 from mas_sae.evaluation.claude_validator import (
     BINARY_LABEL_COLUMNS,
@@ -1347,3 +1348,254 @@ class TestGenerationSettings:
     def test_cli_rejects_unknown_effort(self):
         with pytest.raises(SystemExit):
             CLI.parse_args(["--episodes", "x", "--output", "y", "--effort", "extreme"])
+
+
+# ---------------------------------------------------------------------------
+# --concurrency and --resume (#199)
+# ---------------------------------------------------------------------------
+
+_LABEL_CYCLE = ("adoption", "retention", "agreement", "out")
+_EXPIRED = {"Error": {"Code": "ExpiredTokenException", "Message": "expired"}}
+
+
+def _numbered_episodes(n):
+    """Episodes whose A1 names their index, with unique question and episode ids."""
+    return [_episode(question_id=f"q:{i}", episode_id=f"q:{i}__natural__feedback", a1=f"A1-{i}",
+                     extra={"critic_condition": "natural"}) for i in range(n)]
+
+
+class _IndexedClient:
+    """Thread-safe fake: the label depends only on the episode, and later episodes answer sooner."""
+
+    def __init__(self, n, fail_at=None, error=None):
+        import threading
+        self.n, self.fail_at, self.error = n, fail_at, error
+        self.lock = threading.Lock()
+        self.called, self.finished = [], []
+        self.active = self.max_active = 0
+
+    def generate(self, prompt, **kwargs):
+        import re
+        import time
+        i = int(re.search(r"A1-(\d+)", prompt).group(1))
+        with self.lock:
+            self.called.append(i)
+        if i == self.fail_at:
+            raise self.error or ClientError(_EXPIRED, "InvokeModel")
+        with self.lock:
+            self.active += 1
+            self.max_active = max(self.max_active, self.active)
+        time.sleep(0.002 * (self.n - i))
+        with self.lock:
+            self.active -= 1
+            self.finished.append(i)
+        return ClaudeResult(text=json.dumps({"label": _LABEL_CYCLE[i % 4], "reason": f"r{i}"}),
+                            model="m", input_tokens=10 + i, output_tokens=5, task="labeling",
+                            stop_reason="end_turn")
+
+    def close(self):
+        pass
+
+
+class TestConcurrency:
+
+    def test_concurrent_run_writes_the_serial_file(self, tmp_path):
+        episodes = _numbered_episodes(12)
+        serial = validate_batch(_IndexedClient(12), episodes, output_path=tmp_path / "serial.jsonl")
+        client = _IndexedClient(12)
+        parallel = validate_batch(client, episodes, output_path=tmp_path / "parallel.jsonl", concurrency=4)
+
+        assert client.finished != sorted(client.finished)  # calls really finished out of order
+        assert 1 < client.max_active <= 4
+        assert (tmp_path / "parallel.jsonl").read_bytes() == (tmp_path / "serial.jsonl").read_bytes()
+        assert parallel == serial
+        assert [r["question_id"] for r in parallel["results"]] == [f"q:{i}" for i in range(12)]
+
+    def test_fatal_error_stops_new_calls_and_keeps_a_prefix(self, tmp_path):
+        out = tmp_path / "out.jsonl"
+        client = _IndexedClient(20, fail_at=5)
+
+        with pytest.raises(ClientError):
+            validate_batch(client, _numbered_episodes(20), output_path=out, concurrency=4)
+
+        rows = [json.loads(line) for line in out.read_text().splitlines()]
+        assert [r["question_id"] for r in rows] == [f"q:{i}" for i in range(5)]
+        assert max(client.called) <= 5 + 3  # nothing started after the failure
+
+    def test_non_fatal_errors_are_rows_under_concurrency(self, tmp_path):
+        client = _IndexedClient(6, fail_at=2, error=RuntimeError("connection reset"))
+        summary = validate_batch(client, _numbered_episodes(6), output_path=tmp_path / "o.jsonl", concurrency=3)
+        assert summary["results"][2]["exclusion_reason"] == "api_error"
+        assert summary["error_reasons"] == {"api_error": 1} and summary["n_episodes"] == 6
+
+    def test_concurrency_must_be_positive(self, tmp_path):
+        with pytest.raises(ValueError, match="concurrency"):
+            validate_batch(_mock_client(), [_episode()], output_path=tmp_path / "o.jsonl", concurrency=0)
+        assert not (tmp_path / "o.jsonl").exists()
+
+
+class TestResume:
+
+    def test_resume_labels_only_the_rest_and_matches_an_uninterrupted_run(self, tmp_path):
+        episodes = _numbered_episodes(10)
+        validate_batch(_IndexedClient(10), episodes, output_path=tmp_path / "full.jsonl")
+        out = tmp_path / "out.jsonl"
+        with pytest.raises(ClientError):
+            validate_batch(_IndexedClient(10, fail_at=4), episodes, output_path=out, concurrency=3)
+
+        client = _IndexedClient(10)
+        summary = validate_batch(client, episodes, output_path=out, concurrency=3, resume=True)
+
+        assert sorted(client.called) == list(range(4, 10))
+        assert out.read_bytes() == (tmp_path / "full.jsonl").read_bytes()
+        assert summary["n_resumed"] == 4 and summary["n_episodes"] == 10
+        assert summary["label_counts"] == {"adoption": 3, "retention": 3, "agreement": 2, "out": 2, "error": 0}
+        assert summary["total_input_tokens"] == sum(10 + i for i in range(10))
+
+    def test_resume_without_earlier_rows_labels_everything(self, tmp_path):
+        summary = validate_batch(_IndexedClient(3), _numbered_episodes(3), output_path=tmp_path / "o.jsonl",
+                                 resume=True)
+        assert summary["n_resumed"] == 0 and len(summary["results"]) == 3
+
+    @pytest.mark.parametrize("content, message", [
+        ('{"episode_id": "q:0__natural__feedback"}\n{"episode_id": "q:0__natural__feedback"}\n',
+         "row 2 is 'q:0__natural__feedback', expected 'q:1"),  # repeated
+        ('{"episode_id": "other__natural__feedback"}\n', "row 1 is 'other"),  # foreign
+        ('{"episode_id": "q:1__natural__feedback"}\n', "row 1 is 'q:1"),  # first episode skipped
+        ('{"episode_id": "q:1__natural__feedback"}\n{"episode_id": "q:0__natural__feedback"}\n',
+         "row 1 is 'q:1"),  # wrong order
+        ('{"episode_id": "q:0__natural__feedback"}\n{"episode_id": "q:2__natural__feedback"}\n',
+         "row 2 is 'q:2"),  # gap after a correct start
+        ('{"episode_id": "q:0__natural__feedback"}\n{"episode_id": "q:1__natural__feedback"}\n'
+         '{"episode_id": "q:2__natural__feedback"}\n{"episode_id": "q:3__natural__feedback"}\n',
+         "row 4 is 'q:3__natural__feedback', expected None"),  # more rows than episodes
+        ('{"episode_id": "q:0__natural__feedback"}\n{"episode_id": "q:1', "partial row"),
+    ])
+    def test_resume_refuses_rows_it_cannot_own(self, tmp_path, content, message):
+        out = tmp_path / "o.jsonl"
+        out.write_text(content)
+        client = _IndexedClient(3)
+        with pytest.raises(ValueError, match=message):
+            validate_batch(client, _numbered_episodes(3), output_path=out, resume=True)
+        assert out.read_text() == content and client.called == []
+
+    def test_resume_needs_unique_episode_ids(self, tmp_path):
+        episodes = [_episode(question_id="q:0"), _episode(question_id="q:1")]  # same default episode_id
+        with pytest.raises(ValueError, match="unique episode_id"):
+            validate_batch(_mock_client(), episodes, output_path=tmp_path / "o.jsonl", resume=True)
+
+
+class TestCliResume:
+    """An interrupted CLI run continues in its own folder only with the same settings and episodes."""
+
+    def _argv(self, tmp_path, *extra):
+        episodes = tmp_path / "interactions.jsonl"
+        if not episodes.exists():
+            write_jsonl(episodes, _numbered_episodes(6))
+        return ["--episodes", str(episodes), "--output", str(tmp_path / "out"), *extra]
+
+    def _patch(self, monkeypatch, client):
+        made = []
+
+        class FakeClient:
+            def __init__(self, **kwargs):
+                made.append(kwargs)
+                self.generate, self.close = client.generate, client.close
+
+        monkeypatch.setattr(CLI, "load_dotenv", lambda: None)
+        monkeypatch.setattr(CLI.boto3, "Session", MagicMock())
+        monkeypatch.setattr(CLI, "ClaudeClient", FakeClient)
+        return made
+
+    def _interrupt(self, tmp_path, monkeypatch, *extra):
+        self._patch(monkeypatch, _IndexedClient(6, fail_at=3))
+        with pytest.raises(SystemExit):
+            CLI.main(self._argv(tmp_path, "--concurrency", "2", *extra))
+        return tmp_path / "out"
+
+    def test_interrupted_run_resumes_to_the_full_result(self, tmp_path, monkeypatch, capsys):
+        out = self._interrupt(tmp_path, monkeypatch)
+        assert "rerun the same command with --resume" in capsys.readouterr().err
+        assert not (out / "summary.json").exists() and (out / "run_settings.json").exists()
+
+        client = _IndexedClient(6)
+        made = self._patch(monkeypatch, client)
+        CLI.main(self._argv(tmp_path, "--resume", "--concurrency", "3"))
+
+        assert sorted(client.called) == [3, 4, 5] and client.max_active > 1
+        assert made[0]["config"].max_pool_connections == 3
+        summary = json.loads((out / "summary.json").read_text())
+        assert (summary["n_episodes"], summary["n_resumed"], summary["n_sessions"]) == (6, 3, 2)
+        sessions = [json.loads(line) for line in (out / "sessions.jsonl").read_text().splitlines()]
+        assert [s["finished"] for s in sessions] == [False, True]
+        assert summary["wall_clock_seconds"] == round(sum(s["wall_clock_seconds"] for s in sessions), 2)
+        with open(out / "binary_labels.csv") as fh:  # adoption/retention: q:0, q:1, q:4, q:5
+            assert [row["question_id"] for row in csv.DictReader(fh)] == ["q:0", "q:1", "q:4", "q:5"]
+        assert [json.loads(line)["question_id"] for line in (out / "raw_results.jsonl").read_text().splitlines()] \
+            == [f"q:{i}" for i in range(6)]
+
+    @pytest.mark.parametrize("change, named", [(["--max-attempts", "5"], "max_attempts"),
+                                               (["--no-question"], "prompt_sha256"),
+                                               (["--limit", "4"], "limit")])
+    def test_resume_with_other_settings_is_refused(self, tmp_path, monkeypatch, capsys, change, named):
+        out = self._interrupt(tmp_path, monkeypatch)
+        before = (out / "raw_results.jsonl").read_text()
+        made = self._patch(monkeypatch, _IndexedClient(6))
+        capsys.readouterr()
+
+        with pytest.raises(SystemExit):
+            CLI.main(self._argv(tmp_path, "--resume", *change))
+
+        err = capsys.readouterr().err
+        assert "cannot resume" in err and "started with other settings: " in err and named in err
+        assert made == [] and (out / "raw_results.jsonl").read_text() == before
+
+    def test_resume_on_other_episodes_is_refused(self, tmp_path, monkeypatch, capsys):
+        out = self._interrupt(tmp_path, monkeypatch)
+        write_jsonl(tmp_path / "interactions.jsonl", _numbered_episodes(7))
+        made = self._patch(monkeypatch, _IndexedClient(7))
+        with pytest.raises(SystemExit):
+            CLI.main(self._argv(tmp_path, "--resume"))
+        assert "episodes_sha256" in capsys.readouterr().err and made == []
+
+    def test_finished_and_unstarted_runs_are_not_resumed(self, tmp_path, monkeypatch, capsys):
+        made = self._patch(monkeypatch, _IndexedClient(6))
+        with pytest.raises(SystemExit):
+            CLI.main(self._argv(tmp_path, "--resume"))
+        assert "not a resumable run" in capsys.readouterr().err
+
+        CLI.main(self._argv(tmp_path))
+        with pytest.raises(SystemExit):
+            CLI.main(self._argv(tmp_path, "--resume"))
+        assert "already finished" in capsys.readouterr().err and len(made) == 1
+
+    def test_resume_refuses_another_selection_under_the_same_settings(self, tmp_path):
+        out = tmp_path / "out"
+        out.mkdir()
+        (out / "run_settings.json").write_text(json.dumps({"limit": None}))
+        (out / "selected_episodes.json").write_text(json.dumps([{"episode_id": "a"}]))
+        CLI.check_resume(out, {"limit": None}, [{"episode_id": "a"}])
+        with pytest.raises(ValueError, match="other episodes"):
+            CLI.check_resume(out, {"limit": None}, [{"episode_id": "b"}])
+
+    def test_input_changed_while_read_is_refused(self, tmp_path, monkeypatch, capsys):
+        argv = self._argv(tmp_path, "--dry-run")
+        real_load = CLI.load_episodes
+
+        def load_then_change(path):
+            rows = real_load(path)
+            write_jsonl(path, _numbered_episodes(7))
+            return rows
+
+        monkeypatch.setattr(CLI, "load_episodes", load_then_change)
+        with pytest.raises(SystemExit):
+            CLI.main(argv)
+        assert "changed while it was being read" in capsys.readouterr().err
+
+    def test_serial_run_keeps_the_default_client_config(self, tmp_path, monkeypatch):
+        made = self._patch(monkeypatch, _IndexedClient(6))
+        CLI.main(self._argv(tmp_path))
+        assert made[0]["config"] is None
+        settings = json.loads((tmp_path / "out" / "run_settings.json").read_text())
+        assert "concurrency" not in settings and settings["episodes_sha256"] == CLI.sha256_file(
+            tmp_path / "interactions.jsonl")
