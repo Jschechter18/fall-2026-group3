@@ -1155,3 +1155,102 @@ def test_candidates_replay_uses_exact_candidate_prompt_and_reports_third_answers
         ep["solver_attempt_1"], ep["critic_advocated_answer"], "critic_first")
     assert prompts == [expected]
     assert row["solver_response"] == "third_answer" and row["adopted"] == 0
+
+
+# ---- raw activations as a basis (issue #193): the #191 identity basis in the replay
+
+def _raw_basis(tmp_path, monkeypatch, d=200, targeted=(80, 100, 120)):
+    """A #191 raw-activation basis: centre file, summary and reference file, made by feature selection's own
+    functions on fit rows whose neurons differ in spread (std from 0.1 to 10)."""
+    from types import SimpleNamespace
+    from mas_sae.experiments.artifacts import sha256_file
+    from mas_sae.probe import feature_selection as fs
+    rng = np.random.default_rng(0)
+    X = (rng.normal(size=(220, d)) * np.geomspace(0.1, 10, d) + 3).astype(np.float32)
+    part = np.array(["train"] * 200 + ["validation"] * 20)
+    spec = {"kind": "activations", "path": "centers/raw.npy"}
+    fs.ensure_center(spec, tmp_path, X[:200])
+    hashes = {"Raw activations": {str(p.relative_to(tmp_path)): sha256_file(p) for p in fs.sae_files(spec, tmp_path)}}
+    summary = {"config": {"layer": 33}, "provenance": {"sae_sha256": hashes},
+               "saes": {"Raw activations": {"targeted_features": list(targeted),
+                                            "random_control_draws": [[1, 2, 3]] * 3}}}
+    (tmp_path / "fs.json").write_text(json.dumps(summary))
+    monkeypatch.setattr(fs.ls, "load_inputs", lambda c: (pd.DataFrame({"p": part}), None, SimpleNamespace(partition="p")))
+    monkeypatch.setattr(fs.bd, "load_layer_matrix", lambda *a: X)
+    fs_cfg = fs.FeatureSelectionConfig(capstone_data_root=tmp_path, activations_dir="a", results_dir="r",
+                                       labels_csv="l", manifest_csv="m", layer=33, saes={"Raw activations": spec})
+    ref = {"layer": 33, "feature_selection_summary_sha256": sha256_file(tmp_path / "fs.json"),
+           "saes": fs.reference_activations(fs_cfg, summary)}
+    (tmp_path / "ref.json").write_text(json.dumps(ref))
+    return spec, hashes, X[:200]
+
+
+def test_config_accepts_a_raw_activation_basis_but_not_steering_it(tmp_path):
+    p = tmp_path / "c.yaml"
+    base = ("capstone_data_root: .\ninteractions_jsonl: a\nlabels_csv: b\nfeature_selection_summary: c\nlayer: 25\n"
+            "saes:\n  Raw activations:\n    kind: activations\n    path: centers/raw.npy\n")
+    p.write_text(base + "edit_norms: [-0.5, 0.5]\nrandom_controls: contribution\nfeature_reference: r\n")
+    assert replay.ReplayConfig.from_yaml(p).saes["Raw activations"]["kind"] == "activations"
+    p.write_text(base.replace("kind: activations", "kind: neurons"))
+    with pytest.raises(ValueError, match=r"custom\|gemma_scope\|activations"):
+        replay.ReplayConfig.from_yaml(p)
+    p.write_text(base + "steer_strengths: [2]\nfeature_reference: r\n")
+    with pytest.raises(ValueError, match="signed and have none"):
+        replay.ReplayConfig.from_yaml(p)
+
+
+def test_raw_activation_controls_are_matched_on_std_as_in_feature_selection(tmp_path, monkeypatch):
+    spec, hashes, X_fit = _raw_basis(tmp_path, monkeypatch)
+    cfg = _cfg(tmp_path, saes={"Raw activations": spec}, n_random_draws=3, random_controls="contribution",
+               feature_reference="ref.json", targeted_subsets={"Raw activations": {"one": [100]}})
+    f = replay.feature_sets(cfg, hashes)["Raw activations"]
+    spread = X_fit.std(axis=0)                  # feature selection's rule for raw neurons: std alone
+    expected = offline.contribution_matched_controls(np.ones_like(spread), spread, [80, 100, 120], 3, cfg.seed)
+    assert f["targeted"] == [80, 100, 120] and f["random"] == expected
+    assert all(m["frequency_ratio"] == 1 and 0.5 < m["contribution_ratio"] < 2 for m in f["match"])
+    sub = f["subsets"]["one"]
+    assert len(sub["random"]) == 3 and all(d[0] not in (80, 100, 120) for d in sub["random"])
+    assert "ref" not in f
+
+
+def test_reference_statistics_must_be_for_the_configured_kind_of_basis(tmp_path, monkeypatch):
+    spec, hashes, _ = _raw_basis(tmp_path, monkeypatch)
+    cfg = _cfg(tmp_path, saes={"Raw activations": {**spec, "kind": "custom"}}, n_random_draws=3,
+               random_controls="contribution", feature_reference="ref.json")
+    with pytest.raises(ValueError, match="raw-activation statistics .* kind custom"):
+        replay.feature_sets(cfg, hashes)
+    ref = json.loads((tmp_path / "ref.json").read_text())
+    del ref["saes"]["Raw activations"]["latents"]["basis"]
+    (tmp_path / "ref.json").write_text(json.dumps(ref))
+    with pytest.raises(ValueError, match="SAE statistics .* kind activations"):
+        replay.feature_sets(dataclasses.replace(cfg, saes={"Raw activations": spec}), hashes)
+
+
+def test_replay_runs_raw_activation_edits_and_the_unedited_basis_is_the_plain_replay(tmp_path, monkeypatch):
+    from mas_sae.probe import feature_selection as fs
+    _write_inputs(tmp_path, _episodes())
+    spec, hashes, _ = _raw_basis(tmp_path, monkeypatch, d=16, targeted=(1, 5, 9))
+    cfg = _cfg(tmp_path, saes={"Raw activations": spec}, random_controls="contribution", feature_reference="ref.json",
+               scale_fractions=[-0.5], edit_norms=[-0.5, 0.5])
+    episodes = replay.load_episodes(cfg)
+    features = replay.feature_sets(cfg, hashes)
+    saes = {"Raw activations": fs.load_sae(spec, tmp_path, cfg.layer)[0].eval()}
+    replay.validate_features(features, saes)
+    paragraphs = {q: [{"idx": 0, "title": "T", "paragraph_text": "text"}] for q in episodes.question_id}
+    comp = smoke_components(paragraphs, cfg.layer, saes, features, max_new_tokens=2)
+    run_dir = tmp_path / "out" / "run"
+    replay.replay(cfg, episodes, comp, run_dir)
+    rows = [json.loads(line) for line in (run_dir / "per_row.jsonl").read_text().splitlines()]
+    plain = {r["question_id"]: r for r in rows if r["experiment"] == replay.BASELINE}
+    unedited = [r for r in rows if r["experiment"] == "Raw activations" and r["condition"] == "no_ablation"]
+    assert len(unedited) == len(episodes)                # decode(encode(x)) = x: the splice alone changes nothing
+    for r in unedited:
+        p = plain[r["question_id"]]
+        assert r["solver_attempt_2"] == p["solver_attempt_2"]
+        assert r["first_token_logprob"] == pytest.approx(p["first_token_logprob"], abs=1e-4)
+    # below-mean neurons are negative latents, not inactive ones: every targeted edit moves the activation
+    targeted = [r for r in rows if r["experiment"].startswith("Raw activations") and r["condition"].startswith("targeted")]
+    assert len(targeted) == 2 * 4 * len(episodes) and all(r["removed_rel_norm"] > 0 for r in targeted)
+    replay.analyse(run_dir)
+    match = pd.read_csv(run_dir / "control_match.csv")
+    assert (match.frequency_ratio == 1).all()
