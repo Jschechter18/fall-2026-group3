@@ -48,8 +48,11 @@ def main() -> None:
         "saes": saes,
     }, indent=2))
     for name, s in saes.items():
-        refs = sorted(f["ref"] for f in s["features"].values())
-        print(f"{name}: {len(refs)} features, ref median {refs[len(refs) // 2]:.3f} (min {refs[0]:.3f}, max {refs[-1]:.3f})")
+        # Signed raw-neuron latents have std, not a positive firing reference.
+        statistic = "std" if s["latents"].get("basis") == "activations" else "ref"
+        values = sorted(f[statistic] for f in s["features"].values())
+        print(f"{name}: {len(values)} features, {statistic} median {values[len(values) // 2]:.3f} "
+              f"(min {values[0]:.3f}, max {values[-1]:.3f})")
     print(f"\nWrote {out}")
 
 

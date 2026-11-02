@@ -1,0 +1,458 @@
+{
+  "rule_version": "behavior_v0.2.0_candidate",
+  "label_policy": {
+    "name": "v0.2.0-candidate",
+    "version": "behavior_v0.2.0_candidate",
+    "definition_sha256": "356a13c8e23b7f65b5735f619bb06ec8d906ec07fae28f115e3a4e32531c38f9",
+    "overrides": {
+      "premise": [
+        "question_explicitly_erroneous",
+        "explicitly_no_connection",
+        "question_explicitly_invalid"
+      ],
+      "refusal": [
+        "source_explicitly_does_not_identify",
+        "entity_explicitly_unidentified"
+      ],
+      "a2_nonanswer": [
+        "simple_nonanswer",
+        "no_such_or_valid",
+        "no_answer_or_evidence",
+        "question_invalid",
+        "information_explicitly_unavailable",
+        "no_record"
+      ]
+    },
+    "candidate_rules": {
+      "a2_presentation": "candidates",
+      "max_answer_words": 14,
+      "equivalence_method": "question_aliases_conservative_text_v1",
+      "alias_fields": [
+        "ground_truth",
+        "answer_aliases"
+      ],
+      "ambiguous_forms": [
+        "containment",
+        "token_subsequence",
+        "acronym_initials"
+      ],
+      "acronym_connectors": [
+        "and",
+        "at",
+        "for",
+        "in",
+        "of",
+        "on",
+        "to"
+      ],
+      "first_token_subset": "behavior_eligible_and_valid_distinct_aligned_tokens_v1",
+      "letter_pattern": [
+        "candidate\\s+([ab])\\W*",
+        34
+      ]
+    }
+  },
+  "code": {
+    "git_commit": "28424d5323b7012e86895205e7b51e5f1463cd27",
+    "uncommitted_changes_sha256": "c2ccc59272dadb996dce890e7eed2773ab58de12df556677b1f4b8487aadd2b4",
+    "rule_files_sha256": {
+      "behavior_labels.py": "256644e2b96bc427c08c90f53d82560056238c8a5f8f4c9406d74c0c4e7292a1",
+      "behavior.py": "e45c92f9c9429b13e26d308fa8f3003c07b5730ac263dd317ee6b4b863b13657",
+      "scoring.py": "dff13f72d900ece383ff60f414cd8066d5b6eaa0ce8ace53825cc4de76656b7b",
+      "feedback_coherence.py": "d1238538631ae9e378ee12609e5c57a80cb7baa3834b6b46602330cefedbc16a"
+    }
+  },
+  "source_files_sha256": {
+    "/home/ubuntu/capstone/fall-2026-group3/artifacts/collection/mixed_final_001/prepared/results/mixed_final_001_intervention/intervention/interactions.jsonl": "dfc4bb5049979cce2cf1f8bb627004cda750a16c706b0e93452e62f805f1596f"
+  },
+  "inputs": {
+    "full_results": "/home/ubuntu/capstone/fall-2026-group3/artifacts/collection/mixed_final_001/prepared/results/mixed_final_001_intervention",
+    "scan_results": null,
+    "first_qc_sample": null
+  },
+  "partition": {
+    "frozen_partitions": "/home/ubuntu/capstone/fall-2026-group3/artifacts/collection/mixed_final_001/prepared/results/mixed_final_001_intervention/partitions.csv",
+    "frozen_partitions_sha256": "9471e8b2eded46658860fb300f2e45edb9ae3c5b79ef6cb6d1bb0870d707cadf",
+    "coverage": "subset",
+    "questions": {
+      "expected": 10105,
+      "collected": 10105,
+      "missing": 0
+    },
+    "rule": "membership taken from the frozen mapping; only activation indices were rebuilt for this run"
+  },
+  "all": {
+    "rows": 10105,
+    "feedback_by_response": {
+      "answer / adopted_critic": 1167,
+      "answer / non_answer": 55,
+      "answer / retained_a1": 1316,
+      "answer / third_answer": 11,
+      "answer / unchanged_same_position": 6333,
+      "answer / unresolved": 100,
+      "premise_rejection / non_answer": 24,
+      "premise_rejection / produced_answer": 7,
+      "premise_rejection / retained_a1": 11,
+      "premise_rejection / unresolved": 2,
+      "refusal / non_answer": 511,
+      "refusal / produced_answer": 28,
+      "refusal / retained_a1": 130,
+      "refusal / unresolved": 26,
+      "unresolved / non_answer": 54,
+      "unresolved / produced_answer": 50,
+      "unresolved / retained_a1": 80,
+      "unresolved / unresolved": 200
+    },
+    "lexical_v2_to_candidate": {
+      "adopted_critic -> answer / adopted_critic": 990,
+      "adopted_critic -> answer / non_answer": 4,
+      "adopted_critic -> answer / unchanged_same_position": 5,
+      "adopted_critic -> premise_rejection / non_answer": 4,
+      "adopted_critic -> refusal / non_answer": 125,
+      "adopted_critic -> refusal / produced_answer": 7,
+      "adopted_critic -> unresolved / non_answer": 37,
+      "adopted_critic -> unresolved / unresolved": 77,
+      "ambiguous -> answer / adopted_critic": 174,
+      "ambiguous -> answer / non_answer": 36,
+      "ambiguous -> answer / retained_a1": 129,
+      "ambiguous -> answer / third_answer": 1,
+      "ambiguous -> answer / unchanged_same_position": 32,
+      "ambiguous -> answer / unresolved": 56,
+      "ambiguous -> premise_rejection / non_answer": 20,
+      "ambiguous -> premise_rejection / produced_answer": 6,
+      "ambiguous -> premise_rejection / retained_a1": 11,
+      "ambiguous -> refusal / non_answer": 348,
+      "ambiguous -> refusal / produced_answer": 13,
+      "ambiguous -> refusal / retained_a1": 96,
+      "ambiguous -> refusal / unresolved": 19,
+      "ambiguous -> unresolved / non_answer": 15,
+      "ambiguous -> unresolved / produced_answer": 17,
+      "ambiguous -> unresolved / retained_a1": 23,
+      "ambiguous -> unresolved / unresolved": 28,
+      "no_conflict -> answer / non_answer": 4,
+      "no_conflict -> answer / third_answer": 1,
+      "no_conflict -> answer / unchanged_same_position": 6295,
+      "no_conflict -> refusal / non_answer": 36,
+      "no_conflict -> unresolved / unresolved": 62,
+      "retained_solver_a1 -> answer / non_answer": 11,
+      "retained_solver_a1 -> answer / retained_a1": 1183,
+      "retained_solver_a1 -> answer / unchanged_same_position": 1,
+      "retained_solver_a1 -> answer / unresolved": 39,
+      "retained_solver_a1 -> premise_rejection / unresolved": 2,
+      "retained_solver_a1 -> refusal / retained_a1": 34,
+      "retained_solver_a1 -> refusal / unresolved": 7,
+      "retained_solver_a1 -> unresolved / non_answer": 2,
+      "retained_solver_a1 -> unresolved / retained_a1": 57,
+      "retained_solver_a1 -> unresolved / unresolved": 30,
+      "third_answer_revision -> answer / adopted_critic": 3,
+      "third_answer_revision -> answer / retained_a1": 4,
+      "third_answer_revision -> answer / third_answer": 9,
+      "third_answer_revision -> answer / unresolved": 5,
+      "third_answer_revision -> premise_rejection / produced_answer": 1,
+      "third_answer_revision -> refusal / non_answer": 2,
+      "third_answer_revision -> refusal / produced_answer": 8,
+      "third_answer_revision -> unresolved / produced_answer": 33,
+      "third_answer_revision -> unresolved / unresolved": 3
+    },
+    "exclusion_reasons": {
+      "a1_critic_ambiguous_alias": 24,
+      "a1_critic_containment": 249,
+      "a1_nonanswer": 157,
+      "a1_not_answer_shaped": 386,
+      "a1_uncertain": 1,
+      "a2_equivalence_uncertain": 41,
+      "a2_missing": 1,
+      "a2_nonanswer": 644,
+      "a2_not_answer_shaped": 301,
+      "a2_relationship_unresolved": 328,
+      "critic_not_answer_shaped": 384,
+      "critic_premise_rejection": 44,
+      "critic_refusal": 695,
+      "critic_unresolved": 384,
+      "no_conflict": 6338
+    },
+    "primary_target_by_split": {
+      "intervention / adopted_critic": 945,
+      "intervention / retained_a1": 1173,
+      "intervention / third_answer": 9
+    },
+    "primary_target_by_correctness": {
+      "a1_correct=False / critic_correct=False / adopted_critic": 201,
+      "a1_correct=False / critic_correct=False / retained_a1": 255,
+      "a1_correct=False / critic_correct=False / third_answer": 5,
+      "a1_correct=False / critic_correct=True / adopted_critic": 639,
+      "a1_correct=False / critic_correct=True / retained_a1": 619,
+      "a1_correct=False / critic_correct=True / third_answer": 1,
+      "a1_correct=True / critic_correct=False / adopted_critic": 105,
+      "a1_correct=True / critic_correct=False / retained_a1": 299,
+      "a1_correct=True / critic_correct=False / third_answer": 3
+    },
+    "strict_target_by_split": {
+      "intervention / adopted_critic": 945,
+      "intervention / retained_a1": 1173
+    },
+    "strict_target_by_correctness": {
+      "a1_correct=False / critic_correct=False / adopted_critic": 201,
+      "a1_correct=False / critic_correct=False / retained_a1": 255,
+      "a1_correct=False / critic_correct=True / adopted_critic": 639,
+      "a1_correct=False / critic_correct=True / retained_a1": 619,
+      "a1_correct=True / critic_correct=False / adopted_critic": 105,
+      "a1_correct=True / critic_correct=False / retained_a1": 299
+    },
+    "first_token_target_by_split": {
+      "intervention / adopted_critic": 729,
+      "intervention / retained_a1": 840
+    },
+    "first_token_target_by_correctness": {
+      "a1_correct=False / critic_correct=False / adopted_critic": 153,
+      "a1_correct=False / critic_correct=False / retained_a1": 192,
+      "a1_correct=False / critic_correct=True / adopted_critic": 498,
+      "a1_correct=False / critic_correct=True / retained_a1": 449,
+      "a1_correct=True / critic_correct=False / adopted_critic": 78,
+      "a1_correct=True / critic_correct=False / retained_a1": 199
+    },
+    "behavior_exclusion_reasons": {
+      "a1_critic_ambiguous_alias": 24,
+      "a1_critic_containment": 249,
+      "a1_nonanswer": 157,
+      "a1_not_answer_shaped": 386,
+      "a1_uncertain": 1,
+      "a2_equivalence_uncertain": 41,
+      "a2_missing": 1,
+      "a2_nonanswer": 644,
+      "a2_not_answer_shaped": 301,
+      "a2_relationship_unresolved": 328,
+      "critic_not_answer_shaped": 384,
+      "critic_premise_rejection": 44,
+      "critic_refusal": 695,
+      "critic_unresolved": 384,
+      "no_conflict": 6338,
+      "third_answer": 11
+    },
+    "first_token_exclusion_reasons": {
+      "a1_critic_ambiguous_alias": 24,
+      "a1_critic_containment": 249,
+      "a1_nonanswer": 157,
+      "a1_not_answer_shaped": 386,
+      "a1_uncertain": 1,
+      "a2_equivalence_uncertain": 41,
+      "a2_missing": 1,
+      "a2_nonanswer": 644,
+      "a2_not_answer_shaped": 301,
+      "a2_relationship_unresolved": 328,
+      "critic_not_answer_shaped": 384,
+      "critic_premise_rejection": 44,
+      "critic_refusal": 695,
+      "critic_unresolved": 384,
+      "decision_not_at_first_token": 17,
+      "first_token_alignment_unavailable": 7401,
+      "no_conflict": 6338,
+      "shared_first_token": 7160,
+      "third_answer": 11
+    }
+  },
+  "source_train": {
+    "rows": 0,
+    "feedback_by_response": {},
+    "lexical_v2_to_candidate": {},
+    "exclusion_reasons": {},
+    "primary_target_by_split": {},
+    "primary_target_by_correctness": {}
+  },
+  "source_validation": {
+    "rows": 0,
+    "feedback_by_response": {},
+    "lexical_v2_to_candidate": {},
+    "exclusion_reasons": {},
+    "primary_target_by_split": {},
+    "primary_target_by_correctness": {}
+  },
+  "by_storage_split": {
+    "intervention": {
+      "rows": 10105,
+      "feedback_by_response": {
+        "answer / adopted_critic": 1167,
+        "answer / non_answer": 55,
+        "answer / retained_a1": 1316,
+        "answer / third_answer": 11,
+        "answer / unchanged_same_position": 6333,
+        "answer / unresolved": 100,
+        "premise_rejection / non_answer": 24,
+        "premise_rejection / produced_answer": 7,
+        "premise_rejection / retained_a1": 11,
+        "premise_rejection / unresolved": 2,
+        "refusal / non_answer": 511,
+        "refusal / produced_answer": 28,
+        "refusal / retained_a1": 130,
+        "refusal / unresolved": 26,
+        "unresolved / non_answer": 54,
+        "unresolved / produced_answer": 50,
+        "unresolved / retained_a1": 80,
+        "unresolved / unresolved": 200
+      },
+      "lexical_v2_to_candidate": {
+        "adopted_critic -> answer / adopted_critic": 990,
+        "adopted_critic -> answer / non_answer": 4,
+        "adopted_critic -> answer / unchanged_same_position": 5,
+        "adopted_critic -> premise_rejection / non_answer": 4,
+        "adopted_critic -> refusal / non_answer": 125,
+        "adopted_critic -> refusal / produced_answer": 7,
+        "adopted_critic -> unresolved / non_answer": 37,
+        "adopted_critic -> unresolved / unresolved": 77,
+        "ambiguous -> answer / adopted_critic": 174,
+        "ambiguous -> answer / non_answer": 36,
+        "ambiguous -> answer / retained_a1": 129,
+        "ambiguous -> answer / third_answer": 1,
+        "ambiguous -> answer / unchanged_same_position": 32,
+        "ambiguous -> answer / unresolved": 56,
+        "ambiguous -> premise_rejection / non_answer": 20,
+        "ambiguous -> premise_rejection / produced_answer": 6,
+        "ambiguous -> premise_rejection / retained_a1": 11,
+        "ambiguous -> refusal / non_answer": 348,
+        "ambiguous -> refusal / produced_answer": 13,
+        "ambiguous -> refusal / retained_a1": 96,
+        "ambiguous -> refusal / unresolved": 19,
+        "ambiguous -> unresolved / non_answer": 15,
+        "ambiguous -> unresolved / produced_answer": 17,
+        "ambiguous -> unresolved / retained_a1": 23,
+        "ambiguous -> unresolved / unresolved": 28,
+        "no_conflict -> answer / non_answer": 4,
+        "no_conflict -> answer / third_answer": 1,
+        "no_conflict -> answer / unchanged_same_position": 6295,
+        "no_conflict -> refusal / non_answer": 36,
+        "no_conflict -> unresolved / unresolved": 62,
+        "retained_solver_a1 -> answer / non_answer": 11,
+        "retained_solver_a1 -> answer / retained_a1": 1183,
+        "retained_solver_a1 -> answer / unchanged_same_position": 1,
+        "retained_solver_a1 -> answer / unresolved": 39,
+        "retained_solver_a1 -> premise_rejection / unresolved": 2,
+        "retained_solver_a1 -> refusal / retained_a1": 34,
+        "retained_solver_a1 -> refusal / unresolved": 7,
+        "retained_solver_a1 -> unresolved / non_answer": 2,
+        "retained_solver_a1 -> unresolved / retained_a1": 57,
+        "retained_solver_a1 -> unresolved / unresolved": 30,
+        "third_answer_revision -> answer / adopted_critic": 3,
+        "third_answer_revision -> answer / retained_a1": 4,
+        "third_answer_revision -> answer / third_answer": 9,
+        "third_answer_revision -> answer / unresolved": 5,
+        "third_answer_revision -> premise_rejection / produced_answer": 1,
+        "third_answer_revision -> refusal / non_answer": 2,
+        "third_answer_revision -> refusal / produced_answer": 8,
+        "third_answer_revision -> unresolved / produced_answer": 33,
+        "third_answer_revision -> unresolved / unresolved": 3
+      },
+      "exclusion_reasons": {
+        "a1_critic_ambiguous_alias": 24,
+        "a1_critic_containment": 249,
+        "a1_nonanswer": 157,
+        "a1_not_answer_shaped": 386,
+        "a1_uncertain": 1,
+        "a2_equivalence_uncertain": 41,
+        "a2_missing": 1,
+        "a2_nonanswer": 644,
+        "a2_not_answer_shaped": 301,
+        "a2_relationship_unresolved": 328,
+        "critic_not_answer_shaped": 384,
+        "critic_premise_rejection": 44,
+        "critic_refusal": 695,
+        "critic_unresolved": 384,
+        "no_conflict": 6338
+      },
+      "primary_target_by_split": {
+        "intervention / adopted_critic": 945,
+        "intervention / retained_a1": 1173,
+        "intervention / third_answer": 9
+      },
+      "primary_target_by_correctness": {
+        "a1_correct=False / critic_correct=False / adopted_critic": 201,
+        "a1_correct=False / critic_correct=False / retained_a1": 255,
+        "a1_correct=False / critic_correct=False / third_answer": 5,
+        "a1_correct=False / critic_correct=True / adopted_critic": 639,
+        "a1_correct=False / critic_correct=True / retained_a1": 619,
+        "a1_correct=False / critic_correct=True / third_answer": 1,
+        "a1_correct=True / critic_correct=False / adopted_critic": 105,
+        "a1_correct=True / critic_correct=False / retained_a1": 299,
+        "a1_correct=True / critic_correct=False / third_answer": 3
+      },
+      "strict_target_by_split": {
+        "intervention / adopted_critic": 945,
+        "intervention / retained_a1": 1173
+      },
+      "strict_target_by_correctness": {
+        "a1_correct=False / critic_correct=False / adopted_critic": 201,
+        "a1_correct=False / critic_correct=False / retained_a1": 255,
+        "a1_correct=False / critic_correct=True / adopted_critic": 639,
+        "a1_correct=False / critic_correct=True / retained_a1": 619,
+        "a1_correct=True / critic_correct=False / adopted_critic": 105,
+        "a1_correct=True / critic_correct=False / retained_a1": 299
+      },
+      "first_token_target_by_split": {
+        "intervention / adopted_critic": 729,
+        "intervention / retained_a1": 840
+      },
+      "first_token_target_by_correctness": {
+        "a1_correct=False / critic_correct=False / adopted_critic": 153,
+        "a1_correct=False / critic_correct=False / retained_a1": 192,
+        "a1_correct=False / critic_correct=True / adopted_critic": 498,
+        "a1_correct=False / critic_correct=True / retained_a1": 449,
+        "a1_correct=True / critic_correct=False / adopted_critic": 78,
+        "a1_correct=True / critic_correct=False / retained_a1": 199
+      },
+      "behavior_exclusion_reasons": {
+        "a1_critic_ambiguous_alias": 24,
+        "a1_critic_containment": 249,
+        "a1_nonanswer": 157,
+        "a1_not_answer_shaped": 386,
+        "a1_uncertain": 1,
+        "a2_equivalence_uncertain": 41,
+        "a2_missing": 1,
+        "a2_nonanswer": 644,
+        "a2_not_answer_shaped": 301,
+        "a2_relationship_unresolved": 328,
+        "critic_not_answer_shaped": 384,
+        "critic_premise_rejection": 44,
+        "critic_refusal": 695,
+        "critic_unresolved": 384,
+        "no_conflict": 6338,
+        "third_answer": 11
+      },
+      "first_token_exclusion_reasons": {
+        "a1_critic_ambiguous_alias": 24,
+        "a1_critic_containment": 249,
+        "a1_nonanswer": 157,
+        "a1_not_answer_shaped": 386,
+        "a1_uncertain": 1,
+        "a2_equivalence_uncertain": 41,
+        "a2_missing": 1,
+        "a2_nonanswer": 644,
+        "a2_not_answer_shaped": 301,
+        "a2_relationship_unresolved": 328,
+        "critic_not_answer_shaped": 384,
+        "critic_premise_rejection": 44,
+        "critic_refusal": 695,
+        "critic_unresolved": 384,
+        "decision_not_at_first_token": 17,
+        "first_token_alignment_unavailable": 7401,
+        "no_conflict": 6338,
+        "shared_first_token": 7160,
+        "third_answer": 11
+      }
+    }
+  },
+  "layout": "partitioned",
+  "split_audit": {
+    "questions": 10105,
+    "by_partition": {
+      "intervention": 10105
+    },
+    "by_partition_source_and_hop": {
+      "intervention / intervention / 2hop": 2877,
+      "intervention / intervention / 3hop": 3114,
+      "intervention / intervention / 4hop": 4114
+    },
+    "scan_questions_also_in_full_run": 0,
+    "scan_questions_with_a_different_collection_split": 0,
+    "qc100_by_partition": {},
+    "in_development_data_by_partition": {}
+  }
+}

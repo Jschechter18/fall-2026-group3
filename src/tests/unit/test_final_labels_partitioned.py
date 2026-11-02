@@ -213,6 +213,21 @@ def _first(rows):
     return rows["train"][0]
 
 
+def test_claude_intervention_labels_export_with_frozen_membership(prepared, tmp_path):
+    pd = pytest.importorskip("pandas")
+    intervention = prepared / "results/fixture_intervention"
+    rows = _claude_rows(intervention, "intervention")
+    run = _write_claude_run(tmp_path / "claude/intervention", rows)
+    _exporter().main(_claude_args([run], intervention, tmp_path / "pkg"))
+    table = pd.read_csv(tmp_path / "pkg/labels.csv")
+    assert set(table.partition) == {"intervention"}
+    assert set(table.label_source) == {"claude"}
+    assert dict(zip(table.question_id, table.behavior_label)) == {
+        row["question_id"]: row["behavior_label"] for row in rows}
+    counts = json.loads((tmp_path / "pkg/counts.json").read_text())
+    assert counts["unlabeled_partitions"] == []
+
+
 @pytest.mark.parametrize("change, message", [
     (lambda rows: _first(rows).update(prompt_version="claude_binary_v2"), "share one prompt_version"),
     (lambda rows: rows["validation"].append(dict(_first(rows))), "more than one Claude run"),

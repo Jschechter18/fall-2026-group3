@@ -53,14 +53,41 @@ def main() -> None:
     parser.add_argument("--smoke", action="store_true", help="tiny random model and SAEs on CPU")
     parser.add_argument("--preflight-only", action="store_true",
                         help="run the plain replays and the replay check, then stop")
+    parser.add_argument("--prepare-inputs", action="store_true",
+                        help="build/validate labels and feature references using input_preparation in the YAML; no Solver load")
+    parser.add_argument("--label-only", type=Path, metavar="RUN",
+                        help="coordinator-only Claude labeling and analysis of a completed generation run")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="with --label-only: preview distinct pending Claude requests without API calls or writes")
     args = parser.parse_args()
+    if args.prepare_inputs and args.analyse_only:
+        parser.error("--prepare-inputs and --analyse-only are separate stages")
+    if args.dry_run and not args.label_only:
+        parser.error("--dry-run requires --label-only")
+    if args.label_only and (args.prepare_inputs or args.analyse_only or args.resume or args.preflight_only or args.smoke or args.limit):
+        parser.error("--label-only is a separate coordinator stage; use only RUN and optional --dry-run")
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 
-    if args.analyse_only:
+    if args.label_only:
+        from mas_sae.causal.semantic import label_run
+        run_dir = args.label_only
+        report = label_run(run_dir, dry_run=args.dry_run)
+        print(json.dumps(report, indent=2))
+        if args.dry_run:
+            return
+        replay.analyse(run_dir)
+    elif args.analyse_only:
         run_dir = args.analyse_only
         replay.analyse(run_dir)
     else:
         cfg = replay.ReplayConfig.from_yaml(args.config)
+        if args.prepare_inputs:
+            if args.smoke or args.resume or args.preflight_only or args.limit:
+                parser.error("--prepare-inputs uses only --config; do not combine it with generation options")
+            from mas_sae.causal.prepare import prepare_inputs
+            prepare_inputs(cfg)
+            print("Replay inputs prepared and validated.")
+            return
         if args.limit:
             cfg = dataclasses.replace(cfg, limit=args.limit)
         if args.smoke:
@@ -70,9 +97,13 @@ def main() -> None:
             saes = tiny_saes()
             comp = smoke_components(replay.load_paragraphs(episodes, cfg.musique_revision, cfg.capstone_data_root / cfg.contexts_jsonl if cfg.contexts_jsonl else None), cfg.layer, saes,
                                     tiny_features(saes, n_random_draws=cfg.n_random_draws))
+            if cfg.probe_direction:
+                # A smoke run uses toy components throughout, including its learned direction.
+                from mas_sae.causal.smoke import HIDDEN
+                comp.probe_vector = list(range(1, HIDDEN + 1))
             run_dir = args.resume or create_versioned_run_dir(cfg.output_dir)
             replay.replay(cfg, episodes, comp, run_dir, args.config, args.preflight_only)
-            if not args.preflight_only:
+            if not args.preflight_only and cfg.label_policy != "claude":
                 replay.analyse(run_dir)
         else:
             run_dir = replay.run(cfg, config_path=args.config, resume=args.resume, preflight_only=args.preflight_only)
@@ -80,6 +111,9 @@ def main() -> None:
             check = json.loads((run_dir / "replay_check.json").read_text())
             print(json.dumps({k: v for k, v in check.items() if k != "criterion"}, indent=2))
             print(f"\nReplay check {'passed' if check['passed'] else 'FAILED'}: {run_dir}")
+            return
+        if cfg.label_policy == "claude":
+            print(f"\nGenerations saved: {run_dir}\nRun --label-only {run_dir} on the coordinator to label and analyse.")
             return
 
     with pd.option_context("display.width", 220, "display.max_columns", 20):

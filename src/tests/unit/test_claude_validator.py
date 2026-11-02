@@ -925,16 +925,50 @@ class TestCliScope:
             parse_args(["--episodes", "x", "--output", "y",
                         "--condition", "controlled_correct"])
 
-    def test_intervention_partition_refused(self):
-        parse_args = CLI.parse_args
-
-        with pytest.raises(SystemExit):
-            parse_args(["--episodes", "x", "--output", "y", "--partition", "intervention"])
+    def test_intervention_partition_requires_explicit_selection(self):
+        assert CLI.parse_args(["--episodes", "x", "--output", "y",
+                               "--partition", "intervention"]).partition == "intervention"
 
     def test_default_partition_remains_train(self):
         assert CLI.parse_args(["--episodes", "x", "--output", "y"]).partition == "train"
 
-    def test_test_dry_run_selects_only_natural_test_episodes(self, tmp_path, capsys, monkeypatch):
+    def test_intervention_api_outputs_and_resume_keep_partition_and_protocol(self, tmp_path, monkeypatch):
+        path, output = tmp_path / "interactions.jsonl", tmp_path / "labels"
+        ep = _candidate_episode()
+        ep.update(partition="intervention", source_split="intervention", critic_condition="natural")
+        write_jsonl(path, [ep, dict(ep, episode_id="other_train", question_id="other_train", partition="train")])
+        client = _mock_client(label="adoption")
+
+        class FakeClient:
+            def __init__(self, **kwargs):
+                self.generate = client.generate
+
+            def close(self):
+                pass
+
+        monkeypatch.setattr(CLI, "load_dotenv", lambda: None)
+        monkeypatch.setattr(CLI.boto3, "Session", MagicMock())
+        monkeypatch.setattr(CLI, "ClaudeClient", FakeClient)
+        argv = ["--episodes", str(path), "--output", str(output), "--partition", "intervention"]
+        CLI.main(argv)
+        assert client.generate.call_count == 1
+        with (output / "binary_labels.csv").open(newline="") as f:
+            labels = list(csv.DictReader(f))
+        assert len(labels) == 1 and labels[0]["partition"] == "intervention"
+        raw = [json.loads(line) for line in (output / "raw_results.jsonl").read_text().splitlines()]
+        assert len(raw) == 1 and raw[0]["label_source"] == "claude"
+        assert labels[0]["prompt_version"] == "claude_binary_v3_candidates"
+        assert json.loads((output / "summary.json").read_text())["partition"] == "intervention"
+        assert json.loads((output / "run_settings.json").read_text())["partition"] == "intervention"
+        with pytest.raises(SystemExit):
+            CLI.main([*argv, "--resume"])  # completed runs retain the existing overwrite guard
+        # Simulate an interruption after persisting a raw row but before writing the final summary.
+        (output / "summary.json").unlink()
+        CLI.main([*argv, "--resume"])
+        assert client.generate.call_count == 1  # reuse the recorded result, no duplicate API request
+
+    @pytest.mark.parametrize("partition", ["test", "intervention"])
+    def test_held_out_dry_run_selects_only_requested_natural_partition(self, tmp_path, capsys, monkeypatch, partition):
         episodes = tmp_path / "interactions.jsonl"
         output = tmp_path / "labels"
         write_jsonl(episodes, [
@@ -948,17 +982,20 @@ class TestCliScope:
                      extra={"critic_condition": "natural"}),
             _episode(question_id="q_controlled", episode_id="e_controlled", partition="test",
                      extra={"critic_condition": "controlled_correct"}),
+            _episode(question_id="q_controlled_intervention", episode_id="e_controlled_intervention",
+                     partition="intervention", extra={"critic_condition": "controlled_correct"}),
         ])
         session = MagicMock()
         monkeypatch.setattr(CLI.boto3, "Session", session)
 
         CLI.main(["--episodes", str(episodes), "--output", str(output),
-                  "--partition", "test", "--concurrency", "64", "--dry-run"])
+                  "--partition", partition, "--concurrency", "64", "--dry-run"])
 
         stdout = capsys.readouterr().out
         assert "Episodes to process: 1" in stdout
-        assert '"episode_id": "e_test"' in stdout
-        for excluded in ("e_train", "e_validation", "e_intervention", "e_controlled"):
+        assert f'"episode_id": "e_{partition}"' in stdout
+        for excluded in ({"e_train", "e_validation", "e_intervention", "e_test", "e_controlled",
+                          "e_controlled_intervention"} - {f"e_{partition}"}):
             assert f'"episode_id": "{excluded}"' not in stdout
         assert not output.exists()
         session.assert_not_called()
