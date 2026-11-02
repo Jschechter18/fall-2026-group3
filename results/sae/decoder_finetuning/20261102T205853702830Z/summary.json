@@ -1,0 +1,56 @@
+{
+  "best_epoch": 5,
+  "original": {
+    "train": {
+      "n": 72846,
+      "mse": 6357.763089832826,
+      "variance_explained": 0.22372713181572945
+    },
+    "validation": {
+      "n": 9105,
+      "mse": 6343.526275989182,
+      "variance_explained": 0.22461340536616514,
+      "probe_cohort": {
+        "n": 3227,
+        "mse": 6759.281049403491,
+        "variance_explained": 0.2382532274471012
+      }
+    }
+  },
+  "bias_only": {
+    "train": {
+      "n": 72846,
+      "mse": 4010.126650073256,
+      "variance_explained": 0.5103698466819719
+    },
+    "validation": {
+      "n": 9105,
+      "mse": 3992.371825116726,
+      "variance_explained": 0.512001454820709,
+      "probe_cohort": {
+        "n": 3227,
+        "mse": 4555.835237682864,
+        "variance_explained": 0.4865736809547291
+      }
+    }
+  },
+  "adapted": {
+    "train": {
+      "n": 72846,
+      "mse": 2075.8640454057677,
+      "variance_explained": 0.7465402668015882
+    },
+    "validation": {
+      "n": 9105,
+      "mse": 2071.4094226224292,
+      "variance_explained": 0.7468059517024404,
+      "probe_cohort": {
+        "n": 3227,
+        "mse": 2462.698608774094,
+        "variance_explained": 0.7224626845232699
+      }
+    }
+  },
+  "encoder_unchanged": true,
+  "note": "Only decoder weights and bias adapted. Feature values and probe inputs are unchanged. Variance explained uses each evaluation cohort own mean, identically before and after."
+}

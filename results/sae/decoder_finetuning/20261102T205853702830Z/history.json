@@ -1,0 +1,92 @@
+[
+  {
+    "epoch": 1,
+    "train": {
+      "n": 72846,
+      "mse": 3175.7651077773016,
+      "variance_explained": 0.6122440779782756
+    },
+    "validation": {
+      "n": 9105,
+      "mse": 3164.9430229298796,
+      "variance_explained": 0.6131403440309641,
+      "probe_cohort": {
+        "n": 3227,
+        "mse": 3651.393916094699,
+        "variance_explained": 0.588500979530968
+      }
+    }
+  },
+  {
+    "epoch": 2,
+    "train": {
+      "n": 72846,
+      "mse": 2659.9020578415593,
+      "variance_explained": 0.6752301445720899
+    },
+    "validation": {
+      "n": 9105,
+      "mse": 2651.2893403114604,
+      "variance_explained": 0.6759256407978667,
+      "probe_cohort": {
+        "n": 3227,
+        "mse": 3114.5391570937054,
+        "variance_explained": 0.649002588653252
+      }
+    }
+  },
+  {
+    "epoch": 3,
+    "train": {
+      "n": 72846,
+      "mse": 2391.8938320725915,
+      "variance_explained": 0.7079535271793087
+    },
+    "validation": {
+      "n": 9105,
+      "mse": 2384.8914404087272,
+      "variance_explained": 0.7084881858928619,
+      "probe_cohort": {
+        "n": 3227,
+        "mse": 2814.1095393571677,
+        "variance_explained": 0.6828599308790653
+      }
+    }
+  },
+  {
+    "epoch": 4,
+    "train": {
+      "n": 72846,
+      "mse": 2211.130620413339,
+      "variance_explained": 0.7300244308594612
+    },
+    "validation": {
+      "n": 9105,
+      "mse": 2205.4620916408544,
+      "variance_explained": 0.7304203267346356,
+      "probe_cohort": {
+        "n": 3227,
+        "mse": 2613.6475652689473,
+        "variance_explained": 0.7054512776014745
+      }
+    }
+  },
+  {
+    "epoch": 5,
+    "train": {
+      "n": 72846,
+      "mse": 2075.8640454057677,
+      "variance_explained": 0.7465402668015882
+    },
+    "validation": {
+      "n": 9105,
+      "mse": 2071.4094226224292,
+      "variance_explained": 0.7468059517024404,
+      "probe_cohort": {
+        "n": 3227,
+        "mse": 2462.698608774094,
+        "variance_explained": 0.7224626845232699
+      }
+    }
+  }
+]
