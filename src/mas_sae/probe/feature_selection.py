@@ -146,7 +146,7 @@ class FeatureSelectionConfig:
             if k in raw:
                 raw[k] = Path(raw[k])
         cfg = cls(**raw)
-        for name, spec in tqdm(cfg.saes.items(), desc="Representations", dynamic_ncols=True, unit="basis"):
+        for name, spec in cfg.saes.items():
             if spec.get("kind") not in SAE_KINDS or "path" not in spec:
                 raise ValueError(f"SAE {name!r} needs kind: {'|'.join(SAE_KINDS)} and a path.")
         return cfg
@@ -469,7 +469,7 @@ def run(cfg: FeatureSelectionConfig, config_path: Path | None = None) -> Path:
 
     run_dir = create_versioned_run_dir(cfg.output_dir)
     summaries, per_row = {}, {"question_id": questions[ev], "accepted_observed": y[ev], "readout_original": p_orig}
-    for name, spec in cfg.saes.items():
+    for name, spec in tqdm(cfg.saes.items(), desc="Representations", dynamic_ncols=True, unit="basis"):
         sae, info = load_sae(spec, root, cfg.layer)
         res = analyse_sae(name, sae, X[fit], y[fit], groups[fit], X[ev], y[ev], groups[ev], readout, cfg,
                           q_eval=questions[ev])

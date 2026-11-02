@@ -51,6 +51,7 @@ dist/
 
 # Probe artifacts
 logs/
+/results/**/matched_edits/**/edit_norms.csv
 
 # Generated activation tensors
 /data/activations/
