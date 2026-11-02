@@ -19,6 +19,8 @@ import warnings
 
 import numpy as np
 import torch
+from tqdm.auto import tqdm
+
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import log_loss
 from sklearn.pipeline import Pipeline
@@ -130,19 +132,28 @@ def _readout_model(C: float, seed: int) -> Pipeline:
 
 
 def fit_readout(X: np.ndarray, y: np.ndarray, groups: np.ndarray, c_grid, inner_folds: int,
-                seed: int) -> tuple[Pipeline, float]:
+                seed: int, progress_desc: str | None = None) -> tuple[Pipeline, float]:
     """Acceptance readout on raw activations; C chosen by inner grouped CV log loss on these rows
     only (ties go to the smaller C). ``y`` is 1 = accepted the Critic."""
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         folds, _ = make_group_folds(y, groups, inner_folds, seed)
         best_c, best = c_grid[0], np.inf
-        for C in c_grid:
-            losses = [log_loss(y[va], _readout_model(C, seed).fit(X[tr], y[tr]).predict_proba(X[va])[:, 1],
-                               labels=[0, 1]) for tr, va in folds]
-            if np.mean(losses) < best - 1e-12:
-                best_c, best = C, float(np.mean(losses))
-        return _readout_model(best_c, seed).fit(X, y), best_c
+        with tqdm(total=len(c_grid) * len(folds) + 1, desc=progress_desc,
+                  disable=progress_desc is None, dynamic_ncols=True, unit="fit") as progress:
+            for C in c_grid:
+                losses = []
+                for tr, va in folds:
+                    progress.set_postfix(C=C, stage="CV")
+                    model = _readout_model(C, seed).fit(X[tr], y[tr])
+                    losses.append(log_loss(y[va], model.predict_proba(X[va])[:, 1], labels=[0, 1]))
+                    progress.update()
+                if np.mean(losses) < best - 1e-12:
+                    best_c, best = C, float(np.mean(losses))
+            progress.set_postfix(C=best_c, stage="refit")
+            model = _readout_model(best_c, seed).fit(X, y)
+            progress.update()
+        return model, best_c
 
 
 def p_accept(readout: Pipeline, X: np.ndarray) -> np.ndarray:

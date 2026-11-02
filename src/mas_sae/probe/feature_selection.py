@@ -29,6 +29,7 @@ import numpy as np
 import pandas as pd
 import torch
 import yaml
+from tqdm.auto import tqdm
 
 from mas_sae.causal import offline
 from mas_sae.experiments.artifacts import get_untracked_files, get_untracked_sha256, sha256_file
@@ -145,7 +146,7 @@ class FeatureSelectionConfig:
             if k in raw:
                 raw[k] = Path(raw[k])
         cfg = cls(**raw)
-        for name, spec in cfg.saes.items():
+        for name, spec in tqdm(cfg.saes.items(), desc="Representations", dynamic_ncols=True, unit="basis"):
             if spec.get("kind") not in SAE_KINDS or "path" not in spec:
                 raise ValueError(f"SAE {name!r} needs kind: {'|'.join(SAE_KINDS)} and a path.")
         return cfg
@@ -337,6 +338,7 @@ def analyse_sae(name, sae, X_fit, y_fit, g_fit, X_eval, y_eval, g_eval, readout,
     """``g_fit``/``g_eval`` are the groups no fold or bootstrap splits (families); ``q_eval`` are the
     evaluation question ids for the paired statistics (one row each), clustered by ``g_eval`` when they differ."""
     raw = is_activation_basis(sae)
+    logger.info("%s: encoding train and validation activations", name)
     Z_fit, Z_eval = offline.encode(sae, X_fit), offline.encode(sae, X_eval)
     freq = (Z_fit > 0).mean(axis=0)
     spread = Z_fit.std(axis=0)
@@ -347,7 +349,8 @@ def analyse_sae(name, sae, X_fit, y_fit, g_fit, X_eval, y_eval, g_eval, readout,
 
     # ---- feature-selection probe (fit and rank on train, score on validation)
     model, C, n_conv = ls._fit_counting_warnings(
-        lambda c: ls._activation_model(c, cfg.seed), Z_fit[:, live], y_fit, g_fit, cfg)
+        lambda c: ls._activation_model(c, cfg.seed), Z_fit[:, live], y_fit, g_fit, cfg,
+        progress_desc=f"{name}: probe")
     pred = model.predict(Z_eval[:, live])
     boot = grouped_bootstrap_indices(g_eval, cfg.n_bootstrap, cfg.seed)
     ranking = rank_features(model, Z_fit[:, live], signed=raw)
@@ -366,7 +369,8 @@ def analyse_sae(name, sae, X_fit, y_fit, g_fit, X_eval, y_eval, g_eval, readout,
     draws = (offline.contribution_matched_controls(np.ones_like(spread), spread, targeted, cfg.n_random_draws, cfg.seed)
              if raw else offline.frequency_matched_controls(freq, targeted, cfg.n_random_draws, cfg.seed))
     p_random_draws = np.stack([offline.p_accept(readout, offline.decode(sae, offline.ablate(Z_eval, d)))
-                               for d in draws])
+                               for d in tqdm(draws, desc=f"{name}: random ablations",
+                                             dynamic_ncols=True, unit="draw")])
     p_random = p_random_draws.mean(axis=0)
     stats = lambda p: offline.paired_effect(p, p_control, q_eval, cfg.n_bootstrap, cfg.n_permutations, cfg.seed,
                                             clusters)
@@ -377,7 +381,8 @@ def analyse_sae(name, sae, X_fit, y_fit, g_fit, X_eval, y_eval, g_eval, readout,
     p_orig = offline.p_accept(readout, X_eval)
     p_t_err = offline.p_accept(readout, offline.decode(sae, offline.ablate(Z_eval, targeted)) + err)
     p_r_err = np.stack([offline.p_accept(readout, offline.decode(sae, offline.ablate(Z_eval, d)) + err)
-                        for d in draws]).mean(axis=0)
+                        for d in tqdm(draws, desc=f"{name}: sensitivity ablations",
+                                      dynamic_ncols=True, unit="draw")]).mean(axis=0)
     sens = lambda p: offline.paired_effect(p, p_orig, q_eval, cfg.n_bootstrap, cfg.n_permutations, cfg.seed,
                                            clusters)
 
@@ -457,7 +462,8 @@ def run(cfg: FeatureSelectionConfig, config_path: Path | None = None) -> Path:
             ensure_center(spec, root, X[fit])
     prov = provenance(cfg, config_path)                    # before any run artifacts are written
 
-    readout, readout_c = offline.fit_readout(X[fit], y[fit], groups[fit], cfg.c_grid, cfg.inner_folds, cfg.seed)
+    readout, readout_c = offline.fit_readout(X[fit], y[fit], groups[fit], cfg.c_grid, cfg.inner_folds, cfg.seed,
+                                            progress_desc="Raw activation readout")
     p_orig = offline.p_accept(readout, X[ev])
     readout_pred = (p_orig >= 0.5).astype(int)
 

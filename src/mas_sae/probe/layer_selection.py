@@ -33,6 +33,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import yaml
+from tqdm.auto import tqdm
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
@@ -195,7 +196,7 @@ def _auroc(y_true, scores) -> float:
     return float(roc_auc_score(y_true, scores)) if len(np.unique(y_true)) == 2 else float("nan")
 
 
-def _fit_with_inner_cv(make_model, X, y, groups, c_grid, inner_folds, seed):
+def _fit_with_inner_cv(make_model, X, y, groups, c_grid, inner_folds, seed, progress_desc=None):
     """Pick C by inner grouped CV on THIS training set only, then refit on all of it.
     Ties go to the smaller C (stronger regularization)."""
     n_inner = int(max(2, min(inner_folds, min(np.unique(y, return_counts=True)[1]))))
@@ -203,20 +204,28 @@ def _fit_with_inner_cv(make_model, X, y, groups, c_grid, inner_folds, seed):
         warnings.simplefilter("ignore")
         inner, _ = make_group_folds(y, groups, n_inner, seed)
     best_c, best_score = c_grid[0], -1.0
-    for C in c_grid:
-        scores = []
-        for tr, va in inner:
-            m = make_model(C).fit(X[tr], y[tr])
-            scores.append(balanced_accuracy(y[va], m.predict(X[va])))
-        if np.mean(scores) > best_score + 1e-9:
-            best_c, best_score = C, float(np.mean(scores))
-    return make_model(best_c).fit(X, y), best_c
+    with tqdm(total=len(c_grid) * len(inner) + 1, desc=progress_desc,
+              disable=progress_desc is None, dynamic_ncols=True, unit="fit") as progress:
+        for C in c_grid:
+            scores = []
+            for tr, va in inner:
+                progress.set_postfix(C=C, stage="CV")
+                m = make_model(C).fit(X[tr], y[tr])
+                scores.append(balanced_accuracy(y[va], m.predict(X[va])))
+                progress.update()
+            if np.mean(scores) > best_score + 1e-9:
+                best_c, best_score = C, float(np.mean(scores))
+        progress.set_postfix(C=best_c, stage="refit")
+        model = make_model(best_c).fit(X, y)
+        progress.update()
+    return model, best_c
 
 
-def _fit_counting_warnings(make_model, X, y, groups, cfg):
+def _fit_counting_warnings(make_model, X, y, groups, cfg, progress_desc=None):
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
-        model, C = _fit_with_inner_cv(make_model, X, y, groups, cfg.c_grid, cfg.inner_folds, cfg.seed)
+        model, C = _fit_with_inner_cv(make_model, X, y, groups, cfg.c_grid, cfg.inner_folds, cfg.seed,
+                                      **({"progress_desc": progress_desc} if progress_desc else {}))
     return model, C, sum(issubclass(w.category, ConvergenceWarning) for w in caught)
 
 
