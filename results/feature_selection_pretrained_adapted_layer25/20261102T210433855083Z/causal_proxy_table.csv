@@ -1,0 +1,18 @@
+Experiment,Condition,Outcome,Acceptance Rate (%),Δ vs. SAE Control (pp),95% CI for Δ,p-value
+Baseline,No SAE (observed Solver behavior),observed,50.97613882863341,,,
+Baseline,No SAE (readout on original activations),probe-predicted,50.513869524002075,,,
+Raw activations,No ablation,probe-predicted,50.513869524002075,Reference,,
+Raw activations,Random ablation,probe-predicted,50.61665177345276,0.10279269566501022,"[0.08, 0.13]",9.999000099990002e-05
+Raw activations,Targeted ablation,probe-predicted,50.348490476608276,-0.16536993569381542,"[-0.56, 0.21]",0.39646035396460355
+L1 SAE,No ablation,probe-predicted,50.513237714767456,Reference,,
+L1 SAE,Random ablation,probe-predicted,51.0076642036438,0.49442634230209775,"[0.46, 0.53]",9.999000099990002e-05
+L1 SAE,Targeted ablation,probe-predicted,10.102526843547821,-40.4107126467166,"[-41.22, -39.57]",9.999000099990002e-05
+TopK SAE,No ablation,probe-predicted,53.86699438095093,Reference,,
+TopK SAE,Random ablation,probe-predicted,60.52258014678955,6.655585739522069,"[6.51, 6.82]",9.999000099990002e-05
+TopK SAE,Targeted ablation,probe-predicted,0.14022429240867496,-53.726766997055506,"[-54.80, -52.68]",9.999000099990002e-05
+Pretrained SAE,No ablation,probe-predicted,25.071054697036743,Reference,,
+Pretrained SAE,Random ablation,probe-predicted,25.937891006469727,0.8668359324788707,"[0.72, 1.02]",9.999000099990002e-05
+Pretrained SAE,Targeted ablation,probe-predicted,15.643016993999481,-9.428040123060285,"[-9.85, -9.00]",9.999000099990002e-05
+Adapted pretrained SAE,No ablation,probe-predicted,52.97721028327942,Reference,,
+Adapted pretrained SAE,Random ablation,probe-predicted,53.136587142944336,0.15937764002185553,"[0.02, 0.30]",0.0221977802219778
+Adapted pretrained SAE,Targeted ablation,probe-predicted,33.353203535079956,-19.62400722767081,"[-20.02, -19.22]",9.999000099990002e-05

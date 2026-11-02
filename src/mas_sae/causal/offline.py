@@ -19,6 +19,8 @@ import warnings
 
 import numpy as np
 import torch
+from tqdm.auto import tqdm
+
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import log_loss
 from sklearn.pipeline import Pipeline
@@ -130,19 +132,28 @@ def _readout_model(C: float, seed: int) -> Pipeline:
 
 
 def fit_readout(X: np.ndarray, y: np.ndarray, groups: np.ndarray, c_grid, inner_folds: int,
-                seed: int) -> tuple[Pipeline, float]:
+                seed: int, progress_desc: str | None = None) -> tuple[Pipeline, float]:
     """Acceptance readout on raw activations; C chosen by inner grouped CV log loss on these rows
     only (ties go to the smaller C). ``y`` is 1 = accepted the Critic."""
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         folds, _ = make_group_folds(y, groups, inner_folds, seed)
         best_c, best = c_grid[0], np.inf
-        for C in c_grid:
-            losses = [log_loss(y[va], _readout_model(C, seed).fit(X[tr], y[tr]).predict_proba(X[va])[:, 1],
-                               labels=[0, 1]) for tr, va in folds]
-            if np.mean(losses) < best - 1e-12:
-                best_c, best = C, float(np.mean(losses))
-        return _readout_model(best_c, seed).fit(X, y), best_c
+        with tqdm(total=len(c_grid) * len(folds) + 1, desc=progress_desc,
+                  disable=progress_desc is None, dynamic_ncols=True, unit="fit") as progress:
+            for C in c_grid:
+                losses = []
+                for tr, va in folds:
+                    progress.set_postfix(C=C, stage="CV")
+                    model = _readout_model(C, seed).fit(X[tr], y[tr])
+                    losses.append(log_loss(y[va], model.predict_proba(X[va])[:, 1], labels=[0, 1]))
+                    progress.update()
+                if np.mean(losses) < best - 1e-12:
+                    best_c, best = C, float(np.mean(losses))
+            progress.set_postfix(C=best_c, stage="refit")
+            model = _readout_model(best_c, seed).fit(X, y)
+            progress.update()
+        return model, best_c
 
 
 def p_accept(readout: Pipeline, X: np.ndarray) -> np.ndarray:
@@ -180,13 +191,15 @@ def paired_effect(outcome: np.ndarray, reference: np.ndarray, groups: np.ndarray
 
 
 def targeted_vs_random(targeted: np.ndarray, random: np.ndarray, control: np.ndarray, groups: np.ndarray,
-                       n_bootstrap: int, n_permutations: int, seed: int) -> dict:
+                       n_bootstrap: int, n_permutations: int, seed: int,
+                       clusters: np.ndarray | None = None) -> dict:
     """Targeted ablation against the random-ablation controls, paired by question, in percentage points.
 
     ``targeted`` and ``control`` are one value per question; ``random`` is questions x draws. The
     direct comparison is targeted - mean over draws, with a question bootstrap CI and sign-flip
     p-value. Both are conditional on the draws used; ``ci95_pp_questions_and_draws`` also resamples
     the draws, so it includes the uncertainty from which random feature sets were chosen.
+    Optional ``clusters`` resamples and sign-flips whole question families.
 
     ``draw_tail_fraction`` is descriptive only: the share of feature sets (the random draws plus
     the targeted set itself) whose effect against the control is at least as large in magnitude as
@@ -199,14 +212,14 @@ def targeted_vs_random(targeted: np.ndarray, random: np.ndarray, control: np.nda
     # question needs at least one draw. Without NaNs these are plain means.
     if np.isnan(targeted).any() or np.isnan(random).all(1).any():
         raise ValueError("targeted_vs_random needs a targeted value and at least one random draw per question.")
-    direct = paired_effect(targeted, np.nanmean(random, 1), groups, n_bootstrap, n_permutations, seed)
+    direct = paired_effect(targeted, np.nanmean(random, 1), groups, n_bootstrap, n_permutations, seed, clusters)
     rng = np.random.default_rng(seed + 1)
     n_draws = random.shape[1]
     with warnings.catch_warnings():
         # a question, resample or draw with no values left (all NaN) is NaN and left out below
         warnings.simplefilter("ignore", RuntimeWarning)
         both = []
-        for i in grouped_bootstrap_indices(groups, n_bootstrap, seed):
+        for i in grouped_bootstrap_indices(groups if clusters is None else clusters, n_bootstrap, seed):
             # Same estimand as the point estimate: average each question's resampled draws, then the
             # paired question differences. A question whose resampled draws are all left out is
             # dropped from that resample, so questions are never weighted by their number of draws.

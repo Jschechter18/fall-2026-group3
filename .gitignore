@@ -51,6 +51,7 @@ dist/
 
 # Probe artifacts
 logs/
+/results/**/matched_edits/**/edit_norms.csv
 
 # Generated activation tensors
 /data/activations/
@@ -91,3 +92,6 @@ results/causal_steering/*/per_row.jsonl
 # Examples
 examples/claude/artifacts/
 artifacts/*
+
+# Decoder adaptation weights; keep lightweight run metrics versionable.
+results/sae/decoder_finetuning/**/params.safetensors

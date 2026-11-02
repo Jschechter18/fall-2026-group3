@@ -17,9 +17,19 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--config", type=Path, default=Path("configs/feature_selection_layer33.yaml"))
+    parser.add_argument("--matched-from", type=Path,
+                        help="Completed feature-selection run to reuse for matched-size evaluation")
+    parser.add_argument("--edit-doses", type=float, nargs="+", default=[0.01, 0.025, 0.05, 0.1],
+                        help="Positive edit sizes as fractions of each original activation norm")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
-    run_dir = run(FeatureSelectionConfig.from_yaml(args.config), config_path=args.config)
+    cfg = FeatureSelectionConfig.from_yaml(args.config)
+    if args.matched_from:
+        from mas_sae.probe.matched_edits import run as run_matched
+        run_dir = run_matched(cfg, args.matched_from, args.edit_doses, args.config)
+        print(f"Matched-size evaluation: {run_dir}")
+        return
+    run_dir = run(cfg, config_path=args.config)
 
     summary = json.loads((run_dir / "feature_selection_summary.json").read_text())
     for name, s in summary["saes"].items():
