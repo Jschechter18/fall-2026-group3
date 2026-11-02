@@ -132,6 +132,10 @@ record/tensor alignment, and scientific settings. Hardware and package metadata
 are recorded rather than used as compatibility gates. Different GPU numerics
 can still produce different generations. Missing resolved model revisions are
 recorded as unknown; requested revisions remain in provenance.
+For cross-worker comparison only, a missing resolved revision can match an
+identical full 40-character requested commit pin. Any recorded resolution must
+agree with that pin. Branches, tags, and unpinned revisions retain strict
+comparison. Original worker provenance and completion hashes remain unchanged.
 
 Records are merged in master order. A1 and A2 stay separate until producing
 `cat(all_A1, all_A2)`. One captured layer is materialized at a time; memory still

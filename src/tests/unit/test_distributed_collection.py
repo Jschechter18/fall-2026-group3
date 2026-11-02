@@ -111,6 +111,49 @@ def collect(path, manifest, config, chunks=None, *, resume=False, gpu="fixture")
         candidate_sites=SITES, type_checked_target=True, resume=resume)
 
 
+@pytest.mark.parametrize("pin", [None, "main", "v1", "a" * 12])
+def test_merge_identity_does_not_infer_unpinned_revisions(pin):
+    unknown = {"roles": {"solver": {"requested_revision": pin, "resolved_revision": None}}}
+    known = copy.deepcopy(unknown)
+    known["roles"]["solver"]["resolved_revision"] = "b" * 40
+    assert core._merge_experiment_identity(unknown) != core._merge_experiment_identity(known)
+
+
+def test_merge_identity_rejects_conflicting_resolution():
+    experiment = {"roles": {"solver": {
+        "requested_revision": "a" * 40, "resolved_revision": "b" * 40}}}
+    with pytest.raises(ValueError, match="conflicts with requested commit"):
+        core._merge_experiment_identity(experiment)
+
+
+def test_merge_accepts_missing_pinned_resolution_and_preserves_provenance(tmp_path, monkeypatch):
+    config = make_config(tmp_path, count=4)
+    for spec in config["roles"].values():
+        spec["revision"] = "a" * 40
+    path, manifest = prepare(tmp_path/"run", config, 2)
+    monkeypatch.setattr(core, "collect_examples", fixture_collector(manifest))
+    original_files = {}
+    for chunk in manifest["chunks"]:
+        resolved = make_resolved(config)
+        for metadata in resolved["provenance"]["roles"].values():
+            metadata["requested_revision"] = "a" * 40
+            metadata["resolved_revision"] = None if chunk["chunk_id"] == 0 else "a" * 40
+        core.collect_manifest_chunks(path, manifest, [chunk], config=config,
+            resolved_config=resolved, model=None, solver=None, critic=None, validator=None,
+            candidate_sites=SITES, type_checked_target=True)
+        root = core.chunk_directory(path, chunk)
+        for name in ("provenance.json", "complete.json"):
+            original_files[root/name] = (root/name).read_bytes()
+    merged = core.merge_run(path)
+    info = json.loads((merged/"collection.json").read_text())
+    assert len(info["collected"]) == 8
+    assert info["workers"][0]["resolved_config"]["provenance"]["roles"]["solver"]["resolved_revision"] is None
+    assert info["workers"][1]["resolved_config"]["provenance"]["roles"]["solver"]["resolved_revision"] == "a" * 40
+    for file, contents in original_files.items():
+        assert file.read_bytes() == contents
+    core.split_run(path, config)
+
+
 def test_prepare_is_chunk_independent_and_does_not_assign_research_splits(tmp_path):
     config = make_config(tmp_path)
     a = dataset.prepare_manifest(config, num_chunks=1)

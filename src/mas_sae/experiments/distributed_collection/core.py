@@ -1,7 +1,9 @@
 """Local collection, merge, and export. AWS CLI handles file transport."""
 from contextlib import contextmanager
+import copy
 import json
 from pathlib import Path
+import re
 import tempfile
 
 from mas_sae.data.partition_adapter import canonical_partitions, build_collected_manifest, write_run_tables
@@ -112,6 +114,24 @@ def staged_output(destination):
         root.rename(destination)
 
 
+def _merge_experiment_identity(experiment):
+    """Compare full commit pins across library versions without rewriting provenance.
+
+    Newer Transformers versions omit config._commit_hash. A missing resolved
+    revision may match a full requested commit, but never a branch/tag or a
+    conflicting recorded resolution. Saved chunk identity checks stay exact.
+    """
+    identity = copy.deepcopy(experiment)
+    for role, metadata in identity["roles"].items():
+        requested = metadata.get("requested_revision")
+        if isinstance(requested, str) and re.fullmatch(r"[0-9a-f]{40}", requested):
+            resolved = metadata.get("resolved_revision")
+            if resolved is not None and resolved != requested:
+                raise ValueError(f"{role}: resolved model revision conflicts with requested commit")
+            metadata["resolved_revision"] = requested
+    return identity
+
+
 def merge_run(manifest_path):
     manifest_path = Path(manifest_path)
     manifest = read_manifest(manifest_path)
@@ -133,9 +153,10 @@ def merge_run(manifest_path):
         if worker["experiment"] != current or current != completed["experiment"]:
             raise ValueError("Worker experiment metadata disagrees")
         check_config(manifest, worker["resolved_config"])
-        if experiment is not None and experiment != current:
+        identity = _merge_experiment_identity(current)
+        if experiment is not None and experiment != identity:
             raise ValueError("Workers used different experiment settings")
-        experiment = current
+        experiment = identity
         workers.append(worker)
         ids = [r["question_id"] for r in manifest["questions"][chunk["start"]:chunk["end"]]]
         paths, position = progress._committed_prefix(root, ids)
