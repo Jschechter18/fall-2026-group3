@@ -92,3 +92,6 @@ results/causal_steering/*/per_row.jsonl
 # Examples
 examples/claude/artifacts/
 artifacts/*
+
+# Decoder adaptation weights; keep lightweight run metrics versionable.
+results/sae/decoder_finetuning/**/params.safetensors

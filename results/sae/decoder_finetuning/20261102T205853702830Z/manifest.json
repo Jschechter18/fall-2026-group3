@@ -1,0 +1,40 @@
+{
+  "settings": {
+    "sae_dir": "results/sae/pretrained/gemma-scope-2-4b-it/resid_post_all/layer_25_width_16k_l0_big",
+    "activations_dir": "artifacts/collection/mixed_final_001/prepared/activations/mixed_final_001/layer_25",
+    "layer": 25,
+    "activation_file": "{split}_attempt2.pt",
+    "probe_config": "configs/feature_selection_mixed_final_001_layer25.yaml",
+    "cache_dir": "artifacts/cache/pretrained_decoder",
+    "output_dir": "results/sae/decoder_finetuning",
+    "epochs": 5,
+    "batch_size": 256,
+    "lr": 1e-05,
+    "patience": 2,
+    "seed": 42,
+    "device": "cuda"
+  },
+  "source_files_sha256": {
+    "results/sae/pretrained/gemma-scope-2-4b-it/resid_post_all/layer_25_width_16k_l0_big/config.json": "12a0441423adacb0d0f790f1d35c3fdf13fbeb6b3e55720be99606abf6a0669c",
+    "results/sae/pretrained/gemma-scope-2-4b-it/resid_post_all/layer_25_width_16k_l0_big/params.safetensors": "0fbb3bb9661b4523c655581e11d3f83c91dcc88d2fa62ce8dfb97a0d4b7b009d"
+  },
+  "activation_sha256": {
+    "train": "ba58b2e49a8b809d972d814ab4c6d9adb0acc9b8895ad6e8730f43e752c0045f",
+    "validation": "13f33aa766abb6aa1e490c1dcdf436ab82534411364d07fc07e63089341dabdc"
+  },
+  "encoder_sha256": "5f27b4405e2564c0087526bb68d99aa6f49b0fd1cd59765c68a5e2e09196d178",
+  "cache_paths": {
+    "train": "artifacts/cache/pretrained_decoder/82f12a6f0efdfad6cf7ac0b43c7c0f4845a3fc1e9e3081d2b0085e9110f7a221",
+    "validation": "artifacts/cache/pretrained_decoder/eec564295201361417e75346dde80e0976ca9b3aa54803ccb760ca29e4d5abac"
+  },
+  "git": {
+    "git_dirty": true,
+    "git_status": " M .gitignore\n?? scripts/sae/DECODER_FINETUNING.md\n?? scripts/sae/finetune_pretrained_decoder.py\n?? src/tests/unit/test_pretrained_decoder_finetune.py\n",
+    "git_diff": "diff --git a/.gitignore b/.gitignore\nindex f9cc0d8..bbc3e0b 100644\n--- a/.gitignore\n+++ b/.gitignore\n@@ -92,3 +92,6 @@ results/causal_steering/*/per_row.jsonl\n # Examples\n examples/claude/artifacts/\n artifacts/*\n+\n+# Decoder adaptation weights; keep lightweight run metrics versionable.\n+results/sae/decoder_finetuning/**/params.safetensors\n",
+    "git_diff_sha256": "8302146833c8a4c0a36d0209419867c61e92648664299dd7904816a8e58cd237",
+    "git_diff_scope": "Staged and unstaged tracked changes relative to HEAD; untracked contents excluded."
+  },
+  "script_sha256": "304dc5ac5451b9aa8624b1a32c852d74dbac3d8a2b697bc173fdf73720311c5c",
+  "probe_config_sha256": "40de2edac4b7a5494f2313a9124c2cc5059630f79c3a8eb7e777acc9f929de29",
+  "status": "completed"
+}
