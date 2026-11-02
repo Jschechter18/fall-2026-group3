@@ -1,0 +1,17 @@
+{
+  "model_id": "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+  "client": "ClaudeClient",
+  "effort": null,
+  "max_tokens": 512,
+  "temperature": 0.0,
+  "prompt_version": "claude_binary_v3_candidates",
+  "prompt_sha256": "b589c55745efb3fbe52667aa6de693537999ede28baa513e558862bba27b9162",
+  "a2_presentation": "candidates",
+  "max_attempts": 3,
+  "episodes_sha256": "e34c4666dca75e0cacf9139d9ec71cbee5c7646a0fa6b367494b61e5778235a6",
+  "partitions_sha256": null,
+  "condition_filter": "natural",
+  "partition": "test",
+  "limit": null,
+  "retry_technical_errors_from": null
+}

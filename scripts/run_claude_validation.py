@@ -2,12 +2,13 @@
 
 Reads episodes from a partition-exported interactions.jsonl (records carry
 ``partition``), keeps only ``critic_condition == "natural"`` episodes of one
-development partition, sends each A1/C1/A2 triplet to Claude through Amazon
+train, validation, or test partition, sends each A1/C1/A2 triplet to Claude through Amazon
 Bedrock, and writes probe-ready binary labels (Adoption = 1, Retention = 0)
 alongside an exclusion audit file.
 
 The Natural condition is fixed; there is no option to process Controlled
-episodes.  Sealed partitions (test, intervention) cannot be selected.  The
+episodes.  Test labeling requires explicitly selecting ``--partition test``;
+keep test labels reserved for final evaluation. Intervention cannot be selected. The
 script reports how many records were loaded and kept at each step, so no
 records are silently discarded.
 
@@ -33,6 +34,13 @@ Usage:
         --episodes results/collection/natural_4b_full9_partitioned/train/interactions.jsonl \\
         --output results/claude_validation/pilot_10 \\
         --limit 10
+
+    # Label the held-out test partition separately for final evaluation:
+    PYTHONPATH=src python scripts/run_claude_validation.py \\
+        --episodes artifacts/collection/mixed_final_001/prepared/results/mixed_final_001/test/interactions.jsonl \\
+        --partition test \\
+        --output results/claude_validation/mixed_final_001/test \\
+        --concurrency 64
 """
 
 import argparse
@@ -82,8 +90,8 @@ DEFAULT_MODEL_ID = "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
 # Issue #155 labels Natural episodes only.
 CONDITION = "natural"
 
-# mas_sae.data.production.DEVELOPMENT_PARTITIONS (not imported: it pulls in torch).
-DEVELOPMENT_PARTITIONS = ("train", "validation")
+# Keep intervention sealed; test labels are for final evaluation only.
+LABELING_PARTITIONS = ("train", "validation", "test")
 
 # Fields recorded per selected episode so the run can be traced to its source rows.
 SELECTION_FIELDS = (
@@ -119,8 +127,9 @@ def parse_args(argv=None):
         help="Process only the first N complete episodes (for pilot runs).",
     )
     parser.add_argument(
-        "--partition", choices=DEVELOPMENT_PARTITIONS, default="train",
-        help="Frozen partition to label (default: train). Sealed partitions are refused.",
+        "--partition", choices=LABELING_PARTITIONS, default="train",
+        help="Frozen partition to label (default: train). Test labels are for final evaluation; "
+             "intervention is refused.",
     )
     parser.add_argument(
         "--model-id", type=str, default=DEFAULT_MODEL_ID,
