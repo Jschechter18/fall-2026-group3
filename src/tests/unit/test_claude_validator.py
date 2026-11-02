@@ -925,12 +925,43 @@ class TestCliScope:
             parse_args(["--episodes", "x", "--output", "y",
                         "--condition", "controlled_correct"])
 
-    @pytest.mark.parametrize("partition", ["test", "intervention"])
-    def test_sealed_partitions_refused(self, partition):
+    def test_intervention_partition_refused(self):
         parse_args = CLI.parse_args
 
         with pytest.raises(SystemExit):
-            parse_args(["--episodes", "x", "--output", "y", "--partition", partition])
+            parse_args(["--episodes", "x", "--output", "y", "--partition", "intervention"])
+
+    def test_default_partition_remains_train(self):
+        assert CLI.parse_args(["--episodes", "x", "--output", "y"]).partition == "train"
+
+    def test_test_dry_run_selects_only_natural_test_episodes(self, tmp_path, capsys, monkeypatch):
+        episodes = tmp_path / "interactions.jsonl"
+        output = tmp_path / "labels"
+        write_jsonl(episodes, [
+            _episode(question_id="q_test", episode_id="e_test", partition="test",
+                     extra={"critic_condition": "natural"}),
+            _episode(question_id="q_train", episode_id="e_train", partition="train",
+                     extra={"critic_condition": "natural"}),
+            _episode(question_id="q_validation", episode_id="e_validation", partition="validation",
+                     extra={"critic_condition": "natural"}),
+            _episode(question_id="q_intervention", episode_id="e_intervention", partition="intervention",
+                     extra={"critic_condition": "natural"}),
+            _episode(question_id="q_controlled", episode_id="e_controlled", partition="test",
+                     extra={"critic_condition": "controlled_correct"}),
+        ])
+        session = MagicMock()
+        monkeypatch.setattr(CLI.boto3, "Session", session)
+
+        CLI.main(["--episodes", str(episodes), "--output", str(output),
+                  "--partition", "test", "--concurrency", "64", "--dry-run"])
+
+        stdout = capsys.readouterr().out
+        assert "Episodes to process: 1" in stdout
+        assert '"episode_id": "e_test"' in stdout
+        for excluded in ("e_train", "e_validation", "e_intervention", "e_controlled"):
+            assert f'"episode_id": "{excluded}"' not in stdout
+        assert not output.exists()
+        session.assert_not_called()
 
     def test_unpartitioned_records_refused(self):
         filter_by_partition = CLI.filter_by_partition

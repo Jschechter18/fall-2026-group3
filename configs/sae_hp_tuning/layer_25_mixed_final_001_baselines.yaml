@@ -1,0 +1,45 @@
+activation_run_name: mixed_final_001
+layer: 25
+
+defaults:
+  latent_dim: 12888
+  epochs: 200
+  batch_size: 256
+  seed: 42
+  train_shuffle: true
+
+  patience: 20
+  early_stopping_min_delta: 0.0001
+  lr_patience: 5
+
+  tied_initialization: true
+  weight_l2_coefficient: 0.0
+  inactivity_window_examples: 10000
+
+groups:
+  # Trials 1–3
+  - name: l1_baseline
+    fixed:
+      sparsity_mode: l1
+      lr: 0.0001
+      aux_coefficient: 0.0
+    grid:
+      sparsity_coefficient: [1.0, 2.0, 3.0]
+
+  # Trials 4–6
+  - name: topk_baseline
+    fixed:
+      sparsity_mode: topk
+      lr: 0.0003
+      aux_k: 512
+      aux_dead_window_examples: 10000
+    variants:
+      - top_k: 64
+        aux_coefficient: 0.0078125
+      - top_k: 128
+        aux_coefficient: 0.0078125
+      - top_k: 128
+        aux_coefficient: 0.0
+
+# Deliberately omit automatic selection:
+# review validation results and choose one trial per family.

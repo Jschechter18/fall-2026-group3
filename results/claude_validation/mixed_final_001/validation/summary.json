@@ -1,0 +1,51 @@
+{
+  "n_episodes": 9105,
+  "label_counts": {
+    "adoption": 1645,
+    "retention": 1582,
+    "agreement": 5839,
+    "out": 37,
+    "error": 2
+  },
+  "label_sources": {
+    "claude": 9103
+  },
+  "error_reasons": {
+    "incomplete_response:refusal": 2
+  },
+  "n_technical_errors": 2,
+  "n_retried": 1,
+  "total_input_tokens": 5044136,
+  "total_output_tokens": 761167,
+  "max_attempts": 3,
+  "n_resumed": 0,
+  "model_id": "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+  "client": "ClaudeClient",
+  "effort": null,
+  "max_tokens": 512,
+  "temperature": 0.0,
+  "prompt_version": "claude_binary_v3_candidates",
+  "prompt_sha256": "b589c55745efb3fbe52667aa6de693537999ede28baa513e558862bba27b9162",
+  "a2_presentation": "candidates",
+  "models_returned": [
+    "claude-sonnet-4-5-20250929"
+  ],
+  "partitions_path": null,
+  "partitions_sha256": null,
+  "n_unpartitioned": 0,
+  "episodes_path": "artifacts/collection/mixed_final_001/prepared/results/mixed_final_001/validation/interactions.jsonl",
+  "episodes_sha256": "b01c4f6487d7b1f357ee8b3646ab27d702b057bdba7070d8f5205e3ece4b02b0",
+  "concurrency": 64,
+  "n_sessions": 1,
+  "condition_filter": "natural",
+  "condition_counts": {
+    "natural": 9105
+  },
+  "partition": "validation",
+  "limit": null,
+  "n_incomplete_skipped": 0,
+  "wall_clock_seconds": 380.67,
+  "retry_technical_errors_from": null,
+  "git_commit": "150e78c341c6320f77db6c789ebf17b982f949be",
+  "uncommitted_changes_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

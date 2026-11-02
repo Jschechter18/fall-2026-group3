@@ -1,0 +1,31 @@
+{
+  "run_id": "20261102T140455565573Z-150e78c341c6",
+  "run_name": "sae-l12888",
+  "layer": 25,
+  "created_at": "2026-11-02T14:04:55.565573+00:00",
+  "git_commit": "150e78c341c6320f77db6c789ebf17b982f949be",
+  "command": "/home/ubuntu/miniconda3/envs/capstone/bin/python scripts/sae/train_sae.py --hp-tune --config configs/sae_hp_tuning/layer_25_mixed_final_001_baselines.yaml",
+  "status": "completed",
+  "error_message": "",
+  "tuning": {
+    "study_directory": "results/sae/musique/tuning/layer_25/20261102T130735203392Z-150e78c341c6",
+    "trial_id": 2,
+    "group": "l1_baseline"
+  },
+  "git_dirty": true,
+  "git_status": "?? results/claude_validation/mixed_final_001/train/raw_results.jsonl\n?? results/claude_validation/mixed_final_001/train/run_settings.json\n?? results/claude_validation/mixed_final_001/train/selected_episodes.json\n?? results/sae/musique/tuning/layer_25/20261102T130735203392Z-150e78c341c6/config.json\n?? results/sae/musique/tuning/layer_25/20261102T130735203392Z-150e78c341c6/manifest.json\n?? results/sae/musique/tuning/layer_25/20261102T130735203392Z-150e78c341c6/trials.csv\n?? results/sae/musique/tuning/layer_25/20261102T130735203392Z-150e78c341c6/trials.json\n?? results/sae/musique/tuning/layer_25/20261102T130735203392Z-150e78c341c6/trials/trial_0001/config.json\n?? results/sae/musique/tuning/layer_25/20261102T130735203392Z-150e78c341c6/trials/trial_0001/history.json\n?? results/sae/musique/tuning/layer_25/20261102T130735203392Z-150e78c341c6/trials/trial_0001/manifest.json\n",
+  "git_diff": "",
+  "git_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "git_diff_scope": "Staged and unstaged tracked changes relative to HEAD; untracked contents excluded.",
+  "activation_files": {
+    "train": {
+      "path": "/home/ubuntu/capstone/fall-2026-group3/data/activations/mixed_final_001/layer_25/train.pt",
+      "sha256": "d597da6e50271b1ef920b5c9319ff8872495efa60f8eacbca9c6a5b96f5751c2"
+    },
+    "validation": {
+      "path": "/home/ubuntu/capstone/fall-2026-group3/data/activations/mixed_final_001/layer_25/validation.pt",
+      "sha256": "ab4c1226ec81b4ef41d104d3eec77501e0acf1bca75029ec28ebfd5964073b09"
+    }
+  },
+  "updated_at": "2026-11-02T15:27:02.182786+00:00"
+}
