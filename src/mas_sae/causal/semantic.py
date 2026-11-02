@@ -164,7 +164,7 @@ def _label_run(run: Path, *, client=None, dry_run=False) -> dict:
     final = run / FINAL
     if final.exists():
         load_labeled_rows(run)
-        return json.loads((final / "summary.json").read_text())
+        return {**json.loads((final / "summary.json").read_text()), "n_requests_this_invocation": 0}
     episodes = replay.load_episodes(cfg).set_index("question_id").to_dict("index")
     rows = replay.read_rows(run / "per_row.jsonl")
     conds = {(c["experiment"], c["condition"], c["draw"]) for c in meta["conditions"]}
@@ -203,7 +203,7 @@ def _label_run(run: Path, *, client=None, dry_run=False) -> dict:
               "source_technical_exclusions": {q: r.get("exclusion_reason") for q, r in state["source"].items()
                                               if r.get("behavior_label") is None}}
     if dry_run:
-        return report
+        return {**report, "status": "dry_run", "n_requests_this_invocation": 0}
     work.mkdir(exist_ok=True)
     if not manifest.exists():
         write_json_atomic(manifest, identity, overwrite=False)
@@ -242,9 +242,14 @@ def _label_run(run: Path, *, client=None, dry_run=False) -> dict:
                 failed_questions[row["question_id"]] = r.get("exclusion_reason")
         counts[label.get("behavior_label") or "error"] += 1
         labeled.append({**row, **label})
+    failed_requests = sum(r.get("behavior_label") not in cv.VALID_LABELS for r in cache.values())
+    stopping = bool(failed_questions) and cfg.claude.get("generated_errors", "stop") == "stop"
     report.update(label_counts=dict(counts), excluded_questions=failed_questions,
-                  n_analysis_episodes=len(episodes) - len(failed_questions))
-    if failed_questions and cfg.claude.get("generated_errors", "stop") == "stop":
+                  n_analysis_episodes=len(episodes) - len(failed_questions),
+                  n_requests_this_invocation=len(pending), n_failed_requests=failed_requests,
+                  n_pending_requests=failed_requests if stopping else 0,
+                  status="incomplete" if stopping else "complete_with_exclusions" if failed_questions else "complete")
+    if stopping:
         write_json_atomic(work / "pending_errors.json", report)
         raise ValueError(f"Claude failed on {len(failed_questions)} episodes; audits saved. Repeat --label-only to retry.")
     with staged_output(final) as stage:

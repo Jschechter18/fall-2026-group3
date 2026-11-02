@@ -157,6 +157,7 @@ def test_coordinator_deduplicates_and_preserves_condition_identity(inputs, tmp_p
     report = semantic.label_run(run, client=api)
     assert api.generate.call_count == 2  # six rows, but only two distinct changed semantic inputs
     assert report["n_reused_stored_rows"] == 2 and report["source_technical_exclusions"] == {"q4": "incomplete_response:max_tokens"}
+    assert report["n_pending_requests"] == 0 and report["status"] == "complete"
     labeled, _ = semantic.load_labeled_rows(run)
     assert len({replay.key(r) for r in labeled}) == len(labeled) == 6
     assert all(r["behavior_label"] == "out" for r in labeled if r["condition"].startswith("targeted"))
@@ -164,7 +165,8 @@ def test_coordinator_deduplicates_and_preserves_condition_identity(inputs, tmp_p
     assert set(table.N) == {2}
     summary = json.loads((run / "causal_replay_summary.json").read_text())
     assert summary["validated"] and summary["semantic_labeling"]["label_counts"]["out"] == 2
-    semantic.label_run(run, client=api)
+    repeated = semantic.label_run(run, client=api)
+    assert repeated["n_requests_this_invocation"] == 0
     assert api.generate.call_count == 2  # completed labeling is idempotent
     raw = run / "per_row.jsonl"
     raw.write_text(raw.read_text() + "\n")
@@ -201,7 +203,8 @@ def test_failed_judgments_retry_without_relabeling_successes(inputs, tmp_path, m
     assert set(pending["excluded_questions"]) == {"q0", "q1"}
     good = client()
     report = semantic.label_run(run, client=good)
-    assert good.generate.call_count == 1 and report["n_pending_requests"] == 1
+    assert good.generate.call_count == 1 and report["n_requests_this_invocation"] == 1
+    assert report["n_pending_requests"] == 0
     assert not report["excluded_questions"]
 
 
