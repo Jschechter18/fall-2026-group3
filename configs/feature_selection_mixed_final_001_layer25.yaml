@@ -35,6 +35,10 @@ saes:
     kind: custom
     path: results/sae/musique/runs/layer_25/20261102T182749413400Z-150e78c341c6
 
+  Pretrained SAE:
+    kind: gemma_scope
+    path: results/sae/pretrained/gemma-scope-2-4b-it/resid_post_all/layer_25_width_16k_l0_big
+
 seed: 42
 c_grid: [0.001, 0.01, 0.1, 1.0, 10.0]
 inner_folds: 3
