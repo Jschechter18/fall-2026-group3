@@ -1,0 +1,70 @@
+{
+  "label_policy": {
+    "name": "Claude labels",
+    "prompt_version": "claude_binary_v3_candidates",
+    "claude_model": "claude-sonnet-4-5-20250929",
+    "runs": [
+      "results/claude_validation/mixed_final_001/train",
+      "results/claude_validation/mixed_final_001/validation"
+    ],
+    "technical_failures": 38
+  },
+  "target": {
+    "column": "primary_target",
+    "eligible": "eligible_primary",
+    "1": "adoption",
+    "0": "retention"
+  },
+  "labels_by_partition": {
+    "train": {
+      "retention": 12541,
+      "agreement": 46970,
+      "adoption": 13015,
+      "out": 284
+    },
+    "validation": {
+      "agreement": 5839,
+      "retention": 1582,
+      "adoption": 1645,
+      "out": 37
+    }
+  },
+  "unlabeled_partitions": [
+    "test"
+  ],
+  "binary_by_partition": {
+    "train": {
+      "adoption": 13015,
+      "retention": 12541
+    },
+    "validation": {
+      "adoption": 1645,
+      "retention": 1582
+    }
+  },
+  "excluded_episodes": 38,
+  "partition": {
+    "frozen_partitions": "artifacts/collection/mixed_final_001/prepared/results/mixed_final_001/partitions.csv",
+    "coverage": "complete",
+    "questions": {
+      "expected": 91063,
+      "collected": 91063,
+      "missing": 0
+    }
+  },
+  "code": {
+    "git_commit": "c694e8bcac6840b39f5c965550df56820f4ce1eb",
+    "uncommitted_changes_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "source_files_sha256": {
+    "results/claude_validation/mixed_final_001/train/binary_labels.csv": "e88e0e80d1cfa9c6c853648900d087ef1a35e0f049f225f2d572a5e64625478c",
+    "results/claude_validation/mixed_final_001/train/exclusions.jsonl": "7eac9a2468fcf116eaefbf83304086d49a8802093a3240e4f290999ce0305321",
+    "results/claude_validation/mixed_final_001/validation/binary_labels.csv": "56da5975a5a627b9e0c7d4dedca0bc46f463957452238d5f170cb65d26f28f5e",
+    "results/claude_validation/mixed_final_001/validation/exclusions.jsonl": "bfd8b86a6b99db064e71da6ded5a456419a6b48da75552b2bfd01a6a1cacbe4e",
+    "artifacts/collection/mixed_final_001/prepared/results/mixed_final_001/partitions.csv": "b74cc49b729ad63574dd87c614f22123acffee2feaf3c2fe2cdd2c6a0b59147d",
+    "artifacts/collection/mixed_final_001/prepared/results/mixed_final_001/test/interactions.jsonl": "e34c4666dca75e0cacf9139d9ec71cbee5c7646a0fa6b367494b61e5778235a6",
+    "artifacts/collection/mixed_final_001/prepared/results/mixed_final_001/train/interactions.jsonl": "2ec6369e60bf3bcbb1b13e8cf9ccb72fb583995b8df37fd74d28c36c84847995",
+    "artifacts/collection/mixed_final_001/prepared/results/mixed_final_001/validation/interactions.jsonl": "b01c4f6487d7b1f357ee8b3646ab27d702b057bdba7070d8f5205e3ece4b02b0",
+    "artifacts/collection/mixed_final_001/prepared/results/mixed_final_001/collection_status.json": "d604d7705c3f8f93c615b22b202aa39ced9bea6d5a85c8e24b65749da62e4fed"
+  }
+}
