@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 import re
 import tempfile
+from tqdm import tqdm
 
 from mas_sae.data.partition_adapter import canonical_partitions, build_collected_manifest, write_run_tables
 from mas_sae.data.production import export_partition_activations, write_partitions
@@ -33,10 +34,14 @@ def chunk_directory(manifest_path, chunk):
     return Path(manifest_path).parent / "chunks" / f"{chunk['chunk_id']:06d}"
 
 
-def _file_facts(root):
+def _file_facts(root, *, description=None):
+    files = (p for p in sorted(root.rglob("*")) if p.is_file()
+             and p.name not in {"complete.json", "collection.json"}
+             and not any(part.endswith(".tmp") for part in p.relative_to(root).parts))
+    if description is not None:
+        files = tqdm(list(files), desc=description, unit="file", leave=False)
     return {str(p.relative_to(root)): {"size": p.stat().st_size, "sha256": sha256_file(p)}
-            for p in sorted(root.rglob("*")) if p.is_file() and p.name not in {"complete.json", "collection.json"}
-            and not any(part.endswith(".tmp") for part in p.relative_to(root).parts)}
+            for p in files}
 
 
 def _check_completed(root, manifest, chunk):
@@ -134,6 +139,7 @@ def _merge_experiment_identity(experiment):
 
 def merge_run(manifest_path):
     manifest_path = Path(manifest_path)
+    tqdm.write("Reading and validating the master manifest...")
     manifest = read_manifest(manifest_path)
     expected = {f"{c['chunk_id']:06d}" for c in manifest["chunks"]}
     chunks_root = manifest_path.parent/"chunks"
@@ -143,7 +149,7 @@ def merge_run(manifest_path):
     checkpoints, workers = [], []
     experiment = None
     by_id = {r["question_id"]: r for r in manifest["questions"]}
-    for chunk in manifest["chunks"]:
+    for chunk in tqdm(manifest["chunks"], desc="Validating chunks", unit="chunk"):
         root = chunk_directory(manifest_path, chunk)
         completed = _check_completed(root, manifest, chunk)
         worker = json.loads((root/"provenance.json").read_text())
@@ -182,8 +188,10 @@ def merge_run(manifest_path):
     with staged_output(destination) as stage:
         reference = None
         shapes = {}
-        for site in sites:
+        for site in tqdm(sites, desc="Merging layers", unit="layer"):
+            tqdm.write(f"{site}: loading checkpoints")
             merged = progress.merge_checkpoint_paths(checkpoints, question_ids=ids, candidate_sites=[site])
+            tqdm.write(f"{site}: validating records and writing/verifying tensors")
             rows, exclusions = merged["records"], merged["exclusions"]
             if len({r["episode_id"] for r in rows}) != len(rows) or len({r["question_id"] for r in rows}) != len(rows):
                 raise ValueError("Manifest collection requires exactly one unique episode per successful question")
@@ -203,7 +211,7 @@ def merge_run(manifest_path):
         summary["site_shapes"] = shapes
         write_json_atomic(stage/"results/raw/all/summary.json", summary)
         write_json_atomic(stage/"collection.json", {"manifest_sha256": manifest["manifest_sha256"],
-            "sites": sites, "files": _file_facts(stage), "collected": [r["question_id"] for r in rows], "excluded": exclusions,
+            "sites": sites, "files": _file_facts(stage, description="Hashing merged files"), "collected": [r["question_id"] for r in rows], "excluded": exclusions,
             "workers": workers})
     return destination
 

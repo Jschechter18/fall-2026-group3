@@ -135,11 +135,13 @@ def _validate_alignment(
             resolved_config.get("collection", {}).get("a2_presentations", OMITTED))
         expected = Counter(
             (c.value, p.value) for c in resolve_conditions(active) for p in presentations)
-        for qid in successful_ids:
-            episodes = Counter(
+        episodes_by_question = {qid: Counter() for qid in successful_ids}
+        for row in records:
+            episodes_by_question[row["question_id"]][
                 (row["critic_condition"], row.get("a2_presentation", A2Presentation.FEEDBACK.value))
-                for row in records if row["question_id"] == qid)
-            if episodes != expected:
+            ] += 1
+        for qid in successful_ids:
+            if episodes_by_question[qid] != expected:
                 raise ValueError("Episode conditions do not match active_conditions and a2_presentations")
         episode_ids = [row.get("episode_id") for row in records]
         if None in episode_ids or len(set(episode_ids)) != len(episode_ids):
@@ -188,15 +190,16 @@ def save_collection_artifacts(
         raise ValueError("candidate_sites must not be empty.")
     production = "active_conditions" in resolved_config.get("collection", {})
     successful_ids = list(dict.fromkeys(row["question_id"] for row in records))
+    successful_id_set = set(successful_ids)
     excluded_ids = [row["question_id"] for row in (exclusions or [])]
-    if len(set(excluded_ids)) != len(excluded_ids) or set(successful_ids) & set(excluded_ids):
+    if len(set(excluded_ids)) != len(excluded_ids) or successful_id_set & set(excluded_ids):
         raise ValueError("Successful and excluded question IDs must be disjoint and unique")
     collected_manifest = sampled_questions
     if sampled_questions is not None and exclusions is not None:
         requested_ids = [row["question_id"] for row in sampled_questions]
-        if len(set(requested_ids)) != len(requested_ids) or set(requested_ids) != set(successful_ids) | set(excluded_ids):
+        if len(set(requested_ids)) != len(requested_ids) or set(requested_ids) != successful_id_set | set(excluded_ids):
             raise ValueError("Requested manifest must match successful plus excluded IDs")
-        collected_manifest = [row for row in sampled_questions if row["question_id"] in successful_ids]
+        collected_manifest = [row for row in sampled_questions if row["question_id"] in successful_id_set]
 
     if not records and exclusions:
         if any(attempt1_by_site.values()) or any(attempt2_by_site.values()):

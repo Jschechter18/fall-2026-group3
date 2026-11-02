@@ -1,4 +1,6 @@
 import json
+import copy
+from collections import Counter
 from pathlib import Path
 
 import pytest
@@ -221,3 +223,77 @@ def test_production_summary_does_not_turn_invalid_feedback_into_rejection():
     assert summary["legacy_acceptance_counts"]["rejected"] == 1
     assert row["direct_critic_adoption"] is None
     assert collection_artifacts.behavioral_summary([row], production=False)["rejected"] == 1
+
+
+@pytest.mark.parametrize("presentations", [None, ["candidates"], ["feedback", "candidates"]])
+@pytest.mark.parametrize("fault", [None, "missing", "duplicate", "condition", "presentation", "episode_id", "index"])
+def test_alignment_preserves_episode_coverage_checks(presentations, fault):
+    conditions = ["natural", "controlled_correct"]
+    records = []
+    # Interleave questions; grouping must not depend on adjacent records or string IDs.
+    for condition in conditions:
+        for presentation in presentations or ["feedback"]:
+            for index, qid in enumerate([7, "q2"]):
+                row = {"question_id": qid, "critic_condition": condition,
+                       "episode_id": f"{qid}-{condition}-{presentation}",
+                       "attempt1_activation_index": index,
+                       "attempt2_activation_index": len(records)}
+                if presentations is not None:
+                    row["a2_presentation"] = presentation
+                records.append(row)
+    if fault == "missing":
+        records.pop()
+    elif fault == "duplicate":
+        records.append(copy.deepcopy(records[0]))
+        records[-1]["episode_id"] = "extra"
+        records[-1]["attempt2_activation_index"] = len(records)-1
+    elif fault == "condition":
+        records[-1]["critic_condition"] = "natural"
+    elif fault == "presentation":
+        records[-1]["a2_presentation"] = "invalid"
+    elif fault == "episode_id":
+        records[-1]["episode_id"] = records[0]["episode_id"]
+    elif fault == "index":
+        records[-1]["attempt2_activation_index"] = -1
+    expected = Counter((c, p) for c in conditions for p in presentations or ["feedback"])
+    # Reference the original per-question scan to check equivalent coverage decisions.
+    valid_coverage = all(Counter(
+        (r["critic_condition"], r.get("a2_presentation", "feedback"))
+        for r in records if r["question_id"] == qid) == expected for qid in [7, "q2"])
+    config = {"collection": {"active_conditions": conditions}}
+    if presentations is not None:
+        config["collection"]["a2_presentations"] = presentations
+    before = copy.deepcopy(records)
+    kwargs = dict(candidate_sites=SITES[:1], attempt1={SITES[0]: torch.ones(2, 4)},
+                  attempt2={SITES[0]: torch.ones(len(records), 4)}, records=records,
+                  successful_ids=[7, "q2"], resolved_config=config)
+    if fault is None:
+        assert valid_coverage
+        assert collection_artifacts._validate_alignment(**kwargs) == (2, len(records))
+    else:
+        message = "indices" if fault == "index" else "Episode IDs" if fault == "episode_id" else "Episode conditions"
+        if fault not in {"index", "episode_id"}:
+            assert not valid_coverage
+        with pytest.raises(ValueError, match=message):
+            collection_artifacts._validate_alignment(**kwargs)
+    assert records == before
+
+
+def test_manifest_filter_preserves_order_and_exclusions(tmp_path):
+    records = [{"question_id": qid, "attempt1_activation_index": i,
+                "attempt2_activation_index": i, "solver_accepted_feedback": True}
+               for i, qid in enumerate([7, "q2"])]
+    # Manifest order is independent of the order in which episodes were collected.
+    sampled = [{"question_id": qid, "hop_group": "excluded" if qid == "excluded" else "2hop"}
+               for qid in ["q2", "excluded", 7]]
+    summary = save_collection_artifacts(
+        activation_root=tmp_path/"activations", result_root=tmp_path/"results",
+        run_name="ordered", source_split="train", candidate_sites=SITES[:1],
+        attempt1_by_site={SITES[0]: [torch.ones(2, 4)]},
+        attempt2_by_site={SITES[0]: [torch.ones(2, 4)]}, records=records,
+        resolved_config={}, sampled_questions=sampled,
+        exclusions=[{"question_id": "excluded", "reason": "fixture"}])
+    result = tmp_path/"results/ordered/train"
+    assert json.loads((result/"sampled_questions.json").read_text()) == sampled
+    assert summary["hop_group_counts"] == {"2hop": 2}
+    assert [r["question_id"] for r in read_jsonl(result/"interactions.jsonl")] == [7, "q2"]

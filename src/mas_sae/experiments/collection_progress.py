@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Any
 
 import torch
+from tqdm import tqdm
 
 from mas_sae.experiments.artifacts import (
     ensure_output_available,
@@ -265,7 +266,7 @@ def merge_checkpoint_paths(paths, *, question_ids, candidate_sites):
     attempt2: dict[str, list[torch.Tensor]] = {site: [] for site in candidate_sites}
     num_attempt1 = 0
 
-    for path in paths:
+    for path in tqdm(paths, desc="Loading checkpoints", unit="checkpoint", leave=False):
         metadata = json.loads((path / "metadata.json").read_text(encoding="utf-8"))
         chunk_records = read_jsonl(path / "records.jsonl")
         chunk_exclusions = read_jsonl(path / "exclusions.jsonl")

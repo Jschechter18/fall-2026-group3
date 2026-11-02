@@ -127,6 +127,11 @@ python scripts/distributed_collection.py merge \
   --manifest artifacts/collection/mixed_collection/manifest.json
 ```
 
+The merge displays tqdm bars for chunk validation, layers, checkpoint loading,
+and final output hashing. Stage messages identify each layer's validation and
+tensor writing/verification. Bars measure their own stage; their ETAs are not
+an estimate of the entire remaining merge.
+
 Merge checks completion hashes, membership, coverage, seeds, candidate orders,
 record/tensor alignment, and scientific settings. Hardware and package metadata
 are recorded rather than used as compatibility gates. Different GPU numerics
