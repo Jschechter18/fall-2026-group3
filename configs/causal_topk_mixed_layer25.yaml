@@ -1,0 +1,53 @@
+# Focused TopK experiment, following #207/#210. Scientific values are all fractions of ||x||.
+capstone_data_root: .
+partition: intervention
+layer: 25
+interactions_jsonl: artifacts/collection/mixed_final_001/prepared/results/mixed_final_001_intervention/intervention/interactions.jsonl
+contexts_jsonl: artifacts/collection/mixed_final_001/prepared/results/mixed_final_001_intervention/contexts.jsonl
+labels_csv: results/behavior/mixed_final_001_intervention_claude/labels.csv
+label_policy: claude
+claude:
+  source_run: results/claude_validation/mixed_final_001/intervention
+  source_errors: exclude  # the three audited technical failures never enter the binary cohort
+  generated_errors: stop # retain audits and retry before analysis; never coerce failures to retention
+  concurrency: 64
+  aws_profile: school    # used only by the coordinator's --label-only stage
+  region: us-east-1
+feature_selection_summary: results/probe_mixed_final_001_layer25/20261102T185349607791Z/feature_selection_summary.json
+feature_reference: results/probe_mixed_final_001_layer25/20261102T185349607791Z/feature_reference_activations.json
+input_preparation:
+  collection_results: artifacts/collection/mixed_final_001/prepared/results/mixed_final_001_intervention
+  feature_selection_config: configs/feature_selection_mixed_final_001_layer25.yaml
+solver:
+  id: google/gemma-3-4b-it
+  revision: 093f9f388b31de276ce2de164bdc2081324b9767
+  loader: gemma3
+  dtype: bfloat16
+  device: cuda:0
+  generation: {max_new_tokens: 64, do_sample: false}
+saes:
+  TopK SAE:
+    kind: custom
+    path: results/sae/musique/runs/layer_25/20261102T182749413400Z-150e78c341c6
+targeted_subsets:
+  TopK SAE:
+    f1666: [1666]
+    without_1666: [2828, 12274, 10943, 744, 6854, 2737, 189, 4784, 5904]
+random_controls: contribution
+n_random_draws: 100
+random_directions: 3
+reconstruction: false
+error_preserving: true
+ablation: true
+edit_norms: [-0.01, -0.02]
+# 1%/2% are not assumed feasible for every target/random set. Cap at ablation and report actual norms.
+# Use allow only for a separately declared extrapolating direction-edit experiment.
+norm_edit_policy: cap_at_ablation
+min_replay_label_match: 0.98
+on_replay_check_fail: stop
+seed: 42
+# Initial timing/feasibility pilot only. 916 generations per episode; choose full-run scope after timing.
+limit: 5
+n_bootstrap: 1000
+n_permutations: 10000
+output_dir: results/causal_topk_mixed_layer25

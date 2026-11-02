@@ -104,6 +104,7 @@ MODES = ("reconstruction", "error_preserving")
 EP_SUFFIX = " · error-preserving"
 RANDOM_CONTROLS = ("frequency", "contribution")
 DIRECTION = "Random direction · error-preserving"      # experiment of the SAE-free random-direction control
+PROBE_DIRECTION = "Raw probe direction · error-preserving"
 CODE_DIRS = ("src", "scripts", "configs")
 PATH_KEYS = ("capstone_data_root", "interactions_jsonl", "labels_csv", "feature_selection_summary")
 REFERENCE_KEYS = ("layer", "feature_selection_summary_sha256", "saes")
@@ -131,7 +132,8 @@ class ReplayConfig:
     solver: dict = field(default_factory=dict)       # same role spec as the collection config
     musique_revision: str | None = None
     contexts_jsonl: str | None = None              # exact collected payloads for mixed datasets
-    label_policy: str = "v0.1.2-qc"               # legacy default; candidates use v0.2.0-candidate
+    label_policy: str = "v0.1.2-qc"               # legacy rules, or claude for semantic replay
+    claude: dict = field(default_factory=dict)    # frozen source run and coordinator labeling options
     partition: str = "intervention"
     # name -> {kind: custom | gemma_scope | activations, path: ...}; must be SAEs of the feature-selection run
     saes: dict = field(default_factory=dict)
@@ -148,6 +150,9 @@ class ReplayConfig:
     # SAE-free control for the norm-matched edits: this many fixed random unit directions, each added at
     # every edit_norm with the error-preserving splice (never a no-op)
     random_directions: int = 0
+    probe_direction: str | None = None           # exported raw-unit w and scalar layer in an npz
+    norm_edit_policy: str = "allow"             # allow | cap_at_ablation
+    input_preparation: dict = field(default_factory=dict)  # optional config-driven labels/reference preparation
     random_controls: str = "frequency"               # frequency (#89 draws) | contribution (drawn here)
     # {sae: {label: [feature ids]}}: subsets of that SAE's targeted set, each run as its own experiment
     targeted_subsets: dict = field(default_factory=dict)
@@ -186,11 +191,38 @@ class ReplayConfig:
             if k in raw:
                 raw[k] = Path(raw[k])
         cfg = cls(**raw)
-        if cfg.label_policy not in bl.POLICIES:
+        if cfg.label_policy not in {*bl.POLICIES, "claude"}:
             raise ValueError(f"Unknown label_policy {cfg.label_policy!r}")
+        if cfg.label_policy == "claude":
+            allowed = {"source_run", "source_errors", "generated_errors", "concurrency", "aws_profile", "region"}
+            if (not isinstance(cfg.claude, dict) or set(cfg.claude) - allowed
+                    or not isinstance(cfg.claude.get("source_run"), str) or not cfg.claude["source_run"]):
+                raise ValueError("Claude replay requires claude.source_run and supported labeling settings.")
+            if cfg.claude.get("source_errors", "stop") not in {"stop", "exclude"}:
+                raise ValueError("claude.source_errors must be stop or exclude.")
+            if cfg.claude.get("generated_errors", "stop") not in {"stop", "exclude_episode"}:
+                raise ValueError("claude.generated_errors must be stop or exclude_episode.")
+            if type(cfg.claude.get("concurrency", 1)) is not int or cfg.claude.get("concurrency", 1) < 1:
+                raise ValueError("claude.concurrency must be a positive integer.")
+            if any(k in cfg.claude and (not isinstance(cfg.claude[k], str) or not cfg.claude[k])
+                   for k in ("aws_profile", "region")):
+                raise ValueError("claude.aws_profile and region must be nonempty strings when set.")
+        elif cfg.claude:
+            raise ValueError("claude settings require label_policy: claude.")
+        if cfg.norm_edit_policy not in {"allow", "cap_at_ablation"}:
+            raise ValueError("norm_edit_policy must be allow or cap_at_ablation.")
+        if cfg.probe_direction is not None:
+            if not isinstance(cfg.probe_direction, str) or not cfg.probe_direction:
+                raise ValueError("probe_direction must be a nonempty npz path or null.")
+            if not (cfg.edit_norms and cfg.error_preserving and cfg.random_directions):
+                raise ValueError("probe_direction needs edit_norms, error_preserving and random_directions.")
+        preparation_keys = {"collection_results", "feature_selection_config"}
+        if (not isinstance(cfg.input_preparation, dict) or set(cfg.input_preparation) - preparation_keys
+                or any(not isinstance(v, str) or not v for v in cfg.input_preparation.values())):
+            raise ValueError(f"input_preparation supports nonempty paths for {sorted(preparation_keys)}.")
         from mas_sae.probe.feature_selection import SAE_KINDS
         for name, spec in cfg.saes.items():
-            if name == BASELINE or spec.get("kind") not in SAE_KINDS or "path" not in spec:
+            if name in {BASELINE, DIRECTION, PROBE_DIRECTION} or spec.get("kind") not in SAE_KINDS or "path" not in spec:
                 raise ValueError(f"SAE {name!r} needs kind: {'|'.join(SAE_KINDS)} and a path.")
         if type(cfg.layer) is not int or cfg.layer < 0:
             raise ValueError("layer must be a nonnegative integer.")
@@ -261,7 +293,8 @@ class SAESplice:
     """
 
     def __init__(self, model: torch.nn.Module, module_name: str, sae, features=(), mode: str = "reconstruction",
-                 values=None, fraction: float | None = None, edit_norm: float | None = None):
+                 values=None, fraction: float | None = None, edit_norm: float | None = None,
+                 norm_edit_policy: str = "allow"):
         modules = dict(model.named_modules())
         if module_name not in modules:
             raise ValueError(f"Module {module_name!r} was not found in the model.")
@@ -273,6 +306,8 @@ class SAESplice:
             raise ValueError(f"fraction must be >= -1, got {fraction}.")
         if edit_norm is not None and not (np.isfinite(edit_norm) and edit_norm != 0):
             raise ValueError(f"edit_norm must be a nonzero number, got {edit_norm}.")
+        if norm_edit_policy not in {"allow", "cap_at_ablation"}:
+            raise ValueError("norm_edit_policy must be allow or cap_at_ablation.")
         features = [int(f) for f in features]
         values = [0.0] * len(features) if values is None else [float(v) for v in values]
         if len(values) != len(features):
@@ -280,6 +315,7 @@ class SAESplice:
         self.module, self.sae = modules[module_name], sae
         self.features, self.values = features, values
         self.fraction, self.edit_norm = fraction, edit_norm
+        self.norm_edit_policy = norm_edit_policy
         self.mode = mode
         self.calls, self.stats, self._handle = 0, {}, None
 
@@ -301,12 +337,14 @@ class SAESplice:
         z = self.sae.encoder(x)
         recon_full = self.sae.decoder(z)
         x_norm = x.norm().clamp_min(1e-12)
-        self.stats = {"n_active": int((z > 0).sum()),
+        from mas_sae.probe.feature_selection import is_activation_basis
+        active = z != 0 if is_activation_basis(self.sae) else z > 0
+        self.stats = {"n_active": int(active.sum()),
                       "recon_rel_error": float((x - recon_full).norm() / x_norm)}
         delta = torch.zeros_like(x)
         if self.features:
             # how many of the edited features were firing before the edit: 0 makes an ablation a no-op
-            self.stats["n_ablated_active"] = int((z[0, self.features] > 0).sum())
+            self.stats["n_ablated_active"] = int(active[0, self.features].sum())
             edited = z.clone()
             if self.fraction is not None:
                 edited[:, self.features] = z[:, self.features] * (1 + self.fraction)
@@ -318,6 +356,12 @@ class SAESplice:
             if self.edit_norm is not None:
                 # rescale to the requested size; nothing to rescale when no edited feature is firing
                 scale = abs(self.edit_norm) / raw if raw > 0 else None
+                overshoot = scale is not None and scale > 1 and self.edit_norm < 0
+                capped = overshoot and self.norm_edit_policy == "cap_at_ablation"
+                self.stats.update(requested_edit_scale=scale, would_overshoot=overshoot,
+                                  overshoot=overshoot and not capped, edit_capped=capped)
+                if capped:
+                    scale = 1.0
                 delta = delta * (0.0 if scale is None else scale * (1.0 if self.edit_norm < 0 else -1.0))
             # size of the change the edit makes to the reconstruction, relative to the activation:
             # before rescaling (raw) and as applied (removed_rel_norm)
@@ -339,22 +383,30 @@ class SAESplice:
 
 
 class DirectionSplice(SAESplice):
-    """The SAE-free control for norm-matched edits: x' = x + r * |x| * u at the same position, with u a
-    fixed random unit direction (drawn from ``seed``, the same for every episode) and r = ``edit_norm``
-    (r < 0 adds -u). Every edit has exactly the requested size, so unlike a random feature set it is
-    never a no-op."""
+    """SAE-free edit x' = x + r * |x| * u at the same position.
 
-    def __init__(self, model: torch.nn.Module, module_name: str, edit_norm: float, seed: int):
+    u is a normalized supplied raw-unit vector, or a seeded random direction fixed across episodes.
+    Negative r moves against u. Every edit of a nonzero activation has the requested norm.
+    """
+
+    def __init__(self, model: torch.nn.Module, module_name: str, edit_norm: float, seed: int = 0, direction=None):
         modules = dict(model.named_modules())
         if module_name not in modules:
             raise ValueError(f"Module {module_name!r} was not found in the model.")
         if not (np.isfinite(edit_norm) and edit_norm != 0):
             raise ValueError(f"edit_norm must be a nonzero number, got {edit_norm}.")
         self.module, self.edit_norm, self.seed = modules[module_name], float(edit_norm), int(seed)
+        self.direction = None if direction is None else torch.as_tensor(direction, dtype=torch.float64)
+        if self.direction is not None and (self.direction.ndim != 1 or not torch.isfinite(self.direction).all()
+                                           or self.direction.norm() == 0):
+            raise ValueError("Supplied direction must be a finite nonzero vector.")
         self.calls, self.stats, self._handle = 0, {}, None
 
     def _edit(self, x: torch.Tensor) -> torch.Tensor:
-        u = torch.randn(x.shape[-1], generator=torch.Generator().manual_seed(self.seed)).to(x)
+        u = (torch.randn(x.shape[-1], generator=torch.Generator().manual_seed(self.seed)).to(x)
+             if self.direction is None else self.direction.to(x))
+        if u.shape != (x.shape[-1],):
+            raise ValueError("Direction width differs from the hooked activation width.")
         delta = self.edit_norm * x.norm() * u / u.norm()
         self.stats = {"removed_rel_norm": float(delta.norm() / x.norm().clamp_min(1e-12)),
                       "raw_edit_rel_norm": None, "edit_scale": None}
@@ -401,12 +453,22 @@ def load_episodes(cfg: ReplayConfig) -> pd.DataFrame:
     from mas_sae.probe.behavior_data import read_jsonl
 
     root = Path(cfg.capstone_data_root)
-    labels = bl.read_labels(root / cfg.labels_csv)
-    policy = bl.POLICIES[cfg.label_policy]
-    eligibility, target = (("eligible_strict", "strict_target") if policy.candidate_rules else ("eligible_primary", "primary_target"))
-    versions = {lab["rule_version"] for lab in labels.values()}
-    if versions != {policy.version}:
-        raise ValueError(f"labels.csv rule_version {sorted(versions)} is not {policy.version!r}.")
+    semantic_source = None
+    if cfg.label_policy == "claude":
+        from . import semantic
+        _, semantic_source = semantic.read_source(cfg)
+        packaged = semantic.packaged_labels(cfg, semantic_source)
+        labels = {q: {**r, "eligible_primary": r["behavior_label"] in {"adoption", "retention"},
+                       "solver_response": semantic.RESPONSES[r["behavior_label"]]}
+                  for q, r in semantic_source.items() if q in packaged}
+        policy, eligibility, target = bl.V020_CANDIDATE, "eligible_primary", "primary_target"
+    else:
+        labels = bl.read_labels(root / cfg.labels_csv)
+        policy = bl.POLICIES[cfg.label_policy]
+        eligibility, target = (("eligible_strict", "strict_target") if policy.candidate_rules else ("eligible_primary", "primary_target"))
+        versions = {lab["rule_version"] for lab in labels.values()}
+        if versions != {policy.version}:
+            raise ValueError(f"labels.csv rule_version {sorted(versions)} is not {policy.version!r}.")
     eligible = {q: lab for q, lab in labels.items()
                 if lab["partition"] == cfg.partition and lab[eligibility]}
     if not eligible:
@@ -426,11 +488,13 @@ def load_episodes(cfg: ReplayConfig) -> pd.DataFrame:
     missing = sorted(set(eligible) - set(seen))
     if missing:
         raise ValueError(f"{len(missing)} eligible questions have no stored episode, e.g. {missing[:3]}.")
+    if semantic_source is not None and set(semantic_source) != set(seen):
+        raise ValueError("Claude source labels do not cover exactly the stored intervention episodes.")
 
     rows = []
     for qid, lab in eligible.items():
         r = seen[qid]
-        relabel = bl.classify_candidate(r, policy)
+        relabel = lab if semantic_source is not None else bl.classify_candidate(r, policy)
         if lab.get("episode_id") and lab["episode_id"] != r.get("episode_id"):
             raise ValueError(f"{qid}: label episode_id differs from the collected episode")
         if (relabel["solver_response"], relabel[target]) != (lab["solver_response"], lab[target]):
@@ -445,6 +509,7 @@ def load_episodes(cfg: ReplayConfig) -> pd.DataFrame:
                      "stored_solver_attempt_2": r["solver_attempt_2"],
                      "stored_solver_response": lab["solver_response"],
                      "stored_adopted": int(lab[target]),
+                     **({"stored_behavior_label": lab["behavior_label"]} if semantic_source is not None else {}),
                      # exact A2 prompt token ids at collection, when the collection recorded them
                      "stored_a2_input_ids_sha256": ((r.get("generation_telemetry") or {}).get("solver_a2_prompt")
                                                     or {}).get("input_ids_sha256")})
@@ -618,7 +683,7 @@ def arm_family(arm: str) -> str:
     return arm.partition("_")[0]
 
 
-def condition_label(condition: str) -> str:
+def condition_label(condition: str, norm_edit_policy: str = "allow") -> str:
     if condition in CONDITION_LABELS:
         return CONDITION_LABELS[condition]
     kind, arm = split_condition(condition)
@@ -626,7 +691,8 @@ def condition_label(condition: str) -> str:
     if family == "scale":
         return f"{kind.capitalize()} scale (z × {1 + v:g})"
     if family == "norm":
-        return f"{kind.capitalize()} {'suppress' if v < 0 else 'amplify'} (|Δ| = {abs(v):g}·|x|)"
+        relation = "≤" if v < 0 and norm_edit_policy == "cap_at_ablation" else "="
+        return f"{kind.capitalize()} {'suppress' if v < 0 else 'amplify'} (|Δ| {relation} {abs(v):g}·|x|)"
     return f"{kind.capitalize()} steer ({arm.removeprefix('steer_')}× ref)"
 
 
@@ -676,9 +742,21 @@ def conditions(features: dict, error_preserving: bool = False, ablation: bool = 
 
 def configured_conditions(cfg: ReplayConfig, features: dict) -> list[dict]:
     """Resolve the condition list identically for serial and map-worker execution."""
-    return conditions(features, cfg.error_preserving, cfg.ablation, cfg.steer_strengths,
-                      cfg.scale_fractions, cfg.edit_norms, cfg.reconstruction,
-                      cfg.random_directions, cfg.seed)
+    out = conditions(features, cfg.error_preserving, cfg.ablation, cfg.steer_strengths,
+                     cfg.scale_fractions, cfg.edit_norms, cfg.reconstruction,
+                     cfg.random_directions, cfg.seed)
+    if cfg.probe_direction:
+        # Random-direction rows are generated once, and reused by the learned-direction analysis.
+        for r in cfg.edit_norms:
+            out.append({"experiment": PROBE_DIRECTION, "condition": f"targeted_{norm_arm(r)}",
+                        "draw": None, "features": [], "sae": None, "mode": "error_preserving",
+                        "values": None, "strength": None, "fraction": None, "edit_norm": r,
+                        "probe_direction": True})
+    if cfg.norm_edit_policy != "allow":
+        for c in out:
+            if c.get("sae") is not None and c.get("edit_norm") is not None:
+                c["norm_edit_policy"] = cfg.norm_edit_policy
+    return out
 
 
 def control_key(c: dict) -> tuple | None:
@@ -713,6 +791,25 @@ class Components:
     features: dict
     paragraphs: dict
     info: dict = field(default_factory=dict)
+    probe_vector: Any = None
+
+
+def load_probe_direction(cfg: ReplayConfig) -> np.ndarray | None:
+    """Load only the raw-unit direction explicitly exported by the selected feature run."""
+    if not cfg.probe_direction:
+        return None
+    root = Path(cfg.capstone_data_root)
+    summary = json.loads((root / cfg.feature_selection_summary).read_text())
+    digest = sha256_file(root / cfg.probe_direction)
+    if not any(s.get("probe_direction", {}).get("sha256") == digest for s in summary["saes"].values()):
+        raise ValueError("probe_direction must match a direction exported by feature_selection_summary.")
+    with np.load(root / cfg.probe_direction, allow_pickle=False) as data:
+        if int(data["layer"]) != cfg.layer:
+            raise ValueError("Probe direction layer differs from replay layer.")
+        w = np.asarray(data["w"], dtype=np.float64)
+    if w.ndim != 1 or not np.isfinite(w).all() or np.linalg.norm(w) == 0:
+        raise ValueError("Probe direction must be a finite nonzero vector.")
+    return w
 
 
 def load_components(cfg: ReplayConfig, episodes: pd.DataFrame) -> Components:
@@ -727,6 +824,9 @@ def load_components(cfg: ReplayConfig, episodes: pd.DataFrame) -> Components:
     features = feature_sets(cfg, hashes)
     saes = {name: load_sae(sae_spec, root, cfg.layer)[0].eval() for name, sae_spec in cfg.saes.items()}
     validate_features(features, saes)                    # before the (slow) model load
+    probe_vector = load_probe_direction(cfg)
+    if probe_vector is not None and any(sae.input_dim != len(probe_vector) for sae in saes.values()):
+        raise ValueError("Probe direction width differs from SAE input width.")
     paragraphs = load_paragraphs(episodes, cfg.musique_revision, root / cfg.contexts_jsonl if cfg.contexts_jsonl else None)
 
     spec = resolve_role_spec("solver", cfg.solver, default_max_new_tokens=64)
@@ -738,7 +838,8 @@ def load_components(cfg: ReplayConfig, episodes: pd.DataFrame) -> Components:
     return Components(solver, model, site, saes, features, paragraphs,
                       {"solver_spec": spec, "sae_sha256": hashes, "num_layers": num_layers(model),
                        "device": str(model.device),
-                       "device_name": torch.cuda.get_device_name(model.device) if model.device.type == "cuda" else None})
+                       "device_name": torch.cuda.get_device_name(model.device) if model.device.type == "cuda" else None},
+                      probe_vector=probe_vector)
 
 
 def num_layers(model) -> int | None:
@@ -765,12 +866,16 @@ def generate(comp: Components, ep: dict, cond: dict, control_token: int | None =
 
     ``control_token`` is the first token its control generated; the row records its log-probability here.
     """
-    if cond.get("direction_seed") is not None:
+    if cond.get("probe_direction"):
+        if comp.probe_vector is None:
+            raise ValueError("Learned direction condition has no loaded probe vector.")
+        splice = DirectionSplice(comp.model, comp.site, cond["edit_norm"], direction=comp.probe_vector)
+    elif cond.get("direction_seed") is not None:
         splice = DirectionSplice(comp.model, comp.site, cond["edit_norm"], cond["direction_seed"])
     elif cond["features"] is not None:
         splice = SAESplice(comp.model, comp.site, comp.saes[cond.get("sae", cond["experiment"])], cond["features"],
                            cond.get("mode") or "reconstruction", cond.get("values"), cond.get("fraction"),
-                           cond.get("edit_norm"))
+                           cond.get("edit_norm"), cond.get("norm_edit_policy", "allow"))
     else:
         splice = contextlib.nullcontext()
     t0 = time.perf_counter()
@@ -782,10 +887,15 @@ def generate(comp: Components, ep: dict, cond: dict, control_token: int | None =
             a2 = comp.solver.revise(ep["question"], comp.paragraphs[ep["question_id"]],
                                     ep["solver_attempt_1"], ep["critic_feedback"])
     seconds = time.perf_counter() - t0
-    policy = bl.POLICIES[comp.info.get("label_policy_name", "v0.1.2-qc")]
     generated_ids = comp.solver.last_generated_token_ids or []
-    label = bl.classify_candidate({**ep, "solver_attempt_2": a2,
-        "solver_a2_first_token_id": generated_ids[0] if generated_ids else None}, policy)
+    if comp.info.get("label_policy_name") == "claude":
+        from .semantic import generation_label
+        label = generation_label(ep, a2)
+    else:
+        policy = bl.POLICIES[comp.info.get("label_policy_name", "v0.1.2-qc")]
+        label = bl.classify_candidate({**ep, "solver_attempt_2": a2,
+            "solver_a2_first_token_id": generated_ids[0] if generated_ids else None}, policy)
+        label["adopted"] = int(label["solver_response"] == ACCEPT)
     gen = comp.solver.last_generation or {}
     prompt = comp.solver.last_prompt or {}
     stats = splice.stats if isinstance(splice, SAESplice) else {}
@@ -798,7 +908,9 @@ def generate(comp: Components, ep: dict, cond: dict, control_token: int | None =
             "strength": cond.get("strength"), "fraction": cond.get("fraction"), "edit_norm": cond.get("edit_norm"),
             "solver_attempt_2": a2, "stored_solver_attempt_2": ep["stored_solver_attempt_2"],
             "a2_matches_stored": a2 == ep["stored_solver_attempt_2"],
-            "solver_response": label["solver_response"], "adopted": int(label["solver_response"] == ACCEPT),
+            "solver_response": label["solver_response"], "adopted": label["adopted"],
+            **({"behavior_label": label["behavior_label"], "label_source": label["label_source"]}
+               if comp.info.get("label_policy_name") == "claude" else {}),
             "stored_solver_response": ep["stored_solver_response"], "stored_adopted": ep["stored_adopted"],
             "generated_tokens": gen.get("generated_tokens"), "reached_token_budget": gen.get("reached_token_budget"),
             "prompt_tokens": prompt.get("prompt_tokens"), "input_ids_sha256": prompt.get("input_ids_sha256"),
@@ -809,6 +921,10 @@ def generate(comp: Components, ep: dict, cond: dict, control_token: int | None =
             "n_active_features": stats.get("n_active"), "n_ablated_active": stats.get("n_ablated_active"),
             "removed_rel_norm": stats.get("removed_rel_norm"), "raw_edit_rel_norm": stats.get("raw_edit_rel_norm"),
             "edit_scale": stats.get("edit_scale"),
+            "norm_edit_policy": cond.get("norm_edit_policy"), "probe_direction": cond.get("probe_direction"),
+            "direction_seed": cond.get("direction_seed"), "requested_edit_scale": stats.get("requested_edit_scale"),
+            "would_overshoot": stats.get("would_overshoot"), "overshoot": stats.get("overshoot"),
+            "edit_capped": stats.get("edit_capped"),
             "recon_rel_error": stats.get("recon_rel_error"), "seconds": round(seconds, 4)}
 
 
@@ -822,6 +938,16 @@ def provenance(cfg: ReplayConfig, config_path: Path | None, comp: Components) ->
     if untracked:
         logger.warning("running with %d untracked code files; commit them for a reproducible run: %s",
                        len(untracked), untracked)
+    extra_inputs = []
+    if cfg.label_policy == "claude":
+        from . import semantic
+        protocol, _ = semantic.read_source(cfg)
+        label_version = protocol["prompt_version"]
+        label_definition = hashlib.sha256(json.dumps(protocol, sort_keys=True).encode()).hexdigest()
+        extra_inputs = [str(p.relative_to(root)) for p in semantic.source_files(cfg)]
+    else:
+        label_version = bl.POLICIES[cfg.label_policy].version
+        label_definition = bl.POLICIES[cfg.label_policy].definition_sha256()
     return {
         "git_commit": get_git_commit(), "code_tree_sha": _code_tree_sha(),
         "uncommitted_changes_sha256": uncommitted, "uncommitted_code_sha256": _code_diff_sha256(),
@@ -830,9 +956,10 @@ def provenance(cfg: ReplayConfig, config_path: Path | None, comp: Components) ->
         "config_path": str(config_path) if config_path else None,
         "config_sha256": sha256_file(config_path) if config_path else None,
         "input_sha256": {p: sha256_file(root / p) for p in
-                         (cfg.interactions_jsonl, cfg.labels_csv, cfg.feature_selection_summary, cfg.feature_reference, cfg.contexts_jsonl)
+                         (cfg.interactions_jsonl, cfg.labels_csv, cfg.feature_selection_summary, cfg.feature_reference,
+                          cfg.contexts_jsonl, cfg.probe_direction, *extra_inputs)
                          if p},
-        "label_policy": bl.POLICIES[cfg.label_policy].version, "label_policy_sha256": bl.POLICIES[cfg.label_policy].definition_sha256(),
+        "label_policy": label_version, "label_policy_sha256": label_definition,
         "packages": {p: get_package_version(p) for p in PACKAGES},
         "site": comp.site, "intervention": INTERVENTION,
         **comp.info,
@@ -953,6 +1080,8 @@ def _mismatch_kind(r) -> str:
         return "prompt_differs"
     if r.solver_attempt_2 == r.stored_solver_attempt_2:
         return "exact_match"
+    if r.solver_response == "pending_claude":
+        return "pending_claude"
     if r.solver_response != r.stored_solver_response:
         return "label_changed"
     if _normalize(r.solver_attempt_2) == _normalize(r.stored_solver_attempt_2):
@@ -1001,13 +1130,18 @@ def replay_check(rows: pd.DataFrame, manifest: pd.DataFrame, min_label_match: fl
         failures.append(f"{counts['prompt_differs']} prompts differ from collection")
     if n and label_match < min_label_match:
         failures.append(f"label match {label_match:.3f} < {min_label_match}")
+    semantic = "label_source" in base and base.label_source.isin(["claude:stored_answer", "pending_claude", "claude"]).any()
+    pending = int((base.solver_response == "pending_claude").sum()) if n else 0
     return {"n_episodes": n, "n_planned": int(len(manifest)), "mismatch_counts": counts,
             "a2_exact_match_rate": text_match,
             "solver_response_match_rate": label_match,
             "n_prompt_hashes_compared": int(base.prompt_matches_stored.notna().sum()) if n else 0,
             "stored_acceptance_pct": 100 * float((base.stored_solver_response == ACCEPT).mean()) if n else None,
-            "replayed_acceptance_pct": 100 * float(base.adopted.mean()) if n else None,
-            "criterion": {"min_label_match": min_label_match, "max_prompt_differences": 0},
+            "replayed_acceptance_pct": 100 * float(base.adopted.mean()) if n and not pending else None,
+            "pending_claude_labels": pending,
+            "criterion": {"min_label_match": min_label_match, "max_prompt_differences": 0,
+                          **({"semantic_preflight": "Only exact stored answers reuse Claude labels; changed answers are pending."}
+                             if semantic else {})},
             "passed": not failures, "failures": failures}
 
 
@@ -1103,7 +1237,8 @@ def read_rows(path: Path) -> list[dict]:
 # per-row fields that older runs may not have
 ROW_FIELDS = ("mode", "strength", "fraction", "edit_norm", "first_token_id", "first_token_logprob",
               "control_first_token_logprob", "removed_rel_norm", "raw_edit_rel_norm", "edit_scale", "n_ablated_active",
-              "recon_rel_error", "prompt_matches_stored", "reached_token_budget")
+              "recon_rel_error", "prompt_matches_stored", "reached_token_budget", "requested_edit_scale",
+              "would_overshoot", "overshoot", "edit_capped", "norm_edit_policy", "probe_direction", "direction_seed")
 TVR_COLUMNS = ["Experiment", "Splice", "Arm", "Control", "Rows", "N", "Random draws", "Targeted no-op (%)",
                "Random no-op (%)", "Targeted − random (pp)", "95% CI (questions)", "95% CI (questions + draws)",
                "p-value", "p-value (Holm)", "Draw tail fraction (exploratory)"]
@@ -1164,10 +1299,18 @@ def analyse(run_dir: Path, n_bootstrap: int | None = None, n_permutations: int |
     n_permutations = n_permutations or cfg["n_permutations"]
     seed = cfg["seed"]
     expected = {(c["experiment"], c["condition"], c["draw"]) for c in conds}
-    all_rows = pd.DataFrame(read_rows(run_dir / "per_row.jsonl"))
+    semantic_report = None
+    if cfg.get("label_policy") == "claude":
+        from .semantic import load_labeled_rows
+        labeled, semantic_report = load_labeled_rows(run_dir)
+        all_rows = pd.DataFrame(labeled)
+    else:
+        all_rows = pd.DataFrame(read_rows(run_dir / "per_row.jsonl"))
     if all_rows.empty:
         raise ValueError(f"No generations in {run_dir}.")
     rows = all_rows.drop_duplicates(["question_id", "experiment", "condition", "draw"], keep="last")
+    if semantic_report:
+        rows = rows[~rows.question_id.isin(semantic_report["excluded_questions"])]
     have = rows.assign(k=list(zip(rows.experiment, rows.condition, rows.draw))).groupby("question_id")["k"].agg(set)
     complete = sorted(q for q, ks in have.items() if expected <= {(e, c, None if pd.isna(d) else int(d))
                                                                   for e, c, d in ks})
@@ -1180,10 +1323,12 @@ def analyse(run_dir: Path, n_bootstrap: int | None = None, n_permutations: int |
     n, groups = len(complete), np.array(complete)
 
     def outcome(exp, cond) -> np.ndarray:            # per question; random draws averaged
+        exp = DIRECTION if exp == PROBE_DIRECTION and cond.startswith("random_") else exp
         r = rows[(rows.experiment == exp) & (rows.condition == cond)]
         return r.groupby("question_id")["adopted"].mean().reindex(complete).to_numpy(float)
 
     def by_draw(exp, arm, edited_only=False) -> np.ndarray:   # questions x draws; NaN: a no-op when edited_only
+        exp = DIRECTION if exp == PROBE_DIRECTION else exp
         r = rows[(rows.experiment == exp) & (rows.condition == f"random_{arm}")]
         r = r.assign(adopted=r.adopted.where(_edit_applied(r))) if edited_only else r
         return r.pivot(index="question_id", columns="d", values="adopted").reindex(complete).to_numpy(float)
@@ -1194,11 +1339,13 @@ def analyse(run_dir: Path, n_bootstrap: int | None = None, n_permutations: int |
         return r.set_index("question_id")["adopted"].reindex(complete).to_numpy(float)
 
     def noop_pct(exp, cond) -> float:                         # % of generations whose edit changed nothing
+        exp = DIRECTION if exp == PROBE_DIRECTION and cond.startswith("random_") else exp
         r = rows[(rows.experiment == exp) & (rows.condition == cond)]
         return 100 * float((~_edit_applied(r)).mean())
 
     experiments = [e for e in dict.fromkeys(c["experiment"] for c in conds) if e not in (BASELINE, DIRECTION)]
     arms = arms_of([c for c in conds if c["experiment"] != DIRECTION])
+    experiment_arms = {exp: arms_of([c for c in conds if c["experiment"] == exp]) for exp in experiments}
     direction_arms = arms_of([c for c in conds if c["experiment"] == DIRECTION])
     edited = {c["experiment"]: c for c in reversed(conds) if split_condition(c["condition"])}
     control = {e: control_key(edited[e])[:2] for e in experiments}
@@ -1217,12 +1364,13 @@ def analyse(run_dir: Path, n_bootstrap: int | None = None, n_permutations: int |
         table.append({"Experiment": exp, "Outcome": "regenerated", "N": n, "Acceptance Rate (%)": 100 * float(ref.mean()),
                       "Condition": "No ablation" if control[exp][0] != BASELINE else "No ablation (= plain replay)",
                       "Δ vs. SAE Control (pp)": "Reference"})
-        for arm in arms:
+        for arm in experiment_arms[exp]:
             for cond in (f"random_{arm}", f"targeted_{arm}"):
                 y = outcome(exp, cond)
                 e = offline.paired_effect(y, ref, groups, n_bootstrap, n_permutations, seed)
                 effects[f"{exp}__{cond}"] = e
-                table.append({"Experiment": exp, "Condition": condition_label(cond), "Outcome": "regenerated",
+                label = condition_label(cond, cfg.get("norm_edit_policy", "allow") if exp != PROBE_DIRECTION else "allow")
+                table.append({"Experiment": exp, "Condition": label, "Outcome": "regenerated",
                               "N": n, "Acceptance Rate (%)": 100 * float(y.mean()),
                               "Δ vs. SAE Control (pp)": e["delta_pp"], "95% CI for Δ": _ci(e["ci95_pp"]),
                               "p-value": e["p_value"]})
@@ -1262,12 +1410,12 @@ def analyse(run_dir: Path, n_bootstrap: int | None = None, n_permutations: int |
     tvr, draws, dose = [], [], []
     for exp in experiments:
         ref = outcome(*control[exp])
-        for arm in arms:
+        for arm in experiment_arms[exp]:
             t, r = outcome(exp, f"targeted_{arm}"), by_draw(exp, arm)
-            matched = compare(exp, arm, exp, "matched features")
+            matched = compare(exp, arm, exp, "random direction" if exp == PROBE_DIRECTION else "matched features")
             res = matched[0]
             tvr += matched
-            if splice[exp] == "error_preserving" and arm in direction_arms:
+            if exp != PROBE_DIRECTION and splice[exp] == "error_preserving" and arm in direction_arms:
                 tvr += compare(exp, arm, DIRECTION, "random direction")
             dose.append({"Experiment": exp, "Splice": splice[exp], "Arm": arm, "Edit": arm_family(arm),
                          "Strength": arm_strength(arm),
@@ -1310,7 +1458,7 @@ def analyse(run_dir: Path, n_bootstrap: int | None = None, n_permutations: int |
     bidirectional = []
     for exp in experiments:
         for family in FAMILIES[1:]:
-            strengths = {arm_strength(a) for a in arms if arm_family(a) == family}
+            strengths = {arm_strength(a) for a in experiment_arms[exp] if arm_family(a) == family}
             for s in sorted(v for v in strengths if v > 0 and -v in strengths):
                 up, down = (f"{family}_{v:+g}" for v in (s, -s))
                 t = outcome(exp, f"targeted_{up}") - outcome(exp, f"targeted_{down}")
@@ -1353,12 +1501,15 @@ def analyse(run_dir: Path, n_bootstrap: int | None = None, n_permutations: int |
     ]).to_csv(run_dir / "changed_answers.csv", index=False)
 
     manifest = pd.read_csv(run_dir / "episodes.csv", dtype={"question_id": str})
-    check = replay_check(all_rows, manifest, cfg.get("min_replay_label_match",
+    analysis_manifest = (manifest[~manifest.question_id.isin(semantic_report["excluded_questions"])]
+                         if semantic_report else manifest)
+    check = replay_check(all_rows, analysis_manifest, cfg.get("min_replay_label_match",
                                                       ReplayConfig.min_replay_label_match))
     if not check["passed"]:
         logger.warning("replay check failed (%s): the results are unvalidated", check["failures"])
-    policy_version = (meta.get("provenance") or {}).get(
-        "label_policy", bl.POLICIES[cfg.get("label_policy", "v0.1.2-qc")].version)
+    policy_version = (meta.get("provenance") or {}).get("label_policy") or (
+        "Claude semantic judgments" if cfg.get("label_policy") == "claude"
+        else bl.POLICIES[cfg.get("label_policy", "v0.1.2-qc")].version)
     summary = {
         "n_episodes_complete": n,
         "n_episodes_planned": int(len(manifest)),
@@ -1374,9 +1525,12 @@ def analyse(run_dir: Path, n_bootstrap: int | None = None, n_permutations: int |
                                       "a no-op when none of the chosen features is firing"},
             "arms": arms,
             "random_controls": cfg.get("random_controls", "frequency"),
+            "norm_edit_policy": cfg.get("norm_edit_policy", "allow"),
+            "probe_direction": cfg.get("probe_direction"),
             "splices": {"reconstruction": "decode(z) + Δ",
                         "error_preserving": "x + Δ"}},
         "validated": check["passed"],
+        "semantic_labeling": semantic_report,
         "replay_check": check,
         "effects": effects,
         "targeted_vs_random": tvr,
@@ -1419,7 +1573,8 @@ def analyse(run_dir: Path, n_bootstrap: int | None = None, n_permutations: int |
                  + f"SAE {what} at the final prompt token, prefill only\n"
                    f"(layer {cfg['layer']}, {cfg['partition']}, N={n})"),
           xlabel="Δ acceptance vs. the condition's control (pp, 95% CI)",
-          conditions=[condition_label(f"{k}_{a}") for a in arms for k in ("random", "targeted")])
+          conditions=[condition_label(f"{k}_{a}", policy) for policy in {"allow", cfg.get("norm_edit_policy", "allow")}
+                      for a in arms for k in ("random", "targeted")])
     return table
 
 
@@ -1456,9 +1611,13 @@ def _diagnostics(g: pd.DataFrame, pairs: pd.DataFrame | None, exp: str, cond: st
     """One condition's diagnostics (random draws pooled; per-question means for the log-prob CI)."""
     pct = lambda s: 100 * float(s.mean()) if s.notna().any() else None
     mean = lambda s: float(s.mean()) if s.notna().any() else None
-    out = {"Experiment": exp, "Condition": condition_label(cond), "Generations": int(len(g)),
+    policy = "cap_at_ablation" if (g.norm_edit_policy == "cap_at_ablation").any() else "allow"
+    out = {"Experiment": exp, "Condition": condition_label(cond, policy), "Generations": int(len(g)),
            "Empty answer (%)": pct(g.solver_attempt_2.fillna("").astype(str).str.strip() == ""),
            "Reached token budget (%)": pct(g.reached_token_budget.astype(float))}
+    if "behavior_label" in g and g.behavior_label.notna().any():
+        out.update({f"Semantic {label} (%)": pct(g.behavior_label == label)
+                    for label in ("adoption", "retention", "agreement", "out")})
     if pairs is None:
         return out
     shift = pairs.groupby("question_id").control_token_logprob_shift.mean().reindex(complete).to_numpy(float)
@@ -1477,6 +1636,9 @@ def _diagnostics(g: pd.DataFrame, pairs: pd.DataFrame | None, exp: str, cond: st
             "Mean edit norm (rel. to |x|)": mean(edits),
             "Mean raw edit norm (rel. to |x|)": mean(g.raw_edit_rel_norm.astype(float)),
             "Mean edit scale": mean(g.edit_scale.astype(float)),
+            "Would overshoot zero-ablation (%)": pct(g.would_overshoot.astype(float)),
+            "Overshoot applied (%)": pct(g.overshoot.astype(float)),
+            "Capped at zero-ablation (%)": pct(g.edit_capped.astype(float)),
             "Mean reconstruction error (rel. to |x|)": mean(g.recon_rel_error.astype(float))}
 
 
@@ -1503,7 +1665,9 @@ def run(cfg: ReplayConfig, config_path: Path | None = None, resume: Path | None 
     comp = load_components(cfg, episodes)
     run_dir = resume or create_versioned_run_dir(cfg.output_dir)
     replay(cfg, episodes, comp, run_dir, config_path, preflight_only)
-    if not preflight_only:
+    if not preflight_only and cfg.label_policy != "claude":
         analyse(run_dir)
+    elif not preflight_only:
+        logger.info("Generation complete. Run scripts/causal_replay.py --label-only %s on the coordinator.", run_dir)
     logger.info("wrote %s", run_dir)
     return run_dir

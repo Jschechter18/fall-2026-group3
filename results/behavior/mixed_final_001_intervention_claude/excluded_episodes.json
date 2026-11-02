@@ -1,0 +1,5 @@
+{
+  "synthetic:2hop__synthetic_04d3b97e57364d928a911aee1df06f5d": "Claude technical failure: incomplete_response:max_tokens",
+  "synthetic:4hop2__synthetic_179a964e8eb641fd91e22bdfd0dc3c1a": "Claude technical failure: incomplete_response:refusal",
+  "synthetic:4hop2__synthetic_44151b620de649ceae51b5a0e412c911": "Claude technical failure: incomplete_response:refusal"
+}

@@ -69,6 +69,8 @@ def _fake_workers(monkeypatch, question_ids, features, provenance):
                     "strength": condition.get("strength"),
                     "fraction": condition.get("fraction"),
                     "edit_norm": condition.get("edit_norm"),
+                    **{field: condition[field] for field in ("norm_edit_policy", "probe_direction", "direction_seed")
+                       if field in condition},
                     "first_token_id": (10 + int(episode["question_id"][1:])
                                        if condition["experiment"] == replay.BASELINE else 100 + len(first)),
                     "input_ids_sha256": f"prompt-{episode['question_id']}",
@@ -109,6 +111,26 @@ def test_prepare_map_reduce_has_exact_balanced_coverage(tmp_path, monkeypatch):
     assert len({replay.key(row) for row in rows}) == len(rows)
     assert [row["question_id"] for row in rows[::len(conditions)]] == question_ids
     assert json.loads((merged / "analysis.json").read_text())["rows"] == len(rows)
+
+
+def test_new_controls_keep_the_same_prepare_map_reduce_contract(tmp_path, monkeypatch):
+    preflight, question_ids, features, _, provenance = _preflight(tmp_path, n=3)
+    path = preflight / "replay_config.json"
+    meta = json.loads(path.read_text())
+    meta["config"].update(probe_direction="direction.npz", edit_norms=[-.01, -.02],
+                          random_directions=2, norm_edit_policy="cap_at_ablation", reconstruction=False)
+    meta["conditions"] = replay.configured_conditions(replay.ReplayConfig.from_dict(meta["config"]), features)
+    path.write_text(json.dumps(meta))
+    manifest = distributed.prepare_distributed_run(preflight, num_shards=2)
+    _fake_workers(monkeypatch, question_ids, features, provenance)
+    for shard in range(2):
+        distributed.run_shard(manifest, shard)
+    monkeypatch.setattr(replay, "analyse", lambda path: None)
+    merged = distributed.reduce_shards(manifest)
+    rows = replay.read_rows(merged / "per_row.jsonl")
+    assert len(rows) == len(question_ids) * len(meta["conditions"])
+    learned = [r for r in rows if r["experiment"] == replay.PROBE_DIRECTION]
+    assert len(learned) == len(question_ids) * 2 and all(r["probe_direction"] for r in learned)
 
 
 def test_worker_resume_repairs_tail_and_does_not_repeat_rows(tmp_path, monkeypatch):

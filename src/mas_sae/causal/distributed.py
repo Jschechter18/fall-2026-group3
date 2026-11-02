@@ -208,7 +208,7 @@ def _validate_row_keys(rows: list[dict], question_ids: list[str], condition_keys
 def _validate_condition_metadata(rows: list[dict], conditions: list[dict]) -> None:
     """Ensure a row's recorded intervention parameters match its frozen condition."""
     expected = {_condition_key(condition): condition for condition in conditions}
-    fields = ("mode", "strength", "fraction", "edit_norm")
+    fields = ("mode", "strength", "fraction", "edit_norm", "norm_edit_policy", "probe_direction", "direction_seed")
     for row in rows:
         condition = expected.get(_condition_key(row))
         if condition is None or any(row.get(field) != condition.get(field) for field in fields):
@@ -440,6 +440,9 @@ def reduce_shards(manifest_path: str | Path, *, destination: str | Path | None =
             "n_rows": len(rows),
             "workers": worker_metadata,
         })
-        replay.analyse(stage)
+        if meta["config"].get("label_policy") != "claude":
+            replay.analyse(stage)
+        else:
+            logger.info("Generation merged; Claude labeling and analysis must run on the coordinator.")
     logger.info("reduced %d causal replay shards: %s", len(manifest["shards"]), destination)
     return destination

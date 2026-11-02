@@ -2,13 +2,14 @@
 
 Reads episodes from a partition-exported interactions.jsonl (records carry
 ``partition``), keeps only ``critic_condition == "natural"`` episodes of one
-train, validation, or test partition, sends each A1/C1/A2 triplet to Claude through Amazon
+train, validation, test, or intervention partition, sends each A1/C1/A2 triplet to Claude through Amazon
 Bedrock, and writes probe-ready binary labels (Adoption = 1, Retention = 0)
 alongside an exclusion audit file.
 
 The Natural condition is fixed; there is no option to process Controlled
 episodes.  Test labeling requires explicitly selecting ``--partition test``;
-keep test labels reserved for final evaluation. Intervention cannot be selected. The
+keep test labels reserved for final evaluation. Intervention labeling likewise requires
+explicitly selecting ``--partition intervention``; it never joins training by default. The
 script reports how many records were loaded and kept at each step, so no
 records are silently discarded.
 
@@ -40,6 +41,13 @@ Usage:
         --episodes artifacts/collection/mixed_final_001/prepared/results/mixed_final_001/test/interactions.jsonl \\
         --partition test \\
         --output results/claude_validation/mixed_final_001/test \\
+        --concurrency 64
+
+    # Label the stored intervention episodes with the same Claude semantic protocol:
+    PYTHONPATH=src python scripts/run_claude_validation.py \\
+        --episodes artifacts/collection/mixed_final_001/prepared/results/mixed_final_001_intervention/intervention/interactions.jsonl \\
+        --partition intervention \\
+        --output results/claude_validation/mixed_final_001/intervention \\
         --concurrency 64
 """
 
@@ -90,8 +98,8 @@ DEFAULT_MODEL_ID = "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
 # Issue #155 labels Natural episodes only.
 CONDITION = "natural"
 
-# Keep intervention sealed; test labels are for final evaluation only.
-LABELING_PARTITIONS = ("train", "validation", "test")
+# Held-out partitions require explicit selection; training remains the default.
+LABELING_PARTITIONS = ("train", "validation", "test", "intervention")
 
 # Fields recorded per selected episode so the run can be traced to its source rows.
 SELECTION_FIELDS = (
@@ -129,7 +137,7 @@ def parse_args(argv=None):
     parser.add_argument(
         "--partition", choices=LABELING_PARTITIONS, default="train",
         help="Frozen partition to label (default: train). Test labels are for final evaluation; "
-             "intervention is refused.",
+             "intervention labels are for the causal experiment and require explicit selection.",
     )
     parser.add_argument(
         "--model-id", type=str, default=DEFAULT_MODEL_ID,
