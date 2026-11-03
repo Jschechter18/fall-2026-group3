@@ -1,0 +1,3 @@
+"Same 10 TopK features, same 1% edit",Targeted − random (pp),95% CI
+"Probe (offline, validation)",-2.47,"[-2.78, -2.19]"
+"Solver (live, 494 episodes)",0.01,"[-0.19, 0.23]"
