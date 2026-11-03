@@ -1,0 +1,6 @@
+,Episodes
+Intervention episodes labeled by Claude,"10,105"
+Eligible (Adoption + Retention),"3,518"
+Exp 1 TopK: first episodes of the seed-42 order,500 (replay exact 500/500)
+Exp 1 analysed,494
+Control 1 and Exp 2: first 250 of the same order,Control 1 analysed 249

@@ -1,0 +1,7 @@
+Condition,Status,Evidence
+Baseline,Done,replays match stored answers
+Exp 1 · TopK · targeted + random,Done,-5.1 pp (Holm p 0.0006)
+Control 1 · all three SAEs,Done,no change in adoption
+Exp 2 · original + fine-tuned pretrained · targeted + random,Running,"11/50 shards as of 18:02 ET, finishes ~21:25 ET tonight"
+"L1 SAE, Raw activations",Pending,after Run A
+Part 2 · LLM on dense activations,Pending,after the causal comparisons
