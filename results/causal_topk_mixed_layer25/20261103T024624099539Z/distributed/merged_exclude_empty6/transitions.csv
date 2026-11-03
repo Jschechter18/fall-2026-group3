@@ -1,0 +1,87 @@
+experiment,condition,control_response,response,count
+TopK SAE · error-preserving,targeted_ablation,adopted_critic,retained_a1,22
+TopK SAE · error-preserving,targeted_ablation,adopted_critic,adopted_critic,220
+TopK SAE · error-preserving,targeted_ablation,retained_a1,retained_a1,218
+TopK SAE · error-preserving,targeted_ablation,retained_a1,out,15
+TopK SAE · error-preserving,targeted_ablation,retained_a1,adopted_critic,7
+TopK SAE · error-preserving,targeted_ablation,adopted_critic,out,11
+TopK SAE · error-preserving,targeted_ablation,retained_a1,unchanged_same_position,1
+TopK SAE · error-preserving,random_ablation,adopted_critic,adopted_critic,25053
+TopK SAE · error-preserving,random_ablation,retained_a1,retained_a1,23913
+TopK SAE · error-preserving,random_ablation,adopted_critic,retained_a1,246
+TopK SAE · error-preserving,random_ablation,retained_a1,adopted_critic,163
+TopK SAE · error-preserving,random_ablation,retained_a1,out,24
+TopK SAE · error-preserving,random_ablation,adopted_critic,out,1
+TopK SAE · error-preserving,targeted_norm_-0.01,adopted_critic,adopted_critic,253
+TopK SAE · error-preserving,targeted_norm_-0.01,retained_a1,retained_a1,241
+TopK SAE · error-preserving,random_norm_-0.01,adopted_critic,adopted_critic,25252
+TopK SAE · error-preserving,random_norm_-0.01,retained_a1,retained_a1,24055
+TopK SAE · error-preserving,random_norm_-0.01,adopted_critic,retained_a1,48
+TopK SAE · error-preserving,random_norm_-0.01,retained_a1,adopted_critic,45
+TopK SAE · error-preserving,targeted_norm_-0.02,adopted_critic,adopted_critic,252
+TopK SAE · error-preserving,targeted_norm_-0.02,retained_a1,retained_a1,241
+TopK SAE · error-preserving,targeted_norm_-0.02,adopted_critic,retained_a1,1
+TopK SAE · error-preserving,random_norm_-0.02,adopted_critic,adopted_critic,25194
+TopK SAE · error-preserving,random_norm_-0.02,retained_a1,retained_a1,23994
+TopK SAE · error-preserving,random_norm_-0.02,adopted_critic,retained_a1,106
+TopK SAE · error-preserving,random_norm_-0.02,retained_a1,adopted_critic,94
+TopK SAE · error-preserving,random_norm_-0.02,retained_a1,out,12
+TopK SAE · f1666 · error-preserving,targeted_ablation,adopted_critic,retained_a1,19
+TopK SAE · f1666 · error-preserving,targeted_ablation,adopted_critic,adopted_critic,224
+TopK SAE · f1666 · error-preserving,targeted_ablation,retained_a1,retained_a1,213
+TopK SAE · f1666 · error-preserving,targeted_ablation,retained_a1,out,16
+TopK SAE · f1666 · error-preserving,targeted_ablation,adopted_critic,out,10
+TopK SAE · f1666 · error-preserving,targeted_ablation,retained_a1,adopted_critic,11
+TopK SAE · f1666 · error-preserving,targeted_ablation,retained_a1,unchanged_same_position,1
+TopK SAE · f1666 · error-preserving,random_ablation,adopted_critic,adopted_critic,25210
+TopK SAE · f1666 · error-preserving,random_ablation,retained_a1,retained_a1,24042
+TopK SAE · f1666 · error-preserving,random_ablation,adopted_critic,retained_a1,90
+TopK SAE · f1666 · error-preserving,random_ablation,retained_a1,adopted_critic,54
+TopK SAE · f1666 · error-preserving,random_ablation,retained_a1,out,4
+TopK SAE · f1666 · error-preserving,targeted_norm_-0.01,adopted_critic,adopted_critic,253
+TopK SAE · f1666 · error-preserving,targeted_norm_-0.01,retained_a1,retained_a1,241
+TopK SAE · f1666 · error-preserving,random_norm_-0.01,adopted_critic,adopted_critic,25266
+TopK SAE · f1666 · error-preserving,random_norm_-0.01,retained_a1,retained_a1,24067
+TopK SAE · f1666 · error-preserving,random_norm_-0.01,adopted_critic,retained_a1,34
+TopK SAE · f1666 · error-preserving,random_norm_-0.01,retained_a1,adopted_critic,33
+TopK SAE · f1666 · error-preserving,targeted_norm_-0.02,adopted_critic,adopted_critic,253
+TopK SAE · f1666 · error-preserving,targeted_norm_-0.02,retained_a1,retained_a1,241
+TopK SAE · f1666 · error-preserving,random_norm_-0.02,adopted_critic,adopted_critic,25223
+TopK SAE · f1666 · error-preserving,random_norm_-0.02,retained_a1,retained_a1,24044
+TopK SAE · f1666 · error-preserving,random_norm_-0.02,adopted_critic,retained_a1,77
+TopK SAE · f1666 · error-preserving,random_norm_-0.02,retained_a1,adopted_critic,52
+TopK SAE · f1666 · error-preserving,random_norm_-0.02,retained_a1,out,4
+TopK SAE · without_1666 · error-preserving,targeted_ablation,adopted_critic,adopted_critic,252
+TopK SAE · without_1666 · error-preserving,targeted_ablation,retained_a1,retained_a1,239
+TopK SAE · without_1666 · error-preserving,targeted_ablation,retained_a1,adopted_critic,2
+TopK SAE · without_1666 · error-preserving,targeted_ablation,adopted_critic,retained_a1,1
+TopK SAE · without_1666 · error-preserving,random_ablation,adopted_critic,adopted_critic,25106
+TopK SAE · without_1666 · error-preserving,random_ablation,retained_a1,retained_a1,23935
+TopK SAE · without_1666 · error-preserving,random_ablation,adopted_critic,retained_a1,192
+TopK SAE · without_1666 · error-preserving,random_ablation,retained_a1,adopted_critic,136
+TopK SAE · without_1666 · error-preserving,random_ablation,retained_a1,out,29
+TopK SAE · without_1666 · error-preserving,random_ablation,adopted_critic,out,1
+TopK SAE · without_1666 · error-preserving,random_ablation,adopted_critic,unchanged_same_position,1
+TopK SAE · without_1666 · error-preserving,targeted_norm_-0.01,adopted_critic,adopted_critic,252
+TopK SAE · without_1666 · error-preserving,targeted_norm_-0.01,retained_a1,retained_a1,241
+TopK SAE · without_1666 · error-preserving,targeted_norm_-0.01,adopted_critic,retained_a1,1
+TopK SAE · without_1666 · error-preserving,random_norm_-0.01,adopted_critic,adopted_critic,25254
+TopK SAE · without_1666 · error-preserving,random_norm_-0.01,retained_a1,retained_a1,24070
+TopK SAE · without_1666 · error-preserving,random_norm_-0.01,adopted_critic,retained_a1,46
+TopK SAE · without_1666 · error-preserving,random_norm_-0.01,retained_a1,adopted_critic,30
+TopK SAE · without_1666 · error-preserving,targeted_norm_-0.02,adopted_critic,adopted_critic,252
+TopK SAE · without_1666 · error-preserving,targeted_norm_-0.02,retained_a1,retained_a1,240
+TopK SAE · without_1666 · error-preserving,targeted_norm_-0.02,retained_a1,adopted_critic,1
+TopK SAE · without_1666 · error-preserving,targeted_norm_-0.02,adopted_critic,retained_a1,1
+TopK SAE · without_1666 · error-preserving,random_norm_-0.02,adopted_critic,adopted_critic,25197
+TopK SAE · without_1666 · error-preserving,random_norm_-0.02,retained_a1,retained_a1,23995
+TopK SAE · without_1666 · error-preserving,random_norm_-0.02,adopted_critic,retained_a1,103
+TopK SAE · without_1666 · error-preserving,random_norm_-0.02,retained_a1,adopted_critic,85
+TopK SAE · without_1666 · error-preserving,random_norm_-0.02,retained_a1,out,20
+Random direction · error-preserving,random_norm_-0.01,adopted_critic,adopted_critic,757
+Random direction · error-preserving,random_norm_-0.01,retained_a1,retained_a1,723
+Random direction · error-preserving,random_norm_-0.01,adopted_critic,retained_a1,2
+Random direction · error-preserving,random_norm_-0.02,adopted_critic,adopted_critic,757
+Random direction · error-preserving,random_norm_-0.02,retained_a1,retained_a1,721
+Random direction · error-preserving,random_norm_-0.02,adopted_critic,retained_a1,2
+Random direction · error-preserving,random_norm_-0.02,retained_a1,adopted_critic,2
