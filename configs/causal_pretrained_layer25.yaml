@@ -1,0 +1,56 @@
+# Exp 2 (#220): the original pretrained Gemma Scope SAE and its decoder-fine-tuned copy, as two separate
+# representations, under the same error-preserving test as the TopK run (causal_topk_mixed_layer25.yaml).
+# Identical to that config except saes, the feature-selection inputs, targeted_subsets (none: no targeted
+# feature is always on), generated_errors and output_dir. Scientific values are all fractions of ||x||.
+capstone_data_root: .
+partition: intervention
+layer: 25
+interactions_jsonl: artifacts/collection/mixed_final_001/prepared/results/mixed_final_001_intervention/intervention/interactions.jsonl
+contexts_jsonl: artifacts/collection/mixed_final_001/prepared/results/mixed_final_001_intervention/contexts.jsonl
+labels_csv: results/behavior/mixed_final_001_intervention_claude/labels.csv
+label_policy: claude
+claude:
+  source_run: results/claude_validation/mixed_final_001/intervention
+  source_errors: exclude  # the three audited technical failures never enter the binary cohort
+  generated_errors: exclude_episode  # the policy of the TopK analysis (merged_exclude_empty6), set before the run
+  concurrency: 64
+  aws_profile: school    # used only by the coordinator's --label-only stage
+  region: us-east-1
+# This summary covers all five representations; Pretrained and Adapted share the encoder, so the same features.
+feature_selection_summary: results/feature_selection_pretrained_adapted_layer25/20261102T210433855083Z/feature_selection_summary.json
+feature_reference: results/feature_selection_pretrained_adapted_layer25/20261102T210433855083Z/feature_reference_activations.json
+input_preparation:
+  collection_results: artifacts/collection/mixed_final_001/prepared/results/mixed_final_001_intervention
+  feature_selection_config: configs/feature_selection/feature_selection_pretrained_adapted_layer25.yaml
+solver:
+  id: google/gemma-3-4b-it
+  revision: 093f9f388b31de276ce2de164bdc2081324b9767
+  loader: gemma3
+  dtype: bfloat16
+  device: cuda:0
+  generation: {max_new_tokens: 64, do_sample: false}
+saes:
+  Pretrained SAE:          # original Gemma Scope 2, layer 25, 16k, L0 120 (params 0fbb3bb9…)
+    kind: gemma_scope
+    path: results/sae/pretrained/gemma-scope-2-4b-it/resid_post_all/layer_25_width_16k_l0_big
+  Adapted pretrained SAE:  # same encoder, decoder fine-tuned on mixed_final_001 (params 5a522734…)
+    kind: gemma_scope
+    path: results/sae/decoder_finetuning/20261102T205853702830Z/best
+random_controls: contribution
+n_random_draws: 100
+random_directions: 3
+reconstruction: false
+error_preserving: true
+ablation: true
+edit_norms: [-0.01, -0.02]
+# 1%/2% are not assumed feasible for every target/random set. Cap at ablation and report actual norms.
+# Use allow only for a separately declared extrapolating direction-edit experiment.
+norm_edit_policy: cap_at_ablation
+min_replay_label_match: 0.98
+on_replay_check_fail: stop
+seed: 42
+# Initial timing/feasibility pilot only. 613 generations per episode; choose full-run scope after timing.
+limit: 5
+n_bootstrap: 1000
+n_permutations: 10000
+output_dir: results/causal_pretrained_layer25
