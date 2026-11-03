@@ -1,0 +1,6 @@
+Experiment,Splice,Arm,Control,Rows,N,Random draws,Targeted no-op (%),Random no-op (%),Targeted − random (pp),95% CI (questions),95% CI (questions + draws),p-value,p-value (Holm),Draw tail fraction (exploratory)
+TopK SAE,reconstruction,ablation,matched features,all,249,1,0.0,0.0,-5.622489959839357,"[-9.24, -2.01]","[-9.24, -2.01]",0.0044995500449955,0.0134986501349865,0.5
+Pretrained SAE,reconstruction,ablation,matched features,all,249,1,0.4016064257028112,0.4016064257028112,-0.8032128514056224,"[-2.01, 0.00]","[-2.01, 0.00]",0.5011498850114988,1.0,1.0
+Pretrained SAE,reconstruction,ablation,matched features,edited only,248,1,0.4016064257028112,0.4016064257028112,-0.8064516129032258,"[-2.02, 0.00]","[-2.02, 0.00]",0.4991500849915009,0.9983001699830018,1.0
+Adapted pretrained SAE,reconstruction,ablation,matched features,all,249,1,0.4016064257028112,0.4016064257028112,0.4016064257028112,"[-1.61, 2.41]","[-1.61, 2.41]",1.0,1.0,1.0
+Adapted pretrained SAE,reconstruction,ablation,matched features,edited only,248,1,0.4016064257028112,0.4016064257028112,0.4032258064516129,"[-1.61, 2.82]","[-1.61, 2.82]",1.0,1.0,1.0

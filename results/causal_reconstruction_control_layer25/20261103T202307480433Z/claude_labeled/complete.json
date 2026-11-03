@@ -1,0 +1,30 @@
+{
+  "files": {
+    "identity.json": {
+      "size": 1552,
+      "sha256": "3f63f77346c009de46b35b0a7c38643bc9cf8fdf4f48b46688d93f55d75d12b2"
+    },
+    "per_row.jsonl": {
+      "size": 3179775,
+      "sha256": "aad85f292764ce059462e9b8c1c7898d1039ea05b0f3073e91fd58f05af3f993"
+    },
+    "summary.json": {
+      "size": 817,
+      "sha256": "ff16ab7d59e0f43318c936a181e66c3f322df82023eb3ed3dc874784e1d8019c"
+    }
+  },
+  "audit_files": {
+    "attempts/20261103T205801729902Z/raw_results.jsonl": {
+      "size": 71170,
+      "sha256": "38743c3b1f594dc24e07dfa2517b55e55c0f838337dd9547d4004af25bd507b5"
+    },
+    "attempts/20261103T205801729902Z/requests.jsonl": {
+      "size": 35707,
+      "sha256": "cfe3c5358a22c15721b31a4999b3a7ce3fee82b3ad80884184051dafa47ef65e"
+    },
+    "manifest.json": {
+      "size": 1552,
+      "sha256": "3f63f77346c009de46b35b0a7c38643bc9cf8fdf4f48b46688d93f55d75d12b2"
+    }
+  }
+}

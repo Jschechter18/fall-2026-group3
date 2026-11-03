@@ -1,0 +1,4 @@
+SAE,Reconstruction error (% of ‖x‖),Answers changed (%),Labels changed (%),"Adoption, plain (%)","Adoption, SAE only (%)",Δ adoption (pp),95% CI,p
+TopK (custom),4.2,1.2,0.8,48.6,49.4,0.8,"[0.00, 2.01]",0.497
+Pretrained (original Gemma Scope),13.0,3.2,3.2,48.6,48.6,0.0,"[-2.01, 2.41]",1.0
+"Pretrained, decoder fine-tuned",7.8,2.8,1.2,48.6,48.2,-0.4,"[-2.01, 0.80]",1.0

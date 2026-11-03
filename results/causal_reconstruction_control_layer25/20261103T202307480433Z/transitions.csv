@@ -1,0 +1,33 @@
+experiment,condition,control_response,response,count
+TopK SAE,no_ablation,adopted_critic,adopted_critic,121
+TopK SAE,no_ablation,retained_a1,retained_a1,126
+TopK SAE,no_ablation,retained_a1,adopted_critic,2
+TopK SAE,targeted_ablation,adopted_critic,adopted_critic,104
+TopK SAE,targeted_ablation,retained_a1,retained_a1,119
+TopK SAE,targeted_ablation,retained_a1,out,4
+TopK SAE,targeted_ablation,adopted_critic,retained_a1,14
+TopK SAE,targeted_ablation,adopted_critic,out,5
+TopK SAE,targeted_ablation,retained_a1,adopted_critic,3
+TopK SAE,random_ablation,adopted_critic,adopted_critic,120
+TopK SAE,random_ablation,retained_a1,retained_a1,125
+TopK SAE,random_ablation,adopted_critic,retained_a1,3
+TopK SAE,random_ablation,retained_a1,adopted_critic,1
+Pretrained SAE,no_ablation,adopted_critic,adopted_critic,117
+Pretrained SAE,no_ablation,retained_a1,retained_a1,124
+Pretrained SAE,no_ablation,retained_a1,adopted_critic,4
+Pretrained SAE,no_ablation,adopted_critic,retained_a1,4
+Pretrained SAE,targeted_ablation,adopted_critic,adopted_critic,121
+Pretrained SAE,targeted_ablation,retained_a1,retained_a1,128
+Pretrained SAE,random_ablation,adopted_critic,adopted_critic,121
+Pretrained SAE,random_ablation,retained_a1,retained_a1,126
+Pretrained SAE,random_ablation,retained_a1,adopted_critic,2
+Adapted pretrained SAE,no_ablation,adopted_critic,adopted_critic,119
+Adapted pretrained SAE,no_ablation,retained_a1,retained_a1,127
+Adapted pretrained SAE,no_ablation,retained_a1,adopted_critic,1
+Adapted pretrained SAE,no_ablation,adopted_critic,retained_a1,2
+Adapted pretrained SAE,targeted_ablation,adopted_critic,adopted_critic,120
+Adapted pretrained SAE,targeted_ablation,retained_a1,retained_a1,129
+Adapted pretrained SAE,random_ablation,adopted_critic,adopted_critic,116
+Adapted pretrained SAE,random_ablation,retained_a1,retained_a1,126
+Adapted pretrained SAE,random_ablation,adopted_critic,retained_a1,4
+Adapted pretrained SAE,random_ablation,retained_a1,adopted_critic,3

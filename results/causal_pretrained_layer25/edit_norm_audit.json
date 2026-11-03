@@ -1,0 +1,178 @@
+{
+  "provenance": {
+    "git_commit": "8a8ed8399bddc8a1874e065d7dfac2e955aa69a9",
+    "uncommitted_code": "",
+    "activations_sha256": "13f33aa766abb6aa1e490c1dcdf436ab82534411364d07fc07e63089341dabdc",
+    "config_sha256": {
+      "configs/causal_topk_mixed_layer25.yaml": "67eb44df8be62282e3e590337dd9669ed15a928f3327cfc703ac43d50b77b262",
+      "configs/causal_pretrained_layer25.yaml": "e7d332c68a9d4cb3695fa5c12a92eafaf46c2d9f198c7c0fb0298f07853e8eeb"
+    },
+    "rows_seed": 42,
+    "n_rows": 1000
+  },
+  "population": "1,000 seeded validation rows (layer 25, attempt 2); the replay edits intervention episodes",
+  "TopK (calibration, causal_topk_mixed_layer25.yaml)": {
+    "TopK SAE \u00b7 all 10": {
+      "targeted_mean": 0.8607800006866455,
+      "random_mean": 0.03335641324520111,
+      "targeted_median": 0.8591810464859009,
+      "random_median": 0.03135060518980026,
+      "targeted_iqr": [
+        0.8466329574584961,
+        0.8770976811647415
+      ],
+      "random_iqr": [
+        0.022702908143401146,
+        0.04206177219748497
+      ],
+      "ratio_of_means": 25.805532455444336,
+      "random_draw_means_5_95": [
+        0.023654690943658352,
+        0.050851332582533354
+      ],
+      "targeted_noop_pct": 0.0,
+      "random_noop_pct": 0.0,
+      "capped_at_1%_pct": {
+        "targeted": 0.0,
+        "random": 1.039
+      },
+      "capped_at_2%_pct": {
+        "targeted": 0.0,
+        "random": 18.029
+      },
+      "rows_targeted_below_random_mean_pct": 0.0,
+      "n_rows": 1000,
+      "n_draws": 100
+    },
+    "TopK SAE \u00b7 f1666": {
+      "targeted_mean": 0.8542685508728027,
+      "random_mean": 0.012769200839102268,
+      "targeted_median": 0.851669430732727,
+      "random_median": 0.011024368926882744,
+      "targeted_iqr": [
+        0.8386134952306747,
+        0.8716315180063248
+      ],
+      "random_iqr": [
+        0.005944740958511829,
+        0.017937276512384415
+      ],
+      "ratio_of_means": 66.90070343017578,
+      "random_draw_means_5_95": [
+        0.008604957722127438,
+        0.02360212430357933
+      ],
+      "targeted_noop_pct": 0.0,
+      "random_noop_pct": 7.022,
+      "capped_at_1%_pct": {
+        "targeted": 0.0,
+        "random": 38.161
+      },
+      "capped_at_2%_pct": {
+        "targeted": 0.0,
+        "random": 73.181
+      },
+      "rows_targeted_below_random_mean_pct": 0.0,
+      "n_rows": 1000,
+      "n_draws": 100
+    },
+    "TopK SAE \u00b7 without_1666": {
+      "targeted_mean": 0.02317233197391033,
+      "random_mean": 0.02803889475762844,
+      "targeted_median": 0.023086633533239365,
+      "random_median": 0.025630297139286995,
+      "targeted_iqr": [
+        0.016550587955862284,
+        0.02869987767189741
+      ],
+      "random_iqr": [
+        0.018032079562544823,
+        0.035589694045484066
+      ],
+      "ratio_of_means": 0.8264352679252625,
+      "random_draw_means_5_95": [
+        0.01782595468685031,
+        0.04173412825912236
+      ],
+      "targeted_noop_pct": 0.0,
+      "random_noop_pct": 0.002,
+      "capped_at_1%_pct": {
+        "targeted": 7.7,
+        "random": 2.999
+      },
+      "capped_at_2%_pct": {
+        "targeted": 37.8,
+        "random": 31.849
+      },
+      "rows_targeted_below_random_mean_pct": 79.9,
+      "n_rows": 1000,
+      "n_draws": 100
+    }
+  },
+  "Run A (causal_pretrained_layer25.yaml)": {
+    "Pretrained SAE \u00b7 all 10": {
+      "targeted_mean": 0.02201099693775177,
+      "random_mean": 0.09089834988117218,
+      "targeted_median": 0.02175905369222164,
+      "random_median": 0.08141399174928665,
+      "targeted_iqr": [
+        0.018787529785186052,
+        0.024893132969737053
+      ],
+      "random_iqr": [
+        0.04671236779540777,
+        0.12245588563382626
+      ],
+      "ratio_of_means": 0.24214957654476166,
+      "random_draw_means_5_95": [
+        0.034936381690204146,
+        0.17707386389374727
+      ],
+      "targeted_noop_pct": 0.0,
+      "random_noop_pct": 0.003,
+      "capped_at_1%_pct": {
+        "targeted": 0.2,
+        "random": 0.05
+      },
+      "capped_at_2%_pct": {
+        "targeted": 36.0,
+        "random": 2.316
+      },
+      "rows_targeted_below_random_mean_pct": 100.0,
+      "n_rows": 1000,
+      "n_draws": 100
+    },
+    "Adapted pretrained SAE \u00b7 all 10": {
+      "targeted_mean": 0.021852117031812668,
+      "random_mean": 0.09047392755746841,
+      "targeted_median": 0.02163194864988327,
+      "random_median": 0.07901293784379959,
+      "targeted_iqr": [
+        0.018631715327501297,
+        0.024721017573028803
+      ],
+      "random_iqr": [
+        0.043527656234800816,
+        0.12408535182476044
+      ],
+      "ratio_of_means": 0.2415294349193573,
+      "random_draw_means_5_95": [
+        0.033235863968729976,
+        0.18095096051692958
+      ],
+      "targeted_noop_pct": 0.0,
+      "random_noop_pct": 0.0,
+      "capped_at_1%_pct": {
+        "targeted": 0.2,
+        "random": 0.027999999999999997
+      },
+      "capped_at_2%_pct": {
+        "targeted": 37.8,
+        "random": 1.921
+      },
+      "rows_targeted_below_random_mean_pct": 100.0,
+      "n_rows": 1000,
+      "n_draws": 100
+    }
+  }
+}

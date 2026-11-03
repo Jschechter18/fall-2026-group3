@@ -1,0 +1,1127 @@
+{
+  "n_episodes_complete": 249,
+  "n_episodes_planned": 250,
+  "n_generations": 2490,
+  "intervention": {
+    "name": "final_prompt_token_prefill_only",
+    "description": "The layer output at the final prompt token of the A2 prefill is replaced; earlier positions and decode-step computations at this layer are not. This is not the final layer (or the depth is unknown), so the change also alters that position's keys and values in later layers, which every decode step attends to: the answer can change even when the first token does not.",
+    "edits": {
+      "ablation": "chosen features set to 0",
+      "steering": "chosen feature f set to s * ref_f (ref_f: mean activation where f fires on the feature-selection fit partition)",
+      "scaling": "chosen features multiplied by (1 + p)",
+      "norm_matched": "the ablation edit rescaled to |r| * |x| (r < 0), or reversed (r > 0); a no-op when none of the chosen features is firing"
+    },
+    "arms": [
+      "ablation"
+    ],
+    "random_controls": "contribution",
+    "norm_edit_policy": "cap_at_ablation",
+    "probe_direction": null,
+    "splices": {
+      "reconstruction": "decode(z) + \u0394",
+      "error_preserving": "x + \u0394"
+    }
+  },
+  "validated": true,
+  "semantic_labeling": {
+    "n_generations": 2500,
+    "n_unique_changed_inputs": 56,
+    "n_pending_requests": 0,
+    "n_reused_stored_rows": 2401,
+    "source_technical_exclusions": {
+      "synthetic:2hop__synthetic_04d3b97e57364d928a911aee1df06f5d": "incomplete_response:max_tokens",
+      "synthetic:4hop2__synthetic_179a964e8eb641fd91e22bdfd0dc3c1a": "incomplete_response:refusal",
+      "synthetic:4hop2__synthetic_44151b620de649ceae51b5a0e412c911": "incomplete_response:refusal"
+    },
+    "label_counts": {
+      "adoption": 1205,
+      "retention": 1285,
+      "out": 9,
+      "error": 1
+    },
+    "excluded_questions": {
+      "synthetic:4hop2__synthetic_e0eb8f84b0c1440e92d88f6a1dd9abfd": "missing_field:solver_attempt_2"
+    },
+    "n_analysis_episodes": 249,
+    "n_requests_this_invocation": 56,
+    "n_failed_requests": 1,
+    "status": "complete_with_exclusions"
+  },
+  "replay_check": {
+    "n_episodes": 249,
+    "n_planned": 249,
+    "mismatch_counts": {
+      "exact_match": 249
+    },
+    "a2_exact_match_rate": 1.0,
+    "solver_response_match_rate": 1.0,
+    "n_prompt_hashes_compared": 249,
+    "stored_acceptance_pct": 48.59437751004016,
+    "replayed_acceptance_pct": 48.59437751004016,
+    "pending_claude_labels": 0,
+    "criterion": {
+      "min_label_match": 0.98,
+      "max_prompt_differences": 0,
+      "semantic_preflight": "Only exact stored answers reuse Claude labels; changed answers are pending."
+    },
+    "passed": true,
+    "failures": []
+  },
+  "effects": {
+    "TopK SAE__random_ablation": {
+      "delta_pp": -0.8032128514056224,
+      "ci95_pp": [
+        -2.4096385542168677,
+        0.4116465863453723
+      ],
+      "p_value": 0.6287371262873712
+    },
+    "TopK SAE__targeted_ablation": {
+      "delta_pp": -6.425702811244979,
+      "ci95_pp": [
+        -10.040160642570282,
+        -2.8112449799196786
+      ],
+      "p_value": 0.0008999100089991
+    },
+    "Pretrained SAE__random_ablation": {
+      "delta_pp": 0.8032128514056224,
+      "ci95_pp": [
+        0.0,
+        2.0080321285140563
+      ],
+      "p_value": 0.5011498850114988
+    },
+    "Pretrained SAE__targeted_ablation": {
+      "delta_pp": 0.0,
+      "ci95_pp": [
+        0.0,
+        0.0
+      ],
+      "p_value": 1.0
+    },
+    "Adapted pretrained SAE__random_ablation": {
+      "delta_pp": -0.4016064257028112,
+      "ci95_pp": [
+        -2.4096385542168677,
+        1.6064257028112447
+      ],
+      "p_value": 1.0
+    },
+    "Adapted pretrained SAE__targeted_ablation": {
+      "delta_pp": 0.0,
+      "ci95_pp": [
+        0.0,
+        0.0
+      ],
+      "p_value": 1.0
+    }
+  },
+  "targeted_vs_random": [
+    {
+      "experiment": "TopK SAE",
+      "splice": "reconstruction",
+      "arm": "ablation",
+      "control": "matched features",
+      "targeted_noop_pct": 0.0,
+      "random_noop_pct": 0.0,
+      "rows": "all",
+      "n": 249,
+      "delta_pp": -5.622489959839357,
+      "ci95_pp": [
+        -9.236947791164658,
+        -2.0080321285140563
+      ],
+      "p_value": 0.0044995500449955,
+      "ci95_pp_questions_and_draws": [
+        -9.236947791164658,
+        -2.0080321285140563
+      ],
+      "n_random_draws": 1,
+      "targeted_vs_control_pp": -6.425702811244979,
+      "random_draw_vs_control_pp": [
+        -0.8032128514056224
+      ],
+      "draw_tail_fraction": 0.5,
+      "p_value_holm": 0.0134986501349865
+    },
+    {
+      "experiment": "Pretrained SAE",
+      "splice": "reconstruction",
+      "arm": "ablation",
+      "control": "matched features",
+      "targeted_noop_pct": 0.4016064257028112,
+      "random_noop_pct": 0.4016064257028112,
+      "rows": "all",
+      "n": 249,
+      "delta_pp": -0.8032128514056224,
+      "ci95_pp": [
+        -2.0080321285140563,
+        0.0
+      ],
+      "p_value": 0.5011498850114988,
+      "ci95_pp_questions_and_draws": [
+        -2.0080321285140563,
+        0.0
+      ],
+      "n_random_draws": 1,
+      "targeted_vs_control_pp": 0.0,
+      "random_draw_vs_control_pp": [
+        0.8032128514056224
+      ],
+      "draw_tail_fraction": 1.0,
+      "p_value_holm": 1.0
+    },
+    {
+      "experiment": "Pretrained SAE",
+      "splice": "reconstruction",
+      "arm": "ablation",
+      "control": "matched features",
+      "targeted_noop_pct": 0.4016064257028112,
+      "random_noop_pct": 0.4016064257028112,
+      "rows": "edited only",
+      "n": 248,
+      "delta_pp": -0.8064516129032258,
+      "ci95_pp": [
+        -2.0161290322580645,
+        0.0
+      ],
+      "p_value": 0.4991500849915009,
+      "ci95_pp_questions_and_draws": [
+        -2.0161290322580645,
+        0.0
+      ],
+      "n_random_draws": 1,
+      "targeted_vs_control_pp": 0.0,
+      "random_draw_vs_control_pp": [
+        0.8064516129032258
+      ],
+      "draw_tail_fraction": 1.0,
+      "p_value_holm": 0.9983001699830018
+    },
+    {
+      "experiment": "Adapted pretrained SAE",
+      "splice": "reconstruction",
+      "arm": "ablation",
+      "control": "matched features",
+      "targeted_noop_pct": 0.4016064257028112,
+      "random_noop_pct": 0.4016064257028112,
+      "rows": "all",
+      "n": 249,
+      "delta_pp": 0.4016064257028112,
+      "ci95_pp": [
+        -1.6064257028112447,
+        2.4096385542168677
+      ],
+      "p_value": 1.0,
+      "ci95_pp_questions_and_draws": [
+        -1.6064257028112447,
+        2.4096385542168677
+      ],
+      "n_random_draws": 1,
+      "targeted_vs_control_pp": 0.0,
+      "random_draw_vs_control_pp": [
+        -0.4016064257028112
+      ],
+      "draw_tail_fraction": 1.0,
+      "p_value_holm": 1.0
+    },
+    {
+      "experiment": "Adapted pretrained SAE",
+      "splice": "reconstruction",
+      "arm": "ablation",
+      "control": "matched features",
+      "targeted_noop_pct": 0.4016064257028112,
+      "random_noop_pct": 0.4016064257028112,
+      "rows": "edited only",
+      "n": 248,
+      "delta_pp": 0.4032258064516129,
+      "ci95_pp": [
+        -1.6129032258064515,
+        2.82258064516129
+      ],
+      "p_value": 1.0,
+      "ci95_pp_questions_and_draws": [
+        -1.6129032258064515,
+        2.82258064516129
+      ],
+      "n_random_draws": 1,
+      "targeted_vs_control_pp": 0.0,
+      "random_draw_vs_control_pp": [
+        -0.4032258064516129
+      ],
+      "draw_tail_fraction": 1.0,
+      "p_value_holm": 1.0
+    }
+  ],
+  "dose_response": [
+    {
+      "Experiment": "TopK SAE",
+      "Splice": "reconstruction",
+      "Arm": "ablation",
+      "Edit": "ablation",
+      "Strength": 0.0,
+      "N": 249,
+      "Targeted acceptance (%)": 42.971887550200805,
+      "Targeted \u0394 vs. control (pp)": -6.425702811244979,
+      "Random acceptance (%)": 48.59437751004016,
+      "Random \u0394 vs. control (pp)": -0.8032128514056224,
+      "Targeted \u2212 random (pp)": -5.622489959839357
+    },
+    {
+      "Experiment": "Pretrained SAE",
+      "Splice": "reconstruction",
+      "Arm": "ablation",
+      "Edit": "ablation",
+      "Strength": 0.0,
+      "N": 249,
+      "Targeted acceptance (%)": 48.59437751004016,
+      "Targeted \u0394 vs. control (pp)": 0.0,
+      "Random acceptance (%)": 49.39759036144578,
+      "Random \u0394 vs. control (pp)": 0.8032128514056224,
+      "Targeted \u2212 random (pp)": -0.8032128514056224
+    },
+    {
+      "Experiment": "Adapted pretrained SAE",
+      "Splice": "reconstruction",
+      "Arm": "ablation",
+      "Edit": "ablation",
+      "Strength": 0.0,
+      "N": 249,
+      "Targeted acceptance (%)": 48.19277108433735,
+      "Targeted \u0394 vs. control (pp)": 0.0,
+      "Random acceptance (%)": 47.791164658634536,
+      "Random \u0394 vs. control (pp)": -0.4016064257028112,
+      "Targeted \u2212 random (pp)": 0.4016064257028112
+    }
+  ],
+  "steering_bidirectional": [],
+  "multiple_comparisons": "Confirmatory families: targeted minus mean random edit with the reconstruction splice on all rows, one test per experiment and strength, each edit family (ablation, steer, scale, norm) Holm-adjusted separately (p_value_holm). The same comparisons on edited rows only (no-op edits left out; whether an edit is a no-op is fixed before it is made), and targeted minus the random-direction control, are each Holm-adjusted as their own families. Read a matched-feature comparison next to its targeted and random no-op rates: when they differ, the edits were not the same size on every row. These p-values are conditional on the random draws used; ci95_pp_questions_and_draws also resamples the draws, a broader source of uncertainty. draw_tail_fraction is a descriptive tail fraction, not a test: the probe-selected targeted set and the frequency-matched random sets are not shown to be exchangeable under a null. Error-preserving, per-condition, per-draw, dose-response, bidirectional and diagnostic results are sensitivity / exploratory and not adjusted.",
+  "reconstruction_damage": [
+    {
+      "Experiment": "TopK SAE",
+      "N": 249,
+      "Plain replay acceptance (%)": 48.59437751004016,
+      "Reconstruction-only acceptance (%)": 49.39759036144578,
+      "\u0394 (pp)": 0.8032128514056224,
+      "95% CI for \u0394": "[0.00, 2.01]",
+      "p-value": 0.4968503149685031,
+      "Answer changed vs. control (%)": 1.2048192771084338,
+      "Label changed vs. control (%)": 0.8032128514056224,
+      "First token changed vs. control (%)": 1.2048192771084338,
+      "\u0394 log p(control's first token)": -0.013477760468737325,
+      "95% CI for \u0394 log p": "[-0.025, -0.004]",
+      "Mean reconstruction error (rel. to |x|)": 0.04223870274322818
+    },
+    {
+      "Experiment": "Pretrained SAE",
+      "N": 249,
+      "Plain replay acceptance (%)": 48.59437751004016,
+      "Reconstruction-only acceptance (%)": 48.59437751004016,
+      "\u0394 (pp)": 0.0,
+      "95% CI for \u0394": "[-2.01, 2.41]",
+      "p-value": 1.0,
+      "Answer changed vs. control (%)": 3.2128514056224895,
+      "Label changed vs. control (%)": 3.2128514056224895,
+      "First token changed vs. control (%)": 2.8112449799196786,
+      "\u0394 log p(control's first token)": -0.06297778239075182,
+      "95% CI for \u0394 log p": "[-0.135, -0.011]",
+      "Mean reconstruction error (rel. to |x|)": 0.1298190306228806
+    },
+    {
+      "Experiment": "Adapted pretrained SAE",
+      "N": 249,
+      "Plain replay acceptance (%)": 48.59437751004016,
+      "Reconstruction-only acceptance (%)": 48.19277108433735,
+      "\u0394 (pp)": -0.4016064257028112,
+      "95% CI for \u0394": "[-2.01, 0.80]",
+      "p-value": 1.0,
+      "Answer changed vs. control (%)": 2.8112449799196786,
+      "Label changed vs. control (%)": 1.2048192771084338,
+      "First token changed vs. control (%)": 2.8112449799196786,
+      "\u0394 log p(control's first token)": -0.03309882411601834,
+      "95% CI for \u0394 log p": "[-0.060, -0.011]",
+      "Mean reconstruction error (rel. to |x|)": 0.07833502131951861
+    }
+  ],
+  "diagnostics": [
+    {
+      "Experiment": "Baseline",
+      "Condition": "No SAE (replayed A2)",
+      "Generations": 249,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 2.4096385542168677,
+      "Semantic adoption (%)": 48.59437751004016,
+      "Semantic retention (%)": 51.40562248995983,
+      "Semantic agreement (%)": 0.0,
+      "Semantic out (%)": 0.0
+    },
+    {
+      "Experiment": "TopK SAE",
+      "Condition": "No ablation",
+      "Generations": 249,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 2.4096385542168677,
+      "Semantic adoption (%)": 49.39759036144578,
+      "Semantic retention (%)": 50.602409638554214,
+      "Semantic agreement (%)": 0.0,
+      "Semantic out (%)": 0.0,
+      "Answer changed vs. control (%)": 1.2048192771084338,
+      "Label changed vs. control (%)": 0.8032128514056224,
+      "First token changed vs. control (%)": 1.2048192771084338,
+      "\u0394 log p(control's first token)": -0.013477760468737325,
+      "95% CI for \u0394 log p": "[-0.025, -0.004]",
+      "Edited features all inactive before the edit (%)": null,
+      "Mean edited features active before the edit": null,
+      "No-op edits (%)": null,
+      "Mean edit norm (rel. to |x|)": null,
+      "Mean raw edit norm (rel. to |x|)": null,
+      "Mean edit scale": null,
+      "Would overshoot zero-ablation (%)": null,
+      "Overshoot applied (%)": null,
+      "Capped at zero-ablation (%)": null,
+      "Mean reconstruction error (rel. to |x|)": 0.04223870274322818
+    },
+    {
+      "Experiment": "TopK SAE",
+      "Condition": "Targeted ablation",
+      "Generations": 249,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 2.0080321285140563,
+      "Semantic adoption (%)": 42.971887550200805,
+      "Semantic retention (%)": 53.41365461847389,
+      "Semantic agreement (%)": 0.0,
+      "Semantic out (%)": 3.614457831325301,
+      "Answer changed vs. control (%)": 16.46586345381526,
+      "Label changed vs. control (%)": 10.441767068273093,
+      "First token changed vs. control (%)": 16.46586345381526,
+      "\u0394 log p(control's first token)": -1.3492856796659753,
+      "95% CI for \u0394 log p": "[-1.801, -0.913]",
+      "Edited features all inactive before the edit (%)": 0.0,
+      "Mean edited features active before the edit": 6.831325301204819,
+      "No-op edits (%)": 0.0,
+      "Mean edit norm (rel. to |x|)": 0.8599590769254539,
+      "Mean raw edit norm (rel. to |x|)": 0.8599590769254539,
+      "Mean edit scale": 1.0,
+      "Would overshoot zero-ablation (%)": null,
+      "Overshoot applied (%)": null,
+      "Capped at zero-ablation (%)": null,
+      "Mean reconstruction error (rel. to |x|)": 0.04223870274322818
+    },
+    {
+      "Experiment": "TopK SAE",
+      "Condition": "Random ablation",
+      "Generations": 249,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 2.4096385542168677,
+      "Semantic adoption (%)": 48.59437751004016,
+      "Semantic retention (%)": 51.40562248995983,
+      "Semantic agreement (%)": 0.0,
+      "Semantic out (%)": 0.0,
+      "Answer changed vs. control (%)": 2.0080321285140563,
+      "Label changed vs. control (%)": 1.6064257028112447,
+      "First token changed vs. control (%)": 2.0080321285140563,
+      "\u0394 log p(control's first token)": -0.016145512171940376,
+      "95% CI for \u0394 log p": "[-0.034, -0.002]",
+      "Edited features all inactive before the edit (%)": 0.0,
+      "Mean edited features active before the edit": 6.4417670682730925,
+      "No-op edits (%)": 0.0,
+      "Mean edit norm (rel. to |x|)": 0.02691514060428613,
+      "Mean raw edit norm (rel. to |x|)": 0.02691514060428613,
+      "Mean edit scale": 1.0,
+      "Would overshoot zero-ablation (%)": null,
+      "Overshoot applied (%)": null,
+      "Capped at zero-ablation (%)": null,
+      "Mean reconstruction error (rel. to |x|)": 0.04223870274322818
+    },
+    {
+      "Experiment": "Pretrained SAE",
+      "Condition": "No ablation",
+      "Generations": 249,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 2.4096385542168677,
+      "Semantic adoption (%)": 48.59437751004016,
+      "Semantic retention (%)": 51.40562248995983,
+      "Semantic agreement (%)": 0.0,
+      "Semantic out (%)": 0.0,
+      "Answer changed vs. control (%)": 3.2128514056224895,
+      "Label changed vs. control (%)": 3.2128514056224895,
+      "First token changed vs. control (%)": 2.8112449799196786,
+      "\u0394 log p(control's first token)": -0.06297778239075182,
+      "95% CI for \u0394 log p": "[-0.135, -0.011]",
+      "Edited features all inactive before the edit (%)": null,
+      "Mean edited features active before the edit": null,
+      "No-op edits (%)": null,
+      "Mean edit norm (rel. to |x|)": null,
+      "Mean raw edit norm (rel. to |x|)": null,
+      "Mean edit scale": null,
+      "Would overshoot zero-ablation (%)": null,
+      "Overshoot applied (%)": null,
+      "Capped at zero-ablation (%)": null,
+      "Mean reconstruction error (rel. to |x|)": 0.1298190306228806
+    },
+    {
+      "Experiment": "Pretrained SAE",
+      "Condition": "Targeted ablation",
+      "Generations": 249,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 2.4096385542168677,
+      "Semantic adoption (%)": 48.59437751004016,
+      "Semantic retention (%)": 51.40562248995983,
+      "Semantic agreement (%)": 0.0,
+      "Semantic out (%)": 0.0,
+      "Answer changed vs. control (%)": 0.4016064257028112,
+      "Label changed vs. control (%)": 0.0,
+      "First token changed vs. control (%)": 0.0,
+      "\u0394 log p(control's first token)": -0.00023349816406442893,
+      "95% CI for \u0394 log p": "[-0.003, 0.003]",
+      "Edited features all inactive before the edit (%)": 0.4016064257028112,
+      "Mean edited features active before the edit": 6.329317269076305,
+      "No-op edits (%)": 0.4016064257028112,
+      "Mean edit norm (rel. to |x|)": 0.024668413700618178,
+      "Mean raw edit norm (rel. to |x|)": 0.024668413700618178,
+      "Mean edit scale": 1.0,
+      "Would overshoot zero-ablation (%)": null,
+      "Overshoot applied (%)": null,
+      "Capped at zero-ablation (%)": null,
+      "Mean reconstruction error (rel. to |x|)": 0.1298190306228806
+    },
+    {
+      "Experiment": "Pretrained SAE",
+      "Condition": "Random ablation",
+      "Generations": 249,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 2.4096385542168677,
+      "Semantic adoption (%)": 49.39759036144578,
+      "Semantic retention (%)": 50.602409638554214,
+      "Semantic agreement (%)": 0.0,
+      "Semantic out (%)": 0.0,
+      "Answer changed vs. control (%)": 1.2048192771084338,
+      "Label changed vs. control (%)": 0.8032128514056224,
+      "First token changed vs. control (%)": 0.8032128514056224,
+      "\u0394 log p(control's first token)": 0.00017811310555846562,
+      "95% CI for \u0394 log p": "[-0.011, 0.009]",
+      "Edited features all inactive before the edit (%)": 0.4016064257028112,
+      "Mean edited features active before the edit": 6.3453815261044175,
+      "No-op edits (%)": 0.4016064257028112,
+      "Mean edit norm (rel. to |x|)": 0.03966611215702621,
+      "Mean raw edit norm (rel. to |x|)": 0.03966611215702621,
+      "Mean edit scale": 1.0,
+      "Would overshoot zero-ablation (%)": null,
+      "Overshoot applied (%)": null,
+      "Capped at zero-ablation (%)": null,
+      "Mean reconstruction error (rel. to |x|)": 0.1298190306228806
+    },
+    {
+      "Experiment": "Adapted pretrained SAE",
+      "Condition": "No ablation",
+      "Generations": 249,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 2.4096385542168677,
+      "Semantic adoption (%)": 48.19277108433735,
+      "Semantic retention (%)": 51.80722891566265,
+      "Semantic agreement (%)": 0.0,
+      "Semantic out (%)": 0.0,
+      "Answer changed vs. control (%)": 2.8112449799196786,
+      "Label changed vs. control (%)": 1.2048192771084338,
+      "First token changed vs. control (%)": 2.8112449799196786,
+      "\u0394 log p(control's first token)": -0.03309882411601834,
+      "95% CI for \u0394 log p": "[-0.060, -0.011]",
+      "Edited features all inactive before the edit (%)": null,
+      "Mean edited features active before the edit": null,
+      "No-op edits (%)": null,
+      "Mean edit norm (rel. to |x|)": null,
+      "Mean raw edit norm (rel. to |x|)": null,
+      "Mean edit scale": null,
+      "Would overshoot zero-ablation (%)": null,
+      "Overshoot applied (%)": null,
+      "Capped at zero-ablation (%)": null,
+      "Mean reconstruction error (rel. to |x|)": 0.07833502131951861
+    },
+    {
+      "Experiment": "Adapted pretrained SAE",
+      "Condition": "Targeted ablation",
+      "Generations": 249,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 2.4096385542168677,
+      "Semantic adoption (%)": 48.19277108433735,
+      "Semantic retention (%)": 51.80722891566265,
+      "Semantic agreement (%)": 0.0,
+      "Semantic out (%)": 0.0,
+      "Answer changed vs. control (%)": 0.8032128514056224,
+      "Label changed vs. control (%)": 0.0,
+      "First token changed vs. control (%)": 0.4016064257028112,
+      "\u0394 log p(control's first token)": -0.0026011125786445715,
+      "95% CI for \u0394 log p": "[-0.010, 0.005]",
+      "Edited features all inactive before the edit (%)": 0.4016064257028112,
+      "Mean edited features active before the edit": 6.329317269076305,
+      "No-op edits (%)": 0.4016064257028112,
+      "Mean edit norm (rel. to |x|)": 0.024464508077226967,
+      "Mean raw edit norm (rel. to |x|)": 0.024464508077226967,
+      "Mean edit scale": 1.0,
+      "Would overshoot zero-ablation (%)": null,
+      "Overshoot applied (%)": null,
+      "Capped at zero-ablation (%)": null,
+      "Mean reconstruction error (rel. to |x|)": 0.07833502131951861
+    },
+    {
+      "Experiment": "Adapted pretrained SAE",
+      "Condition": "Random ablation",
+      "Generations": 249,
+      "Empty answer (%)": 0.0,
+      "Reached token budget (%)": 2.4096385542168677,
+      "Semantic adoption (%)": 47.791164658634536,
+      "Semantic retention (%)": 52.208835341365464,
+      "Semantic agreement (%)": 0.0,
+      "Semantic out (%)": 0.0,
+      "Answer changed vs. control (%)": 4.016064257028113,
+      "Label changed vs. control (%)": 2.8112449799196786,
+      "First token changed vs. control (%)": 3.614457831325301,
+      "\u0394 log p(control's first token)": -0.046236100662301924,
+      "95% CI for \u0394 log p": "[-0.109, -0.005]",
+      "Edited features all inactive before the edit (%)": 0.4016064257028112,
+      "Mean edited features active before the edit": 6.3453815261044175,
+      "No-op edits (%)": 0.4016064257028112,
+      "Mean edit norm (rel. to |x|)": 0.04374299370066588,
+      "Mean raw edit norm (rel. to |x|)": 0.04374299370066588,
+      "Mean edit scale": 1.0,
+      "Would overshoot zero-ablation (%)": null,
+      "Overshoot applied (%)": null,
+      "Capped at zero-ablation (%)": null,
+      "Mean reconstruction error (rel. to |x|)": 0.07833502131951861
+    }
+  ],
+  "solver_response_counts": {
+    "Adapted pretrained SAE \u00b7 no_ablation": {
+      "retained_a1": 129,
+      "adopted_critic": 120
+    },
+    "Adapted pretrained SAE \u00b7 random_ablation": {
+      "retained_a1": 130,
+      "adopted_critic": 119
+    },
+    "Adapted pretrained SAE \u00b7 targeted_ablation": {
+      "retained_a1": 129,
+      "adopted_critic": 120
+    },
+    "Baseline \u00b7 no_sae": {
+      "retained_a1": 128,
+      "adopted_critic": 121
+    },
+    "Pretrained SAE \u00b7 no_ablation": {
+      "retained_a1": 128,
+      "adopted_critic": 121
+    },
+    "Pretrained SAE \u00b7 random_ablation": {
+      "retained_a1": 126,
+      "adopted_critic": 123
+    },
+    "Pretrained SAE \u00b7 targeted_ablation": {
+      "retained_a1": 128,
+      "adopted_critic": 121
+    },
+    "TopK SAE \u00b7 no_ablation": {
+      "retained_a1": 126,
+      "adopted_critic": 123
+    },
+    "TopK SAE \u00b7 random_ablation": {
+      "retained_a1": 128,
+      "adopted_critic": 121
+    },
+    "TopK SAE \u00b7 targeted_ablation": {
+      "retained_a1": 133,
+      "adopted_critic": 107,
+      "out": 9
+    }
+  },
+  "seconds_per_generation": 0.686428232931727,
+  "features": {
+    "TopK SAE": {
+      "targeted": [
+        2828,
+        12274,
+        1666,
+        10943,
+        744,
+        6854,
+        2737,
+        189,
+        4784,
+        5904
+      ],
+      "random": [
+        [
+          7705,
+          2721,
+          11649,
+          3907,
+          8955,
+          2080,
+          5883,
+          411,
+          10510,
+          1548
+        ]
+      ],
+      "match": [
+        {
+          "draw": 0,
+          "targeted": 2828,
+          "control": 7705,
+          "targeted_frequency": 0.229105,
+          "control_frequency": 0.211066,
+          "frequency_ratio": 0.921263176272888,
+          "targeted_contribution": 378.91354301399997,
+          "control_contribution": 296.769848521,
+          "contribution_ratio": 0.7832125665406343
+        },
+        {
+          "draw": 0,
+          "targeted": 12274,
+          "control": 2721,
+          "targeted_frequency": 0.831899,
+          "control_frequency": 0.70954,
+          "frequency_ratio": 0.8529160390864755,
+          "targeted_contribution": 325.04525912,
+          "control_contribution": 195.58322846399997,
+          "contribution_ratio": 0.601710755583716
+        },
+        {
+          "draw": 0,
+          "targeted": 1666,
+          "control": 11649,
+          "targeted_frequency": 1.0,
+          "control_frequency": 0.937627,
+          "frequency_ratio": 0.937627,
+          "targeted_contribution": 27857.7766123,
+          "control_contribution": 414.475183176,
+          "contribution_ratio": 0.014878257836018306
+        },
+        {
+          "draw": 0,
+          "targeted": 10943,
+          "control": 3907,
+          "targeted_frequency": 0.688997,
+          "control_frequency": 0.687901,
+          "frequency_ratio": 0.9984092818981796,
+          "targeted_contribution": 383.636301828,
+          "control_contribution": 225.81905380099997,
+          "contribution_ratio": 0.5886279601929955
+        },
+        {
+          "draw": 0,
+          "targeted": 744,
+          "control": 8955,
+          "targeted_frequency": 0.891806,
+          "control_frequency": 0.917828,
+          "frequency_ratio": 1.0291789918435175,
+          "targeted_contribution": 435.12068020999993,
+          "control_contribution": 553.0686531959999,
+          "contribution_ratio": 1.2710695638025649
+        },
+        {
+          "draw": 0,
+          "targeted": 6854,
+          "control": 2080,
+          "targeted_frequency": 0.905463,
+          "control_frequency": 0.729535,
+          "frequency_ratio": 0.8057038222434268,
+          "targeted_contribution": 360.31148550499995,
+          "control_contribution": 187.50729801999998,
+          "contribution_ratio": 0.5204033331249386
+        },
+        {
+          "draw": 0,
+          "targeted": 2737,
+          "control": 5883,
+          "targeted_frequency": 0.704453,
+          "control_frequency": 0.742683,
+          "frequency_ratio": 1.0542690569846391,
+          "targeted_contribution": 224.36193660899997,
+          "control_contribution": 218.444650627,
+          "contribution_ratio": 0.9736261592700006
+        },
+        {
+          "draw": 0,
+          "targeted": 189,
+          "control": 411,
+          "targeted_frequency": 0.699523,
+          "control_frequency": 0.790617,
+          "frequency_ratio": 1.1302230234030903,
+          "targeted_contribution": 197.724495645,
+          "control_contribution": 262.232824335,
+          "contribution_ratio": 1.3262536008983936
+        },
+        {
+          "draw": 0,
+          "targeted": 4784,
+          "control": 10510,
+          "targeted_frequency": 0.382337,
+          "control_frequency": 0.325247,
+          "frequency_ratio": 0.8506814668734651,
+          "targeted_contribution": 119.85175066,
+          "control_contribution": 142.20987527699998,
+          "contribution_ratio": 1.1865481688325636
+        },
+        {
+          "draw": 0,
+          "targeted": 5904,
+          "control": 1548,
+          "targeted_frequency": 0.400767,
+          "control_frequency": 0.45594,
+          "frequency_ratio": 1.1376685206117272,
+          "targeted_contribution": 205.56358018499998,
+          "control_contribution": 215.451253074,
+          "contribution_ratio": 1.0481003146573993
+        }
+      ]
+    },
+    "Pretrained SAE": {
+      "targeted": [
+        4409,
+        12624,
+        14120,
+        10383,
+        12139,
+        1750,
+        16138,
+        16144,
+        7649,
+        15005
+      ],
+      "random": [
+        [
+          14938,
+          4454,
+          13923,
+          5759,
+          1814,
+          9313,
+          8495,
+          3544,
+          9450,
+          8278
+        ]
+      ],
+      "match": [
+        {
+          "draw": 0,
+          "targeted": 4409,
+          "control": 14938,
+          "targeted_frequency": 0.850642,
+          "control_frequency": 0.862185,
+          "frequency_ratio": 1.0135697508470072,
+          "targeted_contribution": 381.63586707,
+          "control_contribution": 348.43817008,
+          "contribution_ratio": 0.9130121148075664
+        },
+        {
+          "draw": 0,
+          "targeted": 12624,
+          "control": 4454,
+          "targeted_frequency": 0.784199,
+          "control_frequency": 0.909493,
+          "frequency_ratio": 1.1597732208278766,
+          "targeted_contribution": 263.79790734600004,
+          "control_contribution": 749.05222065,
+          "contribution_ratio": 2.839492656276213
+        },
+        {
+          "draw": 0,
+          "targeted": 14120,
+          "control": 13923,
+          "targeted_frequency": 0.391845,
+          "control_frequency": 0.386915,
+          "frequency_ratio": 0.9874184945577971,
+          "targeted_contribution": 116.44882215000001,
+          "control_contribution": 261.67189655699997,
+          "contribution_ratio": 2.247097838567532
+        },
+        {
+          "draw": 0,
+          "targeted": 10383,
+          "control": 5759,
+          "targeted_frequency": 0.975935,
+          "control_frequency": 0.982861,
+          "frequency_ratio": 1.0070967841095975,
+          "targeted_contribution": 340.72131019999995,
+          "control_contribution": 844.32144313,
+          "contribution_ratio": 2.4780411962914557
+        },
+        {
+          "draw": 0,
+          "targeted": 12139,
+          "control": 1814,
+          "targeted_frequency": 0.945336,
+          "control_frequency": 0.995735,
+          "frequency_ratio": 1.0533133192854183,
+          "targeted_contribution": 260.51382588499996,
+          "control_contribution": 824.7372623999998,
+          "contribution_ratio": 3.1658099511542552
+        },
+        {
+          "draw": 0,
+          "targeted": 1750,
+          "control": 9313,
+          "targeted_frequency": 0.432149,
+          "control_frequency": 0.489044,
+          "frequency_ratio": 1.131655979766238,
+          "targeted_contribution": 217.95300976000001,
+          "control_contribution": 96.01116032399999,
+          "contribution_ratio": 0.44051311991388936
+        },
+        {
+          "draw": 0,
+          "targeted": 16138,
+          "control": 8495,
+          "targeted_frequency": 0.313625,
+          "control_frequency": 0.294491,
+          "frequency_ratio": 0.9389908330011958,
+          "targeted_contribution": 143.253114853,
+          "control_contribution": 135.232856775,
+          "contribution_ratio": 0.9440133773968542
+        },
+        {
+          "draw": 0,
+          "targeted": 16144,
+          "control": 3544,
+          "targeted_frequency": 0.725466,
+          "control_frequency": 0.58589,
+          "frequency_ratio": 0.8076050428276446,
+          "targeted_contribution": 322.29995850299997,
+          "control_contribution": 189.10283178,
+          "contribution_ratio": 0.5867293084936585
+        },
+        {
+          "draw": 0,
+          "targeted": 7649,
+          "control": 9450,
+          "targeted_frequency": 0.213922,
+          "control_frequency": 0.171584,
+          "frequency_ratio": 0.802086741896579,
+          "targeted_contribution": 104.768,
+          "control_contribution": 93.730009167,
+          "contribution_ratio": 0.89464349006376
+        },
+        {
+          "draw": 0,
+          "targeted": 15005,
+          "control": 8278,
+          "targeted_frequency": 0.589842,
+          "control_frequency": 0.596377,
+          "frequency_ratio": 1.0110792381688656,
+          "targeted_contribution": 202.58743401,
+          "control_contribution": 195.18222416,
+          "contribution_ratio": 0.9634468451304118
+        }
+      ]
+    },
+    "Adapted pretrained SAE": {
+      "targeted": [
+        4409,
+        12624,
+        14120,
+        10383,
+        12139,
+        1750,
+        16138,
+        16144,
+        7649,
+        15005
+      ],
+      "random": [
+        [
+          14938,
+          4454,
+          7797,
+          5759,
+          1814,
+          2757,
+          13490,
+          2918,
+          9450,
+          5139
+        ]
+      ],
+      "match": [
+        {
+          "draw": 0,
+          "targeted": 4409,
+          "control": 14938,
+          "targeted_frequency": 0.850642,
+          "control_frequency": 0.862185,
+          "frequency_ratio": 1.0135697508470072,
+          "targeted_contribution": 378.62641659300004,
+          "control_contribution": 341.156520012,
+          "contribution_ratio": 0.9010372891617917
+        },
+        {
+          "draw": 0,
+          "targeted": 12624,
+          "control": 4454,
+          "targeted_frequency": 0.784199,
+          "control_frequency": 0.909493,
+          "frequency_ratio": 1.1597732208278766,
+          "targeted_contribution": 255.25903960800002,
+          "control_contribution": 739.4175946949999,
+          "contribution_ratio": 2.8967342188175578
+        },
+        {
+          "draw": 0,
+          "targeted": 14120,
+          "control": 7797,
+          "targeted_frequency": 0.391845,
+          "control_frequency": 0.340116,
+          "frequency_ratio": 0.8679860659189219,
+          "targeted_contribution": 110.658926861,
+          "control_contribution": 260.31816755999995,
+          "contribution_ratio": 2.352437123188342
+        },
+        {
+          "draw": 0,
+          "targeted": 10383,
+          "control": 5759,
+          "targeted_frequency": 0.975935,
+          "control_frequency": 0.982861,
+          "frequency_ratio": 1.0070967841095975,
+          "targeted_contribution": 341.68497331000003,
+          "control_contribution": 862.54171767,
+          "contribution_ratio": 2.52437708721666
+        },
+        {
+          "draw": 0,
+          "targeted": 12139,
+          "control": 1814,
+          "targeted_frequency": 0.945336,
+          "control_frequency": 0.995735,
+          "frequency_ratio": 1.0533133192854183,
+          "targeted_contribution": 258.21317821499997,
+          "control_contribution": 819.511783802,
+          "contribution_ratio": 3.1737798568887814
+        },
+        {
+          "draw": 0,
+          "targeted": 1750,
+          "control": 2757,
+          "targeted_frequency": 0.432149,
+          "control_frequency": 0.349546,
+          "frequency_ratio": 0.8088552790819833,
+          "targeted_contribution": 218.97710216,
+          "control_contribution": 464.858631488,
+          "contribution_ratio": 2.12286411183002
+        },
+        {
+          "draw": 0,
+          "targeted": 16138,
+          "control": 13490,
+          "targeted_frequency": 0.313625,
+          "control_frequency": 0.360189,
+          "frequency_ratio": 1.1484703068951774,
+          "targeted_contribution": 133.92325524100002,
+          "control_contribution": 140.28049660000002,
+          "contribution_ratio": 1.0474692864025736
+        },
+        {
+          "draw": 0,
+          "targeted": 16144,
+          "control": 2918,
+          "targeted_frequency": 0.725466,
+          "control_frequency": 0.830333,
+          "frequency_ratio": 1.1445512263841446,
+          "targeted_contribution": 313.98598466699997,
+          "control_contribution": 530.961954474,
+          "contribution_ratio": 1.6910371175870011
+        },
+        {
+          "draw": 0,
+          "targeted": 7649,
+          "control": 9450,
+          "targeted_frequency": 0.213922,
+          "control_frequency": 0.171584,
+          "frequency_ratio": 0.802086741896579,
+          "targeted_contribution": 99.507284416,
+          "control_contribution": 90.1149591789,
+          "contribution_ratio": 0.9056116816751377
+        },
+        {
+          "draw": 0,
+          "targeted": 15005,
+          "control": 5139,
+          "targeted_frequency": 0.589842,
+          "control_frequency": 0.50227,
+          "frequency_ratio": 0.8515331224293964,
+          "targeted_contribution": 191.26370854500001,
+          "control_contribution": 199.892197116,
+          "contribution_ratio": 1.045113046466784
+        }
+      ]
+    }
+  },
+  "provenance": {
+    "git_commit": "6a0883cefe54bed9407a3b73814e94ed55cf215a",
+    "code_tree_sha": {
+      "src": "dda710c559b74a471add821a6b20d68108531e37",
+      "scripts": "ad037eeb9beccaf57cdf154f51aa6804fa5aba23",
+      "configs": "ff4f7791d00c7f8b8b803d9c51bbb07c20056a27"
+    },
+    "uncommitted_changes_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "uncommitted_code_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "untracked_code_files": [],
+    "untracked_code_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "command": "/home/ubuntu/miniforge3/envs/capstone/bin/python scripts/causal_replay.py --config configs/causal_reconstruction_control_layer25.yaml --limit 250",
+    "config_path": "configs/causal_reconstruction_control_layer25.yaml",
+    "config_sha256": "02fbb66bc04f000497849380cceaa956d0be8c3074d7d45a79acbd9ecce13f80",
+    "input_sha256": {
+      "artifacts/collection/mixed_final_001/prepared/results/mixed_final_001_intervention/intervention/interactions.jsonl": "dfc4bb5049979cce2cf1f8bb627004cda750a16c706b0e93452e62f805f1596f",
+      "results/behavior/mixed_final_001_intervention_claude/labels.csv": "ecc8afc74b947d1d20b4c12f9a334fd13dcd0451fdfe5a0fa1728eed677e8612",
+      "results/feature_selection_pretrained_adapted_layer25/20261102T210433855083Z/feature_selection_summary.json": "576bcfd674c9c6424d21fc3e0642474b73c29cf6f672e5073fa1bbd70a0c9f2b",
+      "results/feature_selection_pretrained_adapted_layer25/20261102T210433855083Z/feature_reference_activations.json": "e2a82ec23c3884bdc2bd0e1be1bed3401749c1399f959aed6a3df73e3fb58cb2",
+      "artifacts/collection/mixed_final_001/prepared/results/mixed_final_001_intervention/contexts.jsonl": "b91347de42dbc2c1fdfc14b0deb9eb3f0bb80401751ea658ee2bca3f86cbb8d2",
+      "results/claude_validation/mixed_final_001/intervention/run_settings.json": "3c2ce4ffbbcfcb2e471e7064c098bec548390085659a00cc133e7fa065b74225",
+      "results/claude_validation/mixed_final_001/intervention/summary.json": "47f7a6261ec7085fddd8db37bb31cfacb0ddcb7c5d84a6930aaf176e358ee657",
+      "results/claude_validation/mixed_final_001/intervention/raw_results.jsonl": "623a9f4706579909bca2f1f69494cf7f26b6d84cbc0f0d0ba58dd4ef48dfb36a",
+      "results/claude_validation/mixed_final_001/intervention/binary_labels.csv": "8dbd147fb6d8f9838cac67358d481fff6f5daf8abebc098bff9c5553f9024591",
+      "results/claude_validation/mixed_final_001/intervention/exclusions.jsonl": "26c0ebfae9b4751bedb70e0929646b88b4deae146ab7a65ede945d471dc60230"
+    },
+    "label_policy": "claude_binary_v3_candidates",
+    "label_policy_sha256": "77eacb5439c65dc33563f6f3fc113691f18b0143f5fba9e83b8fc68253b4165b",
+    "packages": {
+      "torch": "2.13.0",
+      "transformers": "5.17.0",
+      "datasets": "5.0.1",
+      "numpy": "2.4.6",
+      "pandas": "3.0.5"
+    },
+    "site": "model.language_model.layers.25",
+    "intervention": "final_prompt_token_prefill_only",
+    "solver_spec": {
+      "id": "google/gemma-3-4b-it",
+      "revision": "093f9f388b31de276ce2de164bdc2081324b9767",
+      "loader": "gemma3",
+      "dtype": "bfloat16",
+      "device": "cuda:0",
+      "generation": {
+        "do_sample": false,
+        "max_new_tokens": 64
+      }
+    },
+    "sae_sha256": {
+      "TopK SAE": {
+        "results/sae/musique/runs/layer_25/20261102T182749413400Z-150e78c341c6/checkpoints/best_checkpoint.pt": "667c347dd965e6d67be5084b714f817facc751144658419a93eca63b8ae98344"
+      },
+      "Pretrained SAE": {
+        "results/sae/pretrained/gemma-scope-2-4b-it/resid_post_all/layer_25_width_16k_l0_big/config.json": "12a0441423adacb0d0f790f1d35c3fdf13fbeb6b3e55720be99606abf6a0669c",
+        "results/sae/pretrained/gemma-scope-2-4b-it/resid_post_all/layer_25_width_16k_l0_big/params.safetensors": "0fbb3bb9661b4523c655581e11d3f83c91dcc88d2fa62ce8dfb97a0d4b7b009d"
+      },
+      "Adapted pretrained SAE": {
+        "results/sae/decoder_finetuning/20261102T205853702830Z/best/config.json": "2c251c8303cb0bbca682c0df287e25719eceeed09e6db34589012c55ab7b4ee4",
+        "results/sae/decoder_finetuning/20261102T205853702830Z/best/params.safetensors": "5a522734f9ffe1c6a8cd6467e80da6f0b74ad09857f81625b26cd0d5c47d6e46"
+      }
+    },
+    "num_layers": 34,
+    "device": "cuda:0",
+    "device_name": "NVIDIA A10G",
+    "label_policy_name": "claude"
+  },
+  "outcome_note": "Acceptance = regenerated A2 labeled adopted_critic under claude_binary_v3_candidates rules, on eligible disagreement episodes only; these results say nothing about correctness or harmful compliance. The intervention is final-prompt-token, prefill-only. \u0394 is paired by question against the condition's control: the same SAE's reconstruction-only run (reconstruction splice) or the plain replay (error-preserving splice). Random edits are the per-question mean over the draws."
+}

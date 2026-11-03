@@ -1,0 +1,747 @@
+{
+  "config": {
+    "capstone_data_root": ".",
+    "interactions_jsonl": "artifacts/collection/mixed_final_001/prepared/results/mixed_final_001_intervention/intervention/interactions.jsonl",
+    "labels_csv": "results/behavior/mixed_final_001_intervention_claude/labels.csv",
+    "feature_selection_summary": "results/feature_selection_pretrained_adapted_layer25/20261102T210433855083Z/feature_selection_summary.json",
+    "layer": 25,
+    "solver": {
+      "id": "google/gemma-3-4b-it",
+      "revision": "093f9f388b31de276ce2de164bdc2081324b9767",
+      "loader": "gemma3",
+      "dtype": "bfloat16",
+      "device": "cuda:0",
+      "generation": {
+        "max_new_tokens": 64,
+        "do_sample": false
+      }
+    },
+    "musique_revision": null,
+    "contexts_jsonl": "artifacts/collection/mixed_final_001/prepared/results/mixed_final_001_intervention/contexts.jsonl",
+    "label_policy": "claude",
+    "claude": {
+      "source_run": "results/claude_validation/mixed_final_001/intervention",
+      "source_errors": "exclude",
+      "generated_errors": "exclude_episode",
+      "concurrency": 64,
+      "aws_profile": "school",
+      "region": "us-east-1"
+    },
+    "partition": "intervention",
+    "saes": {
+      "TopK SAE": {
+        "kind": "custom",
+        "path": "results/sae/musique/runs/layer_25/20261102T182749413400Z-150e78c341c6"
+      },
+      "Pretrained SAE": {
+        "kind": "gemma_scope",
+        "path": "results/sae/pretrained/gemma-scope-2-4b-it/resid_post_all/layer_25_width_16k_l0_big"
+      },
+      "Adapted pretrained SAE": {
+        "kind": "gemma_scope",
+        "path": "results/sae/decoder_finetuning/20261102T205853702830Z/best"
+      }
+    },
+    "n_random_draws": 1,
+    "reconstruction": true,
+    "error_preserving": false,
+    "ablation": true,
+    "steer_strengths": [],
+    "scale_fractions": [],
+    "edit_norms": [],
+    "random_directions": 0,
+    "probe_direction": null,
+    "norm_edit_policy": "cap_at_ablation",
+    "input_preparation": {
+      "collection_results": "artifacts/collection/mixed_final_001/prepared/results/mixed_final_001_intervention",
+      "feature_selection_config": "configs/feature_selection/feature_selection_pretrained_adapted_layer25.yaml"
+    },
+    "random_controls": "contribution",
+    "targeted_subsets": {},
+    "feature_reference": "results/feature_selection_pretrained_adapted_layer25/20261102T210433855083Z/feature_reference_activations.json",
+    "max_hours": null,
+    "min_replay_label_match": 0.98,
+    "on_replay_check_fail": "stop",
+    "limit": 250,
+    "seed": 42,
+    "n_bootstrap": 1000,
+    "n_permutations": 10000,
+    "output_dir": "results/causal_reconstruction_control_layer25"
+  },
+  "conditions": [
+    {
+      "experiment": "Baseline",
+      "condition": "no_sae",
+      "draw": null,
+      "features": null,
+      "sae": null,
+      "mode": null,
+      "values": null,
+      "strength": null,
+      "fraction": null,
+      "edit_norm": null
+    },
+    {
+      "sae": "TopK SAE",
+      "mode": "reconstruction",
+      "experiment": "TopK SAE",
+      "condition": "no_ablation",
+      "draw": null,
+      "features": [],
+      "values": null,
+      "strength": null,
+      "fraction": null,
+      "edit_norm": null
+    },
+    {
+      "sae": "TopK SAE",
+      "mode": "reconstruction",
+      "experiment": "TopK SAE",
+      "condition": "targeted_ablation",
+      "draw": null,
+      "features": [
+        2828,
+        12274,
+        1666,
+        10943,
+        744,
+        6854,
+        2737,
+        189,
+        4784,
+        5904
+      ],
+      "values": null,
+      "strength": null,
+      "fraction": null,
+      "edit_norm": null
+    },
+    {
+      "sae": "TopK SAE",
+      "mode": "reconstruction",
+      "experiment": "TopK SAE",
+      "condition": "random_ablation",
+      "draw": 0,
+      "features": [
+        7705,
+        2721,
+        11649,
+        3907,
+        8955,
+        2080,
+        5883,
+        411,
+        10510,
+        1548
+      ],
+      "values": null,
+      "strength": null,
+      "fraction": null,
+      "edit_norm": null
+    },
+    {
+      "sae": "Pretrained SAE",
+      "mode": "reconstruction",
+      "experiment": "Pretrained SAE",
+      "condition": "no_ablation",
+      "draw": null,
+      "features": [],
+      "values": null,
+      "strength": null,
+      "fraction": null,
+      "edit_norm": null
+    },
+    {
+      "sae": "Pretrained SAE",
+      "mode": "reconstruction",
+      "experiment": "Pretrained SAE",
+      "condition": "targeted_ablation",
+      "draw": null,
+      "features": [
+        4409,
+        12624,
+        14120,
+        10383,
+        12139,
+        1750,
+        16138,
+        16144,
+        7649,
+        15005
+      ],
+      "values": null,
+      "strength": null,
+      "fraction": null,
+      "edit_norm": null
+    },
+    {
+      "sae": "Pretrained SAE",
+      "mode": "reconstruction",
+      "experiment": "Pretrained SAE",
+      "condition": "random_ablation",
+      "draw": 0,
+      "features": [
+        14938,
+        4454,
+        13923,
+        5759,
+        1814,
+        9313,
+        8495,
+        3544,
+        9450,
+        8278
+      ],
+      "values": null,
+      "strength": null,
+      "fraction": null,
+      "edit_norm": null
+    },
+    {
+      "sae": "Adapted pretrained SAE",
+      "mode": "reconstruction",
+      "experiment": "Adapted pretrained SAE",
+      "condition": "no_ablation",
+      "draw": null,
+      "features": [],
+      "values": null,
+      "strength": null,
+      "fraction": null,
+      "edit_norm": null
+    },
+    {
+      "sae": "Adapted pretrained SAE",
+      "mode": "reconstruction",
+      "experiment": "Adapted pretrained SAE",
+      "condition": "targeted_ablation",
+      "draw": null,
+      "features": [
+        4409,
+        12624,
+        14120,
+        10383,
+        12139,
+        1750,
+        16138,
+        16144,
+        7649,
+        15005
+      ],
+      "values": null,
+      "strength": null,
+      "fraction": null,
+      "edit_norm": null
+    },
+    {
+      "sae": "Adapted pretrained SAE",
+      "mode": "reconstruction",
+      "experiment": "Adapted pretrained SAE",
+      "condition": "random_ablation",
+      "draw": 0,
+      "features": [
+        14938,
+        4454,
+        7797,
+        5759,
+        1814,
+        2757,
+        13490,
+        2918,
+        9450,
+        5139
+      ],
+      "values": null,
+      "strength": null,
+      "fraction": null,
+      "edit_norm": null
+    }
+  ],
+  "features": {
+    "TopK SAE": {
+      "targeted": [
+        2828,
+        12274,
+        1666,
+        10943,
+        744,
+        6854,
+        2737,
+        189,
+        4784,
+        5904
+      ],
+      "random": [
+        [
+          7705,
+          2721,
+          11649,
+          3907,
+          8955,
+          2080,
+          5883,
+          411,
+          10510,
+          1548
+        ]
+      ],
+      "match": [
+        {
+          "draw": 0,
+          "targeted": 2828,
+          "control": 7705,
+          "targeted_frequency": 0.229105,
+          "control_frequency": 0.211066,
+          "frequency_ratio": 0.921263176272888,
+          "targeted_contribution": 378.91354301399997,
+          "control_contribution": 296.769848521,
+          "contribution_ratio": 0.7832125665406343
+        },
+        {
+          "draw": 0,
+          "targeted": 12274,
+          "control": 2721,
+          "targeted_frequency": 0.831899,
+          "control_frequency": 0.70954,
+          "frequency_ratio": 0.8529160390864755,
+          "targeted_contribution": 325.04525912,
+          "control_contribution": 195.58322846399997,
+          "contribution_ratio": 0.601710755583716
+        },
+        {
+          "draw": 0,
+          "targeted": 1666,
+          "control": 11649,
+          "targeted_frequency": 1.0,
+          "control_frequency": 0.937627,
+          "frequency_ratio": 0.937627,
+          "targeted_contribution": 27857.7766123,
+          "control_contribution": 414.475183176,
+          "contribution_ratio": 0.014878257836018306
+        },
+        {
+          "draw": 0,
+          "targeted": 10943,
+          "control": 3907,
+          "targeted_frequency": 0.688997,
+          "control_frequency": 0.687901,
+          "frequency_ratio": 0.9984092818981796,
+          "targeted_contribution": 383.636301828,
+          "control_contribution": 225.81905380099997,
+          "contribution_ratio": 0.5886279601929955
+        },
+        {
+          "draw": 0,
+          "targeted": 744,
+          "control": 8955,
+          "targeted_frequency": 0.891806,
+          "control_frequency": 0.917828,
+          "frequency_ratio": 1.0291789918435175,
+          "targeted_contribution": 435.12068020999993,
+          "control_contribution": 553.0686531959999,
+          "contribution_ratio": 1.2710695638025649
+        },
+        {
+          "draw": 0,
+          "targeted": 6854,
+          "control": 2080,
+          "targeted_frequency": 0.905463,
+          "control_frequency": 0.729535,
+          "frequency_ratio": 0.8057038222434268,
+          "targeted_contribution": 360.31148550499995,
+          "control_contribution": 187.50729801999998,
+          "contribution_ratio": 0.5204033331249386
+        },
+        {
+          "draw": 0,
+          "targeted": 2737,
+          "control": 5883,
+          "targeted_frequency": 0.704453,
+          "control_frequency": 0.742683,
+          "frequency_ratio": 1.0542690569846391,
+          "targeted_contribution": 224.36193660899997,
+          "control_contribution": 218.444650627,
+          "contribution_ratio": 0.9736261592700006
+        },
+        {
+          "draw": 0,
+          "targeted": 189,
+          "control": 411,
+          "targeted_frequency": 0.699523,
+          "control_frequency": 0.790617,
+          "frequency_ratio": 1.1302230234030903,
+          "targeted_contribution": 197.724495645,
+          "control_contribution": 262.232824335,
+          "contribution_ratio": 1.3262536008983936
+        },
+        {
+          "draw": 0,
+          "targeted": 4784,
+          "control": 10510,
+          "targeted_frequency": 0.382337,
+          "control_frequency": 0.325247,
+          "frequency_ratio": 0.8506814668734651,
+          "targeted_contribution": 119.85175066,
+          "control_contribution": 142.20987527699998,
+          "contribution_ratio": 1.1865481688325636
+        },
+        {
+          "draw": 0,
+          "targeted": 5904,
+          "control": 1548,
+          "targeted_frequency": 0.400767,
+          "control_frequency": 0.45594,
+          "frequency_ratio": 1.1376685206117272,
+          "targeted_contribution": 205.56358018499998,
+          "control_contribution": 215.451253074,
+          "contribution_ratio": 1.0481003146573993
+        }
+      ]
+    },
+    "Pretrained SAE": {
+      "targeted": [
+        4409,
+        12624,
+        14120,
+        10383,
+        12139,
+        1750,
+        16138,
+        16144,
+        7649,
+        15005
+      ],
+      "random": [
+        [
+          14938,
+          4454,
+          13923,
+          5759,
+          1814,
+          9313,
+          8495,
+          3544,
+          9450,
+          8278
+        ]
+      ],
+      "match": [
+        {
+          "draw": 0,
+          "targeted": 4409,
+          "control": 14938,
+          "targeted_frequency": 0.850642,
+          "control_frequency": 0.862185,
+          "frequency_ratio": 1.0135697508470072,
+          "targeted_contribution": 381.63586707,
+          "control_contribution": 348.43817008,
+          "contribution_ratio": 0.9130121148075664
+        },
+        {
+          "draw": 0,
+          "targeted": 12624,
+          "control": 4454,
+          "targeted_frequency": 0.784199,
+          "control_frequency": 0.909493,
+          "frequency_ratio": 1.1597732208278766,
+          "targeted_contribution": 263.79790734600004,
+          "control_contribution": 749.05222065,
+          "contribution_ratio": 2.839492656276213
+        },
+        {
+          "draw": 0,
+          "targeted": 14120,
+          "control": 13923,
+          "targeted_frequency": 0.391845,
+          "control_frequency": 0.386915,
+          "frequency_ratio": 0.9874184945577971,
+          "targeted_contribution": 116.44882215000001,
+          "control_contribution": 261.67189655699997,
+          "contribution_ratio": 2.247097838567532
+        },
+        {
+          "draw": 0,
+          "targeted": 10383,
+          "control": 5759,
+          "targeted_frequency": 0.975935,
+          "control_frequency": 0.982861,
+          "frequency_ratio": 1.0070967841095975,
+          "targeted_contribution": 340.72131019999995,
+          "control_contribution": 844.32144313,
+          "contribution_ratio": 2.4780411962914557
+        },
+        {
+          "draw": 0,
+          "targeted": 12139,
+          "control": 1814,
+          "targeted_frequency": 0.945336,
+          "control_frequency": 0.995735,
+          "frequency_ratio": 1.0533133192854183,
+          "targeted_contribution": 260.51382588499996,
+          "control_contribution": 824.7372623999998,
+          "contribution_ratio": 3.1658099511542552
+        },
+        {
+          "draw": 0,
+          "targeted": 1750,
+          "control": 9313,
+          "targeted_frequency": 0.432149,
+          "control_frequency": 0.489044,
+          "frequency_ratio": 1.131655979766238,
+          "targeted_contribution": 217.95300976000001,
+          "control_contribution": 96.01116032399999,
+          "contribution_ratio": 0.44051311991388936
+        },
+        {
+          "draw": 0,
+          "targeted": 16138,
+          "control": 8495,
+          "targeted_frequency": 0.313625,
+          "control_frequency": 0.294491,
+          "frequency_ratio": 0.9389908330011958,
+          "targeted_contribution": 143.253114853,
+          "control_contribution": 135.232856775,
+          "contribution_ratio": 0.9440133773968542
+        },
+        {
+          "draw": 0,
+          "targeted": 16144,
+          "control": 3544,
+          "targeted_frequency": 0.725466,
+          "control_frequency": 0.58589,
+          "frequency_ratio": 0.8076050428276446,
+          "targeted_contribution": 322.29995850299997,
+          "control_contribution": 189.10283178,
+          "contribution_ratio": 0.5867293084936585
+        },
+        {
+          "draw": 0,
+          "targeted": 7649,
+          "control": 9450,
+          "targeted_frequency": 0.213922,
+          "control_frequency": 0.171584,
+          "frequency_ratio": 0.802086741896579,
+          "targeted_contribution": 104.768,
+          "control_contribution": 93.730009167,
+          "contribution_ratio": 0.89464349006376
+        },
+        {
+          "draw": 0,
+          "targeted": 15005,
+          "control": 8278,
+          "targeted_frequency": 0.589842,
+          "control_frequency": 0.596377,
+          "frequency_ratio": 1.0110792381688656,
+          "targeted_contribution": 202.58743401,
+          "control_contribution": 195.18222416,
+          "contribution_ratio": 0.9634468451304118
+        }
+      ]
+    },
+    "Adapted pretrained SAE": {
+      "targeted": [
+        4409,
+        12624,
+        14120,
+        10383,
+        12139,
+        1750,
+        16138,
+        16144,
+        7649,
+        15005
+      ],
+      "random": [
+        [
+          14938,
+          4454,
+          7797,
+          5759,
+          1814,
+          2757,
+          13490,
+          2918,
+          9450,
+          5139
+        ]
+      ],
+      "match": [
+        {
+          "draw": 0,
+          "targeted": 4409,
+          "control": 14938,
+          "targeted_frequency": 0.850642,
+          "control_frequency": 0.862185,
+          "frequency_ratio": 1.0135697508470072,
+          "targeted_contribution": 378.62641659300004,
+          "control_contribution": 341.156520012,
+          "contribution_ratio": 0.9010372891617917
+        },
+        {
+          "draw": 0,
+          "targeted": 12624,
+          "control": 4454,
+          "targeted_frequency": 0.784199,
+          "control_frequency": 0.909493,
+          "frequency_ratio": 1.1597732208278766,
+          "targeted_contribution": 255.25903960800002,
+          "control_contribution": 739.4175946949999,
+          "contribution_ratio": 2.8967342188175578
+        },
+        {
+          "draw": 0,
+          "targeted": 14120,
+          "control": 7797,
+          "targeted_frequency": 0.391845,
+          "control_frequency": 0.340116,
+          "frequency_ratio": 0.8679860659189219,
+          "targeted_contribution": 110.658926861,
+          "control_contribution": 260.31816755999995,
+          "contribution_ratio": 2.352437123188342
+        },
+        {
+          "draw": 0,
+          "targeted": 10383,
+          "control": 5759,
+          "targeted_frequency": 0.975935,
+          "control_frequency": 0.982861,
+          "frequency_ratio": 1.0070967841095975,
+          "targeted_contribution": 341.68497331000003,
+          "control_contribution": 862.54171767,
+          "contribution_ratio": 2.52437708721666
+        },
+        {
+          "draw": 0,
+          "targeted": 12139,
+          "control": 1814,
+          "targeted_frequency": 0.945336,
+          "control_frequency": 0.995735,
+          "frequency_ratio": 1.0533133192854183,
+          "targeted_contribution": 258.21317821499997,
+          "control_contribution": 819.511783802,
+          "contribution_ratio": 3.1737798568887814
+        },
+        {
+          "draw": 0,
+          "targeted": 1750,
+          "control": 2757,
+          "targeted_frequency": 0.432149,
+          "control_frequency": 0.349546,
+          "frequency_ratio": 0.8088552790819833,
+          "targeted_contribution": 218.97710216,
+          "control_contribution": 464.858631488,
+          "contribution_ratio": 2.12286411183002
+        },
+        {
+          "draw": 0,
+          "targeted": 16138,
+          "control": 13490,
+          "targeted_frequency": 0.313625,
+          "control_frequency": 0.360189,
+          "frequency_ratio": 1.1484703068951774,
+          "targeted_contribution": 133.92325524100002,
+          "control_contribution": 140.28049660000002,
+          "contribution_ratio": 1.0474692864025736
+        },
+        {
+          "draw": 0,
+          "targeted": 16144,
+          "control": 2918,
+          "targeted_frequency": 0.725466,
+          "control_frequency": 0.830333,
+          "frequency_ratio": 1.1445512263841446,
+          "targeted_contribution": 313.98598466699997,
+          "control_contribution": 530.961954474,
+          "contribution_ratio": 1.6910371175870011
+        },
+        {
+          "draw": 0,
+          "targeted": 7649,
+          "control": 9450,
+          "targeted_frequency": 0.213922,
+          "control_frequency": 0.171584,
+          "frequency_ratio": 0.802086741896579,
+          "targeted_contribution": 99.507284416,
+          "control_contribution": 90.1149591789,
+          "contribution_ratio": 0.9056116816751377
+        },
+        {
+          "draw": 0,
+          "targeted": 15005,
+          "control": 5139,
+          "targeted_frequency": 0.589842,
+          "control_frequency": 0.50227,
+          "frequency_ratio": 0.8515331224293964,
+          "targeted_contribution": 191.26370854500001,
+          "control_contribution": 199.892197116,
+          "contribution_ratio": 1.045113046466784
+        }
+      ]
+    }
+  },
+  "provenance": {
+    "git_commit": "6a0883cefe54bed9407a3b73814e94ed55cf215a",
+    "code_tree_sha": {
+      "src": "dda710c559b74a471add821a6b20d68108531e37",
+      "scripts": "ad037eeb9beccaf57cdf154f51aa6804fa5aba23",
+      "configs": "ff4f7791d00c7f8b8b803d9c51bbb07c20056a27"
+    },
+    "uncommitted_changes_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "uncommitted_code_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "untracked_code_files": [],
+    "untracked_code_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "command": "/home/ubuntu/miniforge3/envs/capstone/bin/python scripts/causal_replay.py --config configs/causal_reconstruction_control_layer25.yaml --limit 250",
+    "config_path": "configs/causal_reconstruction_control_layer25.yaml",
+    "config_sha256": "02fbb66bc04f000497849380cceaa956d0be8c3074d7d45a79acbd9ecce13f80",
+    "input_sha256": {
+      "artifacts/collection/mixed_final_001/prepared/results/mixed_final_001_intervention/intervention/interactions.jsonl": "dfc4bb5049979cce2cf1f8bb627004cda750a16c706b0e93452e62f805f1596f",
+      "results/behavior/mixed_final_001_intervention_claude/labels.csv": "ecc8afc74b947d1d20b4c12f9a334fd13dcd0451fdfe5a0fa1728eed677e8612",
+      "results/feature_selection_pretrained_adapted_layer25/20261102T210433855083Z/feature_selection_summary.json": "576bcfd674c9c6424d21fc3e0642474b73c29cf6f672e5073fa1bbd70a0c9f2b",
+      "results/feature_selection_pretrained_adapted_layer25/20261102T210433855083Z/feature_reference_activations.json": "e2a82ec23c3884bdc2bd0e1be1bed3401749c1399f959aed6a3df73e3fb58cb2",
+      "artifacts/collection/mixed_final_001/prepared/results/mixed_final_001_intervention/contexts.jsonl": "b91347de42dbc2c1fdfc14b0deb9eb3f0bb80401751ea658ee2bca3f86cbb8d2",
+      "results/claude_validation/mixed_final_001/intervention/run_settings.json": "3c2ce4ffbbcfcb2e471e7064c098bec548390085659a00cc133e7fa065b74225",
+      "results/claude_validation/mixed_final_001/intervention/summary.json": "47f7a6261ec7085fddd8db37bb31cfacb0ddcb7c5d84a6930aaf176e358ee657",
+      "results/claude_validation/mixed_final_001/intervention/raw_results.jsonl": "623a9f4706579909bca2f1f69494cf7f26b6d84cbc0f0d0ba58dd4ef48dfb36a",
+      "results/claude_validation/mixed_final_001/intervention/binary_labels.csv": "8dbd147fb6d8f9838cac67358d481fff6f5daf8abebc098bff9c5553f9024591",
+      "results/claude_validation/mixed_final_001/intervention/exclusions.jsonl": "26c0ebfae9b4751bedb70e0929646b88b4deae146ab7a65ede945d471dc60230"
+    },
+    "label_policy": "claude_binary_v3_candidates",
+    "label_policy_sha256": "77eacb5439c65dc33563f6f3fc113691f18b0143f5fba9e83b8fc68253b4165b",
+    "packages": {
+      "torch": "2.13.0",
+      "transformers": "5.17.0",
+      "datasets": "5.0.1",
+      "numpy": "2.4.6",
+      "pandas": "3.0.5"
+    },
+    "site": "model.language_model.layers.25",
+    "intervention": "final_prompt_token_prefill_only",
+    "solver_spec": {
+      "id": "google/gemma-3-4b-it",
+      "revision": "093f9f388b31de276ce2de164bdc2081324b9767",
+      "loader": "gemma3",
+      "dtype": "bfloat16",
+      "device": "cuda:0",
+      "generation": {
+        "do_sample": false,
+        "max_new_tokens": 64
+      }
+    },
+    "sae_sha256": {
+      "TopK SAE": {
+        "results/sae/musique/runs/layer_25/20261102T182749413400Z-150e78c341c6/checkpoints/best_checkpoint.pt": "667c347dd965e6d67be5084b714f817facc751144658419a93eca63b8ae98344"
+      },
+      "Pretrained SAE": {
+        "results/sae/pretrained/gemma-scope-2-4b-it/resid_post_all/layer_25_width_16k_l0_big/config.json": "12a0441423adacb0d0f790f1d35c3fdf13fbeb6b3e55720be99606abf6a0669c",
+        "results/sae/pretrained/gemma-scope-2-4b-it/resid_post_all/layer_25_width_16k_l0_big/params.safetensors": "0fbb3bb9661b4523c655581e11d3f83c91dcc88d2fa62ce8dfb97a0d4b7b009d"
+      },
+      "Adapted pretrained SAE": {
+        "results/sae/decoder_finetuning/20261102T205853702830Z/best/config.json": "2c251c8303cb0bbca682c0df287e25719eceeed09e6db34589012c55ab7b4ee4",
+        "results/sae/decoder_finetuning/20261102T205853702830Z/best/params.safetensors": "5a522734f9ffe1c6a8cd6467e80da6f0b74ad09857f81625b26cd0d5c47d6e46"
+      }
+    },
+    "num_layers": 34,
+    "device": "cuda:0",
+    "device_name": "NVIDIA A10G",
+    "label_policy_name": "claude"
+  }
+}
