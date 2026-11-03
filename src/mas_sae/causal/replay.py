@@ -63,7 +63,10 @@ features reported there; each SAE's checkpoint hashes must match that run's.
 The plain replays run first, for every episode, and are checked against collection before any SAE
 condition is generated: a run whose replay does not reproduce collection stops (or, if configured,
 continues marked unvalidated). Generations are appended to ``per_row.jsonl`` as they finish, so an
-interrupted run resumes where it stopped and ``analyse`` can be run on a partial run at any time. A
+interrupted run resumes where it stopped and ``analyse`` can be run on a partial run at any time.
+An episode's edited conditions share one plain prefill of the layers up to the splice, and a condition
+whose edit repeats one already generated reuses that generation (``generate_episode``, #214): the rows
+are the ones a separate generation per condition writes. A
 resume must use the same inputs, code, environment and episode order as the run it continues (it
 may only add episodes), and an unfinished last line from an interrupted write is cut off before
 appending. Entry point: ``scripts/causal_replay.py``.
@@ -74,6 +77,7 @@ from __future__ import annotations
 import contextlib
 import hashlib
 import io
+import itertools
 import json
 import logging
 import re
@@ -861,46 +865,104 @@ def intervention_description(layer: int, n_layers: int | None) -> str:
                    "can change even when the first token does not.")
 
 
+def splice_for(comp: Components, cond: dict):
+    """The context that applies ``cond``'s edit during a generation (none for the plain replay)."""
+    if cond.get("probe_direction"):
+        if comp.probe_vector is None:
+            raise ValueError("Learned direction condition has no loaded probe vector.")
+        return DirectionSplice(comp.model, comp.site, cond["edit_norm"], direction=comp.probe_vector)
+    if cond.get("direction_seed") is not None:
+        return DirectionSplice(comp.model, comp.site, cond["edit_norm"], cond["direction_seed"])
+    if cond["features"] is not None:
+        return SAESplice(comp.model, comp.site, comp.saes[cond.get("sae", cond["experiment"])], cond["features"],
+                         cond.get("mode") or "reconstruction", cond.get("values"), cond.get("fraction"),
+                         cond.get("edit_norm"), cond.get("norm_edit_policy", "allow"))
+    return contextlib.nullcontext()
+
+
+def _solve(comp: Components, ep: dict) -> str:
+    """The Solver's A2 for ``ep``, with whatever hooks are installed."""
+    if ep.get("a2_presentation", "feedback") == "candidates":
+        return comp.solver.choose(ep["question"], comp.paragraphs[ep["question_id"]],
+                                  ep["solver_attempt_1"], ep["critic_advocated_answer"], ep["candidate_order"])
+    return comp.solver.revise(ep["question"], comp.paragraphs[ep["question_id"]],
+                              ep["solver_attempt_1"], ep["critic_feedback"])
+
+
+def _generation(comp: Components, a2: str, first: FirstTokenLogits, control_token: int | None) -> dict:
+    """What a generation produced: everything in a row that depends on the edit only through generation."""
+    generated_ids = comp.solver.last_generated_token_ids or []
+    # the token generation actually chose (after any logits processing), scored by the model's raw log-probs
+    token = generated_ids[0] if generated_ids else None
+    return {"a2": a2, "gen": dict(comp.solver.last_generation or {}), "prompt": dict(comp.solver.last_prompt or {}),
+            "token": token, "first_token_logprob": None if token is None else float(first.logprobs[token]),
+            "control_first_token_logprob": None if control_token is None else float(first.logprobs[control_token])}
+
+
 def generate(comp: Components, ep: dict, cond: dict, control_token: int | None = None) -> dict:
     """One regenerated A2 under ``cond``, labeled, with telemetry.
 
     ``control_token`` is the first token its control generated; the row records its log-probability here.
     """
-    if cond.get("probe_direction"):
-        if comp.probe_vector is None:
-            raise ValueError("Learned direction condition has no loaded probe vector.")
-        splice = DirectionSplice(comp.model, comp.site, cond["edit_norm"], direction=comp.probe_vector)
-    elif cond.get("direction_seed") is not None:
-        splice = DirectionSplice(comp.model, comp.site, cond["edit_norm"], cond["direction_seed"])
-    elif cond["features"] is not None:
-        splice = SAESplice(comp.model, comp.site, comp.saes[cond.get("sae", cond["experiment"])], cond["features"],
-                           cond.get("mode") or "reconstruction", cond.get("values"), cond.get("fraction"),
-                           cond.get("edit_norm"), cond.get("norm_edit_policy", "allow"))
-    else:
-        splice = contextlib.nullcontext()
+    splice = splice_for(comp, cond)
     t0 = time.perf_counter()
     with splice, FirstTokenLogits(comp.model) as first:
-        if ep.get("a2_presentation", "feedback") == "candidates":
-            a2 = comp.solver.choose(ep["question"], comp.paragraphs[ep["question_id"]],
-                                    ep["solver_attempt_1"], ep["critic_advocated_answer"], ep["candidate_order"])
-        else:
-            a2 = comp.solver.revise(ep["question"], comp.paragraphs[ep["question_id"]],
-                                    ep["solver_attempt_1"], ep["critic_feedback"])
+        a2 = _solve(comp, ep)
     seconds = time.perf_counter() - t0
-    generated_ids = comp.solver.last_generated_token_ids or []
+    stats = splice.stats if isinstance(splice, SAESplice) else {}
+    return _row(comp, ep, cond, _generation(comp, a2, first, control_token), stats, seconds)
+
+
+def generate_episode(comp: Components, items: list, first: dict):
+    """``generate`` for a run of one episode's edited conditions, in order, sharing what they have in common.
+
+    Every condition splices the same layer at the same position of the same prompt, so (#214):
+    - layers 0..L of the prefill are computed once, in one plain generation, and replayed
+      (``PrefixCache``) in each condition's generation, which recomputes only the layers above L;
+    - a condition whose edited activation (and control token) is bitwise one already generated, e.g.
+      a repeated random draw or a norm-matched edit capped at the ablation, reuses that generation.
+    Each row keeps its own edit statistics; rows are the ones ``generate`` writes, apart from ``seconds``.
+    ``first`` maps done keys to their first token, and must hold each condition's control before it.
+    """
+    from mas_sae.causal.prefix import PrefixCache
+
+    ep, qid = items[0][0], items[0][0]["question_id"]
+    prefix = PrefixCache(comp.model, comp.site)
+    with prefix.capture():
+        _solve(comp, ep)
+    prompt = (comp.solver.last_prompt or {}).get("input_ids_sha256")
+    plain = first.get((qid, BASELINE, "no_sae", None))
+    if plain is not None and (comp.solver.last_generated_token_ids or [None])[0] != plain:
+        raise RuntimeError(f"{qid}: the plain generation changed its first token; generation is not deterministic.")
+    done = {}
+    for e, cond in items:
+        if e["question_id"] != qid or cond["features"] is None:
+            raise ValueError("generate_episode takes one episode's edited conditions.")
+        ctl = control_key(cond)
+        control_token = None if ctl is None else first[(qid, *ctl)]
+        splice = splice_for(comp, cond)
+        t0 = time.perf_counter()
+        with torch.inference_mode():
+            new = splice._edit(prefix.final_activation.float()).to(prefix.output.dtype)
+        edit = (hashlib.sha256(new.cpu().contiguous().view(torch.uint8).numpy().tobytes()).hexdigest(), control_token)
+        if edit not in done:
+            with prefix.replay(), splice, FirstTokenLogits(comp.model) as logits:
+                a2 = _solve(comp, ep)
+            if (comp.solver.last_prompt or {}).get("input_ids_sha256") != prompt:
+                raise RuntimeError(f"{qid}: a condition's prompt differs from the captured one.")
+            done[edit] = _generation(comp, a2, logits, control_token)
+        yield _row(comp, e, cond, done[edit], splice.stats, time.perf_counter() - t0)
+
+
+def _row(comp: Components, ep: dict, cond: dict, g: dict, stats: dict, seconds: float) -> dict:
+    a2, gen, prompt, token = g["a2"], g["gen"], g["prompt"], g["token"]
     if comp.info.get("label_policy_name") == "claude":
         from .semantic import generation_label
         label = generation_label(ep, a2)
     else:
         policy = bl.POLICIES[comp.info.get("label_policy_name", "v0.1.2-qc")]
-        label = bl.classify_candidate({**ep, "solver_attempt_2": a2,
-            "solver_a2_first_token_id": generated_ids[0] if generated_ids else None}, policy)
+        label = bl.classify_candidate({**ep, "solver_attempt_2": a2, "solver_a2_first_token_id": token}, policy)
         label["adopted"] = int(label["solver_response"] == ACCEPT)
-    gen = comp.solver.last_generation or {}
-    prompt = comp.solver.last_prompt or {}
-    stats = splice.stats if isinstance(splice, SAESplice) else {}
-    # the token generation actually chose (after any logits processing), scored by the model's raw log-probs
-    token = generated_ids[0] if generated_ids else None
     stored_prompt = ep.get("stored_a2_input_ids_sha256")
     stored_prompt = stored_prompt if isinstance(stored_prompt, str) else None
     return {"question_id": ep["question_id"], "experiment": cond["experiment"],
@@ -916,8 +978,8 @@ def generate(comp: Components, ep: dict, cond: dict, control_token: int | None =
             "prompt_tokens": prompt.get("prompt_tokens"), "input_ids_sha256": prompt.get("input_ids_sha256"),
             "prompt_matches_stored": None if stored_prompt is None else prompt.get("input_ids_sha256") == stored_prompt,
             "first_token_id": token,
-            "first_token_logprob": None if token is None else float(first.logprobs[token]),
-            "control_first_token_logprob": None if control_token is None else float(first.logprobs[control_token]),
+            "first_token_logprob": g["first_token_logprob"],
+            "control_first_token_logprob": g["control_first_token_logprob"],
             "n_active_features": stats.get("n_active"), "n_ablated_active": stats.get("n_ablated_active"),
             "removed_rel_norm": stats.get("removed_rel_norm"), "raw_edit_rel_norm": stats.get("raw_edit_rel_norm"),
             "edit_scale": stats.get("edit_scale"),
@@ -1046,18 +1108,32 @@ def replay(cfg: ReplayConfig, episodes: pd.DataFrame, comp: Components, run_dir:
     return run_dir
 
 
+def _generations(todo: list, comp: Components, first: dict, reuse: bool):
+    """Rows for ``todo`` in order; with ``reuse``, each episode's run of edited conditions goes
+    through ``generate_episode``. Lazy, so ``first`` is updated with each row before the next one."""
+    runs = itertools.groupby(todo, key=lambda t: (t[0]["question_id"], t[1]["features"] is not None))
+    for (_, edited), run in runs:
+        run = list(run)
+        if reuse and edited and len(run) > 1:
+            yield from generate_episode(comp, run, first)
+            continue
+        for ep, c in run:
+            ctl = control_key(c)
+            yield generate(comp, ep, c, None if ctl is None else first[(ep["question_id"], *ctl)])
+
+
 def generate_all(todo: list, comp: Components, out: Path, first: dict, what: str,
-                  max_hours: float | None = None) -> None:
+                  max_hours: float | None = None, reuse: bool = True) -> None:
     """Generate and append ``todo`` in order; ``first`` maps done keys to their first generated token.
 
-    With ``max_hours``, warns once (after 200 generations) if ``todo`` is projected to take longer.
+    ``reuse`` shares each episode's common work across its edited conditions (``generate_episode``);
+    the rows are the same. With ``max_hours``, warns once (after 200 generations) if ``todo`` is
+    projected to take longer.
     """
     t0 = time.perf_counter()
     with out.open("a") as f:
-        for i, (ep, c) in enumerate(todo, 1):
-            ctl = control_key(c)
-            # conditions() orders each control before what is compared with it, so its row exists
-            row = generate(comp, ep, c, None if ctl is None else first[(ep["question_id"], *ctl)])
+        # conditions() orders each control before what is compared with it, so its row exists
+        for i, row in enumerate(_generations(todo, comp, first, reuse), 1):
             first[key(row)] = row["first_token_id"]
             f.write(json.dumps(row) + "\n")
             f.flush()
