@@ -1,0 +1,23 @@
+{
+  "source": "/home/ubuntu/fall-2026-group3-run146/results/causal_topk_mixed_layer25/20261103T024624099539Z/distributed/merged",
+  "source_sha256": {
+    "per_row.jsonl": "b92aef471d3dda0bbf4be0de91a60c07d21c1fc3fe8fed71012fbe090c29bd4b",
+    "replay_config.json": "09de41f694f233278922a7ccaf9b54ee33ee9b287b2d9d563af315739d2e72a6",
+    "episodes.csv": "0687f79a25f9e45228650701ad594d2a5e10f8b86aab324b9fe570010d574446"
+  },
+  "changed": {
+    "config.claude.generated_errors": [
+      "stop",
+      "exclude_episode"
+    ]
+  },
+  "reason": "Team decision 2026-11-03 for the presentation: exclude the episodes whose targeted ablation (all features or f1666) produced an empty Solver answer, which Claude cannot label.",
+  "empty_answer_questions": [
+    "synthetic:2hop__synthetic_0d682a013b9e43ed88ce3cabcbcd15b5",
+    "synthetic:3hop1__synthetic_30ba9430d94e4325818f217081b83944",
+    "synthetic:4hop2__synthetic_1249fd4db5d34fb8938812d761647eb3",
+    "synthetic:4hop2__synthetic_33b99718d32e4f969fceac5bc6280e95",
+    "synthetic:4hop2__synthetic_bbfc651fa5554e69b3d2df6656f48ff6",
+    "synthetic:4hop2__synthetic_e0eb8f84b0c1440e92d88f6a1dd9abfd"
+  ]
+}
