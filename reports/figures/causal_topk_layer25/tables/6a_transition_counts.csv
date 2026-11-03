@@ -1,0 +1,5 @@
+Edit,Generations,Answer changed (%),"Reworded, same label (%)",Adoption→Retention,Retention→Adoption,Became Out,Episodes with an Adoption↔Retention flip
+All 10 features: turn off,494,18.83,7.49,22,7,26,29
+f1666 alone: turn off,494,18.62,7.09,19,11,26,30
+Other 9 (without f1666): turn off,494,1.01,0.4,1,2,0,3
+Random features: turn off (all 3 arms),148200,1.15,0.51,528,353,59,44
