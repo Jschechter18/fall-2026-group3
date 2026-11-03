@@ -179,3 +179,41 @@ def test_presets_and_worker_policy_metadata(tmp_path):
     condition = next(x for x in conds if x.get("norm_edit_policy"))
     with pytest.raises(ValueError, match="metadata differs"):
         distributed._validate_condition_metadata([{**condition, "question_id": "q", "norm_edit_policy": "allow"}], conds)
+
+
+def test_pretrained_and_reconstruction_control_presets():
+    # #220: Exp 2 (original and decoder-fine-tuned pretrained SAEs) at the TopK run's standard, and Control 1
+    # (each SAE with no ablation, on the reconstruction splice) as its own run
+    root = Path(__file__).resolve().parents[3]
+    focused = replay.ReplayConfig.from_yaml(root / "configs/causal_topk_mixed_layer25.yaml")
+    exp2 = replay.ReplayConfig.from_yaml(root / "configs/causal_pretrained_layer25.yaml")
+    control = replay.ReplayConfig.from_yaml(root / "configs/causal_reconstruction_control_layer25.yaml")
+    original = "results/sae/pretrained/gemma-scope-2-4b-it/resid_post_all/layer_25_width_16k_l0_big"
+    adapted = "results/sae/decoder_finetuning/20261102T205853702830Z/best"
+    assert {n: (s["kind"], s["path"]) for n, s in exp2.saes.items()} == {
+        "Pretrained SAE": ("gemma_scope", original), "Adapted pretrained SAE": ("gemma_scope", adapted)}
+    assert not exp2.targeted_subsets and exp2.claude["generated_errors"] == "exclude_episode"
+    same = ("partition", "layer", "interactions_jsonl", "contexts_jsonl", "labels_csv", "label_policy", "solver",
+            "random_controls", "n_random_draws", "random_directions", "reconstruction", "error_preserving", "ablation",
+            "edit_norms", "norm_edit_policy", "min_replay_label_match", "on_replay_check_fail", "seed",
+            "n_bootstrap", "n_permutations")
+    assert {k: getattr(exp2, k) for k in same} == {k: getattr(focused, k) for k in same}
+    assert {k: v for k, v in exp2.claude.items() if k != "generated_errors"} == \
+           {k: v for k, v in focused.claude.items() if k != "generated_errors"}
+
+    assert control.reconstruction and not control.error_preserving and control.ablation
+    assert control.edit_norms == [] and control.random_directions == 0 and control.n_random_draws == 1
+    assert control.saes == {"TopK SAE": focused.saes["TopK SAE"], **exp2.saes}
+    for k in ("feature_selection_summary", "feature_reference", "labels_csv", "interactions_jsonl", "seed", "solver"):
+        assert getattr(control, k) == getattr(exp2, k)
+    assert len({focused.output_dir, exp2.output_dir, control.output_dir}) == 3
+
+    toy = lambda c: {n: {"targeted": list(range(10)), "random": [list(range(10 + 10 * d, 20 + 10 * d))
+                                                                 for d in range(c.n_random_draws)]} for n in c.saes}
+    exp2_conds = replay.configured_conditions(exp2, toy(exp2))
+    control_conds = replay.configured_conditions(control, toy(control))
+    assert len(exp2_conds) == 1 + 2 * 3 * (1 + 100) + 2 * 3 == 613
+    assert len(control_conds) == 1 + 3 * 3 == 10
+    assert sorted((c["experiment"], c["condition"]) for c in control_conds if c["condition"] == "no_ablation") == \
+           sorted((n, "no_ablation") for n in control.saes)
+    assert all(c["mode"] in (None, "reconstruction") for c in control_conds)
