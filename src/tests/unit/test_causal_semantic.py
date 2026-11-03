@@ -102,6 +102,9 @@ def components():
 def bundle(cfg, folder, monkeypatch):
     comp = components()
     monkeypatch.setattr(replay, "generate", fake_generation)
+    # an episode's edited conditions go through generate_episode (#214): one fake generation each
+    monkeypatch.setattr(replay, "generate_episode", lambda comp, items, first: (
+        fake_generation(comp, ep, cond) for ep, cond in items))
     replay.replay(cfg, replay.load_episodes(cfg), comp, folder)
     return folder
 

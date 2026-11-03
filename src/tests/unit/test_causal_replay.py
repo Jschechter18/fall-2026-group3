@@ -1254,3 +1254,146 @@ def test_replay_runs_raw_activation_edits_and_the_unedited_basis_is_the_plain_re
     replay.analyse(run_dir)
     match = pd.read_csv(run_dir / "control_match.csv")
     assert (match.frequency_ratio == 1).all()
+
+
+# ---- sharing an episode's work across its conditions (#214)
+
+def test_prefix_replay_generates_exactly_what_the_full_prefill_does():
+    from mas_sae.causal.prefix import PrefixCache
+    from mas_sae.causal.smoke import tiny_gemma
+    model = tiny_gemma(layers=4)
+    ids = torch.randint(0, 256, (1, 80), generator=torch.Generator().manual_seed(0))   # past the sliding window
+    run = lambda n=80: model.generate(input_ids=ids[:, :n], attention_mask=torch.ones_like(ids[:, :n]),
+                                      max_new_tokens=6, do_sample=False, output_scores=True,
+                                      return_dict_in_generate=True)
+    prefix = PrefixCache(model, "model.language_model.layers.2")
+    with torch.inference_mode():
+        with prefix.capture():
+            plain = run()
+        seen = []
+        hook = model.model.language_model.layers[0].self_attn.register_forward_hook(
+            lambda m, args, kwargs_out: seen.append(kwargs_out[0].shape[1]))
+        with prefix.replay():
+            again = run()
+        hook.remove()
+        with pytest.raises(ValueError, match="not the captured prompt"):
+            with prefix.replay():
+                run(40)
+    assert seen == [1] * 5                                  # below the splice only decode steps were computed
+    assert torch.equal(plain.sequences, again.sequences)
+    assert all(torch.equal(a, b) for a, b in zip(plain.scores, again.scores, strict=True))
+    assert all("forward" not in layer.__dict__ for layer in model.model.language_model.layers)   # restored
+
+
+def test_prefix_cache_refuses_what_it_cannot_capture_or_replay():
+    from mas_sae.causal.prefix import PrefixCache
+    from mas_sae.causal.smoke import tiny_gemma
+    model = tiny_gemma(layers=3)
+    with pytest.raises(ValueError, match="not a layer"):
+        PrefixCache(model, "model.language_model.layers.3")
+    prefix = PrefixCache(model, "model.language_model.layers.1")
+    with pytest.raises(RuntimeError, match="Capture a plain generation"):
+        with prefix.replay():
+            pass
+    with pytest.raises(RuntimeError, match="did not see one prefill"):
+        with prefix.capture():
+            pass
+
+
+@pytest.mark.parametrize("layer, n_layers", [(2, 4), (33, None)])
+def test_episode_reuse_writes_the_rows_of_one_generation_per_condition(tmp_path, layer, n_layers):
+    cfg, episodes, comp = _smoke(tmp_path, layer=layer, n_layers=n_layers)
+    for f in comp.features.values():
+        f["random"] = [f["random"][0]] * 2                  # a repeated draw: the same edit twice
+    calls, solve = [], comp.solver._generate
+    comp.solver._generate = lambda prompt: calls.append(prompt) or solve(prompt)
+    conds = replay.configured_conditions(cfg, comp.features)
+    todo = lambda edited: [(ep, c) for ep in episodes.head(2).to_dict("records") for c in conds
+                           if (c["features"] is not None) == edited]
+    first = {}
+    replay.generate_all(todo(False), comp, tmp_path / "plain.jsonl", first, "plain")
+    rows, n_generations = {}, {}
+    for reuse in (False, True):
+        before = len(calls)
+        replay.generate_all(todo(True), comp, tmp_path / f"{reuse}.jsonl", dict(first), "edited", reuse=reuse)
+        n_generations[reuse] = len(calls) - before
+        rows[reuse] = [{k: v for k, v in r.items() if k != "seconds"} for r in replay.read_rows(tmp_path / f"{reuse}.jsonl")]
+    assert rows[True] == rows[False]
+    repeats = sum(r["draw"] == 1 for r in rows[True])
+    assert n_generations[False] == len(rows[False])
+    assert n_generations[True] <= len(rows[True]) - repeats + 2         # + one plain capture per episode
+    plain = {r["question_id"]: r["first_token_logprob"] for r in replay.read_rows(tmp_path / "plain.jsonl")}
+    assert any(r["first_token_logprob"] != plain[r["question_id"]] for r in rows[True])   # the edits took effect
+
+
+def _edited_run(tmp_path, n=1):
+    cfg, episodes, comp = _smoke(tmp_path, layer=2, n_layers=4)
+    eps = episodes.head(n).to_dict("records")
+    conds = replay.configured_conditions(cfg, comp.features)
+    first = {}
+    replay.generate_all([(ep, c) for ep in eps for c in conds if c["features"] is None], comp,
+                        tmp_path / "plain.jsonl", first, "plain")
+    return comp, [(ep, c) for ep in eps for c in conds if c["features"] is not None], first
+
+
+def test_episode_reuse_refuses_a_changed_plain_generation_prompt_or_episode(tmp_path):
+    comp, todo, first = _edited_run(tmp_path, n=2)
+    qid = todo[0][0]["question_id"]
+    wrong = {**first, (qid, replay.BASELINE, "no_sae", None): first[(qid, replay.BASELINE, "no_sae", None)] + 1}
+    with pytest.raises(RuntimeError, match="not deterministic"):
+        list(replay.generate_episode(comp, todo[:3], wrong))
+    with pytest.raises(ValueError, match="one episode's edited conditions"):
+        list(replay.generate_episode(comp, [todo[0], todo[-1]], dict(first)))
+    template, calls = comp.solver.processor.apply_chat_template, []
+
+    def shifted(*args, **kwargs):              # every prompt after the captured one: same length, one id changed
+        out = template(*args, **kwargs)
+        calls.append(1)
+        if len(calls) > 1:
+            out["input_ids"][0, 0] = (out["input_ids"][0, 0] + 1) % 256
+        return out
+
+    comp.solver.processor.apply_chat_template = shifted
+    with pytest.raises(RuntimeError, match="prompt differs"):
+        list(replay.generate_episode(comp, todo[:3], dict(first)))
+
+
+def test_check_script_compares_with_rows_written_one_generation_per_condition(tmp_path, monkeypatch, capsys):
+    import functools
+    import runpy
+    import sys
+    from pathlib import Path
+    cfg, episodes, comp = _smoke(tmp_path, layer=2, n_layers=4)
+    cfg = dataclasses.replace(cfg, on_replay_check_fail="mark_unvalidated")
+    every = replay.generate_all
+    monkeypatch.setattr(replay, "generate_all", functools.partial(every, reuse=False))
+    run_dir = replay.replay(cfg, episodes.head(2), comp, tmp_path / "run")
+    monkeypatch.setattr(replay, "generate_all", every)
+    monkeypatch.setattr(replay, "load_components", lambda c, e: comp)
+    script = Path(__file__).resolve().parents[3] / "scripts/check_replay_reuse.py"
+    rows = run_dir / "per_row.jsonl"
+    qids = episodes.head(2).question_id.astype(str).tolist()
+
+    def check(*extra, out="out.jsonl"):
+        monkeypatch.setattr(sys, "argv", [str(script), "--run-dir", str(run_dir), "--question-ids", *qids,
+                                          "--output", str(tmp_path / out), "--rows", *extra])
+        runpy.run_path(str(script), run_name="__main__")
+
+    check(str(rows))
+    summary = json.loads(capsys.readouterr().out)
+    assert summary["rows_differing"] == 0 and summary["rows"] == 2 * (N_CONDITIONS - 1)
+    with pytest.raises(SystemExit, match="more than once"):
+        check(str(rows), str(rows), out="twice.jsonl")
+    lines = rows.read_text().splitlines()
+    edited = next(i for i, line in enumerate(lines) if json.loads(line)["experiment"] != replay.BASELINE)
+    row = json.loads(lines[edited])
+    row["first_token_logprob"] -= 1e-9
+    tampered = tmp_path / "tampered.jsonl"
+    tampered.write_text("\n".join([*lines[:edited], json.dumps(row), *lines[edited + 1:]]) + "\n")
+    with pytest.raises(SystemExit) as stop:
+        check(str(tampered), out="tampered_out.jsonl")
+    assert stop.value.code == 1
+    assert json.loads(capsys.readouterr().out)["fields_differing"] == {"first_token_logprob": 1}
+    monkeypatch.setattr(replay, "generate_all", lambda *a, **k: (every(*a, **k), rows.open("a").write("\n")))
+    with pytest.raises(SystemExit, match="changed during the check"):
+        check(str(rows), out="changed.jsonl")
