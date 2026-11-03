@@ -1,0 +1,24 @@
+{
+  "n_generations": 2500,
+  "n_unique_changed_inputs": 56,
+  "n_pending_requests": 0,
+  "n_reused_stored_rows": 2401,
+  "source_technical_exclusions": {
+    "synthetic:2hop__synthetic_04d3b97e57364d928a911aee1df06f5d": "incomplete_response:max_tokens",
+    "synthetic:4hop2__synthetic_179a964e8eb641fd91e22bdfd0dc3c1a": "incomplete_response:refusal",
+    "synthetic:4hop2__synthetic_44151b620de649ceae51b5a0e412c911": "incomplete_response:refusal"
+  },
+  "label_counts": {
+    "adoption": 1205,
+    "retention": 1285,
+    "out": 9,
+    "error": 1
+  },
+  "excluded_questions": {
+    "synthetic:4hop2__synthetic_e0eb8f84b0c1440e92d88f6a1dd9abfd": "missing_field:solver_attempt_2"
+  },
+  "n_analysis_episodes": 249,
+  "n_requests_this_invocation": 56,
+  "n_failed_requests": 1,
+  "status": "complete_with_exclusions"
+}

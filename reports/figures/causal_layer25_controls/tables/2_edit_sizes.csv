@@ -1,0 +1,6 @@
+SAE · features turned off,Targeted edit (% of ‖x‖),Random edit (% of ‖x‖),Targeted ÷ random,2% dose capped: targeted / random (%),Measured in the TopK run (%)
+TopK SAE · all 10,86.08,3.34,25.81,0 / 18,86.07 / 3.31
+TopK SAE · f1666,85.43,1.28,66.9,0 / 73,85.37 / 1.28
+TopK SAE · other 9,2.32,2.8,0.83,38 / 32,2.68 / 2.79
+Pretrained SAE · all 10,2.2,9.09,0.24,36 / 2,—
+"Pretrained, fine-tuned · all 10",2.19,9.05,0.24,38 / 2,—

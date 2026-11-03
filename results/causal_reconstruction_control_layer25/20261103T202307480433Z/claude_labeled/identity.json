@@ -1,0 +1,28 @@
+{
+  "protocol": {
+    "model_id": "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+    "client": "ClaudeClient",
+    "effort": null,
+    "max_tokens": 512,
+    "temperature": 0.0,
+    "prompt_version": "claude_binary_v3_candidates",
+    "prompt_sha256": "b589c55745efb3fbe52667aa6de693537999ede28baa513e558862bba27b9162",
+    "a2_presentation": "candidates",
+    "max_attempts": 3,
+    "include_question": true,
+    "models_returned": [
+      "claude-sonnet-4-5-20250929"
+    ]
+  },
+  "source_sha256": {
+    "results/claude_validation/mixed_final_001/intervention/run_settings.json": "3c2ce4ffbbcfcb2e471e7064c098bec548390085659a00cc133e7fa065b74225",
+    "results/claude_validation/mixed_final_001/intervention/summary.json": "47f7a6261ec7085fddd8db37bb31cfacb0ddcb7c5d84a6930aaf176e358ee657",
+    "results/claude_validation/mixed_final_001/intervention/raw_results.jsonl": "623a9f4706579909bca2f1f69494cf7f26b6d84cbc0f0d0ba58dd4ef48dfb36a",
+    "results/claude_validation/mixed_final_001/intervention/binary_labels.csv": "8dbd147fb6d8f9838cac67358d481fff6f5daf8abebc098bff9c5553f9024591",
+    "results/claude_validation/mixed_final_001/intervention/exclusions.jsonl": "26c0ebfae9b4751bedb70e0929646b88b4deae146ab7a65ede945d471dc60230"
+  },
+  "generation_sha256": "c97915db24ba3642427b8ce48e061494fb2fbcb082bd778acba4184dbe27ef20",
+  "metadata_sha256": "f7f98c1f01f5727c60aa1607f06c4a4db22a8a9b39c4854e8b94fc70765970c8",
+  "episodes_sha256": "903006ce45bdf0bd4c26c631a09c9293c459df5017df08bd83a26a4dfc0996ab",
+  "generated_errors": "exclude_episode"
+}

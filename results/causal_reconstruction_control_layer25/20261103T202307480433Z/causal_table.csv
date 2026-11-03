@@ -1,0 +1,12 @@
+Experiment,Condition,Outcome,N,Acceptance Rate (%),Δ vs. SAE Control (pp),95% CI for Δ,p-value
+Baseline,No SAE (stored A2),observed,249,48.59437751004016,,,
+Baseline,No SAE (replayed A2),regenerated,249,48.59437751004016,,,
+TopK SAE,No ablation,regenerated,249,49.39759036144578,Reference,,
+TopK SAE,Random ablation,regenerated,249,48.59437751004016,-0.8032128514056224,"[-2.41, 0.41]",0.6287371262873712
+TopK SAE,Targeted ablation,regenerated,249,42.971887550200805,-6.425702811244979,"[-10.04, -2.81]",0.0008999100089991
+Pretrained SAE,No ablation,regenerated,249,48.59437751004016,Reference,,
+Pretrained SAE,Random ablation,regenerated,249,49.39759036144578,0.8032128514056224,"[0.00, 2.01]",0.5011498850114988
+Pretrained SAE,Targeted ablation,regenerated,249,48.59437751004016,0.0,"[0.00, 0.00]",1.0
+Adapted pretrained SAE,No ablation,regenerated,249,48.19277108433735,Reference,,
+Adapted pretrained SAE,Random ablation,regenerated,249,47.791164658634536,-0.4016064257028112,"[-2.41, 1.61]",1.0
+Adapted pretrained SAE,Targeted ablation,regenerated,249,48.19277108433735,0.0,"[0.00, 0.00]",1.0
