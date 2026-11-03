@@ -1,0 +1,304 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="707.78125pt" height="384.701037pt" viewBox="0 0 707.78125 384.701037" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Matplotlib v3.10.8, https://matplotlib.org/</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 384.701037 
+L 707.78125 384.701037 
+L 707.78125 0 
+L 0 0 
+z
+" style="fill: #fcfcfb"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 168.48 297.986125 
+L 619.92 297.986125 
+L 619.92 65.138125 
+L 168.48 65.138125 
+z
+" style="fill: #fcfcfb"/>
+   </g>
+   <g id="matplotlib.axis_1">
+    <g id="xtick_1">
+     <g id="line2d_1">
+      <path d="M 168.48 297.986125 
+L 168.48 65.138125 
+" clip-path="url(#pa15f0ec757)" style="fill: none; stroke: #e1e0d9; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_2"/>
+     <g id="text_1">
+      <text style="font-size: 11px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: middle; fill: #898781" x="168.48" y="309.359719" transform="rotate(-0 168.48 309.359719)">0%</text>
+     </g>
+    </g>
+    <g id="xtick_2">
+     <g id="line2d_3">
+      <path d="M 232.971429 297.986125 
+L 232.971429 65.138125 
+" clip-path="url(#pa15f0ec757)" style="fill: none; stroke: #e1e0d9; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_4"/>
+     <g id="text_2">
+      <text style="font-size: 11px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: middle; fill: #898781" x="232.971429" y="309.359719" transform="rotate(-0 232.971429 309.359719)">1%</text>
+     </g>
+    </g>
+    <g id="xtick_3">
+     <g id="line2d_5">
+      <path d="M 297.462857 297.986125 
+L 297.462857 65.138125 
+" clip-path="url(#pa15f0ec757)" style="fill: none; stroke: #e1e0d9; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_6"/>
+     <g id="text_3">
+      <text style="font-size: 11px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: middle; fill: #898781" x="297.462857" y="309.359719" transform="rotate(-0 297.462857 309.359719)">2%</text>
+     </g>
+    </g>
+    <g id="xtick_4">
+     <g id="line2d_7">
+      <path d="M 361.954286 297.986125 
+L 361.954286 65.138125 
+" clip-path="url(#pa15f0ec757)" style="fill: none; stroke: #e1e0d9; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_8"/>
+     <g id="text_4">
+      <text style="font-size: 11px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: middle; fill: #898781" x="361.954286" y="309.359719" transform="rotate(-0 361.954286 309.359719)">3%</text>
+     </g>
+    </g>
+    <g id="xtick_5">
+     <g id="line2d_9">
+      <path d="M 426.445714 297.986125 
+L 426.445714 65.138125 
+" clip-path="url(#pa15f0ec757)" style="fill: none; stroke: #e1e0d9; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_10"/>
+     <g id="text_5">
+      <text style="font-size: 11px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: middle; fill: #898781" x="426.445714" y="309.359719" transform="rotate(-0 426.445714 309.359719)">4%</text>
+     </g>
+    </g>
+    <g id="xtick_6">
+     <g id="line2d_11">
+      <path d="M 490.937143 297.986125 
+L 490.937143 65.138125 
+" clip-path="url(#pa15f0ec757)" style="fill: none; stroke: #e1e0d9; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_12"/>
+     <g id="text_6">
+      <text style="font-size: 11px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: middle; fill: #898781" x="490.937143" y="309.359719" transform="rotate(-0 490.937143 309.359719)">5%</text>
+     </g>
+    </g>
+    <g id="xtick_7">
+     <g id="line2d_13">
+      <path d="M 555.428571 297.986125 
+L 555.428571 65.138125 
+" clip-path="url(#pa15f0ec757)" style="fill: none; stroke: #e1e0d9; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_14"/>
+     <g id="text_7">
+      <text style="font-size: 11px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: middle; fill: #898781" x="555.428571" y="309.359719" transform="rotate(-0 555.428571 309.359719)">6%</text>
+     </g>
+    </g>
+    <g id="xtick_8">
+     <g id="line2d_15">
+      <path d="M 619.92 297.986125 
+L 619.92 65.138125 
+" clip-path="url(#pa15f0ec757)" style="fill: none; stroke: #e1e0d9; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_16"/>
+     <g id="text_8">
+      <text style="font-size: 11px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: middle; fill: #898781" x="619.92" y="309.359719" transform="rotate(-0 619.92 309.359719)">7%</text>
+     </g>
+    </g>
+    <g id="text_9">
+     <text style="font-size: 11px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: middle; fill: #52514e" x="394.2" y="323.419562" transform="rotate(-0 394.2 323.419562)">Share of revised answers</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_2">
+    <g id="ytick_1">
+     <g id="line2d_17"/>
+     <g id="text_10">
+      <text style="font-size: 11px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: end; fill: #0b0b0b" x="164.98" y="108.80327" transform="rotate(-0 164.98 108.80327)">Adoption → Retention</text>
+     </g>
+    </g>
+    <g id="ytick_2">
+     <g id="line2d_18"/>
+     <g id="text_11">
+      <text style="font-size: 11px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: end; fill: #0b0b0b" x="164.98" y="185.498922" transform="rotate(-0 164.98 185.498922)">Retention → Adoption</text>
+     </g>
+    </g>
+    <g id="ytick_3">
+     <g id="line2d_19"/>
+     <g id="text_12">
+      <text style="font-size: 11px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: end; fill: #0b0b0b" x="164.98" y="262.194574" transform="rotate(-0 164.98 262.194574)">Became Out</text>
+     </g>
+    </g>
+   </g>
+   <g id="patch_3">
+    <path d="M 168.48 75.722125 
+L 455.688791 75.722125 
+L 455.688791 94.129082 
+L 168.48 94.129082 
+z
+" clip-path="url(#pa15f0ec757)" style="fill: #2a78d6"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 168.48 152.417777 
+L 259.864615 152.417777 
+L 259.864615 170.824734 
+L 168.48 170.824734 
+z
+" clip-path="url(#pa15f0ec757)" style="fill: #2a78d6"/>
+   </g>
+   <g id="patch_5">
+    <path d="M 168.48 229.113429 
+L 507.908571 229.113429 
+L 507.908571 247.520386 
+L 168.48 247.520386 
+z
+" clip-path="url(#pa15f0ec757)" style="fill: #2a78d6"/>
+   </g>
+   <g id="patch_6">
+    <path d="M 168.48 95.662995 
+L 416.523956 95.662995 
+L 416.523956 114.069951 
+L 168.48 114.069951 
+z
+" clip-path="url(#pa15f0ec757)" style="fill: #1baf7a"/>
+   </g>
+   <g id="patch_7">
+    <path d="M 168.48 172.358647 
+L 312.084396 172.358647 
+L 312.084396 190.765603 
+L 168.48 190.765603 
+z
+" clip-path="url(#pa15f0ec757)" style="fill: #1baf7a"/>
+   </g>
+   <g id="patch_8">
+    <path d="M 168.48 249.054299 
+L 507.908571 249.054299 
+L 507.908571 267.461255 
+L 168.48 267.461255 
+z
+" clip-path="url(#pa15f0ec757)" style="fill: #1baf7a"/>
+   </g>
+   <g id="patch_9">
+    <path d="M 168.48 115.603864 
+L 191.456703 115.603864 
+L 191.456703 134.010821 
+L 168.48 134.010821 
+z
+" clip-path="url(#pa15f0ec757)" style="fill: #eb6834"/>
+   </g>
+   <g id="patch_10">
+    <path d="M 168.48 192.299516 
+L 183.841319 192.299516 
+L 183.841319 210.706473 
+L 168.48 210.706473 
+z
+" clip-path="url(#pa15f0ec757)" style="fill: #eb6834"/>
+   </g>
+   <g id="patch_11">
+    <path d="M 168.48 268.995168 
+L 171.047473 268.995168 
+L 171.047473 287.402125 
+L 168.48 287.402125 
+z
+" clip-path="url(#pa15f0ec757)" style="fill: #eb6834"/>
+   </g>
+   <g id="patch_12">
+    <path d="M 168.48 297.986125 
+L 619.92 297.986125 
+" style="fill: none; stroke: #c3c2b7; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_13">
+    <text style="font-size: 9.5px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #0b0b0b" x="460.848105" y="87.383728" transform="rotate(-0 460.848105 87.383728)">4.5%  (22)</text>
+   </g>
+   <g id="text_14">
+    <text style="font-size: 9.5px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #0b0b0b" x="265.02393" y="164.07938" transform="rotate(-0 265.02393 164.07938)">1.4%  (7)</text>
+   </g>
+   <g id="text_15">
+    <text style="font-size: 9.5px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #0b0b0b" x="513.067886" y="240.775033" transform="rotate(-0 513.067886 240.775033)">5.3%  (26)</text>
+   </g>
+   <g id="text_16">
+    <text style="font-size: 9.5px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #0b0b0b" x="421.68327" y="107.324598" transform="rotate(-0 421.68327 107.324598)">3.8%  (19)</text>
+   </g>
+   <g id="text_17">
+    <text style="font-size: 9.5px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #0b0b0b" x="317.24371" y="184.02025" transform="rotate(-0 317.24371 184.02025)">2.2%  (11)</text>
+   </g>
+   <g id="text_18">
+    <text style="font-size: 9.5px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #0b0b0b" x="513.067886" y="260.715902" transform="rotate(-0 513.067886 260.715902)">5.3%  (26)</text>
+   </g>
+   <g id="text_19">
+    <text style="font-size: 9.5px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #52514e" x="196.616018" y="127.263241" transform="rotate(-0 196.616018 127.263241)">0.4%</text>
+   </g>
+   <g id="text_20">
+    <text style="font-size: 9.5px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #52514e" x="189.000633" y="203.958893" transform="rotate(-0 189.000633 203.958893)">0.2%</text>
+   </g>
+   <g id="text_21">
+    <text style="font-size: 9.5px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #52514e" x="176.206787" y="280.654545" transform="rotate(-0 176.206787 280.654545)">0.0%</text>
+   </g>
+   <g id="text_22">
+    <text style="font-weight: 700; font-size: 14px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #0b0b0b" x="13.68" y="28.191562" transform="rotate(-0 13.68 28.191562)">Turning the features off changes answers more often, not more towards Retention than random edits</text>
+   </g>
+   <g id="text_23">
+    <text style="font-size: 10px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #52514e" x="13.68" y="49.033437" transform="rotate(-0 13.68 49.033437)">Adoption→Retention : reverse = all 10 22:7, f1666 19:11, random 528:353 (vs random p = 0.12, 0.85) · Out explains 42% and 56% of the drops</text>
+   </g>
+   <g id="legend_1">
+    <g id="patch_13">
+     <path d="M 228.796094 360.713537 
+L 248.796094 360.713537 
+L 248.796094 353.713537 
+L 228.796094 353.713537 
+z
+" style="fill: #2a78d6; stroke: #2a78d6; stroke-linejoin: miter"/>
+    </g>
+    <g id="text_24">
+     <text style="font-size: 10px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #52514e" x="256.796094" y="360.713537" transform="rotate(-0 256.796094 360.713537)">All 10 features off</text>
+    </g>
+    <g id="patch_14">
+     <path d="M 354.438281 360.713537 
+L 374.438281 360.713537 
+L 374.438281 353.713537 
+L 354.438281 353.713537 
+z
+" style="fill: #1baf7a; stroke: #1baf7a; stroke-linejoin: miter"/>
+    </g>
+    <g id="text_25">
+     <text style="font-size: 10px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #52514e" x="382.438281" y="360.713537" transform="rotate(-0 382.438281 360.713537)">f1666 off</text>
+    </g>
+    <g id="patch_15">
+     <path d="M 441.180469 360.713537 
+L 461.180469 360.713537 
+L 461.180469 353.713537 
+L 441.180469 353.713537 
+z
+" style="fill: #eb6834; stroke: #eb6834; stroke-linejoin: miter"/>
+    </g>
+    <g id="text_26">
+     <text style="font-size: 10px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #52514e" x="469.180469" y="360.713537" transform="rotate(-0 469.180469 360.713537)">Random features off</text>
+    </g>
+   </g>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="pa15f0ec757">
+   <rect x="168.48" y="65.138125" width="451.44" height="232.848"/>
+  </clipPath>
+ </defs>
+</svg>

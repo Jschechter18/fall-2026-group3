@@ -1,0 +1,10 @@
+Features,Edit,Edit size targeted (%),Edit size random (%),Adoption targeted (%),Adoption random (%),Targeted − random (pp),95% CI,p (Holm)
+All 10 features,Turn off,86.07,3.31,45.95,51.04,-5.09,"[-7.5, -2.7]",0.0006
+All 10 features,Turn down 1%,1.0,1.0,51.21,51.21,0.01,"[-0.2, 0.2]",1.00
+All 10 features,Turn down 2%,2.0,1.93,51.01,51.19,-0.18,"[-0.7, 0.2]",1.00
+f1666 alone,Turn off,85.37,1.28,47.57,51.14,-3.57,"[-6.0, -1.2]",0.009
+f1666 alone,Turn down 1%,1.0,0.78,51.21,51.21,0.0,"[-0.1, 0.1]",1.00
+f1666 alone,Turn down 2%,2.0,1.14,51.21,51.16,0.05,"[-0.1, 0.3]",1.00
+Other 9 (without f1666),Turn off,2.68,2.79,51.42,51.1,0.32,"[-0.3, 1.0]",0.34
+Other 9 (without f1666),Turn down 1%,1.0,1.0,51.01,51.18,-0.17,"[-0.7, 0.2]",1.00
+Other 9 (without f1666),Turn down 2%,1.86,1.85,51.21,51.18,0.04,"[-0.5, 0.5]",1.00

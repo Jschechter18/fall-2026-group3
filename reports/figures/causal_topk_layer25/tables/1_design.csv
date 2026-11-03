@@ -1,0 +1,13 @@
+,Value,Source
+Intervention episodes labeled by Claude,"10,105",source labeling run
+Eligible (Adoption + Retention),"1,814 + 1,704 = 3,518",source labeling run
+Replayed: first N of the seed-42 order,500,replay_config.json
+Plain replay reproduces the stored answer,500 / 500,replay_check.json
+Excluded: empty answer under targeted ablation,6,derived_from.json
+Analysed,494,claude_labeled/summary.json
+Conditions per episode,916,replay_config.json
+Random draws per random arm,100 (contribution-matched),replay_config.json
+Generations,"458,000",claude_labeled/summary.json
+Where the edit is applied,"layer 25 residual stream, final prompt token of the revise prompt",causal_replay_summary.json
+SAE input normalization,"÷ one training RMS (643.6), restored on decode",SAE config.json
+Edit size reported below,‖Δx‖ / ‖x‖ in the model's own units (not the SAE's scaled units),diagnostics.csv
