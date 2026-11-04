@@ -18,6 +18,11 @@ ft = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(ft)
 
 
+# The full-mode options at their defaults: decoder-only behaviour is unchanged.
+DECODER_ONLY = dict(train='decoder', lr_enc=None, l0_coef=1.0, l0_tolerance=0.1, bandwidth=None,
+                    freeze_threshold=False)
+
+
 def model():
     return JumpReLUSAE(torch.eye(3), torch.zeros(3), torch.zeros(3, 3),
                       torch.zeros(3), torch.ones(3) * 0.01)
@@ -76,7 +81,7 @@ def test_end_to_end_improves_reconstruction_preserves_features_and_never_reads_t
     args = argparse.Namespace(sae_dir=src, activations_dir=acts, layer=25,
         activation_file='{split}_attempt2.pt', cache_dir=tmp_path / 'cache',
         output_dir=tmp_path / 'out', probe_config=None, epochs=8, batch_size=15,
-        lr=0.05, patience=3, seed=42, device='cpu')
+        lr=0.05, patience=3, seed=42, device='cpu', **DECODER_ONLY)
     out = ft.run(args)
     summary = json.loads((out / 'summary.json').read_text())
     adapted, _ = load_gemma_scope_sae(out / 'best', expected_layer=25)
@@ -100,3 +105,52 @@ def test_cohort_variance_uses_its_own_mean():
     result = ft.evaluate(sae, X, Z, 2, 'cpu', X.double().mean(0), mask, X[mask].double().mean(0))
     expected = 1 - X[mask].square().sum().item() / (X[mask] - X[mask].mean(0)).square().sum().item()
     assert result['probe_cohort']['variance_explained'] == pytest.approx(expected)
+
+
+def test_ste_forward_matches_encoder_and_threshold_gradient_is_local():
+    sae = JumpReLUSAE(torch.eye(3), torch.zeros(3), torch.eye(3), torch.zeros(3), torch.ones(3))
+    # Per feature: well below, just above (inside the window) and well above the threshold of 1.
+    x = torch.tensor([[0.2, 1.01, 3.0]], requires_grad=True)
+    threshold = torch.ones(3, requires_grad=True)
+    z, l0 = sae.encoder_ste(x, bandwidth=0.1, threshold=threshold)
+    assert torch.equal(z, sae.encoder(x)) and l0.item() == 2
+    (z.sum() + l0.sum()).backward()
+    assert threshold.grad[0] == 0 and threshold.grad[2] == 0 and threshold.grad[1] < 0
+    # Gated-off features pass no gradient back to the input; open ones pass it through.
+    assert x.grad.tolist() == [[0.0, 1.0, 1.0]]
+
+
+def test_l0_tolerance_rejects_denser_checkpoints():
+    assert ft.within_l0(110, 100, 0.1) and ft.within_l0(90, 100, 0.1)
+    assert not ft.within_l0(111, 100, 0.1) and not ft.within_l0(5, 0, 0.1)
+
+
+def test_full_mode_trains_encoder_into_a_separate_checkpoint(tmp_path):
+    src, acts = tmp_path / 'source', tmp_path / 'acts'
+    src.mkdir()
+    acts.mkdir()
+    sae = JumpReLUSAE(torch.eye(3) * 0.5, torch.zeros(3), torch.zeros(3, 3), torch.zeros(3),
+                      torch.ones(3) * 0.01)
+    ft.save_model(sae, {'architecture': 'jump_relu', 'hf_hook_point_in': 'model.layers.25.output'}, src)
+    original_hash = sha256_file(src / 'params.safetensors')
+    X = torch.rand(80, 3, generator=torch.Generator().manual_seed(3)) * 3 + 0.1
+    torch.save(X[:60], acts / 'train_attempt2.pt')
+    torch.save(X[60:], acts / 'validation_attempt2.pt')
+    (acts / 'test_attempt2.pt').write_text('must not be read')
+    args = argparse.Namespace(sae_dir=src, activations_dir=acts, layer=25,
+        activation_file='{split}_attempt2.pt', cache_dir=tmp_path / 'cache',
+        output_dir=tmp_path / 'out', probe_config=None, epochs=8, batch_size=15,
+        lr=0.05, patience=3, seed=42, device='cpu',
+        **{**DECODER_ONLY, 'train': 'full', 'lr_enc': 0.01})
+    out = ft.run(args)
+    summary = json.loads((out / 'summary.json').read_text())
+    adapted, _ = load_gemma_scope_sae(out / 'best', expected_layer=25)
+    assert summary['train_mode'] == 'full' and summary['best_epoch'] > 0
+    assert summary['adapted']['validation']['mse'] < summary['original']['validation']['mse']
+    assert ft.within_l0(summary['adapted']['validation']['l0'], summary['l0_target'], 0.1)
+    assert not summary['encoder_unchanged'] and not torch.equal(sae.w_enc, adapted.w_enc)
+    assert summary['feature_drift']['n_examples'] == 20
+    assert set(np.load(out / 'feature_drift.npz')) >= {'activation_correlation', 'encoder_cosine'}
+    assert sha256_file(src / 'params.safetensors') == original_hash
+    assert not args.cache_dir.exists()  # full mode never writes an encoder cache
+    assert json.loads((out / 'manifest.json').read_text())['status'] == 'completed'

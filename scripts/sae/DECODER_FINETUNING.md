@@ -58,3 +58,48 @@ remain applicable, but the decoder changes intervention directions and magnitude
 Re-evaluate interventions with the new decoder. The old `--matched-from` evaluation
 intentionally rejects changed checkpoint hashes; it must not silently reuse old
 provenance with adapted weights.
+
+# Full (encoder + decoder) adaptation
+
+`--train full` starts again from the **original** Gemma Scope weights (not the decoder-only
+checkpoint). It trains `w_enc`, `b_enc`, the JumpReLU `threshold` and the decoder. The result is a
+third, separate checkpoint, kept beside the original and the decoder-only SAE:
+
+```bash
+time PYTHONPATH=src python scripts/sae/finetune_pretrained_decoder.py --train full \
+  --sae-dir results/sae/pretrained/gemma-scope-2-4b-it/resid_post_all/layer_25_width_16k_l0_big \
+  --activations-dir artifacts/collection/mixed_final_001/prepared/activations/mixed_final_001/layer_25 \
+  --layer 25 \
+  --probe-config configs/feature_selection_mixed_final_001_layer25.yaml
+```
+
+Output goes to `results/sae/full_finetuning/<timestamp>/` with the same files as above, plus
+`feature_drift.npz`.
+
+- **Gradients through the gate.** The step `pre > threshold` has zero gradient, so training uses the
+  straight-through estimators of Rajamanoharan et al. (2024), as Gemma Scope did
+  (`JumpReLUSAE.encoder_ste`). Inference (`encoder`) is unchanged. Thresholds are trained in log
+  space, so they stay positive. `--freeze-threshold` keeps them fixed.
+- **Bandwidth.** The default is `0.001 * mean ||x|| / sqrt(d)` on train. This is Gemma Scope's
+  bandwidth rescaled to raw (unnormalized) activations. Override it with `--bandwidth`.
+- **Sparsity.** MSE alone would let the encoder become denser. The loss is
+  `MSE / MSE_orig + l0_coef * L0 / L0_orig`, with both reference values measured on train before
+  training. The default `--l0-coef 1` trades a 1% rise in L0 against a 1% fall in MSE.
+- **Checkpoint selection.** The best checkpoint is the lowest validation MSE among epochs whose
+  validation L0 is within `--l0-tolerance` (default 10%) of the original. The original (epoch 0) is
+  always eligible. `history.json` marks each epoch's `l0_eligible`.
+- **Learning rates.** `--lr` is for the decoder and `--lr-enc` for the encoder and thresholds; it
+  defaults to `--lr`.
+- **No cache.** Features change every step, so each batch is re-encoded live.
+
+`summary.json` reports `feature_drift`, measured on validation against the original encoder:
+- the median per-feature activation correlation, and the fraction of features below 0.9;
+- the mean Jaccard overlap of active sets;
+- encoder-column and decoder-row cosines.
+
+Per-feature arrays are in `feature_drift.npz`. Every run, in both modes, also reports `l0` and
+`dead_fraction` for each split.
+
+**Downstream:** this SAE's features differ from the original's. Re-run feature selection with it
+added (as `kind: gemma_scope`, path `.../best`) before using it in causal configs. The original
+and decoder-only SAEs share an encoder; this one does not.

@@ -1,4 +1,9 @@
-"""Adapt only a Gemma Scope decoder; reuse immutable, disk-backed encoder features.
+"""Fine-tune a Gemma Scope SAE: the decoder only (default), or encoder and decoder together.
+
+--train decoder: reuse immutable, disk-backed encoder features; only w_dec/b_dec update.
+--train full:    w_enc, b_enc, threshold, w_dec, b_dec all update from the original weights, with
+                 straight-through JumpReLU gradients and an L0 penalty that holds sparsity near the
+                 original. Features are re-encoded every batch; no cache is used.
 
 Example (from the repo root):
     PYTHONPATH=src python scripts/sae/finetune_pretrained_decoder.py \
@@ -7,6 +12,7 @@ Example (from the repo root):
         --layer 25 --probe-config configs/feature_selection_mixed_final_001_layer25.yaml
 
 Only train/validation are read. No model calls or probe retraining are performed.
+Add --train full for the encoder-and-decoder checkpoint (written under results/sae/full_finetuning).
 The output best/ directory is loadable by the existing kind: gemma_scope loader.
 """
 from __future__ import annotations
@@ -96,20 +102,33 @@ def cached_features(model, X, identity, cache_dir, batch_size, device):
     return np.load(dest / 'features.npy', mmap_mode='r', allow_pickle=False), dest
 
 
-def batches(X, Z, batch_size, device, shuffle=False):
+def batches(X, Z, batch_size, device, shuffle=False, encode=None):
+    """Yield (rows, x, z). z comes from the cache Z, else from encode(x), else is None."""
     indices = torch.randperm(len(X)).numpy() if shuffle else np.arange(len(X))
     for start in range(0, len(X), batch_size):
         rows = indices[start:start + batch_size]
-        # Only this batch is materialized from the memory-mapped feature matrix.
-        z = torch.from_numpy(np.array(Z[rows], copy=True)).to(device)
-        yield rows, X[rows].to(device).float(), z
+        x = X[rows].to(device).float()
+        if Z is not None:
+            # Only this batch is materialized from the memory-mapped feature matrix.
+            z = torch.from_numpy(np.array(Z[rows], copy=True)).to(device)
+        elif encode is not None:
+            with torch.no_grad():
+                z = encode(x)
+        else:
+            z = None
+        yield rows, x, z
 
 
 @torch.no_grad()
 def evaluate(model, X, Z, batch_size, device, mean, mask=None, cohort_mean=None):
+    """Reconstruction metrics, mean L0 and dead-feature fraction. Z=None encodes live."""
     sse = baseline_sse = selected_sse = selected_baseline = 0.0
-    selected_n = 0
-    for rows, x, z in batches(X, Z, batch_size, device):
+    selected_n = active_total = 0
+    ever_active = torch.zeros(model.latent_dim, dtype=torch.bool, device=device)
+    for rows, x, z in batches(X, Z, batch_size, device, encode=model.encoder):
+        active = z > 0
+        active_total += int(active.sum())
+        ever_active |= active.any(dim=0)
         error = (model.decoder(z) - x).double().square().sum(dim=1)
         baseline = (x.double() - mean.to(device)).square().sum(dim=1)
         sse += error.sum().item()
@@ -123,9 +142,67 @@ def evaluate(model, X, Z, batch_size, device, mean, mask=None, cohort_mean=None)
         return {'n': n, 'mse': error / (n * X.shape[1]),
                 'variance_explained': 1 - error / reference if reference > 0 else None}
     result = metrics(sse, baseline_sse, len(X))
+    result['l0'] = active_total / len(X)
+    result['dead_fraction'] = 1 - ever_active.float().mean().item()
     if mask is not None:
         result['probe_cohort'] = metrics(selected_sse, selected_baseline, selected_n)
     return result
+
+
+def within_l0(l0, target, tolerance):
+    """A checkpoint is eligible only if its mean L0 stays within a relative tolerance of the original."""
+    return abs(l0 - target) <= tolerance * target
+
+
+def default_bandwidth(X, batch_size):
+    """Gemma Scope's 0.001 bandwidth, rescaled from unit-normalized to raw activations.
+
+    Their training inputs were scaled so E||x|| = sqrt(d); ours are raw, so the equivalent
+    bandwidth is 0.001 * E||x|| / sqrt(d).
+    """
+    total = sum(X[i:i + batch_size].double().norm(dim=1).sum().item() for i in range(0, len(X), batch_size))
+    return 0.001 * total / len(X) / X.shape[1] ** 0.5
+
+
+@torch.no_grad()
+def feature_drift(original, adapted, X, batch_size, device):
+    """How far each feature moved: activation correlation, active-set overlap and weight cosines.
+
+    Returns (summary, per-feature arrays). Correlation is undefined (nan) for a feature that is
+    constant, e.g. never active, under either encoder.
+    """
+    sums = {k: torch.zeros(original.latent_dim, dtype=torch.float64, device=device)
+            for k in ('a', 'b', 'aa', 'bb', 'ab')}
+    jaccard = 0.0
+    for _, x, _ in batches(X, None, batch_size, device):
+        a, b = original.encoder(x).double(), adapted.encoder(x).double()
+        for key, value in (('a', a), ('b', b), ('aa', a * a), ('bb', b * b), ('ab', a * b)):
+            sums[key] += value.sum(dim=0)
+        A, B = a > 0, b > 0
+        union = (A | B).sum(dim=1)
+        overlap = (A & B).sum(dim=1).double() / union.clamp(min=1)
+        jaccard += torch.where(union > 0, overlap, torch.ones_like(overlap)).sum().item()
+    n = len(X)
+    mean_a, mean_b = sums['a'] / n, sums['b'] / n
+    var_a, var_b = sums['aa'] / n - mean_a ** 2, sums['bb'] / n - mean_b ** 2
+    defined = (var_a > 0) & (var_b > 0)
+    corr = torch.full_like(var_a, float('nan'))
+    corr[defined] = ((sums['ab'] / n - mean_a * mean_b)[defined] / (var_a * var_b)[defined].sqrt()).clamp(-1, 1)
+    cos = torch.nn.functional.cosine_similarity
+    encoder_cos = cos(original.w_enc.double(), adapted.w_enc.double(), dim=0)
+    decoder_cos = cos(original.w_dec.double(), adapted.w_dec.double(), dim=1)
+    valid = corr[defined]
+    summary = {
+        'n_examples': n, 'n_features_with_defined_correlation': int(defined.sum()),
+        'activation_correlation_median': valid.median().item() if len(valid) else None,
+        'fraction_correlation_below_0.9': (valid < 0.9).double().mean().item() if len(valid) else None,
+        'active_set_jaccard_mean': jaccard / n,
+        'encoder_cosine_median': encoder_cos.median().item(), 'encoder_cosine_min': encoder_cos.min().item(),
+        'decoder_cosine_median': decoder_cos.median().item(), 'decoder_cosine_min': decoder_cos.min().item(),
+    }
+    arrays = {'activation_correlation': corr, 'encoder_cosine': encoder_cos, 'decoder_cosine': decoder_cos,
+              'threshold_ratio': adapted.threshold.double() / original.threshold.double()}
+    return summary, {k: v.cpu().numpy() for k, v in arrays.items()}
 
 
 def save_model(model, config, destination):
@@ -161,8 +238,18 @@ def run(args):
     for name in ('epochs', 'batch_size', 'patience'):
         if getattr(args, name) < 1:
             raise ValueError(f'{name} must be positive.')
-    if not np.isfinite(args.lr) or args.lr <= 0:
-        raise ValueError('lr must be finite and positive.')
+    full = args.train == 'full'
+    if args.train not in ('decoder', 'full'):
+        raise ValueError("train must be 'decoder' or 'full'.")
+    lr_enc = args.lr if args.lr_enc is None else args.lr_enc
+    for name, value in (('lr', args.lr), ('lr_enc', lr_enc)):
+        if not np.isfinite(value) or value <= 0:
+            raise ValueError(f'{name} must be finite and positive.')
+    if args.l0_coef < 0 or args.l0_tolerance < 0:
+        raise ValueError('l0_coef and l0_tolerance must be nonnegative.')
+    if args.bandwidth is not None and not args.bandwidth > 0:
+        raise ValueError('bandwidth must be positive.')
+    output_dir = args.output_dir or Path(f'results/sae/{args.train}_finetuning')
     seed_everything(args.seed)
     device = torch.device(args.device)
     model, config = load_gemma_scope_sae(args.sae_dir, expected_layer=args.layer)
@@ -170,6 +257,15 @@ def run(args):
     model.to(device)
     model.w_dec.requires_grad_(True)
     model.b_dec.requires_grad_(True)
+    log_threshold = None
+    if full:
+        model.w_enc.requires_grad_(True)
+        model.b_enc.requires_grad_(True)
+        if not args.freeze_threshold:
+            if not (model.threshold > 0).all():
+                raise ValueError('Trainable thresholds are stored in log space and must be positive; '
+                                 'use --freeze-threshold.')
+            log_threshold = torch.nn.Parameter(model.threshold.detach().log())
     inputs, paths, hashes = {}, {}, {}
     store = ActivationStore(args.activations_dir)
     for split in ('train', 'validation'):
@@ -182,10 +278,11 @@ def run(args):
             raise ValueError(f'Invalid activation shape or nonfinite values: {path}')
         inputs[split], paths[split], hashes[split] = X, path, sha256_file(path)
     mask = probe_mask(args.probe_config, args, len(inputs['validation']))
-    caches, cache_paths = {}, {}
-    for split, X in inputs.items():
-        caches[split], cache_paths[split] = cached_features(model, X,
-            {'split': split, 'activation_sha256': hashes[split]}, args.cache_dir, args.batch_size, device)
+    caches, cache_paths = {s: None for s in inputs}, {}
+    if not full:  # in full mode the encoder changes, so cached features would be stale
+        for split, X in inputs.items():
+            caches[split], cache_paths[split] = cached_features(model, X,
+                {'split': split, 'activation_sha256': hashes[split]}, args.cache_dir, args.batch_size, device)
     # Use each evaluation cohort's own mean for variance explained, identically before and after.
     means = {s: X.double().mean(dim=0) for s, X in inputs.items()}
     cohort_mean = inputs['validation'][mask].double().mean(dim=0) if mask is not None else None
@@ -197,13 +294,18 @@ def run(args):
     original_bias = model.b_dec.detach().clone()
     residual = torch.zeros(model.input_dim, dtype=torch.float64, device=device)
     with torch.no_grad():
-        for _, x, z in batches(inputs['train'], caches['train'], args.batch_size, device):
+        for _, x, z in batches(inputs['train'], caches['train'], args.batch_size, device, encode=model.encoder):
             residual += (x - model.decoder(z)).double().sum(dim=0)
         model.b_dec.add_((residual / len(inputs['train'])).to(model.b_dec.dtype))
     bias_only = measure()
     with torch.no_grad():
         model.b_dec.copy_(original_bias)
-    out = create_versioned_run_dir(args.output_dir)
+    bandwidth = None
+    if full:
+        bandwidth = args.bandwidth or default_bandwidth(inputs['train'], args.batch_size)
+        if original['train']['l0'] == 0:
+            raise ValueError('Original SAE has no active features on train; the L0 penalty is undefined.')
+    out = create_versioned_run_dir(output_dir)
     manifest = {'settings': {k: str(v) if isinstance(v, Path) else v for k, v in vars(args).items()},
                 'source_files_sha256': {str(args.sae_dir / n): sha256_file(args.sae_dir / n)
                                         for n in ('config.json', 'params.safetensors')},
@@ -211,48 +313,87 @@ def run(args):
                 'cache_paths': {s: str(p) for s, p in cache_paths.items()},
                 'git': get_git_provenance(), 'script_sha256': sha256_file(Path(__file__)),
                 'probe_config_sha256': sha256_file(args.probe_config) if args.probe_config else None,
-                'status': 'running'}
+                'bandwidth': bandwidth, 'lr_enc': lr_enc if full else None, 'status': 'running'}
     write_json_atomic(out / 'manifest.json', manifest)
     write_json_atomic(out / 'baseline.json', {'original': original, 'bias_only': bias_only})
     best_loss, best_epoch = original['validation']['mse'], 0
+    l0_target = original['validation']['l0']
     save_model(model, config, out / 'best')
-    optimizer = torch.optim.Adam([model.w_dec, model.b_dec], lr=args.lr)
+    groups = [{'params': [model.w_dec, model.b_dec], 'lr': args.lr}]
+    if full:
+        encoder_params = [model.w_enc, model.b_enc] + ([log_threshold] if log_threshold is not None else [])
+        groups.append({'params': encoder_params, 'lr': lr_enc})
+    optimizer = torch.optim.Adam(groups)
+    # Full mode: both terms are relative to the original SAE on train, so l0_coef=1 trades a
+    # 1% rise in L0 against a 1% fall in MSE.
+    mse_scale, l0_scale = original['train']['mse'], original['train']['l0']
     history, stale = [], 0
     for epoch in range(1, args.epochs + 1):
         model.train()
         count = (len(inputs['train']) + args.batch_size - 1) // args.batch_size
+        totals = {'mse': 0.0, 'l0': 0.0, 'loss': 0.0}
         for _, x, z in tqdm(batches(inputs['train'], caches['train'], args.batch_size, device, shuffle=True),
                              total=count, desc=f'Epoch {epoch}/{args.epochs}', unit='batch'):
             optimizer.zero_grad(set_to_none=True)
-            loss = torch.nn.functional.mse_loss(model.decoder(z), x)
+            if full:
+                threshold = log_threshold.exp() if log_threshold is not None else None
+                z, l0 = model.encoder_ste(x, bandwidth, threshold)
+                mse = torch.nn.functional.mse_loss(model.decoder(z), x)
+                l0 = l0.mean()
+                loss = mse / mse_scale + args.l0_coef * l0 / l0_scale
+                totals['mse'] += mse.item() * len(x)
+                totals['l0'] += l0.item() * len(x)
+            else:
+                loss = torch.nn.functional.mse_loss(model.decoder(z), x)
             if not torch.isfinite(loss):
                 raise ValueError('Nonfinite training loss.')
+            totals['loss'] += loss.item() * len(x)
             loss.backward()
             optimizer.step()
+            if log_threshold is not None:
+                with torch.no_grad():
+                    model.threshold.copy_(log_threshold.exp())
         model.eval()
         measured = measure()
         if not np.isfinite(measured['validation']['mse']):
             raise ValueError('Nonfinite validation loss.')
-        history.append({'epoch': epoch, **measured})
+        eligible = within_l0(measured['validation']['l0'], l0_target, args.l0_tolerance)
+        objective = {k: v / len(inputs['train']) for k, v in totals.items() if full or k == 'loss'}
+        history.append({'epoch': epoch, **measured, 'train_objective': objective, 'l0_eligible': eligible})
         write_json_atomic(out / 'history.json', history)
-        logger.info('Epoch %d validation MSE %.6g (original %.6g)',
-                    epoch, measured['validation']['mse'], original['validation']['mse'])
-        if measured['validation']['mse'] < best_loss:
+        logger.info('Epoch %d validation MSE %.6g (original %.6g), L0 %.4g (original %.4g)%s',
+                    epoch, measured['validation']['mse'], original['validation']['mse'],
+                    measured['validation']['l0'], l0_target, '' if eligible else ' [outside L0 tolerance]')
+        if eligible and measured['validation']['mse'] < best_loss:
             best_loss, best_epoch, stale = measured['validation']['mse'], epoch, 0
             save_model(model, config, out / 'best')
         else:
             stale += 1
         if stale >= args.patience:
             break
-    if encoder_digest(model) != frozen_hash:
+    if not full and encoder_digest(model) != frozen_hash:
         raise RuntimeError('Frozen encoder or thresholds changed.')
     best, _ = load_gemma_scope_sae(out / 'best', expected_layer=args.layer)
     model.load_state_dict(best.state_dict())
     final = measure()
-    write_json_atomic(out / 'summary.json', {'best_epoch': best_epoch, 'original': original,
-        'bias_only': bias_only, 'adapted': final, 'encoder_unchanged': True,
-        'note': 'Only decoder weights and bias adapted. Feature values and probe inputs are unchanged. '
-                'Variance explained uses each evaluation cohort own mean, identically before and after.'})
+    summary = {'train_mode': args.train, 'best_epoch': best_epoch, 'original': original,
+               'bias_only': bias_only, 'adapted': final,
+               'encoder_unchanged': encoder_digest(model) == frozen_hash,
+               'l0_target': l0_target, 'l0_tolerance': args.l0_tolerance}
+    if full:
+        source, _ = load_gemma_scope_sae(args.sae_dir, expected_layer=args.layer)
+        drift, arrays = feature_drift(source.to(device), model, inputs['validation'], args.batch_size, device)
+        np.savez(out / 'feature_drift.npz', **arrays)
+        summary.update(bandwidth=bandwidth, l0_coef=args.l0_coef, threshold_trained=log_threshold is not None,
+                       feature_drift=drift,
+                       note='Encoder, thresholds and decoder adapted from the original weights. Features changed: '
+                            're-run feature selection for this SAE. The best checkpoint is the lowest validation '
+                            'MSE among epochs whose validation L0 stays within l0_tolerance of the original. '
+                            'Variance explained uses each evaluation cohort own mean, identically before and after.')
+    else:
+        summary['note'] = ('Only decoder weights and bias adapted. Feature values and probe inputs are unchanged. '
+                           'Variance explained uses each evaluation cohort own mean, identically before and after.')
+    write_json_atomic(out / 'summary.json', summary)
     manifest['status'] = 'completed'
     write_json_atomic(out / 'manifest.json', manifest)
     logger.info('Best checkpoint: %s (epoch %d)', out / 'best', best_epoch)
@@ -267,10 +408,22 @@ def main():
     parser.add_argument('--activation-file', default='{split}_attempt2.pt')
     parser.add_argument('--probe-config', type=Path)
     parser.add_argument('--cache-dir', type=Path, default=Path('artifacts/cache/pretrained_decoder'))
-    parser.add_argument('--output-dir', type=Path, default=Path('results/sae/decoder_finetuning'))
+    parser.add_argument('--train', choices=('decoder', 'full'), default='decoder',
+                        help='decoder: decoder only, encoder frozen. full: encoder, thresholds and decoder.')
+    parser.add_argument('--output-dir', type=Path,
+                        help='Default: results/sae/decoder_finetuning or results/sae/full_finetuning.')
     parser.add_argument('--epochs', type=int, default=5)
     parser.add_argument('--batch-size', type=int, default=256)
-    parser.add_argument('--lr', type=float, default=1e-5)
+    parser.add_argument('--lr', type=float, default=1e-5, help='Decoder learning rate.')
+    parser.add_argument('--lr-enc', type=float, help='Full mode: encoder/threshold learning rate (default --lr).')
+    parser.add_argument('--l0-coef', type=float, default=1.0,
+                        help='Full mode: weight of the relative L0 penalty against relative MSE.')
+    parser.add_argument('--l0-tolerance', type=float, default=0.1,
+                        help='Eligible checkpoints keep validation L0 within this fraction of the original.')
+    parser.add_argument('--bandwidth', type=float,
+                        help='Full mode: STE kernel bandwidth (default 0.001 * mean ||x|| / sqrt(d)).')
+    parser.add_argument('--freeze-threshold', action='store_true',
+                        help='Full mode: keep JumpReLU thresholds fixed; train only w_enc/b_enc and the decoder.')
     parser.add_argument('--patience', type=int, default=2)
     parser.add_argument('--seed', type=int, default=42)
     parser.add_argument('--device', default='cuda' if torch.cuda.is_available() else 'cpu')
