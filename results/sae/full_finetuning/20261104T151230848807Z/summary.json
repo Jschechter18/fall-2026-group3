@@ -1,0 +1,85 @@
+{
+  "train_mode": "full",
+  "best_epoch": 1,
+  "original": {
+    "train": {
+      "n": 72846,
+      "mse": 6357.763089832826,
+      "variance_explained": 0.22372713181572945,
+      "l0": 103.4959366334459,
+      "dead_fraction": 0.7371826171875
+    },
+    "validation": {
+      "n": 9105,
+      "mse": 6343.526275989182,
+      "variance_explained": 0.22461340536616514,
+      "l0": 103.51773750686436,
+      "dead_fraction": 0.8172607421875,
+      "probe_cohort": {
+        "n": 3227,
+        "mse": 6759.281049403491,
+        "variance_explained": 0.2382532274471012
+      }
+    }
+  },
+  "bias_only": {
+    "train": {
+      "n": 72846,
+      "mse": 4010.126650073256,
+      "variance_explained": 0.5103698466819719,
+      "l0": 103.4959366334459,
+      "dead_fraction": 0.7371826171875
+    },
+    "validation": {
+      "n": 9105,
+      "mse": 3992.371825116726,
+      "variance_explained": 0.512001454820709,
+      "l0": 103.51773750686436,
+      "dead_fraction": 0.8172607421875,
+      "probe_cohort": {
+        "n": 3227,
+        "mse": 4555.835237682864,
+        "variance_explained": 0.4865736809547291
+      }
+    }
+  },
+  "adapted": {
+    "train": {
+      "n": 72846,
+      "mse": 2824.8116617389505,
+      "variance_explained": 0.655094941451156,
+      "l0": 96.02606869285891,
+      "dead_fraction": 0.7401123046875
+    },
+    "validation": {
+      "n": 9105,
+      "mse": 2821.6597656966337,
+      "variance_explained": 0.6551007969778372,
+      "l0": 96.06457990115321,
+      "dead_fraction": 0.8203125,
+      "probe_cohort": {
+        "n": 3227,
+        "mse": 3300.653120577678,
+        "variance_explained": 0.6280282113526579
+      }
+    }
+  },
+  "encoder_unchanged": false,
+  "l0_target": 103.51773750686436,
+  "l0_tolerance": 0.1,
+  "bandwidth": 0.6479713397982526,
+  "l0_coef": 0.1,
+  "threshold_trained": true,
+  "feature_drift": {
+    "n_examples": 9105,
+    "n_features_with_defined_correlation": 2937,
+    "activation_correlation_median": 0.9666374787957692,
+    "fraction_correlation_below_0.9": 0.33878106911814776,
+    "active_set_jaccard_mean": 0.8237123028162456,
+    "encoder_cosine_median": 1.0,
+    "encoder_cosine_min": 0.9998961229637403,
+    "decoder_cosine_median": 1.0,
+    "decoder_cosine_min": 0.9932369655392999
+  },
+  "note": "Encoder, thresholds and decoder adapted from the original weights. Features changed: re-run feature selection for this SAE. The best checkpoint is the lowest validation MSE among epochs whose validation L0 stays within l0_tolerance of the original. Variance explained uses each evaluation cohort own mean, identically before and after."
+}

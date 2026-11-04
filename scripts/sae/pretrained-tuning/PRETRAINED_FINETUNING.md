@@ -10,7 +10,7 @@ time PYTHONPATH=src python scripts/sae/finetune_pretrained_sae.py \
   --probe-config configs/feature_selection_mixed_final_001_layer25.yaml
 ```
 
-Defaults: 5 epochs, batch size 256, Adam learning rate 1e-5, patience 2,
+Defaults: 5 epochs, batch size 256, Adam decoder learning rate 1e-5, patience 5,
 seed 42, CUDA when available, otherwise CPU. Only decoder weights and bias update.
 The original source is never overwritten. No input scaling, decoder normalization,
 L1 penalty, or changes to the frozen JumpReLU encoder/thresholds are applied.
@@ -84,12 +84,13 @@ Output goes to `results/sae/full_finetuning/<timestamp>/` with the same files as
   bandwidth rescaled to raw (unnormalized) activations. Override it with `--bandwidth`.
 - **Sparsity.** MSE alone would let the encoder become denser. The loss is
   `MSE / MSE_orig + l0_coef * L0 / L0_orig`, with both reference values measured on train before
-  training. The default `--l0-coef 1` trades a 1% rise in L0 against a 1% fall in MSE.
+  training. The default `--l0-coef 0.1` makes a 10% rise in L0 cost as much as a 1% fall in MSE.
 - **Checkpoint selection.** The best checkpoint is the lowest validation MSE among epochs whose
   validation L0 is within `--l0-tolerance` (default 10%) of the original. The original (epoch 0) is
   always eligible. `history.json` marks each epoch's `l0_eligible`.
-- **Learning rates.** `--lr` is for the decoder and `--lr-enc` for the encoder and thresholds; it
-  defaults to `--lr`.
+- **Learning rates.** `--lr` is for the decoder and `--lr-enc` for the encoder and thresholds.
+  The latter defaults to `1e-6` so the sensitive encoder and gate parameters move conservatively.
+- **Early stopping.** `--patience` defaults to 5 epochs without a new eligible best checkpoint.
 - **No cache.** Features change every step, so each batch is re-encoded live.
 
 `summary.json` reports `feature_drift`, measured on validation against the original encoder:

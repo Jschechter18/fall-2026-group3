@@ -728,16 +728,17 @@ def build_parser():
     training.add_argument('--epochs', type=int, default=5, help='Maximum number of epochs.')
     training.add_argument('--batch-size', type=int, default=256)
     training.add_argument('--lr', type=float, default=1e-5, help='Decoder learning rate (Adam).')
-    training.add_argument('--patience', type=int, default=2, help='Stop after this many epochs without a new best.')
+    training.add_argument('--patience', type=int, default=5, help='Stop after this many epochs without a new best.')
     training.add_argument('--l0-tolerance', type=float, default=0.1,
                           help='An epoch can be kept only if its validation L0 is within this fraction of the original.')
     training.add_argument('--seed', type=int, default=42)
     training.add_argument('--device', default='cuda' if torch.cuda.is_available() else 'cpu')
 
     full = parser.add_argument_group('full mode only (--train full)')
-    full.add_argument('--lr-enc', type=float, help='Encoder and threshold learning rate (default: --lr).')
-    full.add_argument('--l0-coef', type=float, default=1.0,
-                      help='Weight of the relative L0 penalty against the relative MSE (1 = 1%% L0 for 1%% MSE).')
+    full.add_argument('--lr-enc', type=float, default=1e-6,
+                      help='Encoder and threshold learning rate (default: 1e-6).')
+    full.add_argument('--l0-coef', type=float, default=0.1,
+                      help='Weight of the relative L0 penalty against the relative MSE (default: 0.1).')
     full.add_argument('--bandwidth', type=float,
                       help='STE window width around each threshold (default: 0.001 * mean ||x|| / sqrt(d)).')
     full.add_argument('--freeze-threshold', action='store_true',
