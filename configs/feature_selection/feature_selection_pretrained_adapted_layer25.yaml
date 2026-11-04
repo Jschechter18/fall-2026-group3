@@ -39,9 +39,10 @@ saes:
     kind: gemma_scope
     path: results/sae/pretrained/gemma-scope-2-4b-it/resid_post_all/layer_25_width_16k_l0_big
 
+  # Decoder-only fine-tune, 10 epochs (same encoder as the Pretrained SAE); see configs/causal_mixed_layer25.yaml.
   Adapted pretrained SAE:
     kind: gemma_scope
-    path: results/sae/decoder_finetuning/20261102T205853702830Z/best
+    path: results/sae/decoder_finetuning/20261104T164310458065Z/best
 
 output_dir: results/feature_selection_pretrained_adapted_layer25
 

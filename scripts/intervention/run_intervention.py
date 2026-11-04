@@ -43,7 +43,25 @@ Exp 1  L1 SAE                                (custom trained)
 
 # something to consider - the SAE features will be the same for both of these, that means we can cache the activations.
 Exp 2  Pretrained SAE                        (Gemma Scope 2, layer 25, 16k)
+           results/sae/pretrained/gemma-scope-2-4b-it/resid_post_all/layer_25_width_16k_l0_big
 Exp 3  Pretrained SAE, fine-tuned decoder    (same encoder; decoder fine-tuned on our data)
+           results/sae/decoder_finetuning/20261104T164310458065Z/best
+           (params.safetensors sha256 a93c7d01…4de6; s3://dats-capstone/shared/group3/results/sae/...)
+           Chosen BEFORE any intervention outcome; fixed for the experiment:
+             - decoder only, 10 epochs, Adam lr 1e-5, fitted on mixed_final_001 train (attempt 2);
+               encoder, b_enc and thresholds identical to Exp 2, so the features, their firing
+               frequencies and the selected targeted features are the same as Exp 2's.
+             - validation variance explained 0.225 -> 0.794 (probe cohort 0.238 -> 0.770).
+             - the 14 targeted features keep decoder cosine 0.928-0.996 with Exp 2 (row norms
+               0.87-1.02): edits keep their meaning, fitted to what each feature writes here.
+             - not used: the 5-epoch run 20261102T205853702830Z (superseded), the 15-epoch run
+               20261104T165208970599Z (+0.02 variance explained for targeted cosine down to 0.88),
+               and every full (encoder + decoder) fine-tune: none passed the stability limits, and a
+               new encoder would change the features themselves.
+           Under the error-preserving splice b_dec cancels, so Exp 3 differs from Exp 2 only in the
+           decoder rows of the edited features. Exp 3 vs. Exp 2 therefore asks: does fitting those
+           directions to our data change the effect? Control 1 (reconstruction splice) is where
+           the better reconstruction itself shows up.
     each with:
     Control 1         SAE spliced in, nothing edited               (reconstruction-damage check)
     Control 2         random sparse features, edited               (matched random draws)
@@ -191,7 +209,13 @@ config = load_config(args.config)
 #   config.solver                        model id + revision, dtype, greedy decoding, max_new_tokens
 #   config.representations               Raw activations, L1 SAE, Pretrained SAE,
 #                                        Pretrained SAE (fine-tuned decoder): name, kind, path
+#                                        fine-tuned decoder = results/sae/decoder_finetuning/
+#                                        20261104T164310458065Z/best (kind: gemma_scope; see Exp 3)
 #   config.feature_selection_summary     targeted features + matched random draws per representation
+#                                        must be a run that used the checkpoints above: its recorded
+#                                        sae_sha256 is checked (replay.feature_sets). The current
+#                                        20261102T210433855083Z run used the 5-epoch decoder, so rerun
+#                                        configs/feature_selection/feature_selection_pretrained_adapted_layer25.yaml
 #   config.number_of_random_draws        5
 #
 #   config.edits                         full_ablation, suppress_1pct (-0.01), suppress_2pct (-0.02)
