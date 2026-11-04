@@ -39,6 +39,9 @@ Raw activations       No SAE: the "features" are the layer's neurons, each cente
     Control 2         targeted neurons, edited
 
 Exp 1  L1 SAE                                (custom trained)
+
+
+# something to consider - the SAE features will be the same for both of these, that means we can cache the activations.
 Exp 2  Pretrained SAE                        (Gemma Scope 2, layer 25, 16k)
 Exp 3  Pretrained SAE, fine-tuned decoder    (same encoder; decoder fine-tuned on our data)
     each with:
@@ -445,7 +448,7 @@ def run_random_directions(episode, prompt, baseline, solver, results):
             continue
 
         for random_draw in range(config.number_of_random_directions):
-
+            
             generation = generate_answer(
                 solver=solver,
                 prompt=prompt,
@@ -601,14 +604,19 @@ if __name__ == "__main__":
 #
 # Every undefined name above, in the order it is used. "Reuse" points at code that already does
 # the job in the old pipeline (src/mas_sae/causal/), so implementing usually means moving it.
+# Mark each item [x] when it is implemented and tested.
+#
+# Sections: SETUP, STAGE 1, STAGE 2, STAGE 3 (required for the benchmark),
+#           OUTSIDE THIS SCRIPT (required, done before the baseline stage),
+#           OPTIONAL SPEEDUPS (not required; the benchmark is correct without them).
 #
 #
 # ---- SETUP ----------------------------------------------------------
 #
-# parse_args()
+# [ ] parse_args()
 #     command (baseline | intervene | merge), --config, --shard (intervene only).
 #
-# load_config(path)
+# [ ] load_config(path)
 #     YAML -> typed config with the fields listed at the top. Refuse unknown keys.
 #     Assert greedy decoding (do_sample: false) and a pinned solver revision.
 #     Edits: each has .name, .size (None for full_ablation, e.g. -0.01), .is_size_matched.
@@ -618,9 +626,9 @@ if __name__ == "__main__":
 #     contrast must name two configured representations.
 #     Reuse: replay.ReplayConfig.from_dict (its validation).
 #
-# set_random_seed(seed)
+# [ ] set_random_seed(seed)
 #
-# load_intervention_episodes(config)
+# [ ] load_intervention_episodes(config)
 #     Keep only eligible adoption/retention episodes of config.partition, Natural critic
 #     condition, exactly one stored episode per question, whose stored A2 relabeled with
 #     config.label_policy reproduces the stored label. Attach each episode's exact collected
@@ -632,17 +640,17 @@ if __name__ == "__main__":
 #
 # ---- STAGE 1 --------------------------------------------------------
 #
-# load_solver_model(solver_spec)
+# [ ] load_solver_model(solver_spec)
 #     Same model, revision, dtype, prompt and greedy settings as collection; resolve the layer's
 #     module for the hook.
 #     Reuse: the solver half of replay.load_components.
 #
-# record_provenance(path, solver)
+# [ ] record_provenance(path, solver)
 #     git commit, code tree hash, uncommitted-code hash, package versions, GPU model, solver
 #     spec, hashes of every input file and representation file.
 #     Reuse: replay.provenance.
 #
-# ResultsFile(path)
+# [ ] ResultsFile(path)
 #     Append-only JSONL: one line per generation, flushed immediately.
 #     .append(row), .rows(), .has_episode(id), .has_complete_episode(id)
 #     On open: cut off an unfinished last line (interrupted write); any other bad line = corrupt.
@@ -652,7 +660,7 @@ if __name__ == "__main__":
 #     The exact revise prompt from collection (question, context, A1, critic feedback).
 #     Reuse: replay._solve.
 #
-# generate_answer(solver, prompt, intervention, compare_to=None) -> generation
+# [ ] generate_answer(solver, prompt, intervention, compare_to=None) -> generation
 #     Greedy-generate A2. With an intervention, hook the layer and replace x at the final
 #     prompt token of the prefill ONLY (first forward call); every later call is untouched.
 #       splice "reconstruction":    x' = decode(encode(x))
@@ -674,10 +682,11 @@ if __name__ == "__main__":
 #       recon_rel_error                |x − decode(encode(x))| / |x|
 #     Keep the speed-up that reuses the shared prefill and skips byte-identical edits; rows must
 #     be identical to generating each condition separately.
+#     Further speedups go behind this function only; see OPTIONAL SPEEDUPS.
 #     Reuse: replay.SAESplice, replay.DirectionSplice, replay.FirstTokenLogits,
 #            prefix.PrefixCache, replay.generate_episode, replay._row.
 #
-# check_baseline_reproduces_stored(rows, episodes, min_match) -> check
+# [ ] check_baseline_reproduces_stored(rows, episodes, min_match) -> check
 #     Passes only if: every episode has a baseline row; ZERO prompt-hash differences from
 #     collection; label match rate >= min_match (labels, not exact text). With Claude labels,
 #     only an exact stored answer reuses its stored label; any other counts as a mismatch.
@@ -685,7 +694,7 @@ if __name__ == "__main__":
 #     prompt_differs | label_changed | formatting_only | text_differs_same_label).
 #     Reuse: replay.replay_check, replay.replay_mismatches.
 #
-# load_representations(config)
+# [ ] load_representations(config)
 #     Load raw activations (neuron centers) and each SAE. For each: targeted features and
 #     config.number_of_random_draws matched random draws from the feature-selection summary.
 #     Refuse unless: each representation's file hashes equal the ones feature selection used,
@@ -696,40 +705,40 @@ if __name__ == "__main__":
 #     Reuse: feature_selection.load_sae, replay.feature_sets, replay.validate_features,
 #            offline.contribution_matched_controls, offline.match_quality.
 #
-# freeze_run(config, episodes, representations, provenance_path)
+# [ ] freeze_run(config, episodes, representations, provenance_path)
 #     Everything a worker must reproduce: resolved config, episode order, every feature set,
 #     provenance, and a hash of each. Nothing in it may change once workers start.
 #
-# split_into_shards(episodes, n)
+# [ ] split_into_shards(episodes, n)
 #     Contiguous, balanced shards of the frozen episode order.
 #     Reuse: distributed.prepare_distributed_run.
 #
 #
 # ---- STAGE 2 --------------------------------------------------------
 #
-# require_passed_baseline_check(path)
-# load_shard(shards_path, shard_id, episodes)
+# [ ] require_passed_baseline_check(path)
+# [ ] load_shard(shards_path, shard_id, episodes)
 #     Refuse if the current episodes don't reproduce the frozen order for this shard.
 #
-# require_same_provenance(path, solver)
+# [ ] require_same_provenance(path, solver)
 #     This worker's code, packages, GPU model, solver and input hashes equal stage 1's.
 #     Reuse: replay.validate_provenance_identity.
 #
-# require_matches_frozen_run(path, shard_episodes, representations)
+# [ ] require_matches_frozen_run(path, shard_episodes, representations)
 #     Resolved episode order and feature sets equal frozen_run.json. Also checked on resume.
 #
-# read_rows_by_episode(path)
+# [ ] read_rows_by_episode(path)
 #     {episode_id: baseline row}.
 #
-# require_worker_reproduces_baseline(solver, shard_episodes, baseline)
+# [ ] require_worker_reproduces_baseline(solver, shard_episodes, baseline)
 #     Regenerate this shard's baseline on this worker; prompt hash, answer and first token must
 #     equal stage 1's for every episode.
 #     Reuse: distributed._validate_worker_baseline.
 #
-# random_direction_seed(seed, draw)
+# [ ] random_direction_seed(seed, draw)
 #     Fixed per draw, identical for every episode and worker (old pipeline: 1000·seed + draw).
 #
-# mark_shard_complete(results, shard_episodes, marker_path)
+# [ ] mark_shard_complete(results, shard_episodes, marker_path)
 #     Every (episode, experiment, condition, edit, draw) row present exactly once; then write
 #     the marker with row count and file hashes. Merge accepts only marked shards.
 #     Reuse: distributed._validate_row_keys, the COMPLETE marker in distributed.run_shard.
@@ -737,14 +746,14 @@ if __name__ == "__main__":
 #
 # ---- STAGE 3 --------------------------------------------------------
 #
-# read_json(path), read_rows(path), write_json(obj, path), write_csv(rows, path)
+# [ ] read_json(path), read_rows(path), write_json(obj, path), write_csv(rows, path)
 #
-# require_shard_complete(marker_path)
+# [ ] require_shard_complete(marker_path)
 #     Marker exists and its file hashes match the shard file.
 #
-# require_every_condition_present(results, episodes, frozen_run_path)
+# [ ] require_every_condition_present(results, episodes, frozen_run_path)
 #
-# load_scorer(scorer_spec, label_policy), score_answer(scorer, episode, answer)
+# [ ] load_scorer(scorer_spec, label_policy), score_answer(scorer, episode, answer)
 #     The SAME labeler as the stored labels. Rules: same rule version. Claude: the source run's
 #     exact model id, prompt version/hash, sampling settings, token limit and retries. An answer
 #     identical to the stored A2 reuses its stored judgment; identical answers share one request.
@@ -752,52 +761,52 @@ if __name__ == "__main__":
 #     score = adopted (1/0). Keep agreement / out labels as their own counts.
 #     Reuse: semantic.label_run, semantic.generation_label, behavior_labels.classify_candidate.
 #
-# handle_scoring_failures(results, policy)
+# [ ] handle_scoring_failures(results, policy)
 #     stop: raise. exclude_whole_episode: drop that episode from EVERY condition, return which
 #     and why. Never count a failure as retention.
 #
-# primary_endpoint(results, representation, edit, sidedness)
+# [ ] primary_endpoint(results, representation, edit, sidedness)
 #     The ONE confirmatory test. At that representation × edit: per question, targeted minus
 #     the mean over random draws; mean difference in pp, bootstrap 95% CI over questions,
 #     permutation p-value (one-sided toward "lower", or two-sided, as configured). No Holm.
 #     Also record N, the no-op and capped rates on both sides, and the excluded episodes.
 #     Reuse: offline.targeted_vs_random (add the one-sided option).
 #
-# between_representation_contrasts(results, pairs, edit)
+# [ ] between_representation_contrasts(results, pairs, edit)
 #     For each pair (A, B), per question:
 #         d_A = targeted_A − mean(random_A),   d_B = targeted_B − mean(random_B)
 #     then d_A − d_B: mean in pp, bootstrap CI over questions, permutation p (two-sided).
 #     Holm across the pairs. Paired works because every representation runs on the same episodes.
 #     New: no equivalent in the old pipeline; build on offline.paired_effect.
 #
-# targeted_minus_random(results)
+# [ ] targeted_minus_random(results)
 #     SECONDARY. Per representation × edit: targeted − mean over draws of random. Paired by question;
 #     bootstrap CI over questions, and a second CI that also resamples draws; permutation p;
 #     Holm across representations within each edit. Also on edited rows only (no-op edits
 #     dropped), with targeted and random no-op rates beside it.
 #     Reuse: offline.targeted_vs_random, offline.holm, the compare() block in replay.analyse.
 #
-# each_condition_vs_baseline(results)
+# [ ] each_condition_vs_baseline(results)
 #     Acceptance per condition; Δ vs. Baseline 1, paired by question, bootstrap CI, permutation p.
 #     Reuse: offline.paired_effect.
 #
-# targeted_minus_random_direction(results)
+# [ ] targeted_minus_random_direction(results)
 #     Size-matched edits only: targeted − mean over random directions at the same size.
 #     Reuse: offline.targeted_vs_random.
 #
-# reconstruction_damage(results)
+# [ ] reconstruction_damage(results)
 #     Per SAE, Control 1 vs. Baseline 1: acceptance Δ (CI, p), % answers / labels / first
 #     tokens changed, Δ log p(baseline's first token), mean reconstruction error.
 #     Reuse: the damage block in replay.analyse, replay._diagnostics.
 #
-# write_diagnostics(results, run_dir)
+# [ ] write_diagnostics(results, run_dir)
 #     edit sizes before/after rescaling and % capped (per representation × edit × side),
 #     no-op rates, per-draw effects and targeted − each draw, label transitions
 #     (baseline -> condition), every changed answer side by side, random-draw match quality.
 #     Reuse: replay._pairs, replay._diagnostics, the random_draws / transitions /
 #            changed_answers / control_match blocks of replay.analyse.
 #
-# write_summary(path, ...)
+# [ ] write_summary(path, ...)
 #     One JSON with every table above, the baseline check, exclusions, provenance, and the
 #     written definitions of the outcome, the edit position and the edits. If the baseline
 #     check failed, mark the whole summary UNVALIDATED.
@@ -807,13 +816,47 @@ if __name__ == "__main__":
 #
 # ---- OUTSIDE THIS SCRIPT, BEFORE THE BASELINE STAGE ---------------------
 #
-# Power estimate (fills in "Sample size" above)
+# [ ] Power estimate (fills in "Sample size" above)
 #     From EXISTING runs only (e.g. the TopK run's per-question targeted − random differences):
 #     estimate the paired variance, then the N that detects the smallest effect of interest at
 #     alpha 0.05 and power 0.80 with the chosen sidedness. Record the inputs and the result in
 #     the docstring and set config.number_of_episodes.
 #
-# Edit-norm audit for L1 (fills in config.edits)
+# [ ] Edit-norm audit for L1 (fills in config.edits)
 #     python scripts/causal_edit_norm_audit.py on the L1 SAE: full-ablation edit sizes of the
 #     targeted set and every random draw. Choose suppress sizes below them so that neither side
 #     is capped.
+#
+#
+# ---- OPTIONAL SPEEDUPS ----------------------------------------------
+#
+# Not needed for correctness. Current cost: ~0.43 s per generation (TopK run), so 82 × N
+# generations, e.g. ~34 GPU-hours for the whole ~3,500-episode pool. Build these only if runtime
+# becomes the bottleneck. Each one lives inside generate_answer, so the benchmark above does not
+# change, and each must pass the parity check before any real run uses it.
+#
+# [ ] Batch one episode's conditions together
+#     Today every condition is generated alone (batch size 1), which leaves the GPU mostly idle
+#     during token-by-token decoding. All of an episode's conditions share the same prompt and
+#     length, so they can run as one batch with no padding. Plausibly several times faster.
+#     [ ] Layers 0–25 captured once per episode and broadcast across the batch
+#         The edit is at layer 25, so layers 0–25 are identical for every condition.
+#         Reuse: prefix.PrefixCache (capture/replay); lift its batch-size-1 check.
+#     [ ] Batched splice hook: a different edit per batch row
+#         Reuse: replay.SAESplice._edit / DirectionSplice._edit (the math already works on a
+#         batch of rows); make the edit stats per row (they currently sum over everything
+#         and index row 0); lift the batch-size-1 check in SAESplice._hook.
+#     [ ] Per-row first-token log-probs
+#         Reuse: replay.FirstTokenLogits, indexed per row.
+#     [ ] Split the batched output back into one row per condition
+#         Reuse: the loop and duplicate-edit handling in replay.generate_episode.
+#     [ ] Batch the baseline the same way
+#         Batch size can change floating-point results; the baseline must be generated the
+#         same way as the conditions, and must still pass the baseline check.
+#
+# [ ] Parity check (required before any speedup is used)
+#     Regenerate a few hundred finished episodes with the speedup and compare every row with
+#     the reference run, field by field (except seconds). Require identical answers, or show
+#     that every difference is a near-tie between the top two tokens. Record the result in the
+#     docstring.
+#     Reuse: scripts/check_replay_reuse.py; reference rows: the TopK run's per-row data in S3.
