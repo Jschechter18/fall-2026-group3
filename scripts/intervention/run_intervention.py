@@ -37,6 +37,9 @@ Raw activations       No SAE: the "features" are the layer's neurons, each cente
                       over the feature-selection fit rows (so ablating a neuron sets it to its mean).
     Control 1         random neurons, edited                       (matched random draws)
     Control 2         targeted neurons, edited
+# TODO: more clear idea of how we want to handle the raw activation feature edits, so that they are comparable across experiments
+- does centering on the mean refer to one feature across all episodes or the mean of the selected features to steer
+
 
 Exp 1  L1 SAE                                (custom trained)
 
@@ -90,17 +93,41 @@ Exp 4  Pretrained SAE, fully fine-tuned      (encoder, thresholds and decoder fi
     Control 1         SAE spliced in, nothing edited               (reconstruction-damage check)
     Control 2         random sparse features, edited               (matched random draws)
     Experiment        targeted sparse features, edited
+                        1. decrease selected features
+                        2. increase selected features
 
+                        # experiment idea
+                        select 10 features associated with adoption
+                        select 10 features associated with retention
+
+                        for intervention episodes labeled adoption
+                            - try independently:
+                                1. decreasing adoption features
+                                2. increasing retention features
+                                3. both
+                            
+                        for intervention episodes labeled retention
+                            - try independently:
+                                1. decreasing retention features
+                                2. increasing adoption features
+                                3. both
+
+
+
+# TODO: figure out how this is any different than the random sparse edits with the random draws? is it redundant? if we can drop this, we should
 Random direction      No SAE: a random unit direction added at each size-matched edit size.
                       The floor: does ANY edit this big move adoption?
 
 
+
+# TODO: shouldn't we also increase the features associated with adoption, while also decreasing the features associated with retention?
 "EDITED" MEANS EACH OF THESE (config.edits), ONE GENERATION PER EDIT
 --------------------------------------------------------------------
-    full_ablation     Set the features to 0 (raw: to their mean). The edit's size depends on the
-                      set (pretrained: targeted 2.2% of |x| vs. random 9%), so targeted vs. random
-                      is confounded by size here. Reported, but descriptive.
-    suppress_1pct     The full-ablation edit rescaled so that |Δ| = 1% of |x|.
+    # NOTE: WE ARE ONLY GOING TO KEEP THE 2% SIZE EDITS
+    # full_ablation     Set the features to 0 (raw: to their mean). The edit's size depends on the
+    #                   set (pretrained: targeted 2.2% of |x| vs. random 9%), so targeted vs. random
+    #                   is confounded by size here. Reported, but descriptive.
+    # suppress_1pct     The full-ablation edit rescaled so that |Δ| = 1% of |x|.
     suppress_2pct     The same at 2%.
                       Same size for every set, so targeted vs. random compares DIRECTION, not size.
                       Never pushed past full ablation (cap_at_ablation): a set whose full ablation
@@ -174,7 +201,7 @@ Secondary: everything else
 
 Sample size
     N = DECIDE eligible episodes, the first N of the seeded shuffle. (Pool ≈ 3,500; Run B used
-    250.) N is required in the config; there is no default.
+    250, etc.) N is required in the config; there is no default. We AGREED on 1000 episodes for our run.
     Chosen by a power estimate for the primary endpoint, done before the run:
         smallest effect of interest   DECIDE pp of adoption (e.g. 3 pp)
         alpha                         0.05, sidedness as above
