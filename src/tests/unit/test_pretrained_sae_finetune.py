@@ -1,4 +1,4 @@
-"""Decoder adaptation preserves encoder features and safely reuses disk caches."""
+"""Pretrained SAE fine-tuning: decoder-only mode keeps features and reuses disk caches; full mode trains the encoder."""
 import argparse
 import importlib.util
 import json
@@ -12,8 +12,8 @@ from safetensors.torch import save_file
 from mas_sae.experiments.artifacts import sha256_file
 from mas_sae.sae.pretrained import JumpReLUSAE, load_gemma_scope_sae
 
-spec = importlib.util.spec_from_file_location('decoder_finetune',
-    Path(__file__).resolve().parents[3] / 'scripts/sae/finetune_pretrained_decoder.py')
+spec = importlib.util.spec_from_file_location('pretrained_sae_finetune',
+    Path(__file__).resolve().parents[3] / 'scripts/sae/finetune_pretrained_sae.py')
 ft = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(ft)
 
@@ -101,8 +101,9 @@ def test_cohort_variance_uses_its_own_mean():
     X = torch.tensor([[1., 2., 3.], [2., 3., 4.], [5., 6., 7.]])
     mask = np.array([True, True, False])
     sae = model()
-    Z = sae.encoder(X).numpy()
-    result = ft.evaluate(sae, X, Z, 2, 'cpu', X.double().mean(0), mask, X[mask].double().mean(0))
+    split = ft.Split('validation', X, Path('unused'), 'unused', mean=X.double().mean(0), probe_cohort=mask,
+                     probe_cohort_mean=X[mask].double().mean(0), cached_features=sae.encoder(X).numpy())
+    result = ft.evaluate(sae, split, 2, 'cpu')
     expected = 1 - X[mask].square().sum().item() / (X[mask] - X[mask].mean(0)).square().sum().item()
     assert result['probe_cohort']['variance_explained'] == pytest.approx(expected)
 

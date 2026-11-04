@@ -1,9 +1,9 @@
-# Pretrained decoder adaptation
+# Pretrained SAE fine-tuning (decoder-only and full)
 
 Run from the repository root in the capstone environment:
 
 ```bash
-time PYTHONPATH=src python scripts/sae/finetune_pretrained_decoder.py \
+time PYTHONPATH=src python scripts/sae/finetune_pretrained_sae.py \
   --sae-dir results/sae/pretrained/gemma-scope-2-4b-it/resid_post_all/layer_25_width_16k_l0_big \
   --activations-dir artifacts/collection/mixed_final_001/prepared/activations/mixed_final_001/layer_25 \
   --layer 25 \
@@ -66,7 +66,7 @@ checkpoint). It trains `w_enc`, `b_enc`, the JumpReLU `threshold` and the decode
 third, separate checkpoint, kept beside the original and the decoder-only SAE:
 
 ```bash
-time PYTHONPATH=src python scripts/sae/finetune_pretrained_decoder.py --train full \
+time PYTHONPATH=src python scripts/sae/finetune_pretrained_sae.py --train full \
   --sae-dir results/sae/pretrained/gemma-scope-2-4b-it/resid_post_all/layer_25_width_16k_l0_big \
   --activations-dir artifacts/collection/mixed_final_001/prepared/activations/mixed_final_001/layer_25 \
   --layer 25 \
