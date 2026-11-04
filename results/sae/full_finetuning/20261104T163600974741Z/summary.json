@@ -1,0 +1,423 @@
+{
+  "train_mode": "full",
+  "best_epoch": 0,
+  "original": {
+    "train": {
+      "n": 72846,
+      "mse": 6357.763089832826,
+      "variance_explained": 0.22372713181572945,
+      "l0": 103.4959366334459,
+      "dead_fraction": 0.7371826171875
+    },
+    "validation": {
+      "n": 9105,
+      "mse": 6343.526275989182,
+      "variance_explained": 0.22461340536616514,
+      "l0": 103.51773750686436,
+      "dead_fraction": 0.8172607421875,
+      "probe_cohort": {
+        "n": 3227,
+        "mse": 6759.281049403491,
+        "variance_explained": 0.2382532274471012
+      }
+    }
+  },
+  "bias_only": {
+    "train": {
+      "n": 72846,
+      "mse": 4010.126650073256,
+      "variance_explained": 0.5103698466819719,
+      "l0": 103.4959366334459,
+      "dead_fraction": 0.7371826171875
+    },
+    "validation": {
+      "n": 9105,
+      "mse": 3992.371825116726,
+      "variance_explained": 0.512001454820709,
+      "l0": 103.51773750686436,
+      "dead_fraction": 0.8172607421875,
+      "probe_cohort": {
+        "n": 3227,
+        "mse": 4555.835237682864,
+        "variance_explained": 0.4865736809547291
+      }
+    }
+  },
+  "adapted": {
+    "train": {
+      "n": 72846,
+      "mse": 6357.763089832826,
+      "variance_explained": 0.22372713181572945,
+      "l0": 103.4959366334459,
+      "dead_fraction": 0.7371826171875
+    },
+    "validation": {
+      "n": 9105,
+      "mse": 6343.526275989182,
+      "variance_explained": 0.22461340536616514,
+      "l0": 103.51773750686436,
+      "dead_fraction": 0.8172607421875,
+      "probe_cohort": {
+        "n": 3227,
+        "mse": 6759.281049403491,
+        "variance_explained": 0.2382532274471012
+      }
+    }
+  },
+  "encoder_unchanged": true,
+  "l0_target": 103.51773750686436,
+  "l0_tolerance": 0.1,
+  "stability_limits": {
+    "min_activation_correlation": 0.95,
+    "min_jaccard": 0.85,
+    "max_alive_change": 0.05
+  },
+  "health": {
+    "original": {
+      "train": {
+        "n_examples": 72846,
+        "utilization": {
+          "alive_count": 4306,
+          "alive_fraction": 0.2628173828125,
+          "fraction_frequency_at_least_0.0001": 0.1630859375,
+          "fraction_frequency_at_least_0.001": 0.08935546875,
+          "fraction_frequency_at_least_0.01": 0.041259765625,
+          "frequency_all": {
+            "p50": 0.0,
+            "p90": 0.0006863794854899376,
+            "p99": 0.18309529692776544,
+            "max": 1.0
+          },
+          "frequency_alive": {
+            "p50": 0.00024709661477637757,
+            "p90": 0.037448864728331,
+            "p99": 0.5904860939516188
+          }
+        },
+        "concentration": {
+          "activation_mass_entropy": 5.207296559976509,
+          "activation_mass_effective_size": 182.5997428657171,
+          "firing_count_entropy": 6.010957379564681,
+          "firing_count_effective_size": 407.8736232819303,
+          "top_1pct_mass_share": 0.8249565966325543,
+          "top_5pct_mass_share": 0.9885676458108712,
+          "top_10pct_mass_share": 0.9979638890761833
+        },
+        "activations": {
+          "mean_nonzero_magnitude": 485.8658868306969,
+          "nonzero_magnitude": {
+            "p10": 160.32453906900417,
+            "p50": 285.10182675039096,
+            "p90": 966.0508789898121,
+            "p99": 3589.2193464500497
+          },
+          "per_feature_mean_magnitude": {
+            "p10": 174.77426922942192,
+            "p50": 264.97475902012417,
+            "p90": 447.55286448381736,
+            "p99": 999.5304565429659
+          },
+          "dense_over_50pct_count": 50,
+          "dense_over_90pct_count": 13
+        }
+      },
+      "validation": {
+        "n_examples": 9105,
+        "utilization": {
+          "alive_count": 2994,
+          "alive_fraction": 0.1827392578125,
+          "fraction_frequency_at_least_0.0001": 0.1827392578125,
+          "fraction_frequency_at_least_0.001": 0.08709716796875,
+          "fraction_frequency_at_least_0.01": 0.04144287109375,
+          "frequency_all": {
+            "p50": 0.0,
+            "p90": 0.0006589785831960461,
+            "p99": 0.1819011532125207,
+            "max": 1.0
+          },
+          "frequency_alive": {
+            "p50": 0.0008786381109280615,
+            "p90": 0.07820977484898416,
+            "p99": 0.6789335529928623
+          }
+        },
+        "concentration": {
+          "activation_mass_entropy": 5.205362427658886,
+          "activation_mass_effective_size": 182.2469121225135,
+          "firing_count_entropy": 6.007511986747932,
+          "firing_count_effective_size": 406.4707565314002,
+          "top_1pct_mass_share": 0.8252733547311727,
+          "top_5pct_mass_share": 0.9888902863598922,
+          "top_10pct_mass_share": 0.9981241239390954
+        },
+        "activations": {
+          "mean_nonzero_magnitude": 485.85795181133295,
+          "nonzero_magnitude": {
+            "p10": 160.32453906900417,
+            "p50": 285.10182675039096,
+            "p90": 966.0508789898121,
+            "p99": 3589.2193464500497
+          },
+          "per_feature_mean_magnitude": {
+            "p10": 172.8897911181321,
+            "p50": 257.02127838134766,
+            "p90": 455.8813321852272,
+            "p99": 1143.8154398029762
+          },
+          "dense_over_50pct_count": 50,
+          "dense_over_90pct_count": 13
+        }
+      },
+      "parameters": {
+        "decoder_norm": {
+          "p1": 0.9999998211860657,
+          "p50": 1.0,
+          "p99": 1.000000238418579,
+          "min": 0.9999995231628418,
+          "max": 1.0000004768371582
+        },
+        "mean_pairwise_abs_cosine": 0.048091377798966536,
+        "nearest_neighbour_abs_cosine": {
+          "mean": 0.33955204486846924,
+          "max": 0.982988715171814,
+          "p50": 0.28556573390960693,
+          "p90": 0.6480485796928406,
+          "p99": 0.936203590631485,
+          "count_over_0.9": 360,
+          "count_over_0.95": 95
+        },
+        "encoder_decoder_alignment": {
+          "p1": -0.2686646223068237,
+          "p10": 0.3672576993703842,
+          "p50": 0.6701906323432922,
+          "min": -0.5825420022010803
+        },
+        "threshold": {
+          "p1": 85.20792762756348,
+          "p10": 155.71197509765625,
+          "p50": 264.0106201171875,
+          "p90": 512.0523498535157,
+          "p99": 1548.9556494140627
+        },
+        "nearest_neighbour_abs_cosine_alive": {
+          "mean": 0.2382059544324875,
+          "max": 0.9751113057136536,
+          "p50": 0.19135519862174988,
+          "p90": 0.4365963786840439,
+          "p99": 0.865231382846832,
+          "count_over_0.9": 28,
+          "count_over_0.95": 7
+        },
+        "encoder_decoder_alignment_alive": {
+          "p1": 0.19096634909510612,
+          "p10": 0.5651080012321472,
+          "p50": 0.7441335022449493
+        }
+      }
+    },
+    "adapted": {
+      "train": {
+        "n_examples": 72846,
+        "utilization": {
+          "alive_count": 4306,
+          "alive_fraction": 0.2628173828125,
+          "fraction_frequency_at_least_0.0001": 0.1630859375,
+          "fraction_frequency_at_least_0.001": 0.08935546875,
+          "fraction_frequency_at_least_0.01": 0.041259765625,
+          "frequency_all": {
+            "p50": 0.0,
+            "p90": 0.0006863794854899376,
+            "p99": 0.18309529692776544,
+            "max": 1.0
+          },
+          "frequency_alive": {
+            "p50": 0.00024709661477637757,
+            "p90": 0.037448864728331,
+            "p99": 0.5904860939516188
+          }
+        },
+        "concentration": {
+          "activation_mass_entropy": 5.207296559976509,
+          "activation_mass_effective_size": 182.5997428657171,
+          "firing_count_entropy": 6.010957379564681,
+          "firing_count_effective_size": 407.8736232819303,
+          "top_1pct_mass_share": 0.8249565966325543,
+          "top_5pct_mass_share": 0.9885676458108712,
+          "top_10pct_mass_share": 0.9979638890761833
+        },
+        "activations": {
+          "mean_nonzero_magnitude": 485.8658868306969,
+          "nonzero_magnitude": {
+            "p10": 160.32453906900417,
+            "p50": 285.10182675039096,
+            "p90": 966.0508789898121,
+            "p99": 3589.2193464500497
+          },
+          "per_feature_mean_magnitude": {
+            "p10": 174.77426922942192,
+            "p50": 264.97475902012417,
+            "p90": 447.55286448381736,
+            "p99": 999.5304565429659
+          },
+          "dense_over_50pct_count": 50,
+          "dense_over_90pct_count": 13
+        }
+      },
+      "validation": {
+        "n_examples": 9105,
+        "utilization": {
+          "alive_count": 2994,
+          "alive_fraction": 0.1827392578125,
+          "fraction_frequency_at_least_0.0001": 0.1827392578125,
+          "fraction_frequency_at_least_0.001": 0.08709716796875,
+          "fraction_frequency_at_least_0.01": 0.04144287109375,
+          "frequency_all": {
+            "p50": 0.0,
+            "p90": 0.0006589785831960461,
+            "p99": 0.1819011532125207,
+            "max": 1.0
+          },
+          "frequency_alive": {
+            "p50": 0.0008786381109280615,
+            "p90": 0.07820977484898416,
+            "p99": 0.6789335529928623
+          }
+        },
+        "concentration": {
+          "activation_mass_entropy": 5.205362427658886,
+          "activation_mass_effective_size": 182.2469121225135,
+          "firing_count_entropy": 6.007511986747932,
+          "firing_count_effective_size": 406.4707565314002,
+          "top_1pct_mass_share": 0.8252733547311727,
+          "top_5pct_mass_share": 0.9888902863598922,
+          "top_10pct_mass_share": 0.9981241239390954
+        },
+        "activations": {
+          "mean_nonzero_magnitude": 485.85795181133295,
+          "nonzero_magnitude": {
+            "p10": 160.32453906900417,
+            "p50": 285.10182675039096,
+            "p90": 966.0508789898121,
+            "p99": 3589.2193464500497
+          },
+          "per_feature_mean_magnitude": {
+            "p10": 172.8897911181321,
+            "p50": 257.02127838134766,
+            "p90": 455.8813321852272,
+            "p99": 1143.8154398029762
+          },
+          "dense_over_50pct_count": 50,
+          "dense_over_90pct_count": 13
+        }
+      },
+      "parameters": {
+        "decoder_norm": {
+          "p1": 0.9999998211860657,
+          "p50": 1.0,
+          "p99": 1.000000238418579,
+          "min": 0.9999995231628418,
+          "max": 1.0000004768371582
+        },
+        "mean_pairwise_abs_cosine": 0.048091377798966536,
+        "nearest_neighbour_abs_cosine": {
+          "mean": 0.33955204486846924,
+          "max": 0.982988715171814,
+          "p50": 0.28556573390960693,
+          "p90": 0.6480485796928406,
+          "p99": 0.936203590631485,
+          "count_over_0.9": 360,
+          "count_over_0.95": 95
+        },
+        "encoder_decoder_alignment": {
+          "p1": -0.2686646223068237,
+          "p10": 0.3672576993703842,
+          "p50": 0.6701906323432922,
+          "min": -0.5825420022010803
+        },
+        "threshold": {
+          "p1": 85.20792762756348,
+          "p10": 155.71197509765625,
+          "p50": 264.0106201171875,
+          "p90": 512.0523498535157,
+          "p99": 1548.9556494140627
+        },
+        "nearest_neighbour_abs_cosine_alive": {
+          "mean": 0.2382059544324875,
+          "max": 0.9751113057136536,
+          "p50": 0.19135519862174988,
+          "p90": 0.4365963786840439,
+          "p99": 0.865231382846832,
+          "count_over_0.9": 28,
+          "count_over_0.95": 7
+        },
+        "encoder_decoder_alignment_alive": {
+          "p1": 0.19096634909510612,
+          "p10": 0.5651080012321472,
+          "p50": 0.7441335022449493
+        }
+      }
+    }
+  },
+  "stability": {
+    "n_examples": 9105,
+    "active_set_jaccard": {
+      "mean": 1.0,
+      "p1": 1.0,
+      "p5": 1.0,
+      "p10": 1.0,
+      "p50": 1.0
+    },
+    "activation_correlation": {
+      "n_features_defined": 2994,
+      "p1": 1.0,
+      "p5": 1.0,
+      "p10": 1.0,
+      "p50": 1.0,
+      "fraction_below_0.9": 0.0
+    },
+    "firing_frequency_change": {
+      "log2_ratio": {
+        "p1": 0.0,
+        "p10": 0.0,
+        "p50": 0.0,
+        "p90": 0.0,
+        "p99": 0.0
+      },
+      "count_changed_over_2x": 0
+    },
+    "lifecycle": {
+      "alive_original": 2994,
+      "alive_adapted": 2994,
+      "alive_relative_change": 0.0,
+      "died": 0,
+      "revived": 0
+    },
+    "encoder_cosine": {
+      "p1": 0.9999999999999998,
+      "p50": 1.0,
+      "min": 0.9999999999999996
+    },
+    "decoder_cosine": {
+      "p1": 0.9999999999999997,
+      "p50": 1.0,
+      "min": 0.999999999999999
+    },
+    "threshold_ratio": {
+      "p1": 1.0,
+      "p10": 1.0,
+      "p50": 1.0,
+      "p90": 1.0,
+      "p99": 1.0
+    },
+    "split_merge": {
+      "split_count": 0,
+      "merged_count": 0,
+      "link_correlation": 0.5,
+      "same_index_intact": 0.9
+    }
+  },
+  "bandwidth": 0.6479713397982526,
+  "l0_coef": 0.1,
+  "threshold_trained": true,
+  "note": "Encoder, thresholds and decoder adapted from the original weights. Features changed: re-run feature selection for this SAE. The best checkpoint is the lowest validation MSE among eligible epochs: validation L0 within l0_tolerance of the original, and stability (activation correlation, active-set Jaccard, alive-feature count) within the configured limits. Variance explained uses each evaluation cohort own mean, identically before and after."
+}
