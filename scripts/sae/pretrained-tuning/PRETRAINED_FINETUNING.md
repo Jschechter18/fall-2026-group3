@@ -22,6 +22,24 @@ trainer; omit `--probe-config` in that case because its indices refer to attempt
 Only train and validation activation tensors are loaded; test/intervention are sealed.
 The optional probe config selects a validation reporting cohort, never training rows.
 
+## Code layout
+
+The script is only the entry point. It holds `run()`, argument checks, model loading, the run
+directory and manifest, and the command line. `run()` calls the steps as modules of
+`mas_sae.sae.finetuning`:
+
+| Module | Contents |
+|---|---|
+| `data` | `Split`, `load_splits`, `probe_cohort_rows`, `iterate_batches`, `features_for` |
+| `cache` | encoder feature cache (decoder mode), `encoder_digest` |
+| `evaluation` | `evaluate`, `evaluate_splits`, bias-only reference |
+| `trainers` | `DecoderOnlyTrainer`, `FullTrainer`, `default_bandwidth`, `encoder_lr` |
+| `loop` | `train` (the epoch loop and checkpoint selection), `save_model` |
+| `selection` | `within_l0`, `eligibility`, `stability_limits` |
+| `reporting` | dictionary health and stability, `feature_health.npz` |
+
+The metrics themselves are in `mas_sae.sae.diagnostics`.
+
 ## Encoder cache
 
 The first run writes float32 features to `artifacts/cache/pretrained_decoder/`.

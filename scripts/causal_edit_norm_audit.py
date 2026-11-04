@@ -8,7 +8,6 @@ diagnostics of its finished run. Run from the repo root with the configs' SAE fi
 in place:
     python scripts/causal_edit_norm_audit.py results/causal_pretrained_layer25/edit_norm_audit.json
 """
-import importlib.util
 import json
 import subprocess
 import sys
@@ -18,15 +17,12 @@ import numpy as np
 import torch
 
 from mas_sae.causal import replay
+from mas_sae.data.activation_store import ActivationStore
 from mas_sae.experiments.artifacts import sha256_file
 from mas_sae.probe.feature_selection import is_activation_basis, load_sae, sae_files
 
-spec = importlib.util.spec_from_file_location("ft", "scripts/sae/pretrained-tuning/finetune_pretrained_sae.py")
-ft = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(ft)
-
 root = Path(".")
-X = ft.ActivationStore(Path("artifacts/collection/mixed_final_001/prepared/activations/mixed_final_001/layer_25")) \
+X = ActivationStore(Path("artifacts/collection/mixed_final_001/prepared/activations/mixed_final_001/layer_25")) \
     .load_activations("validation_attempt2").float()
 rows = np.random.default_rng(42).choice(len(X), size=1000, replace=False)
 X = X[np.sort(rows)]

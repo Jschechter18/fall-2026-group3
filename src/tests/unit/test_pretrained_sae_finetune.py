@@ -10,6 +10,7 @@ import torch
 from safetensors.torch import save_file
 
 from mas_sae.experiments.artifacts import sha256_file
+from mas_sae.sae.finetuning import cache, data, evaluation, loop, selection
 from mas_sae.sae.pretrained import JumpReLUSAE, load_gemma_scope_sae
 
 spec = importlib.util.spec_from_file_location('pretrained_sae_finetune',
@@ -18,6 +19,7 @@ ft = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(ft)
 
 
+# The script is loaded by path only for run(); its helpers are imported from mas_sae.sae.finetuning.
 # The full-mode options at their defaults: decoder-only behaviour is unchanged. Stability gates are off,
 # so these tiny problems may drift freely; test_stability_gate_* covers the gates.
 NO_STABILITY_GATES = dict(min_activation_correlation=0.0, min_jaccard=0.0, max_alive_change=float('inf'))
@@ -33,7 +35,7 @@ def model():
 def test_cache_hits_without_reencoding_and_ignores_decoder_changes(tmp_path, monkeypatch):
     sae = model()
     X = torch.ones(5, 3)
-    Z, path = ft.cached_features(sae, X, {'split': 'train', 'activation_sha256': 'a'},
+    Z, path = cache.cached_features(sae, X, {'split': 'train', 'activation_sha256': 'a'},
                                  tmp_path, 2, 'cpu')
     assert isinstance(Z, np.memmap)
     assert np.array_equal(Z, np.ones((5, 3)))
@@ -42,18 +44,18 @@ def test_cache_hits_without_reencoding_and_ignores_decoder_changes(tmp_path, mon
     def forbidden(*args):
         pytest.fail('Cache hit must not invoke the encoder')
     monkeypatch.setattr(sae, 'encoder', forbidden)
-    reused, hit = ft.cached_features(sae, X, {'split': 'train', 'activation_sha256': 'a'},
+    reused, hit = cache.cached_features(sae, X, {'split': 'train', 'activation_sha256': 'a'},
                                      tmp_path, 3, 'cpu')
     assert hit == path and np.array_equal(reused, Z)
 
 
 def test_input_or_encoder_changes_make_a_new_cache(tmp_path):
     sae, X = model(), torch.ones(3, 3)
-    _, first = ft.cached_features(sae, X, {'split': 'train', 'activation_sha256': 'a'}, tmp_path, 2, 'cpu')
-    _, changed_input = ft.cached_features(sae, X * 2, {'split': 'train', 'activation_sha256': 'b'}, tmp_path, 2, 'cpu')
+    _, first = cache.cached_features(sae, X, {'split': 'train', 'activation_sha256': 'a'}, tmp_path, 2, 'cpu')
+    _, changed_input = cache.cached_features(sae, X * 2, {'split': 'train', 'activation_sha256': 'b'}, tmp_path, 2, 'cpu')
     with torch.no_grad():
         sae.threshold.fill_(2)
-    Z, changed_encoder = ft.cached_features(sae, X, {'split': 'train', 'activation_sha256': 'a'}, tmp_path, 2, 'cpu')
+    Z, changed_encoder = cache.cached_features(sae, X, {'split': 'train', 'activation_sha256': 'a'}, tmp_path, 2, 'cpu')
     assert len({first, changed_input, changed_encoder}) == 3
     assert not np.any(Z)
 
@@ -62,7 +64,7 @@ def test_failed_cache_build_is_not_reused(tmp_path, monkeypatch):
     sae = model()
     monkeypatch.setattr(sae, 'encoder', lambda x: x * float('nan'))
     with pytest.raises(ValueError, match='nonfinite'):
-        ft.cached_features(sae, torch.ones(3, 3), {'split': 'train'}, tmp_path, 2, 'cpu')
+        cache.cached_features(sae, torch.ones(3, 3), {'split': 'train'}, tmp_path, 2, 'cpu')
     assert not list(tmp_path.iterdir())
 
 
@@ -72,7 +74,7 @@ def test_end_to_end_improves_reconstruction_preserves_features_and_never_reads_t
     acts.mkdir()
     sae = model()
     config = {'architecture': 'jump_relu', 'hf_hook_point_in': 'model.layers.25.output'}
-    ft.save_model(sae, config, src)
+    loop.save_model(sae, config, src)
     original_hash = sha256_file(src / 'params.safetensors')
     generator = torch.Generator().manual_seed(3)
     X = torch.rand(80, 3, generator=generator) * 3
@@ -89,7 +91,7 @@ def test_end_to_end_improves_reconstruction_preserves_features_and_never_reads_t
     adapted, _ = load_gemma_scope_sae(out / 'best', expected_layer=25)
     assert summary['adapted']['validation']['mse'] < summary['original']['validation']['mse']
     assert summary['best_epoch'] > 0
-    for name in ft.ENCODER_KEYS:
+    for name in cache.ENCODER_KEYS:
         assert torch.equal(getattr(sae, name), getattr(adapted, name))
     assert torch.equal(sae.encoder(X), adapted.encoder(X))
     assert not torch.equal(sae.w_dec, adapted.w_dec)
@@ -111,9 +113,9 @@ def test_cohort_variance_uses_its_own_mean():
     X = torch.tensor([[1., 2., 3.], [2., 3., 4.], [5., 6., 7.]])
     mask = np.array([True, True, False])
     sae = model()
-    split = ft.Split('validation', X, Path('unused'), 'unused', mean=X.double().mean(0), probe_cohort=mask,
+    split = data.Split('validation', X, Path('unused'), 'unused', mean=X.double().mean(0), probe_cohort=mask,
                      probe_cohort_mean=X[mask].double().mean(0), cached_features=sae.encoder(X).numpy())
-    result = ft.evaluate(sae, split, 2, 'cpu')
+    result = evaluation.evaluate(sae, split, 2, 'cpu')
     expected = 1 - X[mask].square().sum().item() / (X[mask] - X[mask].mean(0)).square().sum().item()
     assert result['probe_cohort']['variance_explained'] == pytest.approx(expected)
 
@@ -132,8 +134,8 @@ def test_ste_forward_matches_encoder_and_threshold_gradient_is_local():
 
 
 def test_l0_tolerance_rejects_denser_checkpoints():
-    assert ft.within_l0(110, 100, 0.1) and ft.within_l0(90, 100, 0.1)
-    assert not ft.within_l0(111, 100, 0.1) and not ft.within_l0(5, 0, 0.1)
+    assert selection.within_l0(110, 100, 0.1) and selection.within_l0(90, 100, 0.1)
+    assert not selection.within_l0(111, 100, 0.1) and not selection.within_l0(5, 0, 0.1)
 
 
 def test_full_mode_trains_encoder_into_a_separate_checkpoint(tmp_path):
@@ -142,7 +144,7 @@ def test_full_mode_trains_encoder_into_a_separate_checkpoint(tmp_path):
     acts.mkdir()
     sae = JumpReLUSAE(torch.eye(3) * 0.5, torch.zeros(3), torch.zeros(3, 3), torch.zeros(3),
                       torch.ones(3) * 0.01)
-    ft.save_model(sae, {'architecture': 'jump_relu', 'hf_hook_point_in': 'model.layers.25.output'}, src)
+    loop.save_model(sae, {'architecture': 'jump_relu', 'hf_hook_point_in': 'model.layers.25.output'}, src)
     original_hash = sha256_file(src / 'params.safetensors')
     X = torch.rand(80, 3, generator=torch.Generator().manual_seed(3)) * 3 + 0.1
     torch.save(X[:60], acts / 'train_attempt2.pt')
@@ -158,7 +160,7 @@ def test_full_mode_trains_encoder_into_a_separate_checkpoint(tmp_path):
     adapted, _ = load_gemma_scope_sae(out / 'best', expected_layer=25)
     assert summary['train_mode'] == 'full' and summary['best_epoch'] > 0
     assert summary['adapted']['validation']['mse'] < summary['original']['validation']['mse']
-    assert ft.within_l0(summary['adapted']['validation']['l0'], summary['l0_target'], 0.1)
+    assert selection.within_l0(summary['adapted']['validation']['l0'], summary['l0_target'], 0.1)
     assert not summary['encoder_unchanged'] and not torch.equal(sae.w_enc, adapted.w_enc)
     assert summary['stability']['n_examples'] == 20
     assert set(np.load(out / 'feature_health.npz')) >= {'activation_correlation', 'encoder_cosine',
@@ -173,10 +175,10 @@ def test_stability_gate_rejects_drifted_epochs_and_says_why():
     args = argparse.Namespace(l0_tolerance=0.1, min_activation_correlation=0.95, min_jaccard=0.85,
                               max_alive_change=0.05)
     steady = {'activation_correlation_median': 0.99, 'active_set_jaccard_mean': 0.95, 'alive_relative_change': 0.0}
-    assert ft.eligibility(100, steady, 100, args) == (True, [])
+    assert selection.eligibility(100, steady, 100, args) == (True, [])
     drifted = {'activation_correlation_median': 0.9, 'active_set_jaccard_mean': 0.8, 'alive_relative_change': -0.1}
-    eligible, reasons = ft.eligibility(120, drifted, 100, args)
+    eligible, reasons = selection.eligibility(120, drifted, 100, args)
     assert not eligible and len(reasons) == 4
     assert any('correlation' in r for r in reasons) and any('Jaccard' in r for r in reasons)
     disabled = argparse.Namespace(l0_tolerance=0.1, **NO_STABILITY_GATES)
-    assert ft.eligibility(100, drifted, 100, disabled) == (True, [])
+    assert selection.eligibility(100, drifted, 100, disabled) == (True, [])
