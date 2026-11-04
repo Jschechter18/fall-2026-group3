@@ -130,8 +130,8 @@ Copy `configs/sae_refinement/layer_25_residual_warmup.yaml`, set the source and 
 new output directory, then run from the repository root:
 
 ```bash
-PYTHONPATH=src python scripts/sae/refine_sae.py --config configs/sae_refinement/layer_25_residual_warmup.yaml --dry-run
-PYTHONPATH=src python scripts/sae/refine_sae.py --config configs/sae_refinement/layer_25_residual_warmup.yaml
+PYTHONPATH=src python scripts/sae/improvement-trials/refine_sae.py --config configs/sae_refinement/layer_25_residual_warmup.yaml --dry-run
+PYTHONPATH=src python scripts/sae/improvement-trials/refine_sae.py --config configs/sae_refinement/layer_25_residual_warmup.yaml
 ```
 
 The default comparison uses matched warmup-control and residual-warmup branches:
@@ -156,12 +156,12 @@ checkpoints preserve the tested protocol; no automatic promotion occurs.
 Record the selected checkpoint explicitly (it must appear in the comparison):
 
 ```bash
-PYTHONPATH=src python scripts/sae/refine_sae.py --config configs/sae_refinement/layer_25_residual_warmup.yaml --select-checkpoint results/sae/musique/refinement/layer_25/residual_warmup/seed_42/residual_warmup/final_checkpoint.pt
+PYTHONPATH=src python scripts/sae/improvement-trials/refine_sae.py --config configs/sae_refinement/layer_25_residual_warmup.yaml --select-checkpoint results/sae/musique/refinement/layer_25/residual_warmup/seed_42/residual_warmup/final_checkpoint.pt
 ```
 
 `selection.json` records checkpoint hashes and source lineage. Resuming regenerates
 comparison artifacts but leaves this explicit selection record intact. Pass its
 checkpoint path to downstream consumers using `load_sae_checkpoint`; rerun feature
 selection and causal analysis because refinement changes the dictionary. The
-legacy `scripts/sae/experiment_sae_resampling.py` uses the same engine and retains its
+legacy `scripts/sae/improvement-trials/experiment_sae_resampling.py` uses the same engine and retains its
 old `source_trial` configs and branch artifact names.

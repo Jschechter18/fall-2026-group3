@@ -1,0 +1,10 @@
+{
+  "hf_hook_point_in": "model.layers.25.output",
+  "hf_hook_point_out": "model.layers.25.output",
+  "width": 16384,
+  "model_name": "google/gemma-3-4b-it",
+  "architecture": "jump_relu",
+  "l0": 120,
+  "affine_connection": false,
+  "type": "sae"
+}

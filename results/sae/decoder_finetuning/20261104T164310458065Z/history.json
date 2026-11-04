@@ -1,0 +1,422 @@
+[
+  {
+    "epoch": 1,
+    "train": {
+      "n": 72846,
+      "mse": 3175.7651077773016,
+      "variance_explained": 0.6122440779782756,
+      "l0": 103.4959366334459,
+      "dead_fraction": 0.7371826171875
+    },
+    "validation": {
+      "n": 9105,
+      "mse": 3164.9430229298796,
+      "variance_explained": 0.6131403440309641,
+      "l0": 103.51773750686436,
+      "dead_fraction": 0.8172607421875,
+      "probe_cohort": {
+        "n": 3227,
+        "mse": 3651.393916094699,
+        "variance_explained": 0.588500979530968
+      }
+    },
+    "train_objective": {
+      "loss": 4108.3236832466455
+    },
+    "validation_health": {
+      "alive_fraction": 0.1827392578125,
+      "activation_mass_effective_size": 182.2469121225135,
+      "top_1pct_mass_share": 0.8252733547311727,
+      "dense_over_50pct_count": 50,
+      "activation_correlation_median": 1.0,
+      "active_set_jaccard_mean": 1.0,
+      "active_set_jaccard_p10": 1.0,
+      "alive_original": 2994,
+      "alive_adapted": 2994,
+      "alive_relative_change": 0.0,
+      "died": 0,
+      "revived": 0
+    },
+    "l0_eligible": true,
+    "eligible": true,
+    "ineligible_reasons": []
+  },
+  {
+    "epoch": 2,
+    "train": {
+      "n": 72846,
+      "mse": 2659.9020578415593,
+      "variance_explained": 0.6752301445720899,
+      "l0": 103.4959366334459,
+      "dead_fraction": 0.7371826171875
+    },
+    "validation": {
+      "n": 9105,
+      "mse": 2651.2893403114604,
+      "variance_explained": 0.6759256407978667,
+      "l0": 103.51773750686436,
+      "dead_fraction": 0.8172607421875,
+      "probe_cohort": {
+        "n": 3227,
+        "mse": 3114.5391570937054,
+        "variance_explained": 0.649002588653252
+      }
+    },
+    "train_objective": {
+      "loss": 2882.8167921708873
+    },
+    "validation_health": {
+      "alive_fraction": 0.1827392578125,
+      "activation_mass_effective_size": 182.2469121225135,
+      "top_1pct_mass_share": 0.8252733547311727,
+      "dense_over_50pct_count": 50,
+      "activation_correlation_median": 1.0,
+      "active_set_jaccard_mean": 1.0,
+      "active_set_jaccard_p10": 1.0,
+      "alive_original": 2994,
+      "alive_adapted": 2994,
+      "alive_relative_change": 0.0,
+      "died": 0,
+      "revived": 0
+    },
+    "l0_eligible": true,
+    "eligible": true,
+    "ineligible_reasons": []
+  },
+  {
+    "epoch": 3,
+    "train": {
+      "n": 72846,
+      "mse": 2391.8938320725915,
+      "variance_explained": 0.7079535271793087,
+      "l0": 103.4959366334459,
+      "dead_fraction": 0.7371826171875
+    },
+    "validation": {
+      "n": 9105,
+      "mse": 2384.8914404087272,
+      "variance_explained": 0.7084881858928619,
+      "l0": 103.51773750686436,
+      "dead_fraction": 0.8172607421875,
+      "probe_cohort": {
+        "n": 3227,
+        "mse": 2814.1095393571677,
+        "variance_explained": 0.6828599308790653
+      }
+    },
+    "train_objective": {
+      "loss": 2517.5025179402437
+    },
+    "validation_health": {
+      "alive_fraction": 0.1827392578125,
+      "activation_mass_effective_size": 182.2469121225135,
+      "top_1pct_mass_share": 0.8252733547311727,
+      "dense_over_50pct_count": 50,
+      "activation_correlation_median": 1.0,
+      "active_set_jaccard_mean": 1.0,
+      "active_set_jaccard_p10": 1.0,
+      "alive_original": 2994,
+      "alive_adapted": 2994,
+      "alive_relative_change": 0.0,
+      "died": 0,
+      "revived": 0
+    },
+    "l0_eligible": true,
+    "eligible": true,
+    "ineligible_reasons": []
+  },
+  {
+    "epoch": 4,
+    "train": {
+      "n": 72846,
+      "mse": 2211.130620413339,
+      "variance_explained": 0.7300244308594612,
+      "l0": 103.4959366334459,
+      "dead_fraction": 0.7371826171875
+    },
+    "validation": {
+      "n": 9105,
+      "mse": 2205.4620916408544,
+      "variance_explained": 0.7304203267346356,
+      "l0": 103.51773750686436,
+      "dead_fraction": 0.8172607421875,
+      "probe_cohort": {
+        "n": 3227,
+        "mse": 2613.6475652689473,
+        "variance_explained": 0.7054512776014745
+      }
+    },
+    "train_objective": {
+      "loss": 2298.408305337898
+    },
+    "validation_health": {
+      "alive_fraction": 0.1827392578125,
+      "activation_mass_effective_size": 182.2469121225135,
+      "top_1pct_mass_share": 0.8252733547311727,
+      "dense_over_50pct_count": 50,
+      "activation_correlation_median": 1.0,
+      "active_set_jaccard_mean": 1.0,
+      "active_set_jaccard_p10": 1.0,
+      "alive_original": 2994,
+      "alive_adapted": 2994,
+      "alive_relative_change": 0.0,
+      "died": 0,
+      "revived": 0
+    },
+    "l0_eligible": true,
+    "eligible": true,
+    "ineligible_reasons": []
+  },
+  {
+    "epoch": 5,
+    "train": {
+      "n": 72846,
+      "mse": 2075.8640454057677,
+      "variance_explained": 0.7465402668015882,
+      "l0": 103.4959366334459,
+      "dead_fraction": 0.7371826171875
+    },
+    "validation": {
+      "n": 9105,
+      "mse": 2071.4094226224292,
+      "variance_explained": 0.7468059517024404,
+      "l0": 103.51773750686436,
+      "dead_fraction": 0.8172607421875,
+      "probe_cohort": {
+        "n": 3227,
+        "mse": 2462.698608774094,
+        "variance_explained": 0.7224626845232699
+      }
+    },
+    "train_objective": {
+      "loss": 2142.291777767643
+    },
+    "validation_health": {
+      "alive_fraction": 0.1827392578125,
+      "activation_mass_effective_size": 182.2469121225135,
+      "top_1pct_mass_share": 0.8252733547311727,
+      "dense_over_50pct_count": 50,
+      "activation_correlation_median": 1.0,
+      "active_set_jaccard_mean": 1.0,
+      "active_set_jaccard_p10": 1.0,
+      "alive_original": 2994,
+      "alive_adapted": 2994,
+      "alive_relative_change": 0.0,
+      "died": 0,
+      "revived": 0
+    },
+    "l0_eligible": true,
+    "eligible": true,
+    "ineligible_reasons": []
+  },
+  {
+    "epoch": 6,
+    "train": {
+      "n": 72846,
+      "mse": 1968.8583619311873,
+      "variance_explained": 0.7596054923611356,
+      "l0": 103.4959366334459,
+      "dead_fraction": 0.7371826171875
+    },
+    "validation": {
+      "n": 9105,
+      "mse": 1965.6868261739776,
+      "variance_explained": 0.7597287142905451,
+      "l0": 103.51773750686436,
+      "dead_fraction": 0.8172607421875,
+      "probe_cohort": {
+        "n": 3227,
+        "mse": 2344.7818916520914,
+        "variance_explained": 0.7357514763402111
+      }
+    },
+    "train_objective": {
+      "loss": 2022.1040884167242
+    },
+    "validation_health": {
+      "alive_fraction": 0.1827392578125,
+      "activation_mass_effective_size": 182.2469121225135,
+      "top_1pct_mass_share": 0.8252733547311727,
+      "dense_over_50pct_count": 50,
+      "activation_correlation_median": 1.0,
+      "active_set_jaccard_mean": 1.0,
+      "active_set_jaccard_p10": 1.0,
+      "alive_original": 2994,
+      "alive_adapted": 2994,
+      "alive_relative_change": 0.0,
+      "died": 0,
+      "revived": 0
+    },
+    "l0_eligible": true,
+    "eligible": true,
+    "ineligible_reasons": []
+  },
+  {
+    "epoch": 7,
+    "train": {
+      "n": 72846,
+      "mse": 1880.9601079493877,
+      "variance_explained": 0.7703377308485932,
+      "l0": 103.4959366334459,
+      "dead_fraction": 0.7371826171875
+    },
+    "validation": {
+      "n": 9105,
+      "mse": 1879.028019490131,
+      "variance_explained": 0.7703212576309826,
+      "l0": 103.51773750686436,
+      "dead_fraction": 0.8172607421875,
+      "probe_cohort": {
+        "n": 3227,
+        "mse": 2249.1155477457087,
+        "variance_explained": 0.7465327307635722
+      }
+    },
+    "train_objective": {
+      "loss": 1925.1621552464649
+    },
+    "validation_health": {
+      "alive_fraction": 0.1827392578125,
+      "activation_mass_effective_size": 182.2469121225135,
+      "top_1pct_mass_share": 0.8252733547311727,
+      "dense_over_50pct_count": 50,
+      "activation_correlation_median": 1.0,
+      "active_set_jaccard_mean": 1.0,
+      "active_set_jaccard_p10": 1.0,
+      "alive_original": 2994,
+      "alive_adapted": 2994,
+      "alive_relative_change": 0.0,
+      "died": 0,
+      "revived": 0
+    },
+    "l0_eligible": true,
+    "eligible": true,
+    "ineligible_reasons": []
+  },
+  {
+    "epoch": 8,
+    "train": {
+      "n": 72846,
+      "mse": 1806.8063227636783,
+      "variance_explained": 0.7793917913254431,
+      "l0": 103.4959366334459,
+      "dead_fraction": 0.7371826171875
+    },
+    "validation": {
+      "n": 9105,
+      "mse": 1806.1002607738562,
+      "variance_explained": 0.7792354173625071,
+      "l0": 103.51773750686436,
+      "dead_fraction": 0.8172607421875,
+      "probe_cohort": {
+        "n": 3227,
+        "mse": 2170.171811743645,
+        "variance_explained": 0.755429407151684
+      }
+    },
+    "train_objective": {
+      "loss": 1844.4577301337915
+    },
+    "validation_health": {
+      "alive_fraction": 0.1827392578125,
+      "activation_mass_effective_size": 182.2469121225135,
+      "top_1pct_mass_share": 0.8252733547311727,
+      "dense_over_50pct_count": 50,
+      "activation_correlation_median": 1.0,
+      "active_set_jaccard_mean": 1.0,
+      "active_set_jaccard_p10": 1.0,
+      "alive_original": 2994,
+      "alive_adapted": 2994,
+      "alive_relative_change": 0.0,
+      "died": 0,
+      "revived": 0
+    },
+    "l0_eligible": true,
+    "eligible": true,
+    "ineligible_reasons": []
+  },
+  {
+    "epoch": 9,
+    "train": {
+      "n": 72846,
+      "mse": 1743.0307536658167,
+      "variance_explained": 0.7871786879499575,
+      "l0": 103.4959366334459,
+      "dead_fraction": 0.7371826171875
+    },
+    "validation": {
+      "n": 9105,
+      "mse": 1743.6135710125461,
+      "variance_explained": 0.7868733366326386,
+      "l0": 103.51773750686436,
+      "dead_fraction": 0.8172607421875,
+      "probe_cohort": {
+        "n": 3227,
+        "mse": 2102.46180111976,
+        "variance_explained": 0.7630600829122103
+      }
+    },
+    "train_objective": {
+      "loss": 1775.696159551941
+    },
+    "validation_health": {
+      "alive_fraction": 0.1827392578125,
+      "activation_mass_effective_size": 182.2469121225135,
+      "top_1pct_mass_share": 0.8252733547311727,
+      "dense_over_50pct_count": 50,
+      "activation_correlation_median": 1.0,
+      "active_set_jaccard_mean": 1.0,
+      "active_set_jaccard_p10": 1.0,
+      "alive_original": 2994,
+      "alive_adapted": 2994,
+      "alive_relative_change": 0.0,
+      "died": 0,
+      "revived": 0
+    },
+    "l0_eligible": true,
+    "eligible": true,
+    "ineligible_reasons": []
+  },
+  {
+    "epoch": 10,
+    "train": {
+      "n": 72846,
+      "mse": 1687.3570672494018,
+      "variance_explained": 0.7939763574488375,
+      "l0": 103.4959366334459,
+      "dead_fraction": 0.7371826171875
+    },
+    "validation": {
+      "n": 9105,
+      "mse": 1689.1074060666538,
+      "variance_explained": 0.7935357744921484,
+      "l0": 103.51773750686436,
+      "dead_fraction": 0.8172607421875,
+      "probe_cohort": {
+        "n": 3227,
+        "mse": 2044.1009737758702,
+        "variance_explained": 0.7696371391919825
+      }
+    },
+    "train_objective": {
+      "loss": 1716.098116998987
+    },
+    "validation_health": {
+      "alive_fraction": 0.1827392578125,
+      "activation_mass_effective_size": 182.2469121225135,
+      "top_1pct_mass_share": 0.8252733547311727,
+      "dense_over_50pct_count": 50,
+      "activation_correlation_median": 1.0,
+      "active_set_jaccard_mean": 1.0,
+      "active_set_jaccard_p10": 1.0,
+      "alive_original": 2994,
+      "alive_adapted": 2994,
+      "alive_relative_change": 0.0,
+      "died": 0,
+      "revived": 0
+    },
+    "l0_eligible": true,
+    "eligible": true,
+    "ineligible_reasons": []
+  }
+]

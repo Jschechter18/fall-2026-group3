@@ -1,1 +1,0 @@
-Experiment,N,Plain replay acceptance (%),Reconstruction-only acceptance (%),Δ (pp),95% CI for Δ,p-value,Answer changed vs. control (%),Label changed vs. control (%),First token changed vs. control (%),Δ log p(control's first token),95% CI for Δ log p,Mean reconstruction error (rel. to |x|)
