@@ -14,17 +14,18 @@ The pipeline (read run() first; everything below it is a step it calls):
     2. Measure two reference points: the original SAE, and the original with only its decoder
        bias re-centred ("bias-only").
     3. Train for up to --epochs, scoring validation after each epoch. Keep the best epoch: the
-       lowest validation MSE, among epochs whose L0 stays near the original's.
-    4. Score the kept checkpoint and write the summary. Full mode also reports how far each
-       feature drifted from the original.
+       lowest validation MSE among eligible epochs, i.e. those whose L0 stays near the original's
+       and whose features have not drifted far from it (see eligibility()).
+    4. Score the kept checkpoint and write the summary: reconstruction, dictionary health
+       (mas_sae.sae.diagnostics) and stability against the original.
 
 Files in the run directory:
-    manifest.json      settings, input hashes and code provenance; status running -> completed
-    baseline.json      metrics for the original and bias-only SAEs
-    history.json       metrics after every epoch
-    summary.json       best epoch, before/after metrics (and feature drift in full mode)
-    best/              the kept checkpoint (config.json + params.safetensors), loadable as kind: gemma_scope
-    feature_drift.npz  full mode only: per-feature drift arrays
+    manifest.json       settings, input hashes and code provenance; status running -> completed
+    baseline.json       metrics and dictionary health for the original and bias-only SAEs
+    history.json        metrics, compact health/stability and eligibility after every epoch
+    summary.json        best epoch, before/after metrics, health and stability
+    best/               the kept checkpoint (config.json + params.safetensors), loadable as kind: gemma_scope
+    feature_health.npz  per-feature arrays: health of both SAEs, and drift between them
 
 Example (from the repo root):
     PYTHONPATH=src python scripts/sae/finetune_pretrained_sae.py --train full \\
@@ -47,13 +48,14 @@ import tempfile
 
 import numpy as np
 import torch
-from torch.nn.functional import cosine_similarity, mse_loss
+from torch.nn.functional import mse_loss
 from safetensors.torch import save_file
 from tqdm.auto import tqdm
 
 from mas_sae.data.activation_store import ActivationStore
 from mas_sae.experiments.artifacts import get_git_provenance, sha256_file, sha256_json, write_json_atomic
 from mas_sae.experiments.reproducibility import seed_everything
+from mas_sae.sae import diagnostics
 from mas_sae.sae.pretrained import load_gemma_scope_sae
 from mas_sae.utils.versioning import create_versioned_run_dir
 
@@ -62,7 +64,6 @@ logger = logging.getLogger(__name__)
 SPLITS = ('train', 'validation')                   # the only activation files ever opened
 ENCODER_KEYS = ('w_enc', 'b_enc', 'threshold')     # the tensors that determine the features
 GEMMA_SCOPE_BANDWIDTH = 0.001                      # STE bandwidth Gemma Scope used on unit-scaled inputs
-DRIFT_CORRELATION_CUTOFF = 0.9                     # report the share of features correlating below this
 BYTES_PER_FLOAT32 = 4
 CACHE_DISK_HEADROOM_BYTES = 1024 ** 2
 
@@ -70,8 +71,11 @@ DECODER_NOTE = ('Only decoder weights and bias adapted. Feature values and probe
                 'Variance explained uses each evaluation cohort own mean, identically before and after.')
 FULL_NOTE = ('Encoder, thresholds and decoder adapted from the original weights. Features changed: '
              're-run feature selection for this SAE. The best checkpoint is the lowest validation '
-             'MSE among epochs whose validation L0 stays within l0_tolerance of the original. '
-             'Variance explained uses each evaluation cohort own mean, identically before and after.')
+             'MSE among eligible epochs: validation L0 within l0_tolerance of the original, and '
+             'stability (activation correlation, active-set Jaccard, alive-feature count) within the '
+             'configured limits. Variance explained uses each evaluation cohort own mean, identically '
+             'before and after.')
+BIAS_ONLY_HEALTH_NOTE = 'Identical to the original: only b_dec differs, so features and the dictionary are unchanged.'
 
 
 # =============================================================================================
@@ -87,6 +91,7 @@ def run(args):
 
     # Step 1: load the pretrained SAE and the train/validation activations.
     model, sae_config = load_model(args, device)
+    source = copy.deepcopy(model).eval()   # the untouched original, for stability comparisons
     source_encoder_sha256 = encoder_digest(model)
     splits = load_splits(args, model)
     if not train_encoder:
@@ -98,6 +103,7 @@ def run(args):
     original = evaluate_splits(model, splits, args.batch_size, device)
     bias_only_model = with_bias_only_fix(model, splits['train'], args.batch_size, device)
     bias_only = evaluate_splits(bias_only_model, splits, args.batch_size, device)
+    original_health = dictionary_health(model, splits, args.batch_size, device)
 
     # Step 3: train, saving the best epoch to <run>/best.
     if train_encoder:
@@ -105,8 +111,10 @@ def run(args):
     else:
         trainer = DecoderOnlyTrainer(model, args)
     out, manifest = start_run_dir(args, splits, source_encoder_sha256, trainer)
-    write_json_atomic(out / 'baseline.json', {'original': original, 'bias_only': bias_only})
-    best_epoch = train(args, model, trainer, splits, original, sae_config, out, device)
+    write_json_atomic(out / 'baseline.json', {
+        'original': original, 'bias_only': bias_only,
+        'health': {'original': original_health.summary, 'bias_only': BIAS_ONLY_HEALTH_NOTE}})
+    best_epoch = train(args, model, source, trainer, splits, original, sae_config, out, device)
     if not train_encoder and encoder_digest(model) != source_encoder_sha256:
         raise RuntimeError('Frozen encoder or thresholds changed.')
 
@@ -114,12 +122,19 @@ def run(args):
     best_model, _ = load_gemma_scope_sae(out / 'best', expected_layer=args.layer)
     model.load_state_dict(best_model.state_dict())
     adapted = evaluate_splits(model, splits, args.batch_size, device)
+    adapted_health = dictionary_health(model, splits, args.batch_size, device)
+    stability, stability_per_feature = stability_report(source, model, splits['validation'], args.batch_size, device)
+    save_feature_arrays(out / 'feature_health.npz', original_health, adapted_health, stability_per_feature)
     summary = {'train_mode': args.train, 'best_epoch': best_epoch, 'original': original,
                'bias_only': bias_only, 'adapted': adapted,
                'encoder_unchanged': encoder_digest(model) == source_encoder_sha256,
-               'l0_target': original['validation']['l0'], 'l0_tolerance': args.l0_tolerance}
+               'l0_target': original['validation']['l0'], 'l0_tolerance': args.l0_tolerance,
+               'stability_limits': stability_limits(args),
+               'health': {'original': original_health.summary, 'adapted': adapted_health.summary},
+               'stability': stability}
     if train_encoder:
-        summary.update(full_mode_report(args, model, trainer, splits['validation'], out, device))
+        summary.update(bandwidth=trainer.bandwidth, l0_coef=args.l0_coef,
+                       threshold_trained=trainer.log_threshold is not None, note=FULL_NOTE)
     else:
         summary['note'] = DECODER_NOTE
     write_json_atomic(out / 'summary.json', summary)
@@ -147,6 +162,10 @@ def validate_args(args):
         raise ValueError('l0_coef and l0_tolerance must be nonnegative.')
     if args.bandwidth is not None and not args.bandwidth > 0:
         raise ValueError('bandwidth must be positive.')
+    if not -1 <= args.min_activation_correlation <= 1 or not 0 <= args.min_jaccard <= 1:
+        raise ValueError('min_activation_correlation must be in [-1, 1] and min_jaccard in [0, 1].')
+    if not args.max_alive_change >= 0:
+        raise ValueError('max_alive_change must be nonnegative (inf disables it).')
 
 
 def encoder_lr(args):
@@ -336,12 +355,13 @@ def start_run_dir(args, splits, source_encoder_sha256, trainer):
     return out, manifest
 
 
-def train(args, model, trainer, splits, original, sae_config, out, device):
+def train(args, model, source, trainer, splits, original, sae_config, out, device):
     """Train for up to args.epochs and save the best epoch to out/best. Returns the best epoch number.
 
     Choosing the best epoch:
-      - An epoch is eligible only if its validation L0 is within l0_tolerance of the original.
-        In decoder mode the encoder is frozen, so every epoch is eligible.
+      - An epoch is eligible only if it passes eligibility(): L0 near the original's, and features
+        still close to the original's (`source`). In decoder mode the encoder is frozen, so every
+        epoch is eligible.
       - Among eligible epochs, the lowest validation MSE wins.
       - The untouched original counts as epoch 0. If training never helps, the original is kept.
     Training stops early after `patience` epochs in a row without a new best.
@@ -373,14 +393,20 @@ def train(args, model, trainer, splits, original, sae_config, out, device):
         validation = metrics['validation']
         if not np.isfinite(validation['mse']):
             raise ValueError('Nonfinite validation loss.')
-        eligible = within_l0(validation['l0'], target_l0, args.l0_tolerance)
+        paired = paired_stats(source, model, splits['validation'], args.batch_size, device)
+        health = {**diagnostics.compact_health(paired.adapted), **diagnostics.compact_stability(paired)}
+        eligible, reasons = eligibility(validation['l0'], health, target_l0, args)
         history.append({'epoch': epoch, **metrics,
                         'train_objective': {name: total / n_train for name, total in term_totals.items()},
-                        'l0_eligible': eligible})
+                        'validation_health': health,
+                        'l0_eligible': within_l0(validation['l0'], target_l0, args.l0_tolerance),
+                        'eligible': eligible, 'ineligible_reasons': reasons})
         write_json_atomic(out / 'history.json', history)
-        logger.info('Epoch %d validation MSE %.6g (original %.6g), L0 %.4g (original %.4g)%s',
+        logger.info('Epoch %d validation MSE %.6g (original %.6g), L0 %.4g (original %.4g), '
+                    'correlation median %s, Jaccard mean %.4g%s',
                     epoch, validation['mse'], original['validation']['mse'], validation['l0'], target_l0,
-                    '' if eligible else ' [outside L0 tolerance]')
+                    _format(health['activation_correlation_median']), health['active_set_jaccard_mean'],
+                    '' if eligible else f' [ineligible: {"; ".join(reasons)}]')
 
         if eligible and validation['mse'] < best_mse:
             best_mse, best_epoch, epochs_without_improvement = validation['mse'], epoch, 0
@@ -392,15 +418,63 @@ def train(args, model, trainer, splits, original, sae_config, out, device):
     return best_epoch
 
 
-def full_mode_report(args, model, trainer, validation_split, out, device):
-    """Full mode's extra summary fields; also writes the per-feature drift arrays to feature_drift.npz."""
-    source, _ = load_gemma_scope_sae(args.sae_dir, expected_layer=args.layer)
-    drift, per_feature = feature_drift(source.to(device), model, validation_split.activations,
-                                       args.batch_size, device)
-    np.savez(out / 'feature_drift.npz', **per_feature)
-    return {'bandwidth': trainer.bandwidth, 'l0_coef': args.l0_coef,
-            'threshold_trained': trainer.log_threshold is not None,
-            'feature_drift': drift, 'note': FULL_NOTE}
+@dataclass
+class Health:
+    """dictionary_health() output: the JSON summary, and per-feature arrays for feature_health.npz."""
+    summary: dict
+    per_feature: dict
+
+
+def dictionary_health(model, splits, batch_size, device):
+    """Utilization, concentration and activation health per split, plus weight geometry.
+
+    The near-duplicate search is also run among features alive on train (the larger split).
+    Per-feature arrays are taken from validation, the split stability is measured on.
+    """
+    stats = {name: feature_stats(model, split, batch_size, device) for name, split in splits.items()}
+    activation = {name: diagnostics.activation_health(s) for name, s in stats.items()}
+    parameters, parameter_arrays = diagnostics.parameter_health(model, alive=stats['train'].alive())
+    summary = {name: report for name, (report, _) in activation.items()}
+    summary['parameters'] = parameters
+    return Health(summary, {**activation['validation'][1], **parameter_arrays})
+
+
+def stability_report(source, model, split, batch_size, device):
+    """Adapted vs original on one split, including split/merge detection (a second pass)."""
+    paired = paired_stats(source, model, split, batch_size, device)
+    summary, per_feature = diagnostics.stability(paired, source, model)
+    summary['split_merge'], split_merge_arrays = diagnostics.split_merge(
+        lambda: paired_batches(source, model, split, batch_size, device), paired)
+    return summary, {**per_feature, **split_merge_arrays}
+
+
+def save_feature_arrays(path, original_health, adapted_health, stability_per_feature):
+    arrays = {**{f'original_{k}': v for k, v in original_health.per_feature.items()},
+              **{f'adapted_{k}': v for k, v in adapted_health.per_feature.items()},
+              **stability_per_feature}
+    np.savez(path, **{name: value.detach().cpu().numpy() for name, value in arrays.items()})
+
+
+@torch.no_grad()
+def feature_stats(model, split, batch_size, device):
+    stats = diagnostics.FeatureStats(model.latent_dim, device)
+    for rows, batch in iterate_batches(split.activations, batch_size, device):
+        stats.add(features_for(model, split, rows, batch))
+    return stats
+
+
+def paired_batches(source, model, split, batch_size, device):
+    """Yield (original features, current features) for every batch of a split."""
+    with torch.no_grad():
+        for rows, batch in iterate_batches(split.activations, batch_size, device):
+            yield source.encoder(batch), features_for(model, split, rows, batch)
+
+
+def paired_stats(source, model, split, batch_size, device):
+    paired = diagnostics.PairedStats(model.latent_dim, device)
+    for original_features, features in paired_batches(source, model, split, batch_size, device):
+        paired.add(original_features, features)
+    return paired
 
 
 # =============================================================================================
@@ -472,6 +546,41 @@ def within_l0(l0, target, tolerance):
     return abs(l0 - target) <= tolerance * target
 
 
+def stability_limits(args):
+    return {'min_activation_correlation': args.min_activation_correlation, 'min_jaccard': args.min_jaccard,
+            'max_alive_change': args.max_alive_change}
+
+
+def eligibility(l0, health, target_l0, args):
+    """Can this epoch be kept? Returns (eligible, reasons it is not).
+
+    The fine-tune should be light, so beyond lowering MSE an epoch must keep:
+      - validation L0 within l0_tolerance of the original;
+      - the median activation correlation with the original (features alive in both) at least
+        min_activation_correlation (0 disables);
+      - the mean active-set Jaccard with the original at least min_jaccard (0 disables);
+      - the number of features alive on validation within max_alive_change of the original (inf disables).
+    `health` is the epoch's compact health/stability block.
+    """
+    reasons = []
+    if not within_l0(l0, target_l0, args.l0_tolerance):
+        reasons.append(f'L0 {l0:.4g} not within {args.l0_tolerance:g} of {target_l0:.4g}')
+    correlation = health['activation_correlation_median']
+    if args.min_activation_correlation > 0 and (correlation is None or correlation < args.min_activation_correlation):
+        reasons.append(f'activation correlation median {_format(correlation)} < {args.min_activation_correlation:g}')
+    jaccard = health['active_set_jaccard_mean']
+    if args.min_jaccard > 0 and jaccard < args.min_jaccard:
+        reasons.append(f'active-set Jaccard mean {jaccard:.4g} < {args.min_jaccard:g}')
+    change = health['alive_relative_change']
+    if change is not None and abs(change) > args.max_alive_change:
+        reasons.append(f'alive features changed by {change:+.2%} (limit {args.max_alive_change:g})')
+    return not reasons, reasons
+
+
+def _format(value):
+    return 'n/a' if value is None else f'{value:.4g}'
+
+
 def default_bandwidth(activations, batch_size):
     """Gemma Scope's STE bandwidth, rescaled from their unit-scaled inputs to our raw activations.
 
@@ -482,84 +591,6 @@ def default_bandwidth(activations, batch_size):
                      for start in range(0, len(activations), batch_size))
     mean_norm = total_norm / len(activations)
     return GEMMA_SCOPE_BANDWIDTH * mean_norm / activations.shape[1] ** 0.5
-
-
-@torch.no_grad()
-def feature_drift(original, adapted, activations, batch_size, device):
-    """How far each feature moved between the original and the adapted SAE.
-
-    Returns (summary dict for summary.json, {name: per-feature array} for feature_drift.npz):
-      - activation correlation: per feature, Pearson correlation of its values under each encoder.
-      - active-set Jaccard: per example, |both fire| / |either fires|, averaged over examples.
-      - encoder / decoder cosine: per feature, cosine between its original and adapted weight vector.
-      - threshold ratio: adapted threshold / original threshold.
-    """
-    correlation = RunningCorrelation(original.latent_dim, device)
-    jaccard_total = 0.0
-    for _, batch in iterate_batches(activations, batch_size, device):
-        original_features = original.encoder(batch).double()
-        adapted_features = adapted.encoder(batch).double()
-        correlation.add(original_features, adapted_features)
-        original_active, adapted_active = original_features > 0, adapted_features > 0
-        either = (original_active | adapted_active).sum(dim=1)
-        both = (original_active & adapted_active).sum(dim=1)
-        jaccard = both.double() / either.clamp(min=1)
-        # An example where neither encoder fires anything counts as perfect agreement.
-        jaccard_total += torch.where(either > 0, jaccard, torch.ones_like(jaccard)).sum().item()
-
-    corr, defined = correlation.result()
-    corr_defined = corr[defined]
-    has_any = len(corr_defined) > 0
-    # w_enc is (d_model, n_features): one column per feature. w_dec is (n_features, d_model): one row.
-    encoder_cos = cosine_similarity(original.w_enc.double(), adapted.w_enc.double(), dim=0)
-    decoder_cos = cosine_similarity(original.w_dec.double(), adapted.w_dec.double(), dim=1)
-    summary = {
-        'n_examples': len(activations),
-        'n_features_with_defined_correlation': int(defined.sum()),
-        'activation_correlation_median': corr_defined.median().item() if has_any else None,
-        f'fraction_correlation_below_{DRIFT_CORRELATION_CUTOFF}':
-            (corr_defined < DRIFT_CORRELATION_CUTOFF).double().mean().item() if has_any else None,
-        'active_set_jaccard_mean': jaccard_total / len(activations),
-        'encoder_cosine_median': encoder_cos.median().item(), 'encoder_cosine_min': encoder_cos.min().item(),
-        'decoder_cosine_median': decoder_cos.median().item(), 'decoder_cosine_min': decoder_cos.min().item(),
-    }
-    per_feature = {'activation_correlation': corr, 'encoder_cosine': encoder_cos, 'decoder_cosine': decoder_cos,
-                   'threshold_ratio': adapted.threshold.double() / original.threshold.double()}
-    return summary, {name: values.cpu().numpy() for name, values in per_feature.items()}
-
-
-class RunningCorrelation:
-    """Per-feature Pearson correlation between two feature matrices, accumulated batch by batch.
-
-        corr = (E[ab] - E[a] E[b]) / sqrt(Var a * Var b),   where Var a = E[a^2] - E[a]^2
-
-    Only five running sums per feature are kept, so neither full matrix is ever held in memory.
-    """
-
-    def __init__(self, n_features, device):
-        def zeros():
-            return torch.zeros(n_features, dtype=torch.float64, device=device)
-        self.n = 0
-        self.sum_a, self.sum_b, self.sum_aa, self.sum_bb, self.sum_ab = zeros(), zeros(), zeros(), zeros(), zeros()
-
-    def add(self, a, b):
-        self.n += len(a)
-        self.sum_a += a.sum(dim=0)
-        self.sum_b += b.sum(dim=0)
-        self.sum_aa += (a * a).sum(dim=0)
-        self.sum_bb += (b * b).sum(dim=0)
-        self.sum_ab += (a * b).sum(dim=0)
-
-    def result(self):
-        """Returns (correlation, defined). Correlation is nan where either side never varies, e.g. a dead feature."""
-        mean_a, mean_b = self.sum_a / self.n, self.sum_b / self.n
-        var_a = self.sum_aa / self.n - mean_a ** 2
-        var_b = self.sum_bb / self.n - mean_b ** 2
-        covariance = self.sum_ab / self.n - mean_a * mean_b
-        defined = (var_a > 0) & (var_b > 0)
-        correlation = torch.full_like(var_a, float('nan'))
-        correlation[defined] = (covariance[defined] / (var_a * var_b)[defined].sqrt()).clamp(-1, 1)
-        return correlation, defined
 
 
 # =============================================================================================
@@ -731,6 +762,15 @@ def build_parser():
     training.add_argument('--patience', type=int, default=5, help='Stop after this many epochs without a new best.')
     training.add_argument('--l0-tolerance', type=float, default=0.1,
                           help='An epoch can be kept only if its validation L0 is within this fraction of the original.')
+    training.add_argument('--min-activation-correlation', type=float, default=0.95,
+                          help='An epoch can be kept only if the median per-feature activation correlation with the '
+                               'original (features alive in both) is at least this. 0 disables.')
+    training.add_argument('--min-jaccard', type=float, default=0.85,
+                          help='An epoch can be kept only if the mean active-set Jaccard with the original is at '
+                               'least this. 0 disables.')
+    training.add_argument('--max-alive-change', type=float, default=0.05,
+                          help='An epoch can be kept only if the number of features alive on validation changed by '
+                               'at most this fraction. inf disables.')
     training.add_argument('--seed', type=int, default=42)
     training.add_argument('--device', default='cuda' if torch.cuda.is_available() else 'cpu')
 

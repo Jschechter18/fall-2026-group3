@@ -21,7 +21,7 @@ from mas_sae.causal import replay
 from mas_sae.experiments.artifacts import sha256_file
 from mas_sae.probe.feature_selection import is_activation_basis, load_sae, sae_files
 
-spec = importlib.util.spec_from_file_location("ft", "scripts/sae/finetune_pretrained_sae.py")
+spec = importlib.util.spec_from_file_location("ft", "scripts/sae/pretrained-tuning/finetune_pretrained_sae.py")
 ft = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(ft)
 

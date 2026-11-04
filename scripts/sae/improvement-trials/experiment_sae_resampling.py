@@ -6,7 +6,7 @@ from mas_sae.sae.refinement import ModelRunner, resolve_branches, measure_activi
 
 
 def main():
-    refinement_cli(Path(__file__).resolve().parents[2])
+    refinement_cli(Path(__file__).resolve().parents[3])
 
 
 if __name__ == '__main__':

@@ -13,14 +13,16 @@ from mas_sae.experiments.artifacts import sha256_file
 from mas_sae.sae.pretrained import JumpReLUSAE, load_gemma_scope_sae
 
 spec = importlib.util.spec_from_file_location('pretrained_sae_finetune',
-    Path(__file__).resolve().parents[3] / 'scripts/sae/finetune_pretrained_sae.py')
+    Path(__file__).resolve().parents[3] / 'scripts/sae/pretrained-tuning/finetune_pretrained_sae.py')
 ft = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(ft)
 
 
-# The full-mode options at their defaults: decoder-only behaviour is unchanged.
+# The full-mode options at their defaults: decoder-only behaviour is unchanged. Stability gates are off,
+# so these tiny problems may drift freely; test_stability_gate_* covers the gates.
+NO_STABILITY_GATES = dict(min_activation_correlation=0.0, min_jaccard=0.0, max_alive_change=float('inf'))
 DECODER_ONLY = dict(train='decoder', lr_enc=None, l0_coef=1.0, l0_tolerance=0.1, bandwidth=None,
-                    freeze_threshold=False)
+                    freeze_threshold=False, **NO_STABILITY_GATES)
 
 
 def model():
@@ -95,6 +97,14 @@ def test_end_to_end_improves_reconstruction_preserves_features_and_never_reads_t
     assert sha256_file(src / 'params.safetensors') == original_hash
     assert json.loads((out / 'manifest.json').read_text())['status'] == 'completed'
     assert len(list(args.cache_dir.glob('*/manifest.json'))) == 2
+    # Frozen encoder: features are identical to the original's, so stability is perfect.
+    stability = summary['stability']
+    assert stability['active_set_jaccard']['mean'] == 1.0
+    assert stability['lifecycle']['died'] == stability['lifecycle']['revived'] == 0
+    assert stability['split_merge']['split_count'] == stability['split_merge']['merged_count'] == 0
+    history = json.loads((out / 'history.json').read_text())
+    assert all(entry['eligible'] and not entry['ineligible_reasons'] for entry in history)
+    assert 'health' in json.loads((out / 'baseline.json').read_text())
 
 
 def test_cohort_variance_uses_its_own_mean():
@@ -150,8 +160,23 @@ def test_full_mode_trains_encoder_into_a_separate_checkpoint(tmp_path):
     assert summary['adapted']['validation']['mse'] < summary['original']['validation']['mse']
     assert ft.within_l0(summary['adapted']['validation']['l0'], summary['l0_target'], 0.1)
     assert not summary['encoder_unchanged'] and not torch.equal(sae.w_enc, adapted.w_enc)
-    assert summary['feature_drift']['n_examples'] == 20
-    assert set(np.load(out / 'feature_drift.npz')) >= {'activation_correlation', 'encoder_cosine'}
+    assert summary['stability']['n_examples'] == 20
+    assert set(np.load(out / 'feature_health.npz')) >= {'activation_correlation', 'encoder_cosine',
+                                                         'original_frequency', 'adapted_frequency'}
+    assert summary['health']['adapted']['validation']['utilization']['alive_count'] >= 0
     assert sha256_file(src / 'params.safetensors') == original_hash
     assert not args.cache_dir.exists()  # full mode never writes an encoder cache
     assert json.loads((out / 'manifest.json').read_text())['status'] == 'completed'
+
+
+def test_stability_gate_rejects_drifted_epochs_and_says_why():
+    args = argparse.Namespace(l0_tolerance=0.1, min_activation_correlation=0.95, min_jaccard=0.85,
+                              max_alive_change=0.05)
+    steady = {'activation_correlation_median': 0.99, 'active_set_jaccard_mean': 0.95, 'alive_relative_change': 0.0}
+    assert ft.eligibility(100, steady, 100, args) == (True, [])
+    drifted = {'activation_correlation_median': 0.9, 'active_set_jaccard_mean': 0.8, 'alive_relative_change': -0.1}
+    eligible, reasons = ft.eligibility(120, drifted, 100, args)
+    assert not eligible and len(reasons) == 4
+    assert any('correlation' in r for r in reasons) and any('Jaccard' in r for r in reasons)
+    disabled = argparse.Namespace(l0_tolerance=0.1, **NO_STABILITY_GATES)
+    assert ft.eligibility(100, drifted, 100, disabled) == (True, [])
