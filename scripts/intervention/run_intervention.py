@@ -41,7 +41,8 @@ Raw activations       No SAE: the "features" are the layer's neurons, each cente
 Exp 1  L1 SAE                                (custom trained)
 
 
-# something to consider - the SAE features will be the same for both of these, that means we can cache the activations.
+# something to consider - the SAE features will be the same for Exp 2 and Exp 3 (same encoder), that means we
+# can cache the activations for those two. NOT for Exp 4: its encoder and thresholds changed.
 Exp 2  Pretrained SAE                        (Gemma Scope 2, layer 25, 16k)
            results/sae/pretrained/gemma-scope-2-4b-it/resid_post_all/layer_25_width_16k_l0_big
 Exp 3  Pretrained SAE, fine-tuned decoder    (same encoder; decoder fine-tuned on our data)
@@ -54,14 +55,37 @@ Exp 3  Pretrained SAE, fine-tuned decoder    (same encoder; decoder fine-tuned o
              - validation variance explained 0.225 -> 0.794 (probe cohort 0.238 -> 0.770).
              - the 14 targeted features keep decoder cosine 0.928-0.996 with Exp 2 (row norms
                0.87-1.02): edits keep their meaning, fitted to what each feature writes here.
-             - not used: the 5-epoch run 20261102T205853702830Z (superseded), the 15-epoch run
-               20261104T165208970599Z (+0.02 variance explained for targeted cosine down to 0.88),
-               and every full (encoder + decoder) fine-tune: none passed the stability limits, and a
-               new encoder would change the features themselves.
+             - not used: the 5-epoch run 20261102T205853702830Z (superseded) and the 15-epoch run
+               20261104T165208970599Z (+0.02 variance explained for targeted cosine down to 0.88).
+               The full (encoder + decoder) fine-tune is Exp 4, below.
            Under the error-preserving splice b_dec cancels, so Exp 3 differs from Exp 2 only in the
            decoder rows of the edited features. Exp 3 vs. Exp 2 therefore asks: does fitting those
            directions to our data change the effect? Control 1 (reconstruction splice) is where
            the better reconstruction itself shows up.
+Exp 4  Pretrained SAE, fully fine-tuned      (encoder, thresholds and decoder fine-tuned on our data)
+           results/sae/full_finetuning/20261104T151230848807Z/best
+           (params.safetensors sha256 42648eda…00c0; s3://dats-capstone/shared/group3/results/sae/...)
+           Chosen BEFORE any intervention outcome; fixed for the experiment:
+             - full fine-tune from Exp 2's weights, best epoch 1 of 5, Adam lr 1e-5 (encoder lr 1e-6),
+               L0 penalty 0.1, thresholds trained, fitted on mixed_final_001 train (attempt 2).
+             - validation variance explained 0.225 -> 0.655 (probe cohort 0.238 -> 0.628);
+               validation L0 103.5 -> 96.1.
+             - the only full fine-tune whose best checkpoint differs from Exp 2. The other runs'
+               `best` are byte-identical to the pretrained SAE (no epoch beat epoch 0, or none
+               passed the stability limits), so they would duplicate Exp 2:
+                   20261104T144108610261Z, 20261104T150829483221Z, 20261104T163600974741Z
+           CAVEAT, stated before the run: Exp 4 FAILS the stability limits later adopted for full
+           fine-tuning (min active-set Jaccard 0.85; observed 0.82). Median per-feature activation
+           correlation with Exp 2 is 0.967, but 34% of features fall below 0.9. Weights barely move
+           (encoder/decoder cosine median 1.0, min 0.993), so the drift comes mostly from the trained
+           thresholds: the same directions, firing on different tokens.
+           Consequences:
+             - the features are no longer Exp 2's features. Exp 4 gets its OWN feature-selection run
+               (targeted features and matched random draws); its targeted set may differ from Exp 2/3.
+             - Exp 4 vs. Exp 2 therefore asks: does adapting the whole SAE to our data change which
+               features are found AND their effect? It cannot isolate either one.
+             - Exp 4 is reported as EXPLORATORY: never the primary endpoint, and its contrasts are
+               flagged as comparing different feature sets.
     each with:
     Control 1         SAE spliced in, nothing edited               (reconstruction-damage check)
     Control 2         random sparse features, edited               (matched random draws)
@@ -136,9 +160,13 @@ Secondary: between-SAE contrasts (what the design is built to compare)
         L1 SAE                 vs. Pretrained SAE
         Fine-tuned decoder     vs. Pretrained SAE
         L1 SAE                 vs. Fine-tuned decoder
+        Fully fine-tuned       vs. Pretrained SAE      (exploratory: different feature sets, see Exp 4)
+        Fully fine-tuned       vs. Fine-tuned decoder  (exploratory: different feature sets, see Exp 4)
     Holm-adjusted across the contrasts. Only this test supports a claim like "L1 features are
     more causal than pretrained features": one representation significant and another not is
     NOT evidence that they differ.
+    Exploratory contrasts (Exp 4) get their own Holm family, separate from the pre-specified
+    ones, so adding Exp 4 does not weaken the correction on the others.
 
 Secondary: everything else
     The other comparisons listed above. Reported with CIs and Holm-adjusted p-values where
@@ -153,16 +181,16 @@ Sample size
         power                         0.80
         paired variance               from EXISTING runs (e.g. the TopK run's per-question
                                       targeted − random differences), never from this cohort
-    Record the estimate and its inputs here once done. Cost: N × 82 generations.
+    Record the estimate and its inputs here once done. Cost: N × 101 generations.
 
 
 GENERATIONS PER EPISODE (5 random draws, 3 random directions)
 -------------------------------------------------------------
       1   Baseline 1
-    + 3   Control 1                       (3 SAEs)
-    + 72  4 representations × 3 edits × (1 targeted + 5 random)
+    + 4   Control 1                       (4 SAEs)
+    + 90  5 representations × 3 edits × (1 targeted + 5 random)
     + 6   3 random directions × 2 size-matched edits
-    = 82                                  × N episodes
+    = 101                                 × N episodes
 
 
 HOW TO RUN
@@ -210,12 +238,17 @@ config = load_config(args.config)
 #   config.representations               Raw activations, L1 SAE, Pretrained SAE,
 #                                        Pretrained SAE (fine-tuned decoder): name, kind, path
 #                                        fine-tuned decoder = results/sae/decoder_finetuning/
-#                                        20261104T164310458065Z/best (kind: gemma_scope; see Exp 3)
+#                                        20261104T164310458065Z/best (kind: gemma_scope; see Exp 3),
+#                                        Pretrained SAE (fully fine-tuned), exploratory: true
+#                                        fully fine-tuned = results/sae/full_finetuning/
+#                                        20261104T151230848807Z/best (kind: gemma_scope; see Exp 4)
 #   config.feature_selection_summary     targeted features + matched random draws per representation
 #                                        must be a run that used the checkpoints above: its recorded
 #                                        sae_sha256 is checked (replay.feature_sets). The current
 #                                        20261102T210433855083Z run used the 5-epoch decoder, so rerun
 #                                        configs/feature_selection/feature_selection_pretrained_adapted_layer25.yaml
+#                                        Exp 4 needs its own run (new encoder = new features): add a
+#                                        config pointing at the full_finetuning checkpoint (none exists yet)
 #   config.number_of_random_draws        5
 #
 #   config.edits                         full_ablation, suppress_1pct (-0.01), suppress_2pct (-0.02)
@@ -854,8 +887,8 @@ if __name__ == "__main__":
 #
 # ---- OPTIONAL SPEEDUPS ----------------------------------------------
 #
-# Not needed for correctness. Current cost: ~0.43 s per generation (TopK run), so 82 × N
-# generations, e.g. ~34 GPU-hours for the whole ~3,500-episode pool. Build these only if runtime
+# Not needed for correctness. Current cost: ~0.43 s per generation (TopK run), so 101 × N
+# generations, e.g. ~42 GPU-hours for the whole ~3,500-episode pool. Build these only if runtime
 # becomes the bottleneck. Each one lives inside generate_answer, so the benchmark above does not
 # change, and each must pass the parity check before any real run uses it.
 #
