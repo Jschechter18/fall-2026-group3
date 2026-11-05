@@ -60,7 +60,7 @@ def representation_problems(config) -> list[str]:
             continue
         _, width = load_basis(spec, config.layer)
         problems += feature_set_problems(name, entry, width, config.experiment.number_of_targeted_features,
-                                         config.experiment.number_of_random_draws)
+                                         config.experiment.random_draw_pool_size)
     return problems
 
 

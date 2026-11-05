@@ -39,7 +39,8 @@ class Experiment:
     number_of_choose_r_episodes: int = 50
     candidate_edit_sizes: tuple = (0.02, 0.05, 0.10, 0.20)
     number_of_targeted_features: int = 10
-    number_of_random_draws: int = 3
+    number_of_random_draws: int = 3          # random draws per question, each from the pool below
+    random_draw_pool_size: int = 100         # the first this many matched draws in feature_sets.json
     min_baseline_label_match: float = 0.98
     seed: int = 42
 
@@ -156,9 +157,12 @@ def validate(config: InterventionConfig) -> list[str]:
     if [n for n, r in config.representations.items() if r.kind == "activations"] != config.names_with_role("control"):
         problems.append("the raw activations, and only they, must have role: control")
     for key in ("number_of_episodes", "number_of_shards", "number_of_choose_r_episodes",
-                "number_of_targeted_features", "number_of_random_draws"):
+                "number_of_targeted_features", "number_of_random_draws", "random_draw_pool_size"):
         if not positive_int(getattr(e, key)):
             problems.append(f"experiment.{key} must be a positive integer")
+    if positive_int(e.number_of_random_draws) and positive_int(e.random_draw_pool_size) \
+            and e.number_of_random_draws > e.random_draw_pool_size:
+        problems.append("experiment.number_of_random_draws must be at most experiment.random_draw_pool_size")
     size_ok = lambda v: type(v) in (int, float) and 0 < v < 1
     if e.edit_size is not None and not size_ok(e.edit_size):
         problems.append("experiment.edit_size must be a number in (0, 1), or null until choose-r has run")

@@ -43,7 +43,8 @@ or between arms, comes from direction alone.
                             both        r·|x|·normalize(u_adoption − u_retention)
 
 "Decrease" is a steering edit, not an ablation, so it is never a no-op. "Both" is one edit of size r,
-not two. Random draw k of "both" pairs adoption draw k with retention draw k.
+not two. A random draw uses one pool index for both labels, so "both" pairs adoption draw i with
+retention draw i.
 
 
 CONDITIONS PER EPISODE (65 generations)
@@ -55,6 +56,9 @@ CONDITIONS PER EPISODE (65 generations)
     representations: Raw activations (control), L1 SAE, Pretrained SAE, Fine-tuned decoder,
                      Fully fine-tuned † (exploratory: its own feature sets)
     feature sets:    feature_sets.json from the feature-selection rerun (read-only here)
+    random draws:    each question gets its own 3 distinct draws from the pool of the first
+                     random_draw_pool_size (100) matched draws, fixed by the seed and the question id
+                     and frozen by prepare, so across questions the random baseline samples the pool
 
 
 OUTCOME
@@ -67,8 +71,9 @@ condition. A labeling failure is never retention: retried, then its episode is d
 
 ANALYSIS PLAN (fixed before any outcome is seen; also in the config's `analysis` section)
 -----------------------------------------------------------------------------------------
-Every comparison: Δ = targeted flip − mean flip over the 3 random draws, paired by question;
-95% bootstrap CI over questions; permutation p (swap targeted and random within each question).
+Every comparison: Δ = targeted flip − mean flip over the question's 3 random draws, paired by
+question; 95% bootstrap CI over questions (each carries its own random draws, so this also resamples
+them); permutation p (swap targeted and random within each question).
 
 PRIMARY (Table P): "some SAE's features are causal"
     L1 SAE, Pretrained SAE, Fine-tuned decoder × decrease, increase, both = 9 tests, strata pooled
@@ -123,7 +128,7 @@ from tqdm.auto import tqdm
 from mas_sae.intervention.run_files import layout
 from mas_sae.intervention.analysis import tables
 from mas_sae.intervention.checks.baseline import check_baseline_reproduces_stored
-from mas_sae.intervention.experiment.conditions import BASELINE, choose_r_conditions, study_conditions
+from mas_sae.intervention.experiment.conditions import BASELINE, choose_r_conditions, random_draws_for, study_conditions
 from mas_sae.intervention.experiment.config import load_config
 from mas_sae.intervention.experiment.episodes import study_and_choose_r_episodes
 from mas_sae.intervention.generation.episode import BaselineMismatch, generate_episode, make_row
@@ -159,8 +164,9 @@ def choose_r(config, labels_stubbed: bool) -> None:
     record_choose_r_run(run_dir, choose_r_episodes, conditions)
 
     results = ResultsFile(layout.choose_r_rows(run_dir))
+    draws = random_draws(config, choose_r_episodes)
     for episode in tqdm(choose_r_episodes, desc="choose-r episodes"):
-        generate_episode(solver_model, episode, conditions, representations, results)
+        generate_episode(solver_model, episode, conditions, representations, results, draws[episode.episode_id])
 
     labeled, excluded = label(results.rows, choose_r_episodes, config, layout.choose_r_dir(run_dir), labels_stubbed)
     write_choose_r_report(labeled, excluded, list(representations), e.candidate_edit_sizes, e.number_of_random_draws,
@@ -186,7 +192,8 @@ def prepare(config) -> None:
 
     # Freeze everything a worker must reproduce. A rerun of prepare must freeze the same run.
     content = frozen_content(config, ids(study_episodes), ids(choose_r_episodes),
-                             frozen_feature_sets(representations), [c.key for c in conditions])
+                             frozen_feature_sets(representations), [c.key for c in conditions],
+                             random_draws(config, study_episodes + choose_r_episodes))
     frozen_sha = write_frozen_run(layout.frozen_run(run_dir), content,
                                   provenance(config, device_name(solver_model)),
                                   recorded={"edit_size": config.experiment.edit_size,
@@ -234,7 +241,8 @@ def run(config, shard: int) -> None:
     # This worker must be running the frozen experiment, with the same code, packages and inputs.
     # The GPU model is recorded, not enforced: each episode's baseline check below is what guarantees it.
     content = frozen_content(config, ids(study_episodes), ids(choose_r_episodes),
-                             frozen_feature_sets(representations), [c.key for c in conditions])
+                             frozen_feature_sets(representations), [c.key for c in conditions],
+                             random_draws(config, study_episodes + choose_r_episodes))
     require_same_experiment(frozen, content, provenance(config, device_name(solver_model)),
                             where=str(layout.frozen_run(run_dir)))
 
@@ -252,6 +260,7 @@ def run(config, shard: int) -> None:
             continue
         try:
             generate_episode(solver_model, episode, conditions, representations, results,
+                             frozen["random_draws"][episode.episode_id],
                              prepared_baseline=prepared_baseline[episode.episode_id])
         except BaselineMismatch as mismatch:
             logger.warning("Excluding %s", mismatch)
@@ -278,7 +287,8 @@ def merge(config, labels_stubbed: bool) -> None:
     conditions = study_conditions(representations, config.experiment.edit_size,
                                   config.experiment.number_of_random_draws)
     content = frozen_content(config, ids(study_episodes), ids(choose_r_episodes),
-                             frozen_feature_sets(representations), [c.key for c in conditions])
+                             frozen_feature_sets(representations), [c.key for c in conditions],
+                             random_draws(config, study_episodes + choose_r_episodes))
     require_same_experiment(frozen, content, None, where=str(layout.frozen_run(run_dir)))
 
     rows, mismatched = read_complete_shards(run_dir, shards["shards"], frozen["conditions"],
@@ -344,6 +354,13 @@ def write_tables(labeled, excluded, config, frozen, baseline_check, out: Path, l
 
 def ids(episodes) -> list[str]:
     return [episode.episode_id for episode in episodes]
+
+
+def random_draws(config, episodes) -> dict[str, list[int]]:
+    """{episode id: its pool indices, one per random draw slot}, fixed by the seed and the question id."""
+    e = config.experiment
+    return {episode.episode_id: random_draws_for(episode.question_id, e.seed, e.random_draw_pool_size,
+                                                 e.number_of_random_draws) for episode in episodes}
 
 
 def on_device(representations, solver_model, roles=None) -> dict:

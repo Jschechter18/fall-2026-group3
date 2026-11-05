@@ -70,6 +70,11 @@ def test_every_stage_runs_and_resumes(experiment, tmp_path):
         script.run(config, shard)
     shard_0 = (run_dir / "shard_0.jsonl").read_text()
     assert len(shard_0.splitlines()) == 1 + 1 + 2 * 3 * (1 + fakes.N_DRAWS)    # baseline, splice, 2 reps × arms
+    frozen_draws = json.loads(layout.frozen_run(run_dir).read_text())["random_draws"]
+    for line in shard_0.splitlines():                                          # each row used its frozen draws
+        row = json.loads(line)
+        if row["source"] == "random":
+            assert row["random_pool_draw"] == frozen_draws[row["episode_id"]][row["draw"]]
     script.run(config, 0)                                                      # finished: nothing is redone
     assert (run_dir / "shard_0.jsonl").read_text() == shard_0
 

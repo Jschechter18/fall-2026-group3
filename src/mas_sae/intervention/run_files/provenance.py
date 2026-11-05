@@ -68,10 +68,11 @@ def device_name(solver_model) -> str | None:
 
 
 def frozen_content(config, episode_ids: list[str], choose_r_episode_ids: list[str], feature_sets: dict,
-                   condition_keys: list[str]) -> dict:
-    """Everything that defines the experiment, and a hash of each part."""
+                   condition_keys: list[str], random_draws: dict[str, list[int]]) -> dict:
+    """Everything that defines the experiment, and a hash of each part. ``random_draws`` maps each
+    episode id to its pool indices, one per random draw slot."""
     parts = {"config": config.as_dict(), "episode_ids": episode_ids, "choose_r_episode_ids": choose_r_episode_ids,
-             "feature_sets": feature_sets, "conditions": condition_keys}
+             "feature_sets": feature_sets, "conditions": condition_keys, "random_draws": random_draws}
     return {**json.loads(json.dumps(parts)), "hashes": {k: sha256_json(v) for k, v in parts.items()}}
 
 

@@ -50,7 +50,8 @@ experiment:
   edit_size: null # r, |Δ| = r·|x|: set from the choose-r report before prepare
   candidate_edit_sizes: [0.02, 0.05, 0.10, 0.20]
   number_of_targeted_features: 10
-  number_of_random_draws: 3
+  number_of_random_draws: 3         # per question, distinct draws from the pool below
+  random_draw_pool_size: 100        # the first 100 matched random draws in feature_sets.json
   min_baseline_label_match: 0.98
   seed: 42
 

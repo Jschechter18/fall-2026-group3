@@ -38,6 +38,13 @@ def test_config_problems_are_reported_together(workspace):
         assert text in str(error.value)
 
 
+def test_config_refuses_more_draws_per_question_than_the_pool_holds(workspace):
+    raw = {**workspace, "experiment": {**workspace["experiment"], "number_of_random_draws": 5,
+                                       "random_draw_pool_size": 4}}
+    with pytest.raises(ValueError, match="number_of_random_draws must be at most experiment.random_draw_pool_size"):
+        parse_config(raw)
+
+
 def test_config_refuses_unknown_and_missing_keys(workspace):
     with pytest.raises(ValueError, match="Unknown keys in experiment"):
         parse_config({**workspace, "experiment": {**workspace["experiment"], "typo": 1}})
@@ -92,7 +99,7 @@ def test_invalid_feature_sets(workspace, tmp_path):
     assert "Raw: the adoption and retention sets overlap" in problems
     assert "Raw: random adoption draw 1 must be 3 unique ints in [0, 16)" in problems
     assert "SAE: random retention draw 0 shares a feature with a targeted set" in problems
-    assert "SAE: 1 random adoption draws, 2 needed" in problems
+    assert "SAE: 1 random adoption draws, 4 needed" in problems                          # the pool size
     assert "SAE: missing" not in " ".join(problems)
 
 

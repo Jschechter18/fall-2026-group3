@@ -1,8 +1,9 @@
 """The representations whose features are edited: raw activations (the control) and the SAEs.
 
 Each has, from ``feature_sets.json`` (read-only, never reselected here), a targeted adoption set, a
-targeted retention set and matched random draws for each, and every set gets its direction u_S once
-per run (``edits.set_direction``).
+targeted retention set and a pool of matched random draws for each (the first
+``random_draw_pool_size``), and every set gets its direction u_S once per run (``edits.set_direction``).
+Which pool draws a question uses is ``conditions.random_draws_for``.
 
 Raw neurons: a targeted neuron's direction is e_i times the sign of its probe coefficient toward its
 set's label (always +1 by how the sets were selected, but computed, not assumed). Random neurons use
@@ -32,7 +33,7 @@ LABELS = ("adoption", "retention")
 class FeatureSet:
     label: str                 # adoption | retention: the label the set is associated with
     source: str                # targeted | random
-    draw: int | None           # random draw number (None for targeted)
+    draw: int | None           # index in the random draw pool (None for targeted)
     features: list[int]
     direction: Tensor          # u_S, a unit vector in activation space
 
@@ -45,7 +46,7 @@ class Representation:
     sae: torch.nn.Module | None
     width: int
     targeted: dict             # label -> FeatureSet
-    random: dict               # label -> [FeatureSet, one per draw]
+    random: dict               # label -> [FeatureSet, one per pool draw]
     encoder_id: str | None     # SAEs with the same encoder share it, and share z = encode(x)
 
     @property
@@ -94,7 +95,7 @@ def load_basis(spec, layer: int) -> tuple[torch.nn.Module | None, int]:
     return sae, int(sae.latent_dim)
 
 
-def feature_set_problems(name: str, entry: dict, width: int, n_targeted: int, n_draws: int) -> list[str]:
+def feature_set_problems(name: str, entry: dict, width: int, n_targeted: int, pool_size: int) -> list[str]:
     """Everything wrong with one representation's feature sets in ``feature_sets.json``."""
     problems = []
     valid = lambda ids: (len(ids) == n_targeted and all(type(f) is int and 0 <= f < width for f in ids)
@@ -108,9 +109,9 @@ def feature_set_problems(name: str, entry: dict, width: int, n_targeted: int, n_
     both = set(targeted["adoption"]) | set(targeted["retention"])
     for label in LABELS:
         draws = entry.get(f"random_draws_{label}", [])
-        if len(draws) < n_draws:
-            problems.append(f"{name}: {len(draws)} random {label} draws, {n_draws} needed")
-        for k, draw in enumerate(draws[:n_draws]):
+        if len(draws) < pool_size:
+            problems.append(f"{name}: {len(draws)} random {label} draws, {pool_size} needed")
+        for k, draw in enumerate(draws[:pool_size]):
             if not valid(draw):
                 problems.append(f"{name}: random {label} draw {k} must be {n_targeted} unique ints in [0, {width})")
             if set(draw) & both:
@@ -124,7 +125,7 @@ def _directions(sae, width: int, features: list[int], signs: list[int]) -> Tenso
     return edits.sae_feature_directions(sae, features)
 
 
-def build_representation(name: str, spec, entry: dict, sae, width: int, n_draws: int) -> Representation:
+def build_representation(name: str, spec, entry: dict, sae, width: int, pool_size: int) -> Representation:
     def targeted_set(label):
         rows = entry[f"{label}_features"]
         toward = 1 if label == "adoption" else -1          # coefficients are toward adoption
@@ -139,7 +140,7 @@ def build_representation(name: str, spec, entry: dict, sae, width: int, n_draws:
     return Representation(
         name=name, kind=spec.kind, role=spec.role, sae=sae, width=width,
         targeted={label: targeted_set(label) for label in LABELS},
-        random={label: [random_set(label, k) for k in range(n_draws)] for label in LABELS},
+        random={label: [random_set(label, k) for k in range(pool_size)] for label in LABELS},
         encoder_id=None if sae is None else encoder_id(sae))
 
 
@@ -150,7 +151,7 @@ def load_representations(config: InterventionConfig) -> list[Representation]:
     for name, spec in config.representations.items():
         sae, width = load_basis(spec, config.layer)
         out.append(build_representation(name, spec, entries[name], sae, width,
-                                        config.experiment.number_of_random_draws))
+                                        config.experiment.random_draw_pool_size))
     return out
 
 

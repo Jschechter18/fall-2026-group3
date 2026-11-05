@@ -14,7 +14,8 @@ from mas_sae.intervention.experiment.config import Representation as Representat
 from mas_sae.intervention.generation.solver import SolverModel
 from mas_sae.sae.pretrained import JumpReLUSAE
 
-HIDDEN, WIDTH, N_FEATURES, N_DRAWS = 16, 40, 3, 2
+HIDDEN, WIDTH, N_FEATURES, N_DRAWS, POOL_SIZE = 16, 40, 3, 2, 4
+DRAWS = [0, 1]          # an episode's pool indices, one per draw slot
 
 
 class ByteProcessor:
@@ -67,18 +68,19 @@ def feature_entry(width):
     """A feature_sets.json entry (ids < 16, so it fits raw neurons too): disjoint targeted sets, draws avoid both."""
     return {"adoption_features": [{"feature": f, "coef_toward_accept": 0.5} for f in range(0, N_FEATURES)],
             "retention_features": [{"feature": f, "coef_toward_accept": -0.5} for f in range(3, 3 + N_FEATURES)],
-            "random_draws_adoption": [[6, 7, 8], [9, 10, 11]],
-            "random_draws_retention": [[12, 13, 14], [15, 7, 9]]}
+            "random_draws_adoption": [[6, 7, 8], [9, 10, 11], [6, 9, 12], [8, 11, 14]],
+            "random_draws_retention": [[12, 13, 14], [15, 7, 9], [10, 13, 6], [12, 15, 10]]}
 
 
 def representations():
     """Raw neurons, an SAE, and a second SAE with the same encoder but another decoder."""
     spec = lambda kind, role: RepresentationSpec(kind=kind, path="unused", role=role)
     return {r.name: r for r in [
-        build_representation("Raw", spec("activations", "control"), feature_entry(HIDDEN), None, HIDDEN, N_DRAWS),
-        build_representation("SAE", spec("gemma_scope", "primary"), feature_entry(WIDTH), jump_relu(0), WIDTH, N_DRAWS),
+        build_representation("Raw", spec("activations", "control"), feature_entry(HIDDEN), None, HIDDEN, POOL_SIZE),
+        build_representation("SAE", spec("gemma_scope", "primary"), feature_entry(WIDTH), jump_relu(0), WIDTH,
+                             POOL_SIZE),
         build_representation("SAE decoder", spec("gemma_scope", "primary"), feature_entry(WIDTH),
-                             jump_relu(0, w_dec_seed=7), WIDTH, N_DRAWS),
+                             jump_relu(0, w_dec_seed=7), WIDTH, POOL_SIZE),
     ]}
 
 
@@ -132,7 +134,8 @@ def write_workspace(root, n_episodes=8, presentation="candidates"):
         "representations": {"Raw": {"kind": "activations", "path": "in/center.npy", "role": "control"},
                             "SAE": {"kind": "gemma_scope", "path": "in/sae", "role": "primary"}},
         "experiment": {"number_of_episodes": 2, "number_of_choose_r_episodes": 1, "number_of_shards": 1,
-                       "edit_size": 0.05, "number_of_targeted_features": N_FEATURES, "number_of_random_draws": N_DRAWS},
+                       "edit_size": 0.05, "number_of_targeted_features": N_FEATURES, "number_of_random_draws": N_DRAWS,
+                       "random_draw_pool_size": POOL_SIZE},
         "analysis": {"primary_representations": ["SAE"], "between_sae_contrasts": [], "exploratory_contrasts": [],
                      "direction_contrasts": [["both", "decrease"]], "n_bootstrap": 10, "n_permutations": 10},
         "machine": {"min_gpu_memory_gb": 1, "min_free_disk_gb": 0},

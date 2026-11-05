@@ -16,7 +16,7 @@ from __future__ import annotations
 import torch
 
 from mas_sae.intervention.generation import edits
-from mas_sae.intervention.experiment.conditions import Condition, edited_features, sets_for
+from mas_sae.intervention.experiment.conditions import Condition, edited_features, pool_draw, sets_for
 from mas_sae.intervention.generation.solver import generate_baseline, generate_with_activation
 
 
@@ -34,22 +34,26 @@ def encode_once(x: torch.Tensor, representations: dict) -> dict:
     return codes
 
 
-def apply_condition(condition: Condition, x: torch.Tensor, rep, stored_label: str, codes: dict):
-    """(x', diagnostics, edited set name) for a reconstruction or edit condition. ``x`` is float32."""
+def apply_condition(condition: Condition, x: torch.Tensor, rep, stored_label: str, codes: dict,
+                    random_draws: list[int]):
+    """(x', diagnostics, edited set name) for a reconstruction or edit condition. ``x`` is float32;
+    ``random_draws`` are the question's pool indices (``conditions.random_draws_for``)."""
     z, reconstruction = codes.get(rep.name, (None, None))
     if condition.kind == "reconstruction":
         return reconstruction, edits.diagnose(x, reconstruction - x, [], z, reconstruction), None
-    toward, away, edited_set = sets_for(condition, rep, stored_label)
+    toward, away, edited_set = sets_for(condition, rep, stored_label, random_draws)
     delta = edits.edit_delta(condition.arm, x, toward.direction, away.direction, condition.edit_size)
     diagnostics = edits.diagnose(x, delta, edited_features(condition, toward, away), z, reconstruction)
     return x + delta, diagnostics, edited_set
 
 
-def make_row(episode, condition: Condition, generation, baseline, diagnostics, edited_set) -> dict:
+def make_row(episode, condition: Condition, generation, baseline, diagnostics, edited_set,
+             random_pool_draw: int | None = None) -> dict:
     """One results-file line: what was generated, under which condition, and how the edit went."""
     return {
         "episode_id": episode.episode_id, "question_id": episode.question_id, "stored_label": episode.stored_label,
         "condition": condition.key, **condition.as_dict(), "edited_set": edited_set,
+        "random_pool_draw": random_pool_draw,                          # pool index of a random condition
         "answer": generation.answer, "prompt_sha256": generation.prompt_sha256,
         "generated_token_ids": generation.generated_token_ids,
         "reached_token_budget": generation.reached_token_budget,
@@ -78,9 +82,11 @@ def require_same_baseline(baseline, prepared: dict, episode) -> None:
 
 
 def generate_episode(solver_model, episode, conditions: list[Condition], representations: dict, results,
-                     prepared_baseline: dict | None = None, use_prefill_cache: bool = True) -> int:
+                     random_draws: list[int], prepared_baseline: dict | None = None,
+                     use_prefill_cache: bool = True) -> int:
     """Generate every condition of ``episode`` not yet in ``results``. Returns how many were generated.
 
+    ``random_draws`` are the question's pool indices, one per random draw slot (``conditions.random_draws_for``).
     ``use_prefill_cache=False`` computes every prefill in full (the plain path the parity test uses)."""
     # Resume: skip conditions already in the results file; stop early if none are left.
     missing_conditions = [c for c in conditions if not results.has(episode.episode_id, c.key)]
@@ -107,7 +113,7 @@ def generate_episode(solver_model, episode, conditions: list[Condition], represe
             continue
         # Build x' (an SAE reconstruction or an edit of x) and diagnostics on how the edit went.
         x_new, diagnostics, edited_set = apply_condition(condition, x32, representations[condition.representation],
-                                                         episode.stored_label, codes)
+                                                         episode.stored_label, codes, random_draws)
         # Regenerate A2 with x replaced by x', replaying the cached layers 0..25 instead of recomputing them.
         generation = generate_with_activation(solver_model, episode, x, x_new,
                                               prefill if use_prefill_cache else None)
@@ -115,5 +121,6 @@ def generate_episode(solver_model, episode, conditions: list[Condition], represe
         if generation.prompt_sha256 != baseline.prompt_sha256:
             raise RuntimeError(f"{episode.episode_id}: a condition's prompt differs from the baseline's.")
         # Write the row right away so a crash loses at most this one condition.
-        results.append(make_row(episode, condition, generation, baseline, diagnostics, edited_set))
+        results.append(make_row(episode, condition, generation, baseline, diagnostics, edited_set,
+                                pool_draw(condition, random_draws)))
     return len(missing_conditions)

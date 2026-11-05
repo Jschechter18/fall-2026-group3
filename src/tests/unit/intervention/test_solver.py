@@ -23,7 +23,7 @@ def test_prefill_cache_rows_equal_the_plain_generation_rows(tmp_path):
     for name, cached in (("cached", True), ("plain", False)):
         results = ResultsFile(tmp_path / f"{name}.jsonl")
         for ep in episodes:
-            generate_episode(solver_model, ep, conditions, reps, results, use_prefill_cache=cached)
+            generate_episode(solver_model, ep, conditions, reps, results, fakes.DRAWS, use_prefill_cache=cached)
     cached, plain = _rows_without_time(tmp_path / "cached.jsonl"), _rows_without_time(tmp_path / "plain.jsonl")
     assert len(cached) == len(episodes) * len(conditions) and cached == plain
     baseline = {r["episode_id"]: r["answer"] for r in cached if r["kind"] == "baseline"}
@@ -34,7 +34,7 @@ def test_every_edit_is_written_at_size_r(tmp_path):
     solver_model, reps = fakes.solver_model(), fakes.representations()
     results = ResultsFile(tmp_path / "rows.jsonl")
     generate_episode(solver_model, fakes.episode(), study_conditions(list(reps.values()), SIZE, fakes.N_DRAWS),
-                     reps, results)
+                     reps, results, fakes.DRAWS)
     edits = [r for r in results.rows if r["kind"] == "edit"]
     assert all(r["applied_relative_size"] == pytest.approx(SIZE, rel=1e-5) for r in edits)     # float32 model
     sae_edits = [r for r in edits if r["representation"] != "Raw"]
@@ -42,13 +42,23 @@ def test_every_edit_is_written_at_size_r(tmp_path):
     assert all(r["edited_features_active"] is None for r in edits if r["representation"] == "Raw")
 
 
+def test_each_random_row_records_the_pool_draw_it_used(tmp_path):
+    solver_model, reps = fakes.solver_model(), fakes.representations()
+    results = ResultsFile(tmp_path / "rows.jsonl")
+    generate_episode(solver_model, fakes.episode(), study_conditions(list(reps.values()), SIZE, fakes.N_DRAWS),
+                     reps, results, [3, 2])
+    assert {(r["draw"], r["random_pool_draw"]) for r in results.rows if r["source"] == "random"} == {(0, 3), (1, 2)}
+    assert all(r["random_pool_draw"] is None for r in results.rows if r["source"] != "random")
+
+
 def test_rerun_generates_nothing_and_a_partial_episode_finishes(tmp_path):
     solver_model, reps = fakes.solver_model(), fakes.representations()
     conditions = study_conditions(list(reps.values()), SIZE, fakes.N_DRAWS)
     results = ResultsFile(tmp_path / "rows.jsonl")
-    assert generate_episode(solver_model, fakes.episode(), conditions[:5], reps, results) == 5
-    assert generate_episode(solver_model, fakes.episode(), conditions, reps, results) == len(conditions) - 5
-    assert generate_episode(solver_model, fakes.episode(), conditions, reps, ResultsFile(tmp_path / "rows.jsonl")) == 0
+    assert generate_episode(solver_model, fakes.episode(), conditions[:5], reps, results, fakes.DRAWS) == 5
+    assert generate_episode(solver_model, fakes.episode(), conditions, reps, results, fakes.DRAWS) == len(conditions) - 5
+    assert generate_episode(solver_model, fakes.episode(), conditions, reps, ResultsFile(tmp_path / "rows.jsonl"),
+                            fakes.DRAWS) == 0
 
 
 def _next_layer_prefill_input(solver_model, run):

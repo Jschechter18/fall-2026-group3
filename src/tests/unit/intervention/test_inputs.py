@@ -6,7 +6,9 @@ import pytest
 import torch
 
 from . import fakes
-from mas_sae.intervention.experiment.conditions import edited_features, choose_r_conditions, sets_for, study_conditions
+from mas_sae.intervention.experiment.conditions import (
+    edited_features, choose_r_conditions, pool_draw, random_draws_for, sets_for, study_conditions,
+)
 from mas_sae.intervention.experiment.config import parse_config
 from mas_sae.intervention.experiment.episodes import eligible_episodes, seeded_order, study_and_choose_r_episodes
 from mas_sae.intervention.experiment.representations import frozen_feature_sets
@@ -69,13 +71,26 @@ def test_each_arm_steers_along_the_right_sets():
     rep = fakes.representations()["SAE"]
     edit = lambda arm, source="targeted", draw=None: [c for c in study_conditions([rep], 0.05, fakes.N_DRAWS)
                                                       if (c.arm, c.source, c.draw) == (arm, source, draw)][0]
-    toward, away, edited = sets_for(edit("decrease"), rep, "adoption")
+    toward, away, edited = sets_for(edit("decrease"), rep, "adoption", fakes.DRAWS)
     assert (toward.label, away.label, edited) == ("retention", "adoption", "adoption")
     assert edited_features(edit("decrease"), toward, away) == [0, 1, 2]
-    toward, away, edited = sets_for(edit("increase"), rep, "retention")
+    toward, away, edited = sets_for(edit("increase"), rep, "retention", fakes.DRAWS)
     assert (toward.label, away.label, edited) == ("adoption", "retention", "adoption")
-    toward, away, edited = sets_for(edit("both", "random", 1), rep, "adoption")
-    assert (toward.features, away.features, edited) == ([15, 7, 9], [9, 10, 11], "both")    # draw k with draw k
+    toward, away, edited = sets_for(edit("both", "random", 1), rep, "adoption", fakes.DRAWS)
+    assert (toward.features, away.features, edited) == ([15, 7, 9], [9, 10, 11], "both")    # draw i with draw i
+    # slot k uses the question's k-th pool index, the same one for both labels
+    toward, away, _ = sets_for(edit("both", "random", 1), rep, "adoption", [3, 2])
+    assert (toward.draw, away.draw, toward.features, away.features) == (2, 2, [10, 13, 6], [6, 9, 12])
+    assert pool_draw(edit("both", "random", 1), [3, 2]) == 2 and pool_draw(edit("both"), [3, 2]) is None
+
+
+def test_each_question_gets_its_own_fixed_distinct_draws_from_the_pool():
+    draws = {q: random_draws_for(q, seed=42, pool_size=100, n_draws=3) for q in (f"q{i}" for i in range(200))}
+    assert draws["q0"] == random_draws_for("q0", seed=42, pool_size=100, n_draws=3)       # same on every machine
+    assert all(len(set(d)) == 3 and all(0 <= i < 100 for i in d) for d in draws.values())
+    assert len({tuple(d) for d in draws.values()}) > 150                                  # questions differ
+    assert len({i for d in draws.values() for i in d}) > 90                               # the pool is sampled
+    assert random_draws_for("q0", seed=43, pool_size=100, n_draws=3) != draws["q0"]       # the seed matters
 
 
 def test_raw_targeted_neurons_are_signed_toward_their_label_and_random_ones_are_not():
