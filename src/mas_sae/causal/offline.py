@@ -54,12 +54,13 @@ def ablate(Z: np.ndarray, features) -> np.ndarray:
 
 
 def frequency_matched_controls(freq: np.ndarray, targeted, n_draws: int, seed: int,
-                               pool_size: int = 50) -> list[list[int]]:
+                               pool_size: int = 50, exclude=()) -> list[list[int]]:
     """Random feature sets the same size as ``targeted``: each targeted feature is replaced by a
     random live, non-targeted feature among the ``pool_size`` with the closest training firing
-    frequency, so the control removes about as much activity as the targeted ablation."""
+    frequency, so the control removes about as much activity as the targeted ablation. ``exclude``
+    are further features never drawn (e.g. another targeted set)."""
     targeted = [int(f) for f in targeted]
-    candidates = np.setdiff1d(np.flatnonzero(freq > 0), targeted)
+    candidates = np.setdiff1d(np.flatnonzero(freq > 0), [*targeted, *(int(f) for f in exclude)])
     if len(candidates) < len(targeted):
         raise ValueError("Not enough live features to draw a matched random control.")
     rng = np.random.default_rng(seed)
