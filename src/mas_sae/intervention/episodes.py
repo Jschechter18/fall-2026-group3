@@ -15,6 +15,7 @@ from pathlib import Path
 import numpy as np
 
 from mas_sae.experiments.artifacts import sha256_file
+from mas_sae.intervention.config import InterventionConfig
 
 STRATA = ("adoption", "retention")
 OPPOSITE = {"adoption": "retention", "retention": "adoption"}
@@ -92,12 +93,12 @@ def seeded_order(episodes: list[Episode], seed: int) -> list[Episode]:
     return [episodes[i] for i in np.random.default_rng(seed).permutation(len(episodes))]
 
 
-def study_and_pilot_episodes(config) -> tuple[list[Episode], list[Episode]]:
+def study_and_pilot_episodes(config: InterventionConfig) -> tuple[list[Episode], list[Episode]]:
     """(study, pilot): positions 1..N and N+1..N+P of the seeded order. Refuses if too few are eligible."""
-    e = config.experiment
+    experiment = config.experiment
     order = seeded_order(eligible_episodes(Path(config.inputs.interactions), Path(config.inputs.contexts),
-                                           Path(config.inputs.stored_labels), config.partition), e.seed)
-    needed = e.number_of_episodes + e.number_of_pilot_episodes
+                                           Path(config.inputs.stored_labels), config.partition), experiment.seed)
+    needed = experiment.number_of_episodes + experiment.number_of_pilot_episodes
     if len(order) < needed:
         raise ValueError(f"Only {len(order)} eligible episodes; the study and pilot need {needed}.")
-    return order[:e.number_of_episodes], order[e.number_of_episodes:needed]
+    return order[:experiment.number_of_episodes], order[experiment.number_of_episodes:needed]

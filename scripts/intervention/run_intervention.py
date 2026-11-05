@@ -98,7 +98,9 @@ HOW TO RUN
 Every stage first runs the preflight, which lists everything the machine is missing in one error
 before any GPU work; `--check-only` runs it and exits. Every stage can be killed and rerun with the
 same command: finished generations and Claude responses are never redone, and a worker refuses to
-continue a run frozen with different code, inputs, packages or GPU.
+continue a run frozen with different code, inputs or packages. The GPU model is recorded, not
+enforced; a worker whose baseline of an episode differs from prepare's excludes that episode, and
+merge refuses if more than (1 − min_baseline_label_match) of the episodes were excluded that way.
 
     pilot    choose r: the pilot episodes, the 3 primary SAEs, each size in pilot_edit_sizes.
              Writes pilot/pilot_report.md. Then stop, choose r, and set experiment.edit_size.
@@ -123,7 +125,7 @@ from mas_sae.intervention.baseline import check_baseline_reproduces_stored
 from mas_sae.intervention.conditions import BASELINE, pilot_conditions, study_conditions
 from mas_sae.intervention.config import load_config
 from mas_sae.intervention.episodes import study_and_pilot_episodes
-from mas_sae.intervention.generation import generate_episode, make_row
+from mas_sae.intervention.generation import BaselineMismatch, generate_episode, make_row
 from mas_sae.intervention.labeling import StubClaudeClient, create_client, label_rows, read_protocol
 from mas_sae.intervention.pilot import write_pilot_report
 from mas_sae.intervention.preflight import run_preflight
@@ -132,7 +134,9 @@ from mas_sae.intervention.provenance import (
 )
 from mas_sae.intervention.representations import frozen_feature_sets, load_representations
 from mas_sae.intervention.results_file import ResultsFile, read_rows
-from mas_sae.intervention.shards import mark_shard_complete, read_complete_shards, shard_rows_path, split_into_shards
+from mas_sae.intervention.shards import (
+    mark_shard_complete, read_complete_shards, read_excluded, record_excluded, shard_rows_path, split_into_shards,
+)
 from mas_sae.intervention.solver import generate_baseline, load_solver
 from mas_sae.experiments.artifacts import sha256_file
 
@@ -221,12 +225,13 @@ def run(config, shard: int) -> None:
         raise RuntimeError("The baseline check did not pass; no edit is run.")
 
     study_episodes, pilot_episodes = study_and_pilot_episodes(config)
-    representations = load_representations(config)
+    representations = load_representations(config) 
     conditions = study_conditions(representations, config.experiment.edit_size,
                                   config.experiment.number_of_random_draws)
     solver_model = load_solver(config)
 
-    # This worker must be running the frozen experiment, with the same code, packages, GPU and inputs.
+    # This worker must be running the frozen experiment, with the same code, packages and inputs.
+    # The GPU model is recorded, not enforced: each episode's baseline check below is what guarantees it.
     content = frozen_content(config, ids(study_episodes), ids(pilot_episodes),
                              frozen_feature_sets(representations), [c.key for c in conditions])
     require_same_experiment(frozen, content, provenance(config, device_name(solver_model)),
@@ -238,16 +243,25 @@ def run(config, shard: int) -> None:
     prepared_baseline = {r["episode_id"]: r for r in read_rows(layout.baseline_rows(run_dir))}
 
     # Each episode's baseline is regenerated first and must equal prepare's, before any of its edits.
+    # An episode whose baseline differs is excluded (recorded, never retried) and the shard goes on.
     results = ResultsFile(shard_rows_path(run_dir, shard))
+    excluded = read_excluded(run_dir, shard)
     for episode in tqdm(shard_episodes, desc=f"shard {shard}"):
-        generate_episode(solver_model, episode, conditions, representations, results,
-                         prepared_baseline=prepared_baseline[episode.episode_id])
+        if episode.episode_id in excluded:
+            continue
+        try:
+            generate_episode(solver_model, episode, conditions, representations, results,
+                             prepared_baseline=prepared_baseline[episode.episode_id])
+        except BaselineMismatch as mismatch:
+            logger.warning("Excluding %s", mismatch)
+            excluded = record_excluded(run_dir, shard, episode.episode_id, str(mismatch))
 
     marker = mark_shard_complete(run_dir, shard, shards["shards"][shard], [c.key for c in conditions],
-                                 shards["frozen_run_sha256"])
+                                 shards["frozen_run_sha256"], excluded)
     seconds = [r["seconds"] for r in results.rows]
-    per_generation = sum(seconds) / len(seconds)
-    print(f"Shard {shard} complete: {marker['row_count']} rows, {per_generation:.2f} s per generation "
+    per_generation = sum(seconds) / len(seconds) if seconds else float("nan")
+    print(f"Shard {shard} complete: {marker['row_count']} rows, {len(excluded)} of {len(shard_episodes)} episodes "
+          f"excluded (baseline differs from prepare's), {per_generation:.2f} s per generation "
           f"(~{per_generation * len(conditions) * 1000 / 3600:.1f} GPU-hours per 1000 episodes).")
 
 
@@ -266,8 +280,16 @@ def merge(config, labels_stubbed: bool) -> None:
                              frozen_feature_sets(representations), [c.key for c in conditions])
     require_same_experiment(frozen, content, None, where=str(layout.frozen_run(run_dir)))
 
-    rows = read_complete_shards(run_dir, shards["shards"], frozen["conditions"], shards["frozen_run_sha256"])
-    labeled, excluded = label(rows, study_episodes, config, out, labels_stubbed)
+    rows, mismatched = read_complete_shards(run_dir, shards["shards"], frozen["conditions"],
+                                            shards["frozen_run_sha256"])
+    # A worker that could not reproduce prepare's baseline for more episodes than prepare itself may
+    # miss collection's is not a few close calls but a different machine: refuse to analyse it.
+    allowed = (1 - config.experiment.min_baseline_label_match) * len(study_episodes)
+    if len(mismatched) > allowed:
+        raise RuntimeError(f"{len(mismatched)} episodes were excluded because a worker's baseline differed from "
+                           f"prepare's (at most {allowed:.0f} allowed); see shard_*.excluded.json.")
+    labeled, label_failed = label(rows, study_episodes, config, out, labels_stubbed)
+    excluded = {**{e: f"baseline mismatch: {why}" for e, why in mismatched.items()}, **label_failed}
     out.mkdir(parents=True, exist_ok=True)
     (out / "labeled_rows.jsonl").write_text("".join(json.dumps(r) + "\n" for r in labeled))
 

@@ -4,7 +4,8 @@ Per episode:
   1. Generate the baseline (no SAE, no edit). This also records layers 0..25 of the prefill and the
      final prompt activation x, which every other condition starts from.
   2. On a run worker, require the baseline to equal prepare's (same prompt, answer and first token):
-     otherwise differences could come from the machine, not the edit.
+     otherwise differences could come from the machine, not the edit. A mismatch raises
+     BaselineMismatch, and the worker excludes that episode instead of stopping.
   3. Encode x once per SAE encoder (the Pretrained SAE and the fine-tuned decoder share one).
   4. For each condition not yet in the results file: compute x', generate A2 with x replaced by x',
      and append the row at once.
@@ -62,12 +63,18 @@ def make_row(episode, condition: Condition, generation, baseline, diagnostics, e
     }
 
 
+class BaselineMismatch(RuntimeError):
+    """This worker's baseline of one episode differs from prepare's: the run worker excludes that episode."""
+
+
 def require_same_baseline(baseline, prepared: dict, episode) -> None:
-    same = (baseline.prompt_sha256 == prepared["prompt_sha256"] and baseline.answer == prepared["answer"]
-            and baseline.first_token_id == prepared["first_token_id"])
-    if not same:
-        raise RuntimeError(f"{episode.episode_id}: this worker's baseline differs from prepare's "
-                           "(prompt, answer or first token); its edits would not be comparable.")
+    differs = [name for name, ours, theirs in (("prompt", baseline.prompt_sha256, prepared["prompt_sha256"]),
+                                               ("answer", baseline.answer, prepared["answer"]),
+                                               ("first token", baseline.first_token_id, prepared["first_token_id"]))
+               if ours != theirs]
+    if differs:
+        raise BaselineMismatch(f"{episode.episode_id}: this worker's baseline differs from prepare's "
+                               f"({', '.join(differs)}); its edits would not be comparable.")
 
 
 def generate_episode(solver_model, episode, conditions: list[Condition], representations: dict, results,
@@ -75,24 +82,38 @@ def generate_episode(solver_model, episode, conditions: list[Condition], represe
     """Generate every condition of ``episode`` not yet in ``results``. Returns how many were generated.
 
     ``use_prefill_cache=False`` computes every prefill in full (the plain path the parity test uses)."""
-    todo = [c for c in conditions if not results.has(episode.episode_id, c.key)]
-    if not todo:
+    # Resume: skip conditions already in the results file; stop early if none are left.
+    missing_conditions = [c for c in conditions if not results.has(episode.episode_id, c.key)]
+    if not missing_conditions:
         return 0
+
+    # Baseline: plain generation that also records layers 0..25 of the prefill for reuse below.
     baseline, prefill = generate_baseline(solver_model, episode)
+    # Run workers only: the baseline must match prepare's, or this machine's results aren't comparable.
+    # Raises BaselineMismatch before any of this episode's rows are written; the worker excludes it.
     if prepared_baseline is not None:
         require_same_baseline(baseline, prepared_baseline, episode)
+
+    # The activation every condition edits (bf16, as in the model), a float32 copy for the edit math,
+    # and each SAE's code and reconstruction of it, computed once for all conditions.
     x = prefill.final_activation
     x32 = x.float()
     codes = encode_once(x32, representations)
-    for condition in todo:
+
+    for condition in missing_conditions:
+        # The baseline condition is the generation above: just record it.
         if condition.kind == "baseline":
             results.append(make_row(episode, condition, baseline, baseline, None, None))
             continue
+        # Build x' (an SAE reconstruction or an edit of x) and diagnostics on how the edit went.
         x_new, diagnostics, edited_set = apply_condition(condition, x32, representations[condition.representation],
                                                          episode.stored_label, codes)
+        # Regenerate A2 with x replaced by x', replaying the cached layers 0..25 instead of recomputing them.
         generation = generate_with_activation(solver_model, episode, x, x_new,
                                               prefill if use_prefill_cache else None)
+        # Sanity check: the edited run must have seen the exact same prompt as the baseline.
         if generation.prompt_sha256 != baseline.prompt_sha256:
             raise RuntimeError(f"{episode.episode_id}: a condition's prompt differs from the baseline's.")
+        # Write the row right away so a crash loses at most this one condition.
         results.append(make_row(episode, condition, generation, baseline, diagnostics, edited_set))
-    return len(todo)
+    return len(missing_conditions)

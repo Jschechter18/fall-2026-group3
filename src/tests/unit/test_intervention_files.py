@@ -6,7 +6,8 @@ import pytest
 
 from mas_sae.intervention.results_file import ResultsFile
 from mas_sae.intervention.shards import (
-    mark_shard_complete, read_complete_shards, shard_marker_path, shard_rows_path, split_into_shards,
+    mark_shard_complete, read_complete_shards, read_excluded, record_excluded, shard_marker_path, shard_rows_path,
+    split_into_shards,
 )
 
 CONDITIONS = ["baseline", "edit|SAE|both|targeted||0.05"]
@@ -66,8 +67,27 @@ def test_merge_reads_complete_shards(tmp_path):
     for k, ids in enumerate(shards):
         _write_shard(tmp_path, k, ids)
         assert mark_shard_complete(tmp_path, k, ids, CONDITIONS, "frozen")["row_count"] == 2 * len(ids)
-    rows = read_complete_shards(tmp_path, shards, CONDITIONS, "frozen")
-    assert len(rows) == 6
+    rows, excluded = read_complete_shards(tmp_path, shards, CONDITIONS, "frozen")
+    assert len(rows) == 6 and excluded == {}
+
+
+def test_an_excluded_episode_is_dropped_at_merge_even_with_leftover_rows(tmp_path):
+    shards = [["e1", "e2"], ["e3"]]
+    _write_shard(tmp_path, 0, ["e1"])
+    _write_shard(tmp_path, 0, ["e2"], conditions=CONDITIONS[:1])         # e2: a partial earlier attempt
+    excluded = record_excluded(tmp_path, 0, "e2", "baseline differs")
+    assert read_excluded(tmp_path, 0) == {"e2": "baseline differs"}
+    assert mark_shard_complete(tmp_path, 0, shards[0], CONDITIONS, "frozen", excluded)["row_count"] == 3
+    _write_shard(tmp_path, 1, ["e3"])
+    mark_shard_complete(tmp_path, 1, shards[1], CONDITIONS, "frozen")
+    rows, excluded = read_complete_shards(tmp_path, shards, CONDITIONS, "frozen")
+    assert {r["episode_id"] for r in rows} == {"e1", "e3"} and excluded == {"e2": "baseline differs"}
+
+
+def test_a_shard_cannot_exclude_an_episode_it_does_not_have(tmp_path):
+    _write_shard(tmp_path, 0, ["e1"])
+    with pytest.raises(RuntimeError, match="not in it"):
+        mark_shard_complete(tmp_path, 0, ["e1"], CONDITIONS, "frozen", {"e9": "baseline differs"})
 
 
 def test_merge_lists_every_problem_with_the_shards(tmp_path):

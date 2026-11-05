@@ -22,6 +22,7 @@ from torch import Tensor
 
 from mas_sae.experiments.artifacts import sha256_file
 from mas_sae.intervention import edits
+from mas_sae.intervention.config import InterventionConfig
 from mas_sae.probe.feature_selection import load_sae, sae_files
 
 LABELS = ("adoption", "retention")
@@ -142,7 +143,7 @@ def build_representation(name: str, spec, entry: dict, sae, width: int, n_draws:
         encoder_id=None if sae is None else encoder_id(sae))
 
 
-def load_representations(config) -> list[Representation]:
+def load_representations(config: InterventionConfig) -> list[Representation]:
     """Every configured representation, in config order, on the CPU. Assumes the preflight passed."""
     entries = read_feature_sets(Path(config.inputs.feature_sets))
     out = []

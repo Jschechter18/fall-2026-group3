@@ -91,6 +91,28 @@ def test_a_worker_with_a_different_experiment_refuses_to_run(experiment):
         script.run(changed, 0)
 
 
+def test_a_worker_excludes_an_episode_whose_baseline_differs_and_merge_refuses_too_many(experiment):
+    script, raw = experiment
+    config = parse_config(raw)
+    run_dir = Path(config.output_dir)
+    script.pilot(config, labels_stubbed=True)
+    script.prepare(config)
+    episode_id = json.loads(layout.shards(run_dir).read_text())["shards"][0][0]
+    baseline = layout.baseline_rows(run_dir)
+    rows = [json.loads(line) for line in baseline.read_text().splitlines()]
+    baseline.write_text("".join(json.dumps({**r, "answer": "not what prepare saw"} if r["episode_id"] == episode_id
+                                           else r) + "\n" for r in rows))
+
+    script.run(config, 0)                                                      # does not stop
+    assert list(json.loads((run_dir / "shard_0.excluded.json").read_text())) == [episode_id]
+    assert (run_dir / "shard_0.jsonl").read_text() == ""                        # none of its rows written
+    assert json.loads((run_dir / "shard_0.complete.json").read_text())["excluded"].keys() == {episode_id}
+    script.run(config, 0)                                                      # rerun: not retried
+    script.run(config, 1)
+    with pytest.raises(RuntimeError, match="1 episodes were excluded"):        # 1 of 2 > the 2% allowed
+        script.merge(config, labels_stubbed=True)
+
+
 def test_prepare_stops_when_the_baseline_does_not_reproduce_the_stored_answers(experiment, tmp_path):
     script, raw = experiment
     path = tmp_path / "in/interactions.jsonl"

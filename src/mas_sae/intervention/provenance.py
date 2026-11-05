@@ -3,7 +3,9 @@
 ``frozen_run.json`` (written once, by prepare) holds the config, the study episode order, the feature
 sets, the condition list and provenance, plus a hash of each. A worker recomputes all of them from
 its own config and inputs and refuses to start if anything differs; it also refuses a different code
-state, package versions, GPU model or input file. Merge accepts only shards made for this frozen run.
+state, package versions or input file. The GPU model is recorded but not enforced: each episode's
+baseline check on the worker is what guarantees comparability. Merge accepts only shards made for
+this frozen run.
 """
 
 from __future__ import annotations
@@ -23,7 +25,7 @@ CODE_DIRS = ("src", "scripts", "configs")
 PACKAGES = ("torch", "transformers", "numpy", "pandas", "safetensors")
 # provenance that must be identical on every worker
 IDENTITY_KEYS = ("code_tree_sha", "uncommitted_code_sha256", "untracked_code_sha256", "packages",
-                 "device_name", "solver", "input_sha256", "checkpoint_sha256")
+                 "solver", "input_sha256", "checkpoint_sha256")
 
 
 def _git(*args: str) -> str:
@@ -89,7 +91,7 @@ def write_frozen_run(path: Path, content: dict, prov: dict, recorded: dict) -> s
 
 def require_same_experiment(frozen: dict, content: dict, prov: dict | None, where: str) -> None:
     """Refuse unless ``content`` equals what ``frozen`` recorded and, if ``prov`` is given (GPU
-    workers), so does its identity: code, packages, GPU model, Solver, inputs and checkpoints.
+    workers), so does its identity: code, packages, Solver, inputs and checkpoints (not the GPU model).
     Merge passes no ``prov``: it only labels and analyses, on any machine."""
     changed = [k for k in content["hashes"] if frozen["hashes"].get(k) != content["hashes"][k]]
     if prov is not None:
