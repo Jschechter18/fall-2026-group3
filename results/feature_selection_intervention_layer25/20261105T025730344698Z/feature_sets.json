@@ -1,0 +1,835 @@
+{
+  "Raw activations": {
+    "path": "results/probe_mixed_final_001_layer25/centers/raw_layer25.npy",
+    "sha256": {
+      "results/probe_mixed_final_001_layer25/centers/raw_layer25.npy": "e2137f03da819153490c60ec1b57d89b109e3b84eb9ff3d6df24bbcb154d28e1"
+    },
+    "adoption_features": [
+      {
+        "feature": 321,
+        "coef_toward_accept": 0.2842893600463867
+      },
+      {
+        "feature": 653,
+        "coef_toward_accept": 0.25563961267471313
+      },
+      {
+        "feature": 1236,
+        "coef_toward_accept": 0.2457236349582672
+      },
+      {
+        "feature": 402,
+        "coef_toward_accept": 0.25130027532577515
+      },
+      {
+        "feature": 841,
+        "coef_toward_accept": 0.24571922421455383
+      },
+      {
+        "feature": 1551,
+        "coef_toward_accept": 0.237519770860672
+      },
+      {
+        "feature": 233,
+        "coef_toward_accept": 0.223003089427948
+      },
+      {
+        "feature": 1422,
+        "coef_toward_accept": 0.22438578307628632
+      },
+      {
+        "feature": 392,
+        "coef_toward_accept": 0.22123762965202332
+      },
+      {
+        "feature": 302,
+        "coef_toward_accept": 0.21490313112735748
+      }
+    ],
+    "retention_features": [
+      {
+        "feature": 1992,
+        "coef_toward_accept": -0.2827346920967102
+      },
+      {
+        "feature": 1912,
+        "coef_toward_accept": -0.2491605132818222
+      },
+      {
+        "feature": 1048,
+        "coef_toward_accept": -0.23678933084011078
+      },
+      {
+        "feature": 58,
+        "coef_toward_accept": -0.2262885719537735
+      },
+      {
+        "feature": 365,
+        "coef_toward_accept": -0.22751165926456451
+      },
+      {
+        "feature": 2558,
+        "coef_toward_accept": -0.22773028910160065
+      },
+      {
+        "feature": 1105,
+        "coef_toward_accept": -0.21712645888328552
+      },
+      {
+        "feature": 1185,
+        "coef_toward_accept": -0.2188471406698227
+      },
+      {
+        "feature": 509,
+        "coef_toward_accept": -0.21813099086284637
+      },
+      {
+        "feature": 1191,
+        "coef_toward_accept": -0.21167130768299103
+      }
+    ],
+    "random_draws_adoption": [
+      [
+        736,
+        1497,
+        352,
+        29,
+        1340,
+        1591,
+        1311,
+        430,
+        2423,
+        1757
+      ],
+      [
+        2537,
+        695,
+        346,
+        1211,
+        2282,
+        1521,
+        72,
+        881,
+        1682,
+        568
+      ],
+      [
+        2437,
+        203,
+        494,
+        886,
+        609,
+        2101,
+        191,
+        844,
+        1222,
+        568
+      ]
+    ],
+    "random_draws_retention": [
+      [
+        659,
+        1510,
+        2327,
+        394,
+        1642,
+        1505,
+        2120,
+        943,
+        1553,
+        884
+      ],
+      [
+        1881,
+        162,
+        552,
+        611,
+        1,
+        1440,
+        2316,
+        1263,
+        2454,
+        1597
+      ],
+      [
+        1534,
+        68,
+        1870,
+        772,
+        2483,
+        1953,
+        1931,
+        890,
+        147,
+        1597
+      ]
+    ]
+  },
+  "L1 SAE": {
+    "path": "results/sae/musique/runs/layer_25/20261102T182346930753Z-150e78c341c6",
+    "sha256": {
+      "results/sae/musique/runs/layer_25/20261102T182346930753Z-150e78c341c6/checkpoints/best_checkpoint.pt": "211e5b524bf039a213a1e869de9229e7916f60aa6a3adddfd253d069448f0088"
+    },
+    "adoption_features": [
+      {
+        "feature": 8677,
+        "coef_toward_accept": 0.5616995692253113
+      },
+      {
+        "feature": 4455,
+        "coef_toward_accept": 0.39935576915740967
+      },
+      {
+        "feature": 3168,
+        "coef_toward_accept": 0.27078384160995483
+      },
+      {
+        "feature": 7265,
+        "coef_toward_accept": 0.11239073425531387
+      },
+      {
+        "feature": 1757,
+        "coef_toward_accept": 0.1544688194990158
+      },
+      {
+        "feature": 2547,
+        "coef_toward_accept": 0.15412969887256622
+      },
+      {
+        "feature": 11791,
+        "coef_toward_accept": 0.10034482181072235
+      },
+      {
+        "feature": 3532,
+        "coef_toward_accept": 0.12966930866241455
+      },
+      {
+        "feature": 5705,
+        "coef_toward_accept": 0.11592360585927963
+      },
+      {
+        "feature": 3411,
+        "coef_toward_accept": 0.1094103679060936
+      }
+    ],
+    "retention_features": [
+      {
+        "feature": 3399,
+        "coef_toward_accept": -0.2817763090133667
+      },
+      {
+        "feature": 8893,
+        "coef_toward_accept": -0.225534126162529
+      },
+      {
+        "feature": 5810,
+        "coef_toward_accept": -0.17082293331623077
+      },
+      {
+        "feature": 2361,
+        "coef_toward_accept": -0.15942001342773438
+      },
+      {
+        "feature": 5676,
+        "coef_toward_accept": -0.176540806889534
+      },
+      {
+        "feature": 10382,
+        "coef_toward_accept": -0.23891930282115936
+      },
+      {
+        "feature": 9706,
+        "coef_toward_accept": -0.0936068743467331
+      },
+      {
+        "feature": 3077,
+        "coef_toward_accept": -0.10512841492891312
+      },
+      {
+        "feature": 6764,
+        "coef_toward_accept": -0.15254269540309906
+      },
+      {
+        "feature": 920,
+        "coef_toward_accept": -0.11234380304813385
+      }
+    ],
+    "random_draws_adoption": [
+      [
+        6975,
+        4694,
+        10013,
+        5139,
+        8427,
+        11179,
+        8669,
+        11242,
+        3291,
+        876
+      ],
+      [
+        1889,
+        847,
+        10918,
+        4694,
+        8191,
+        12821,
+        9456,
+        6644,
+        5868,
+        5615
+      ],
+      [
+        9456,
+        1906,
+        11069,
+        847,
+        4233,
+        8191,
+        5139,
+        9058,
+        7985,
+        5615
+      ]
+    ],
+    "random_draws_retention": [
+      [
+        10918,
+        12039,
+        7059,
+        7174,
+        12631,
+        397,
+        6975,
+        997,
+        5615,
+        12258
+      ],
+      [
+        12039,
+        1906,
+        997,
+        8427,
+        11179,
+        875,
+        1889,
+        11863,
+        3242,
+        12416
+      ],
+      [
+        6644,
+        9217,
+        7299,
+        12113,
+        10527,
+        9788,
+        7174,
+        10918,
+        2156,
+        3632
+      ]
+    ]
+  },
+  "Pretrained SAE": {
+    "path": "results/sae/pretrained/gemma-scope-2-4b-it/resid_post_all/layer_25_width_16k_l0_big",
+    "sha256": {
+      "results/sae/pretrained/gemma-scope-2-4b-it/resid_post_all/layer_25_width_16k_l0_big/config.json": "12a0441423adacb0d0f790f1d35c3fdf13fbeb6b3e55720be99606abf6a0669c",
+      "results/sae/pretrained/gemma-scope-2-4b-it/resid_post_all/layer_25_width_16k_l0_big/params.safetensors": "0fbb3bb9661b4523c655581e11d3f83c91dcc88d2fa62ce8dfb97a0d4b7b009d"
+    },
+    "adoption_features": [
+      {
+        "feature": 4409,
+        "coef_toward_accept": 0.14958609640598297
+      },
+      {
+        "feature": 12624,
+        "coef_toward_accept": 0.1349862813949585
+      },
+      {
+        "feature": 14120,
+        "coef_toward_accept": 0.09008956700563431
+      },
+      {
+        "feature": 10383,
+        "coef_toward_accept": 0.0996430292725563
+      },
+      {
+        "feature": 12139,
+        "coef_toward_accept": 0.09738795459270477
+      },
+      {
+        "feature": 1750,
+        "coef_toward_accept": 0.07776875048875809
+      },
+      {
+        "feature": 16138,
+        "coef_toward_accept": 0.07545917481184006
+      },
+      {
+        "feature": 16144,
+        "coef_toward_accept": 0.08308891952037811
+      },
+      {
+        "feature": 7649,
+        "coef_toward_accept": 0.0818161591887474
+      },
+      {
+        "feature": 15005,
+        "coef_toward_accept": 0.06868954747915268
+      }
+    ],
+    "retention_features": [
+      {
+        "feature": 11977,
+        "coef_toward_accept": -0.11909911036491394
+      },
+      {
+        "feature": 13643,
+        "coef_toward_accept": -0.09304923564195633
+      },
+      {
+        "feature": 8278,
+        "coef_toward_accept": -0.08241927623748779
+      },
+      {
+        "feature": 11218,
+        "coef_toward_accept": -0.08908335864543915
+      },
+      {
+        "feature": 125,
+        "coef_toward_accept": -0.08762369304895401
+      },
+      {
+        "feature": 10499,
+        "coef_toward_accept": -0.09071369469165802
+      },
+      {
+        "feature": 657,
+        "coef_toward_accept": -0.07533809542655945
+      },
+      {
+        "feature": 13887,
+        "coef_toward_accept": -0.07169916480779648
+      },
+      {
+        "feature": 263,
+        "coef_toward_accept": -0.07296839356422424
+      },
+      {
+        "feature": 13626,
+        "coef_toward_accept": -0.061221200972795486
+      }
+    ],
+    "random_draws_adoption": [
+      [
+        699,
+        2452,
+        11580,
+        15280,
+        9807,
+        5369,
+        8438,
+        2882,
+        1367,
+        16239
+      ],
+      [
+        11955,
+        11435,
+        16263,
+        2452,
+        13609,
+        5369,
+        5251,
+        15803,
+        16295,
+        1800
+      ],
+      [
+        15096,
+        5759,
+        15591,
+        4933,
+        1260,
+        14813,
+        7797,
+        12566,
+        14437,
+        5139
+      ]
+    ],
+    "random_draws_retention": [
+      [
+        9659,
+        11307,
+        4933,
+        10608,
+        15280,
+        12566,
+        7289,
+        258,
+        14938,
+        13793
+      ],
+      [
+        4933,
+        2918,
+        9430,
+        2452,
+        13609,
+        662,
+        1260,
+        11955,
+        2236,
+        5139
+      ],
+      [
+        11435,
+        2882,
+        9807,
+        4933,
+        1260,
+        16106,
+        9313,
+        3396,
+        308,
+        662
+      ]
+    ]
+  },
+  "Fine-tuned decoder": {
+    "path": "results/sae/decoder_finetuning/20261104T164310458065Z/best",
+    "sha256": {
+      "results/sae/decoder_finetuning/20261104T164310458065Z/best/config.json": "2c251c8303cb0bbca682c0df287e25719eceeed09e6db34589012c55ab7b4ee4",
+      "results/sae/decoder_finetuning/20261104T164310458065Z/best/params.safetensors": "a93c7d01c62a0c7623cceee66a66781e903e47088f01877fdb55210368e64de6"
+    },
+    "adoption_features": [
+      {
+        "feature": 4409,
+        "coef_toward_accept": 0.14958609640598297
+      },
+      {
+        "feature": 12624,
+        "coef_toward_accept": 0.1349862813949585
+      },
+      {
+        "feature": 14120,
+        "coef_toward_accept": 0.09008956700563431
+      },
+      {
+        "feature": 10383,
+        "coef_toward_accept": 0.0996430292725563
+      },
+      {
+        "feature": 12139,
+        "coef_toward_accept": 0.09738795459270477
+      },
+      {
+        "feature": 1750,
+        "coef_toward_accept": 0.07776875048875809
+      },
+      {
+        "feature": 16138,
+        "coef_toward_accept": 0.07545917481184006
+      },
+      {
+        "feature": 16144,
+        "coef_toward_accept": 0.08308891952037811
+      },
+      {
+        "feature": 7649,
+        "coef_toward_accept": 0.0818161591887474
+      },
+      {
+        "feature": 15005,
+        "coef_toward_accept": 0.06868954747915268
+      }
+    ],
+    "retention_features": [
+      {
+        "feature": 11977,
+        "coef_toward_accept": -0.11909911036491394
+      },
+      {
+        "feature": 13643,
+        "coef_toward_accept": -0.09304923564195633
+      },
+      {
+        "feature": 8278,
+        "coef_toward_accept": -0.08241927623748779
+      },
+      {
+        "feature": 11218,
+        "coef_toward_accept": -0.08908335864543915
+      },
+      {
+        "feature": 125,
+        "coef_toward_accept": -0.08762369304895401
+      },
+      {
+        "feature": 10499,
+        "coef_toward_accept": -0.09071369469165802
+      },
+      {
+        "feature": 657,
+        "coef_toward_accept": -0.07533809542655945
+      },
+      {
+        "feature": 13887,
+        "coef_toward_accept": -0.07169916480779648
+      },
+      {
+        "feature": 263,
+        "coef_toward_accept": -0.07296839356422424
+      },
+      {
+        "feature": 13626,
+        "coef_toward_accept": -0.061221200972795486
+      }
+    ],
+    "random_draws_adoption": [
+      [
+        699,
+        2452,
+        11580,
+        15280,
+        9807,
+        5369,
+        8438,
+        2882,
+        1367,
+        16239
+      ],
+      [
+        11955,
+        11435,
+        16263,
+        2452,
+        13609,
+        5369,
+        5251,
+        15803,
+        16295,
+        1800
+      ],
+      [
+        15096,
+        5759,
+        15591,
+        4933,
+        1260,
+        14813,
+        7797,
+        12566,
+        14437,
+        5139
+      ]
+    ],
+    "random_draws_retention": [
+      [
+        9659,
+        11307,
+        4933,
+        10608,
+        15280,
+        12566,
+        7289,
+        258,
+        14938,
+        13793
+      ],
+      [
+        4933,
+        2918,
+        9430,
+        2452,
+        13609,
+        662,
+        1260,
+        11955,
+        2236,
+        5139
+      ],
+      [
+        11435,
+        2882,
+        9807,
+        4933,
+        1260,
+        16106,
+        9313,
+        3396,
+        308,
+        662
+      ]
+    ]
+  },
+  "Fully fine-tuned": {
+    "path": "results/sae/full_finetuning/20261104T151230848807Z/best",
+    "sha256": {
+      "results/sae/full_finetuning/20261104T151230848807Z/best/config.json": "2c251c8303cb0bbca682c0df287e25719eceeed09e6db34589012c55ab7b4ee4",
+      "results/sae/full_finetuning/20261104T151230848807Z/best/params.safetensors": "42648eda024f2d9e992704538abd138a8214a6acf9cbde6f6fbae5f9bf2100c0"
+    },
+    "adoption_features": [
+      {
+        "feature": 12624,
+        "coef_toward_accept": 0.13977397978305817
+      },
+      {
+        "feature": 4409,
+        "coef_toward_accept": 0.1298970878124237
+      },
+      {
+        "feature": 1750,
+        "coef_toward_accept": 0.09992849081754684
+      },
+      {
+        "feature": 15372,
+        "coef_toward_accept": 0.09560976177453995
+      },
+      {
+        "feature": 4688,
+        "coef_toward_accept": 0.12165753543376923
+      },
+      {
+        "feature": 15005,
+        "coef_toward_accept": 0.08328472822904587
+      },
+      {
+        "feature": 12139,
+        "coef_toward_accept": 0.0953984186053276
+      },
+      {
+        "feature": 10383,
+        "coef_toward_accept": 0.09330109506845474
+      },
+      {
+        "feature": 45,
+        "coef_toward_accept": 0.08146915584802628
+      },
+      {
+        "feature": 5170,
+        "coef_toward_accept": 0.10879932343959808
+      }
+    ],
+    "retention_features": [
+      {
+        "feature": 11977,
+        "coef_toward_accept": -0.1371678113937378
+      },
+      {
+        "feature": 13643,
+        "coef_toward_accept": -0.09646304696798325
+      },
+      {
+        "feature": 125,
+        "coef_toward_accept": -0.10022968053817749
+      },
+      {
+        "feature": 11218,
+        "coef_toward_accept": -0.0971403643488884
+      },
+      {
+        "feature": 8278,
+        "coef_toward_accept": -0.08559946715831757
+      },
+      {
+        "feature": 10499,
+        "coef_toward_accept": -0.08895859122276306
+      },
+      {
+        "feature": 657,
+        "coef_toward_accept": -0.07185520976781845
+      },
+      {
+        "feature": 7797,
+        "coef_toward_accept": -0.07121974229812622
+      },
+      {
+        "feature": 13887,
+        "coef_toward_accept": -0.07104120403528214
+      },
+      {
+        "feature": 263,
+        "coef_toward_accept": -0.0724058747291565
+      }
+    ],
+    "random_draws_adoption": [
+      [
+        15803,
+        13562,
+        5369,
+        9659,
+        11348,
+        6845,
+        11324,
+        7289,
+        15591,
+        14028
+      ],
+      [
+        14753,
+        16263,
+        10645,
+        15591,
+        15496,
+        1944,
+        5369,
+        14938,
+        12294,
+        11731
+      ],
+      [
+        1814,
+        16144,
+        3396,
+        2236,
+        8928,
+        5139,
+        15513,
+        662,
+        7289,
+        11731
+      ]
+    ],
+    "random_draws_retention": [
+      [
+        1944,
+        16263,
+        14813,
+        5365,
+        13562,
+        662,
+        11955,
+        3396,
+        15280,
+        11324
+      ],
+      [
+        662,
+        11324,
+        7289,
+        2882,
+        16263,
+        4933,
+        278,
+        16369,
+        258,
+        16106
+      ],
+      [
+        16239,
+        15096,
+        3150,
+        16263,
+        2452,
+        1944,
+        13054,
+        2236,
+        409,
+        16106
+      ]
+    ]
+  }
+}

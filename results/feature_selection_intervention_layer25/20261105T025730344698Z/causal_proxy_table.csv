@@ -1,0 +1,18 @@
+Experiment,Condition,Outcome,Acceptance Rate (%),Δ vs. SAE Control (pp),95% CI for Δ,p-value
+Baseline,No SAE (observed Solver behavior),observed,50.97613882863341,,,
+Baseline,No SAE (readout on original activations),probe-predicted,50.51605701446533,,,
+Raw activations,No ablation,probe-predicted,50.51605701446533,Reference,,
+Raw activations,Random ablation,probe-predicted,50.621676445007324,0.10562127799173121,"[0.08, 0.13]",9.999000099990002e-05
+Raw activations,Targeted ablation,probe-predicted,50.34951567649841,-0.1665463799503121,"[-0.56, 0.21]",0.39336066393360664
+L1 SAE,No ablation,probe-predicted,50.512874126434326,Reference,,
+L1 SAE,Random ablation,probe-predicted,50.61996579170227,0.10708827541890788,"[0.08, 0.13]",9.999000099990002e-05
+L1 SAE,Targeted ablation,probe-predicted,10.138416290283203,-40.37445768618494,"[-41.19, -39.54]",9.999000099990002e-05
+Pretrained SAE,No ablation,probe-predicted,24.97526854276657,Reference,,
+Pretrained SAE,Random ablation,probe-predicted,24.661804735660553,-0.31346311617917705,"[-0.43, -0.20]",9.999000099990002e-05
+Pretrained SAE,Targeted ablation,probe-predicted,15.576693415641785,-9.398574250823295,"[-9.82, -8.97]",9.999000099990002e-05
+Fine-tuned decoder,No ablation,probe-predicted,50.96389651298523,Reference,,
+Fine-tuned decoder,Random ablation,probe-predicted,49.705055356025696,-1.2588375772136402,"[-1.36, -1.16]",9.999000099990002e-05
+Fine-tuned decoder,Targeted ablation,probe-predicted,29.9809992313385,-20.982898018912728,"[-21.40, -20.56]",9.999000099990002e-05
+Fully fine-tuned,No ablation,probe-predicted,50.75673460960388,Reference,,
+Fully fine-tuned,Random ablation,probe-predicted,49.290040135383606,-1.4666922724559774,"[-1.59, -1.34]",9.999000099990002e-05
+Fully fine-tuned,Targeted ablation,probe-predicted,41.33836328983307,-9.418367252687727,"[-9.76, -9.09]",9.999000099990002e-05
