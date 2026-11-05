@@ -10,7 +10,7 @@ inputs:
   interactions: artifacts/collection/mixed_final_001/prepared/results/mixed_final_001_intervention/intervention/interactions.jsonl
   contexts: artifacts/collection/mixed_final_001/prepared/results/mixed_final_001_intervention/contexts.jsonl
   stored_labels: results/claude_validation/mixed_final_001/intervention
-  feature_sets: results/feature_selection_intervention_layer25/20261105T025730344698Z/feature_sets.json
+  feature_sets: results/feature_selection_intervention_layer25/20261105T025730344698Z_pool/feature_sets.json
 
 # The collection's Solver: same model, revision, dtype and greedy settings.
 solver:
