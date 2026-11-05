@@ -5,7 +5,7 @@ import json
 import pytest
 
 import intervention_fakes as fakes
-from mas_sae.intervention import labeling
+from mas_sae.intervention.analysis import labeling
 from mas_sae.models.claude import ClaudeResult
 
 MODEL = "claude-sonnet-4-5-20250929"

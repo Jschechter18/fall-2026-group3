@@ -19,7 +19,7 @@ from mas_sae.experiments.artifacts import (
     get_git_commit, get_package_version, get_run_command, get_untracked_files, get_untracked_sha256,
     sha256_file, sha256_json,
 )
-from mas_sae.intervention.representations import checkpoint_sha256
+from mas_sae.intervention.experiment.representations import checkpoint_sha256
 
 CODE_DIRS = ("src", "scripts", "configs")
 PACKAGES = ("torch", "transformers", "numpy", "pandas", "safetensors")

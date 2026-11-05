@@ -11,10 +11,10 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from mas_sae.intervention import stats
-from mas_sae.intervention.conditions import Condition
-from mas_sae.intervention.edits import ARMS
-from mas_sae.intervention.episodes import OPPOSITE, STRATA
+from mas_sae.intervention.analysis import stats
+from mas_sae.intervention.experiment.conditions import Condition
+from mas_sae.intervention.generation.edits import ARMS
+from mas_sae.intervention.experiment.episodes import OPPOSITE, STRATA
 
 ARM_NAMES = {("adoption", "decrease"): "decrease adoption features",
              ("adoption", "increase"): "increase retention features",

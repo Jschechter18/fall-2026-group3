@@ -8,7 +8,7 @@ from pathlib import Path
 import numpy as np
 
 from mas_sae.experiments.artifacts import sha256_file
-from mas_sae.intervention.results_file import read_rows, row_key
+from mas_sae.intervention.run_files.results_file import read_rows, row_key
 
 
 def split_into_shards(episode_ids: list[str], number_of_shards: int) -> list[list[str]]:

@@ -15,7 +15,7 @@ from pathlib import Path
 import numpy as np
 
 from mas_sae.experiments.artifacts import sha256_file
-from mas_sae.intervention.config import InterventionConfig
+from mas_sae.intervention.experiment.config import InterventionConfig
 
 STRATA = ("adoption", "retention")
 OPPOSITE = {"adoption": "retention", "retention": "adoption"}

@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 
-from mas_sae.intervention.edits import ARMS
+from mas_sae.intervention.generation.edits import ARMS
 
 
 @dataclass(frozen=True)

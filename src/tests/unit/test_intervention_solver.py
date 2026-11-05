@@ -4,10 +4,10 @@ import pytest
 import torch
 
 import intervention_fakes as fakes
-from mas_sae.intervention.conditions import study_conditions
-from mas_sae.intervention.generation import encode_once, generate_episode, require_same_baseline
-from mas_sae.intervention.results_file import ResultsFile
-from mas_sae.intervention.solver import ReplaceFinalPromptActivation, generate_baseline, generate_with_activation
+from mas_sae.intervention.experiment.conditions import study_conditions
+from mas_sae.intervention.generation.episode import encode_once, generate_episode, require_same_baseline
+from mas_sae.intervention.run_files.results_file import ResultsFile
+from mas_sae.intervention.generation.solver import ReplaceFinalPromptActivation, generate_baseline, generate_with_activation
 
 SIZE = 0.5          # large, so edits visibly change this tiny model's answers
 

@@ -8,10 +8,10 @@ import torch
 from transformers import BatchEncoding, Gemma3Config, Gemma3ForConditionalGeneration
 
 from mas_sae.agents.solver import Solver
-from mas_sae.intervention.episodes import Episode
-from mas_sae.intervention.representations import build_representation
-from mas_sae.intervention.config import Representation as RepresentationSpec
-from mas_sae.intervention.solver import SolverModel
+from mas_sae.intervention.experiment.episodes import Episode
+from mas_sae.intervention.experiment.representations import build_representation
+from mas_sae.intervention.experiment.config import Representation as RepresentationSpec
+from mas_sae.intervention.generation.solver import SolverModel
 from mas_sae.sae.pretrained import JumpReLUSAE
 
 HIDDEN, WIDTH, N_FEATURES, N_DRAWS = 16, 40, 3, 2

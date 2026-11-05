@@ -3,7 +3,7 @@
 import pytest
 import torch
 
-from mas_sae.intervention import edits
+from mas_sae.intervention.generation import edits
 from mas_sae.sae.pretrained import JumpReLUSAE
 from mas_sae.sae.sparse_autoencoder import SparseAutoencoder
 

@@ -5,8 +5,8 @@ import json
 import pytest
 
 import intervention_fakes as fakes
-from mas_sae.intervention import preflight
-from mas_sae.intervention.config import parse_config
+from mas_sae.intervention.checks import preflight
+from mas_sae.intervention.experiment.config import parse_config
 
 
 @pytest.fixture

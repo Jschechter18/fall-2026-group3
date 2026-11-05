@@ -12,8 +12,9 @@ import tempfile
 from pathlib import Path
 
 from mas_sae.experiments.artifacts import sha256_file
-from mas_sae.intervention import labeling, layout
-from mas_sae.intervention.representations import checkpoint_sha256, feature_set_problems, load_basis, read_feature_sets
+from mas_sae.intervention.analysis import labeling
+from mas_sae.intervention.run_files import layout
+from mas_sae.intervention.experiment.representations import checkpoint_sha256, feature_set_problems, load_basis, read_feature_sets
 
 GPU_STAGES = ("pilot", "prepare", "run")
 LABELING_STAGES = ("pilot", "merge")

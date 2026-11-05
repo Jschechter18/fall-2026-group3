@@ -6,10 +6,10 @@ import pytest
 import torch
 
 import intervention_fakes as fakes
-from mas_sae.intervention.conditions import edited_features, pilot_conditions, sets_for, study_conditions
-from mas_sae.intervention.config import parse_config
-from mas_sae.intervention.episodes import eligible_episodes, seeded_order, study_and_pilot_episodes
-from mas_sae.intervention.representations import frozen_feature_sets
+from mas_sae.intervention.experiment.conditions import edited_features, pilot_conditions, sets_for, study_conditions
+from mas_sae.intervention.experiment.config import parse_config
+from mas_sae.intervention.experiment.episodes import eligible_episodes, seeded_order, study_and_pilot_episodes
+from mas_sae.intervention.experiment.representations import frozen_feature_sets
 
 
 @pytest.fixture

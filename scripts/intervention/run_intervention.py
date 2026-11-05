@@ -24,7 +24,7 @@ every decode step, so the answer can change even when the first token does not. 
 "these features don't matter at this position", not "they don't matter".
 
 
-THE EDIT (mas_sae.intervention.edits)
+THE EDIT (mas_sae.intervention.generation.edits)
 -------------------------------------
 x is the layer-25 activation at that token. Every edit is x' = x + Δ with |Δ| = r·|x|, one size r for
 every arm and every feature set, chosen by the pilot. So a difference between targeted and random,
@@ -120,24 +120,25 @@ from pathlib import Path
 
 from tqdm.auto import tqdm
 
-from mas_sae.intervention import layout, tables
-from mas_sae.intervention.baseline import check_baseline_reproduces_stored
-from mas_sae.intervention.conditions import BASELINE, pilot_conditions, study_conditions
-from mas_sae.intervention.config import load_config
-from mas_sae.intervention.episodes import study_and_pilot_episodes
-from mas_sae.intervention.generation import BaselineMismatch, generate_episode, make_row
-from mas_sae.intervention.labeling import StubClaudeClient, create_client, label_rows, read_protocol
-from mas_sae.intervention.pilot import write_pilot_report
-from mas_sae.intervention.preflight import run_preflight
-from mas_sae.intervention.provenance import (
+from mas_sae.intervention.run_files import layout
+from mas_sae.intervention.analysis import tables
+from mas_sae.intervention.checks.baseline import check_baseline_reproduces_stored
+from mas_sae.intervention.experiment.conditions import BASELINE, pilot_conditions, study_conditions
+from mas_sae.intervention.experiment.config import load_config
+from mas_sae.intervention.experiment.episodes import study_and_pilot_episodes
+from mas_sae.intervention.generation.episode import BaselineMismatch, generate_episode, make_row
+from mas_sae.intervention.analysis.labeling import StubClaudeClient, create_client, label_rows, read_protocol
+from mas_sae.intervention.analysis.pilot import write_pilot_report
+from mas_sae.intervention.checks.preflight import run_preflight
+from mas_sae.intervention.run_files.provenance import (
     device_name, frozen_content, provenance, require_same_experiment, write_frozen_run,
 )
-from mas_sae.intervention.representations import frozen_feature_sets, load_representations
-from mas_sae.intervention.results_file import ResultsFile, read_rows
-from mas_sae.intervention.shards import (
+from mas_sae.intervention.experiment.representations import frozen_feature_sets, load_representations
+from mas_sae.intervention.run_files.results_file import ResultsFile, read_rows
+from mas_sae.intervention.run_files.shards import (
     mark_shard_complete, read_complete_shards, read_excluded, record_excluded, shard_rows_path, split_into_shards,
 )
-from mas_sae.intervention.solver import generate_baseline, load_solver
+from mas_sae.intervention.generation.solver import generate_baseline, load_solver
 from mas_sae.experiments.artifacts import sha256_file
 
 logger = logging.getLogger("intervention")

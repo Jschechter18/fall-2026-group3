@@ -8,11 +8,11 @@ import pytest
 
 import intervention_fakes as fakes
 from mas_sae.experiments.artifacts import sha256_file
-from mas_sae.intervention import layout
-from mas_sae.intervention.config import parse_config
-from mas_sae.intervention.episodes import eligible_episodes
-from mas_sae.intervention.provenance import IDENTITY_KEYS
-from mas_sae.intervention.solver import generate_baseline
+from mas_sae.intervention.run_files import layout
+from mas_sae.intervention.experiment.config import parse_config
+from mas_sae.intervention.experiment.episodes import eligible_episodes
+from mas_sae.intervention.run_files.provenance import IDENTITY_KEYS
+from mas_sae.intervention.generation.solver import generate_baseline
 
 SCRIPT = Path(__file__).resolve().parents[3] / "scripts/intervention/run_intervention.py"
 

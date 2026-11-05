@@ -21,8 +21,8 @@ import torch
 from torch import Tensor
 
 from mas_sae.experiments.artifacts import sha256_file
-from mas_sae.intervention import edits
-from mas_sae.intervention.config import InterventionConfig
+from mas_sae.intervention.generation import edits
+from mas_sae.intervention.experiment.config import InterventionConfig
 from mas_sae.probe.feature_selection import load_sae, sae_files
 
 LABELS = ("adoption", "retention")

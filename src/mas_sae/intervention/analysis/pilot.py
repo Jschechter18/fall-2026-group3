@@ -15,10 +15,10 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from mas_sae.intervention import stats
-from mas_sae.intervention.edits import ARMS
-from mas_sae.intervention.episodes import OPPOSITE
-from mas_sae.intervention.tables import to_markdown
+from mas_sae.intervention.analysis import stats
+from mas_sae.intervention.generation.edits import ARMS
+from mas_sae.intervention.experiment.episodes import OPPOSITE
+from mas_sae.intervention.analysis.tables import to_markdown
 
 REPEAT_RUN = 5            # this many identical tokens in a row makes an answer degenerate
 MAX_BAD_PCT = 5.0         # suggested rule: under this % of out and of degenerate answers

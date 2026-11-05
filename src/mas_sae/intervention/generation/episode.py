@@ -15,9 +15,9 @@ from __future__ import annotations
 
 import torch
 
-from mas_sae.intervention import edits
-from mas_sae.intervention.conditions import Condition, edited_features, sets_for
-from mas_sae.intervention.solver import generate_baseline, generate_with_activation
+from mas_sae.intervention.generation import edits
+from mas_sae.intervention.experiment.conditions import Condition, edited_features, sets_for
+from mas_sae.intervention.generation.solver import generate_baseline, generate_with_activation
 
 
 @torch.no_grad()

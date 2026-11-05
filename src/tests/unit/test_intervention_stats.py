@@ -3,12 +3,12 @@
 import numpy as np
 import pytest
 
-from mas_sae.intervention import stats, tables
-from mas_sae.intervention.conditions import Condition
-from mas_sae.intervention.config import Analysis
-from mas_sae.intervention.edits import ARMS
-from mas_sae.intervention.episodes import OPPOSITE
-from mas_sae.intervention.pilot import is_degenerate, longest_repeat_run
+from mas_sae.intervention.analysis import stats, tables
+from mas_sae.intervention.experiment.conditions import Condition
+from mas_sae.intervention.experiment.config import Analysis
+from mas_sae.intervention.generation.edits import ARMS
+from mas_sae.intervention.experiment.episodes import OPPOSITE
+from mas_sae.intervention.analysis.pilot import is_degenerate, longest_repeat_run
 
 SIZE, DRAWS = 0.05, 3
 PLAN = Analysis(primary_representations=("Causal SAE", "Null SAE"),
