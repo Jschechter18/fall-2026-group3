@@ -45,7 +45,7 @@ candidate_order)`, not `revise`. Refuse any episode with another presentation.
 Feature selection has already been rerun (see `scripts/intervention/probe_prompt_draft.md`). It
 wrote `feature_sets.json`: for each representation, its checkpoint path and sha256, its 10
 adoption features and 10 retention features (with coefficients), and 3 matched random draws for
-each set. Path: `configs/intervention.yaml: feature_sets` (TODO: fill in once the probe run finishes).
+each set. Path: `/results/feature_selection_intervention_layer25/20261105T025730344698Z/feature_sets.json` 
 
 Treat this file as read-only input. Do not reselect features. The preflight verifies that each
 checkpoint's sha256 matches the hash recorded in the file.

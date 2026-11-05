@@ -500,8 +500,8 @@ def run(cfg: FeatureSelectionConfig, config_path: Path | None = None) -> Path:
             "path": str(spec["path"]), "sha256": prov["sae_sha256"][name],
             "adoption_features": with_coef(s["targeted_features"]),
             "retention_features": with_coef(s["retention_features"]),
-            "random_draws_adoption": s["random_control_draws"][:3],
-            "random_draws_retention": s["random_control_draws_retention"][:3]}
+            "random_draws_adoption": s["random_control_draws"],              # every matched draw: the
+            "random_draws_retention": s["random_control_draws_retention"]}   # intervention's draw pool
         logger.info("%s done: probe BA %.3f", name, res["summary"]["probe"]["balanced_accuracy_eval"])
 
     table = results_table(100 * float(y[ev].mean()), 100 * float(p_orig.mean()), summaries)
