@@ -1,0 +1,88 @@
+# SMOKE RUN ONLY: configs/intervention.yaml on 3 study episodes and 1 pilot episode, with a placeholder
+# edit size, its own output directory and stubbed labels. Its results are never used.
+#   for s in pilot prepare run merge; do
+#     python scripts/intervention/run_intervention.py $s --config configs/intervention_smoke.yaml --shard 0 --stub-labeling
+#   done
+layer: 25
+partition: intervention
+
+inputs:
+  interactions: artifacts/collection/mixed_final_001/prepared/results/mixed_final_001_intervention/intervention/interactions.jsonl
+  contexts: artifacts/collection/mixed_final_001/prepared/results/mixed_final_001_intervention/contexts.jsonl
+  stored_labels: results/claude_validation/mixed_final_001/intervention
+  feature_sets: results/feature_selection_intervention_layer25/20261105T025730344698Z/feature_sets.json
+
+# The collection's Solver: same model, revision, dtype and greedy settings.
+solver:
+  id: google/gemma-3-4b-it
+  revision: 093f9f388b31de276ce2de164bdc2081324b9767
+  loader: gemma3
+  dtype: bfloat16
+  device: cuda:0
+  generation: {max_new_tokens: 64, do_sample: false}
+
+# Reporting order. Paths must be the ones feature_sets.json records (checked, with their sha256).
+representations:
+  Raw activations:
+    kind: activations
+    path: results/probe_mixed_final_001_layer25/centers/raw_layer25.npy
+    role: control
+  L1 SAE:
+    kind: custom
+    path: results/sae/musique/runs/layer_25/20261102T182346930753Z-150e78c341c6
+    role: primary
+  Pretrained SAE:
+    kind: gemma_scope
+    path: results/sae/pretrained/gemma-scope-2-4b-it/resid_post_all/layer_25_width_16k_l0_big
+    role: primary
+  # Decoder-only fine-tune of the Pretrained SAE (same encoder, so the same features).
+  Fine-tuned decoder:
+    kind: gemma_scope
+    path: results/sae/decoder_finetuning/20261104T164310458065Z/best
+    role: primary
+  # Full fine-tune: its own features and feature sets, so exploratory.
+  Fully fine-tuned:
+    kind: gemma_scope
+    path: results/sae/full_finetuning/20261104T151230848807Z/best
+    role: exploratory
+
+experiment:
+  number_of_episodes: 3
+  number_of_pilot_episodes: 1
+  number_of_shards: 1
+  edit_size: 0.05                   # placeholder, NOT chosen by the pilot
+  pilot_edit_sizes: [0.05]
+  number_of_targeted_features: 10
+  number_of_random_draws: 3
+  min_baseline_label_match: 0.98
+  seed: 42
+
+# The pre-specified analysis plan. Fixed before any outcome is seen; frozen with the run.
+analysis:
+  primary_representations: [L1 SAE, Pretrained SAE, Fine-tuned decoder]   # Table P: × 3 arms, Holm across 9
+  primary_alternative: greater                                            # one-sided: targeted > random
+  secondary_alternative: two-sided
+  between_sae_contrasts:                                                  # Table 2, pre-specified family
+    - [L1 SAE, Pretrained SAE]
+    - [Fine-tuned decoder, Pretrained SAE]
+    - [L1 SAE, Fine-tuned decoder]
+  exploratory_contrasts:                                                  # Table 2, exploratory family
+    - [Fully fine-tuned, Pretrained SAE]
+  direction_contrasts:                                                    # Table D, within each representation
+    - [both, decrease]
+    - [both, increase]
+    - [increase, decrease]
+  n_bootstrap: 200
+  n_permutations: 200
+
+# The labeler itself (model, prompt, temperature, ...) is read from inputs.stored_labels/run_settings.json.
+labeling:
+  aws_profile: school
+  region: us-east-1
+  concurrency: 32
+
+machine:
+  min_gpu_memory_gb: 20
+  min_free_disk_gb: 10
+
+output_dir: results/intervention_smoke
