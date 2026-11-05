@@ -281,7 +281,8 @@ def test_raw_basis_selects_from_fit_rows_only_and_matches_controls_on_std():
     # controls are matched on per-neuron std (every centered neuron "fires"), not on firing frequency
     spread = offline.encode(fs.ActivationBasis(X_fit.mean(0)), X_fit).std(0)
     assert s["random_control_draws"] == offline.contribution_matched_controls(
-        np.ones_like(spread), spread, s["targeted_features"], cfg.n_random_draws, cfg.seed)
+        np.ones_like(spread), spread, s["targeted_features"], cfg.n_random_draws, cfg.seed,
+        exclude=s["retention_features"])
     assert s["selection_rules"]["random_control_draws"] == "matched on per-neuron std"
     d = res["direction"]
     assert d["w"][11] == 0 and d["w"][0] > 0 and d["w"][1] < 0

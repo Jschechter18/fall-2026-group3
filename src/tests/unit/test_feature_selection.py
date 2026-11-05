@@ -87,6 +87,25 @@ def test_random_controls_are_matched_live_and_disjoint_from_targets():
         assert d[0] in {5, 8} and d[1] in {7, 4}           # nearest firing frequencies (log scale)
 
 
+
+def test_adoption_and_retention_sets_are_disjoint_and_every_draw_excludes_both():
+    rng = np.random.default_rng(0)
+    params = _jump_relu(d_in=8, d_sae=60)
+    params["threshold"] = torch.zeros(60)
+    sae = JumpReLUSAE(**params)
+    X = rng.normal(size=(400, 8)).astype(np.float32)
+    y = (X[:, 0] - X[:, 1] + rng.normal(0, 0.5, 400) > 0).astype(int)
+    g = np.arange(400).astype(str)
+    fit, ev = slice(0, 300), slice(300, 400)
+    cfg = fs.FeatureSelectionConfig(**{k: "." for k in fs.PATH_KEYS}, c_grid=[1.0], inner_folds=2,
+                                    n_targeted=5, n_random_draws=20, n_bootstrap=20, n_permutations=20)
+    readout, _ = offline.fit_readout(X[fit], y[fit], g[fit], [1.0], 2, seed=0)
+    s = fs.analyse_sae("sae", sae, X[fit], y[fit], g[fit], X[ev], y[ev], g[ev], readout, cfg)["summary"]
+    adoption, retention = set(s["targeted_features"]), set(s["retention_features"])
+    assert len(adoption) == len(retention) == 5 and not adoption & retention
+    draws = s["random_control_draws"] + s["random_control_draws_retention"]
+    assert len(draws) == 40 and all(not (adoption | retention) & set(d) for d in draws)
+
 def test_paired_effect_reports_pp_ci_and_p_value():
     rng = np.random.default_rng(0)
     ref = rng.uniform(0.6, 0.9, 400)

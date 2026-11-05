@@ -358,6 +358,8 @@ def analyse_sae(name, sae, X_fit, y_fit, g_fit, X_eval, y_eval, g_eval, readout,
     ranking = ranking.sort_values("mean_abs_shap", ascending=False).reset_index(drop=True)
     promote = ranking[ranking.coef_toward_accept > 0]
     targeted = promote["feature"].head(cfg.n_targeted).astype(int).tolist()
+    retain = ranking[ranking.coef_toward_accept < 0]
+    retention = retain["feature"].head(cfg.n_targeted).astype(int).tolist()
     signed = ranking.head(cfg.n_targeted)
     targeted_signed = signed["feature"].astype(int).tolist()
 
@@ -366,8 +368,12 @@ def analyse_sae(name, sae, X_fit, y_fit, g_fit, X_eval, y_eval, g_eval, readout,
     p_control = offline.p_accept(readout, recon)
     p_targeted = offline.p_accept(readout, offline.decode(sae, offline.ablate(Z_eval, targeted)))
     # raw neurons all "fire" (signed, dense), so their controls are matched on std alone
-    draws = (offline.contribution_matched_controls(np.ones_like(spread), spread, targeted, cfg.n_random_draws, cfg.seed)
-             if raw else offline.frequency_matched_controls(freq, targeted, cfg.n_random_draws, cfg.seed))
+    # each set's draws exclude both targeted sets
+    matched = lambda ids, other: (
+        offline.contribution_matched_controls(np.ones_like(spread), spread, ids, cfg.n_random_draws, cfg.seed,
+                                              exclude=other)
+        if raw else offline.frequency_matched_controls(freq, ids, cfg.n_random_draws, cfg.seed, exclude=other))
+    draws, draws_retention = matched(targeted, retention), matched(retention, targeted)
     p_random_draws = np.stack([offline.p_accept(readout, offline.decode(sae, offline.ablate(Z_eval, d)))
                                for d in tqdm(draws, desc=f"{name}: random ablations",
                                              dynamic_ncols=True, unit="draw")])
@@ -406,6 +412,8 @@ def analyse_sae(name, sae, X_fit, y_fit, g_fit, X_eval, y_eval, g_eval, readout,
             "targeted_features_signed": targeted_signed,
             "targeted_signed_coefficient_signs": [int(np.sign(c)) for c in signed["coef_toward_accept"]],
             "random_control_draws": draws,
+            "retention_features": retention,
+            "random_control_draws_retention": draws_retention,
             "conditions": {
                 "no_ablation": {"acceptance_pct": 100 * float(p_control.mean())},
                 "random_ablation": {"acceptance_pct": 100 * float(p_random.mean()), **stats(p_random),
@@ -468,6 +476,7 @@ def run(cfg: FeatureSelectionConfig, config_path: Path | None = None) -> Path:
     readout_pred = (p_orig >= 0.5).astype(int)
 
     run_dir = create_versioned_run_dir(cfg.output_dir)
+    feature_sets = {}
     summaries, per_row = {}, {"question_id": questions[ev], "accepted_observed": y[ev], "readout_original": p_orig}
     for name, spec in tqdm(cfg.saes.items(), desc="Representations", dynamic_ncols=True, unit="basis"):
         sae, info = load_sae(spec, root, cfg.layer)
@@ -484,11 +493,21 @@ def run(cfg: FeatureSelectionConfig, config_path: Path | None = None) -> Path:
             np.savez(path, layer=np.int64(cfg.layer), **res["direction"])
             summaries[name]["probe_direction"] = {"file": path.name, "sha256": sha256_file(path)}
         per_row.update(res["per_row"])
+        coef = res["ranking"].set_index("feature")["coef_toward_accept"]
+        with_coef = lambda ids: [{"feature": f, "coef_toward_accept": float(coef[f])} for f in ids]
+        s = res["summary"]
+        feature_sets[name] = {
+            "path": str(spec["path"]), "sha256": prov["sae_sha256"][name],
+            "adoption_features": with_coef(s["targeted_features"]),
+            "retention_features": with_coef(s["retention_features"]),
+            "random_draws_adoption": s["random_control_draws"][:3],
+            "random_draws_retention": s["random_control_draws_retention"][:3]}
         logger.info("%s done: probe BA %.3f", name, res["summary"]["probe"]["balanced_accuracy_eval"])
 
     table = results_table(100 * float(y[ev].mean()), 100 * float(p_orig.mean()), summaries)
     table.to_csv(run_dir / "causal_proxy_table.csv", index=False)
     pd.DataFrame(per_row).to_csv(run_dir / "per_row_outcomes.csv", index=False)
+    (run_dir / "feature_sets.json").write_text(json.dumps(feature_sets, indent=2))
     (run_dir / "feature_selection_summary.json").write_text(json.dumps({
         "data_diagnostics": diag,
         "config": json.loads(json.dumps(asdict(cfg), default=str)),
