@@ -5,7 +5,7 @@ import json
 import pytest
 import torch
 
-import intervention_fakes as fakes
+from . import fakes
 from mas_sae.intervention.experiment.conditions import edited_features, pilot_conditions, sets_for, study_conditions
 from mas_sae.intervention.experiment.config import parse_config
 from mas_sae.intervention.experiment.episodes import eligible_episodes, seeded_order, study_and_pilot_episodes

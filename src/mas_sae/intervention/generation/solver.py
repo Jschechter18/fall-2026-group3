@@ -12,7 +12,7 @@ can change even when the first token does not.
 Caching: layers 0..25 of the prefill are the same in every condition of an episode, since the edit
 happens at layer 25's output. ``PrefillCache`` records them during the episode's baseline generation
 and replays them in every other condition, which then computes only layers 26+ and the decode steps.
-Generation is otherwise unchanged, so rows equal the uncached computation's (``test_intervention_solver``).
+Generation is otherwise unchanged, so rows equal the uncached computation's (``tests/unit/intervention/test_solver.py``).
 """
 
 from __future__ import annotations

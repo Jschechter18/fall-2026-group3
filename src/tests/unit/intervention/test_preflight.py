@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-import intervention_fakes as fakes
+from . import fakes
 from mas_sae.intervention.checks import preflight
 from mas_sae.intervention.experiment.config import parse_config
 

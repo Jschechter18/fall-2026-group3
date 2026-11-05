@@ -3,7 +3,7 @@
 import pytest
 import torch
 
-import intervention_fakes as fakes
+from . import fakes
 from mas_sae.intervention.experiment.conditions import study_conditions
 from mas_sae.intervention.generation.episode import encode_once, generate_episode, require_same_baseline
 from mas_sae.intervention.run_files.results_file import ResultsFile

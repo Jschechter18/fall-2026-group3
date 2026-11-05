@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-import intervention_fakes as fakes
+from . import fakes
 from mas_sae.experiments.artifacts import sha256_file
 from mas_sae.intervention.run_files import layout
 from mas_sae.intervention.experiment.config import parse_config
@@ -14,7 +14,7 @@ from mas_sae.intervention.experiment.episodes import eligible_episodes
 from mas_sae.intervention.run_files.provenance import IDENTITY_KEYS
 from mas_sae.intervention.generation.solver import generate_baseline
 
-SCRIPT = Path(__file__).resolve().parents[3] / "scripts/intervention/run_intervention.py"
+SCRIPT = Path(__file__).resolve().parents[4] / "scripts/intervention/run_intervention.py"
 
 
 def _load_script():
