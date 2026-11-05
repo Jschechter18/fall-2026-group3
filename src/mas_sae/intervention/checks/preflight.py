@@ -1,7 +1,7 @@
 """Every check a stage needs before it spends GPU time, reported together in one error.
 
-Which checks run depends on the stage: GPU stages (pilot, prepare, run) check the solver weights,
-CUDA, GPU memory and disk; labeling stages (pilot, merge) check the labeler and AWS credentials.
+Which checks run depends on the stage: GPU stages (choose-r, prepare, run) check the solver weights,
+CUDA, GPU memory and disk; labeling stages (choose-r, merge) check the labeler and AWS credentials.
 """
 
 from __future__ import annotations
@@ -16,8 +16,8 @@ from mas_sae.intervention.analysis import labeling
 from mas_sae.intervention.run_files import layout
 from mas_sae.intervention.experiment.representations import checkpoint_sha256, feature_set_problems, load_basis, read_feature_sets
 
-GPU_STAGES = ("pilot", "prepare", "run")
-LABELING_STAGES = ("pilot", "merge")
+GPU_STAGES = ("choose-r", "prepare", "run")
+LABELING_STAGES = ("choose-r", "merge")
 
 
 class PreflightError(RuntimeError):
@@ -123,9 +123,9 @@ def stage_problems(config, stage: str, shard: int | None) -> list[str]:
     run_dir, problems = Path(config.output_dir), []
     if stage == "prepare":
         if config.experiment.edit_size is None:
-            problems.append("experiment.edit_size is not set: run the pilot, choose r, and write it into the config")
-        if not layout.pilot_report_csv(run_dir).is_file():
-            problems.append(f"no pilot report at {layout.pilot_report_csv(run_dir)}: run the pilot first")
+            problems.append("experiment.edit_size is not set: run choose-r, choose r, and write it into the config")
+        if not layout.choose_r_report_csv(run_dir).is_file():
+            problems.append(f"no choose-r report at {layout.choose_r_report_csv(run_dir)}: run choose-r first")
     if stage in ("run", "merge"):
         for path in (layout.frozen_run(run_dir), layout.shards(run_dir)):
             if not path.is_file():

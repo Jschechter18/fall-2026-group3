@@ -142,7 +142,7 @@ def test_aws_credentials_that_do_not_work(workspace, monkeypatch):
 def test_stage_requirements(workspace):
     raw = {**workspace, "experiment": {**workspace["experiment"], "edit_size": None}}
     prepare = preflight.stage_problems(parse_config(raw), "prepare", None)
-    assert any("edit_size is not set" in p for p in prepare) and any("no pilot report" in p for p in prepare)
+    assert any("edit_size is not set" in p for p in prepare) and any("no choose-r report" in p for p in prepare)
     run = preflight.stage_problems(parse_config(workspace), "run", 0)
     assert len(run) == 2 and all("run prepare first" in p for p in run)
 
@@ -152,7 +152,7 @@ def test_one_error_lists_every_problem(workspace, tmp_path, monkeypatch):
     monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
     (tmp_path / "in/contexts.jsonl").unlink()
     with pytest.raises(preflight.PreflightError) as error:
-        preflight.run_preflight(parse_config(workspace), "pilot", labels_stubbed=True)
+        preflight.run_preflight(parse_config(workspace), "choose-r", labels_stubbed=True)
     message = str(error.value)
     assert "(3 problems)" in message
     for text in ("missing input file in/contexts.jsonl", "are not cached", "CUDA is not available"):

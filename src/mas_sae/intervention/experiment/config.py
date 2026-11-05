@@ -35,9 +35,9 @@ class Representation:
 class Experiment:
     number_of_episodes: int
     number_of_shards: int
-    edit_size: float | None  # r: |Δ| = r·|x|. None until the pilot has been run and r chosen.
-    number_of_pilot_episodes: int = 50
-    pilot_edit_sizes: tuple = (0.02, 0.05, 0.10, 0.20)
+    edit_size: float | None  # r: |Δ| = r·|x|. None until choose-r has been run and r chosen.
+    number_of_choose_r_episodes: int = 50
+    candidate_edit_sizes: tuple = (0.02, 0.05, 0.10, 0.20)
     number_of_targeted_features: int = 10
     number_of_random_draws: int = 3
     min_baseline_label_match: float = 0.98
@@ -155,15 +155,15 @@ def validate(config: InterventionConfig) -> list[str]:
             problems.append(f"representations.{name}.role must be one of {ROLES}")
     if [n for n, r in config.representations.items() if r.kind == "activations"] != config.names_with_role("control"):
         problems.append("the raw activations, and only they, must have role: control")
-    for key in ("number_of_episodes", "number_of_shards", "number_of_pilot_episodes",
+    for key in ("number_of_episodes", "number_of_shards", "number_of_choose_r_episodes",
                 "number_of_targeted_features", "number_of_random_draws"):
         if not positive_int(getattr(e, key)):
             problems.append(f"experiment.{key} must be a positive integer")
     size_ok = lambda v: type(v) in (int, float) and 0 < v < 1
     if e.edit_size is not None and not size_ok(e.edit_size):
-        problems.append("experiment.edit_size must be a number in (0, 1), or null until the pilot has run")
-    if not e.pilot_edit_sizes or not all(size_ok(v) for v in e.pilot_edit_sizes):
-        problems.append("experiment.pilot_edit_sizes must be numbers in (0, 1)")
+        problems.append("experiment.edit_size must be a number in (0, 1), or null until choose-r has run")
+    if not e.candidate_edit_sizes or not all(size_ok(v) for v in e.candidate_edit_sizes):
+        problems.append("experiment.candidate_edit_sizes must be numbers in (0, 1)")
     if not 0 < e.min_baseline_label_match <= 1:
         problems.append("experiment.min_baseline_label_match must be in (0, 1]")
     generation = config.solver.get("generation", {})

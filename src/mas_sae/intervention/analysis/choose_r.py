@@ -1,10 +1,10 @@
-"""The edit-size pilot's report: what each candidate r does to real generations.
+"""The choose-r report: what each candidate r does to real generations.
 
-Why a pilot: the probes cannot calibrate r. In the matched-edits run
+Why choose-r: the probes cannot calibrate r. In the matched-edits run
 (results/probe_mixed_final_001_layer25/matched_edits) the probe's prediction flips at about
 0.0007% of |x|, and even random directions swing it at 1-2.5%, so r must come from generations.
 
-The pilot runs on its own episodes (positions N+1..N+P of the seeded order, never study episodes),
+choose-r runs on its own episodes (positions N+1..N+P of the seeded order, never study episodes),
 and its results are never part of the study tables. The report is for choosing r by hand; the
 "meets suggested rule" column applies the suggested rule (targeted − random flip with a 95% CI above
 0, and under 5% out and degenerate answers), which the experimenter may override.
@@ -43,7 +43,7 @@ def is_flip(row: dict) -> bool:
     return row["label"] == OPPOSITE[row["stored_label"]]
 
 
-def pilot_table(rows: list[dict], representations: list[str], sizes, n_draws: int, n_bootstrap: int) -> pd.DataFrame:
+def choose_r_table(rows: list[dict], representations: list[str], sizes, n_draws: int, n_bootstrap: int) -> pd.DataFrame:
     df = pd.DataFrame([r for r in rows if r["kind"] == "edit"])
     df["flip"] = df.apply(is_flip, axis=1).astype(float)
     df["degenerate"] = df.apply(is_degenerate, axis=1)
@@ -76,14 +76,14 @@ def examples(rows: list[dict], size: float) -> pd.DataFrame:
                          for r in targeted[:EXAMPLES_PER_SIZE]])
 
 
-def write_pilot_report(rows: list[dict], excluded: dict, representations: list[str], sizes, n_draws: int,
+def write_choose_r_report(rows: list[dict], excluded: dict, representations: list[str], sizes, n_draws: int,
                        n_bootstrap: int, csv_path, md_path, labels_stubbed: bool) -> pd.DataFrame:
-    table = pilot_table(rows, representations, sizes, n_draws, n_bootstrap)
+    table = choose_r_table(rows, representations, sizes, n_draws, n_bootstrap)
     table.to_csv(csv_path, index=False)
     baseline_flips = np.mean([is_flip(r) for r in rows if r["kind"] == "baseline"])
-    parts = ["# Edit-size pilot\n",
+    parts = ["# Choose r: edit-size report\n",
              *(["**LABELS STUBBED: these numbers are meaningless (smoke run).**\n"] if labels_stubbed else []),
-             f"{len({r['episode_id'] for r in rows})} pilot episodes; {len(excluded)} excluded for labeling "
+             f"{len({r['episode_id'] for r in rows})} choose-r episodes; {len(excluded)} excluded for labeling "
              f"failures. Baseline flip rate {100 * baseline_flips:.1f}% (should be ~0).\n",
              "Choose r and write it into the config as `experiment.edit_size`. Suggested rule: the smallest "
              "size where targeted − random is clearly above 0 for at least one SAE, with out and degenerate "

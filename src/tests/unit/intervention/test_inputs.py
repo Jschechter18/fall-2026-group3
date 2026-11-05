@@ -6,9 +6,9 @@ import pytest
 import torch
 
 from . import fakes
-from mas_sae.intervention.experiment.conditions import edited_features, pilot_conditions, sets_for, study_conditions
+from mas_sae.intervention.experiment.conditions import edited_features, choose_r_conditions, sets_for, study_conditions
 from mas_sae.intervention.experiment.config import parse_config
-from mas_sae.intervention.experiment.episodes import eligible_episodes, seeded_order, study_and_pilot_episodes
+from mas_sae.intervention.experiment.episodes import eligible_episodes, seeded_order, study_and_choose_r_episodes
 from mas_sae.intervention.experiment.representations import frozen_feature_sets
 
 
@@ -29,16 +29,16 @@ def test_only_adoption_and_retention_episodes_are_eligible(workspace):
     assert episodes[0].target_label == "retention" and episodes[0].stored_prompt_sha256 == "sha0"
 
 
-def test_study_and_pilot_are_disjoint_positions_of_one_seeded_order(workspace):
+def test_study_and_choose_r_are_disjoint_positions_of_one_seeded_order(workspace):
     config = parse_config({**workspace, "experiment": {**workspace["experiment"], "number_of_episodes": 4,
-                                                       "number_of_pilot_episodes": 2}})
-    study, pilot = study_and_pilot_episodes(config)
+                                                       "number_of_choose_r_episodes": 2}})
+    study, choose_r = study_and_choose_r_episodes(config)
     order = seeded_order(_eligible(), 42)
-    assert [e.episode_id for e in study + pilot] == [e.episode_id for e in order]
+    assert [e.episode_id for e in study + choose_r] == [e.episode_id for e in order]
     assert seeded_order(_eligible(), 42) == order and seeded_order(_eligible(), 7) != order
     too_many = parse_config({**workspace, "experiment": {**workspace["experiment"], "number_of_episodes": 6}})
-    with pytest.raises(ValueError, match="Only 6 eligible episodes; the study and pilot need 7"):
-        study_and_pilot_episodes(too_many)
+    with pytest.raises(ValueError, match="Only 6 eligible episodes; the study and choose-r need 7"):
+        study_and_choose_r_episodes(too_many)
 
 
 def test_other_presentations_are_refused(tmp_path, monkeypatch):
@@ -62,7 +62,7 @@ def test_condition_counts():
     conditions = study_conditions(reps, 0.05, fakes.N_DRAWS)
     # 1 baseline + 2 SAE reconstructions + 3 representations × 3 arms × (1 targeted + 2 draws)
     assert len(conditions) == 1 + 2 + 3 * 3 * 3 and len({c.key for c in conditions}) == len(conditions)
-    assert len(pilot_conditions(reps[1:], [0.02, 0.05], fakes.N_DRAWS)) == 1 + 2 * 2 * 3 * 3
+    assert len(choose_r_conditions(reps[1:], [0.02, 0.05], fakes.N_DRAWS)) == 1 + 2 * 2 * 3 * 3
 
 
 def test_each_arm_steers_along_the_right_sets():

@@ -1,6 +1,6 @@
-# SMOKE RUN ONLY: configs/intervention.yaml on 3 study episodes and 1 pilot episode, with a placeholder
+# SMOKE RUN ONLY: configs/intervention.yaml on 3 study episodes and 1 choose-r episode, with a placeholder
 # edit size, its own output directory and stubbed labels. Its results are never used.
-#   for s in pilot prepare run merge; do
+#   for s in choose-r prepare run merge; do
 #     python scripts/intervention/run_intervention.py $s --config configs/intervention_smoke.yaml --shard 0 --stub-labeling
 #   done
 layer: 25
@@ -48,10 +48,10 @@ representations:
 
 experiment:
   number_of_episodes: 3
-  number_of_pilot_episodes: 1
+  number_of_choose_r_episodes: 1
   number_of_shards: 1
-  edit_size: 0.05                   # placeholder, NOT chosen by the pilot
-  pilot_edit_sizes: [0.05]
+  edit_size: 0.05                   # placeholder, NOT chosen by choose-r
+  candidate_edit_sizes: [0.05]
   number_of_targeted_features: 10
   number_of_random_draws: 3
   min_baseline_label_match: 0.98

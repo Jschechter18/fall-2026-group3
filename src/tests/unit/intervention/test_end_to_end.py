@@ -1,4 +1,4 @@
-"""pilot -> prepare -> run (2 shards) -> merge, through the script's stages, on the tiny CPU model with stub labels."""
+"""choose-r -> prepare -> run (2 shards) -> merge, through the script's stages, on the tiny CPU model with stub labels."""
 
 import importlib.util
 import json
@@ -43,8 +43,8 @@ def _make_stored_answers_reproducible(tmp_path, solver_model):
 def experiment(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     raw = fakes.write_workspace(tmp_path, n_episodes=12)
-    raw["experiment"].update(number_of_episodes=2, number_of_pilot_episodes=1, number_of_shards=2,
-                             edit_size=0.5, pilot_edit_sizes=[0.5])
+    raw["experiment"].update(number_of_episodes=2, number_of_choose_r_episodes=1, number_of_shards=2,
+                             edit_size=0.5, candidate_edit_sizes=[0.5])
     solver_model = fakes.solver_model()
     _make_stored_answers_reproducible(tmp_path, solver_model)
     script = _load_script()
@@ -58,8 +58,8 @@ def test_every_stage_runs_and_resumes(experiment, tmp_path):
     config = parse_config(raw)
     run_dir = Path(config.output_dir)
 
-    script.pilot(config, labels_stubbed=True)
-    assert layout.pilot_report_md(run_dir).read_text().startswith("# Edit-size pilot")
+    script.choose_r(config, labels_stubbed=True)
+    assert layout.choose_r_report_md(run_dir).read_text().startswith("# Choose r: edit-size report")
 
     script.prepare(config)
     assert json.loads(layout.baseline_check(run_dir).read_text())["passed"]
@@ -84,7 +84,7 @@ def test_every_stage_runs_and_resumes(experiment, tmp_path):
 def test_a_worker_with_a_different_experiment_refuses_to_run(experiment):
     script, raw = experiment
     config = parse_config(raw)
-    script.pilot(config, labels_stubbed=True)
+    script.choose_r(config, labels_stubbed=True)
     script.prepare(config)
     changed = parse_config({**raw, "experiment": {**raw["experiment"], "edit_size": 0.25}})
     with pytest.raises(RuntimeError, match="frozen with different"):
@@ -95,7 +95,7 @@ def test_a_worker_excludes_an_episode_whose_baseline_differs_and_merge_refuses_t
     script, raw = experiment
     config = parse_config(raw)
     run_dir = Path(config.output_dir)
-    script.pilot(config, labels_stubbed=True)
+    script.choose_r(config, labels_stubbed=True)
     script.prepare(config)
     episode_id = json.loads(layout.shards(run_dir).read_text())["shards"][0][0]
     baseline = layout.baseline_rows(run_dir)
@@ -121,7 +121,7 @@ def test_prepare_stops_when_the_baseline_does_not_reproduce_the_stored_answers(e
     settings = tmp_path / "in/labels/run_settings.json"
     settings.write_text(json.dumps({**json.loads(settings.read_text()), "episodes_sha256": sha256_file(path)}))
     config = parse_config(raw)
-    script.pilot(config, labels_stubbed=True)
+    script.choose_r(config, labels_stubbed=True)
     with pytest.raises(RuntimeError, match="does not reproduce the stored answers"):
         script.prepare(config)
     assert not layout.shards(Path(config.output_dir)).exists()

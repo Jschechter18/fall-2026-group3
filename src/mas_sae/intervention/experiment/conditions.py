@@ -54,8 +54,8 @@ def study_conditions(representations, edit_size: float, n_draws: int) -> list[Co
     return conditions
 
 
-def pilot_conditions(representations, edit_sizes, n_draws: int) -> list[Condition]:
-    """Baseline, then every edit at every pilot size for the given (primary) SAEs."""
+def choose_r_conditions(representations, edit_sizes, n_draws: int) -> list[Condition]:
+    """Baseline, then every edit at every candidate size for the given (primary) SAEs."""
     conditions = [BASELINE]
     for size in edit_sizes:
         for r in representations:

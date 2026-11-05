@@ -13,7 +13,7 @@ EPISODES
 --------
 Stored intervention episodes whose stored Claude label is adoption or retention (the stratum),
 one per question, Natural Critic, candidates presentation. Sorted by question id and shuffled with
-seed 42: the study is positions 1..1000, the pilot positions 1001..1050. Never the same episode.
+seed 42: the study is positions 1..1000, choose-r positions 1001..1050. Never the same episode.
 
 
 WHERE THE EDIT HAPPENS
@@ -27,7 +27,7 @@ every decode step, so the answer can change even when the first token does not. 
 THE EDIT (mas_sae.intervention.generation.edits)
 -------------------------------------
 x is the layer-25 activation at that token. Every edit is x' = x + Δ with |Δ| = r·|x|, one size r for
-every arm and every feature set, chosen by the pilot. So a difference between targeted and random,
+every arm and every feature set, chosen by choose-r. So a difference between targeted and random,
 or between arms, comes from direction alone.
 
     d_i      direction of feature i: its unit decoder row (SAE), or e_i (raw neuron), signed so that
@@ -90,7 +90,7 @@ SECONDARY (each its own Holm family, two-sided)
 
 HOW TO RUN
 ----------
-    python scripts/intervention/run_intervention.py pilot   --config configs/intervention.yaml
+    python scripts/intervention/run_intervention.py choose-r --config configs/intervention.yaml
     python scripts/intervention/run_intervention.py prepare --config configs/intervention.yaml
     python scripts/intervention/run_intervention.py run     --config configs/intervention.yaml --shard K
     python scripts/intervention/run_intervention.py merge   --config configs/intervention.yaml
@@ -102,8 +102,8 @@ continue a run frozen with different code, inputs or packages. The GPU model is 
 enforced; a worker whose baseline of an episode differs from prepare's excludes that episode, and
 merge refuses if more than (1 − min_baseline_label_match) of the episodes were excluded that way.
 
-    pilot    choose r: the pilot episodes, the 3 primary SAEs, each size in pilot_edit_sizes.
-             Writes pilot/pilot_report.md. Then stop, choose r, and set experiment.edit_size.
+    choose-r choose r: the choose-r episodes, the 3 primary SAEs, each size in candidate_edit_sizes.
+             Writes choose_r/choose_r_report.md. Then stop, choose r, and set experiment.edit_size.
     prepare  freeze the run, generate and check the baseline of every study episode, write shards.
     run      one GPU worker, one shard. Needs frozen_run.json, shards.json, baseline.jsonl.
     merge    check every shard is complete, label every answer, write the tables and summary.json.
@@ -123,12 +123,12 @@ from tqdm.auto import tqdm
 from mas_sae.intervention.run_files import layout
 from mas_sae.intervention.analysis import tables
 from mas_sae.intervention.checks.baseline import check_baseline_reproduces_stored
-from mas_sae.intervention.experiment.conditions import BASELINE, pilot_conditions, study_conditions
+from mas_sae.intervention.experiment.conditions import BASELINE, choose_r_conditions, study_conditions
 from mas_sae.intervention.experiment.config import load_config
-from mas_sae.intervention.experiment.episodes import study_and_pilot_episodes
+from mas_sae.intervention.experiment.episodes import study_and_choose_r_episodes
 from mas_sae.intervention.generation.episode import BaselineMismatch, generate_episode, make_row
 from mas_sae.intervention.analysis.labeling import StubClaudeClient, create_client, label_rows, read_protocol
-from mas_sae.intervention.analysis.pilot import write_pilot_report
+from mas_sae.intervention.analysis.choose_r import write_choose_r_report
 from mas_sae.intervention.checks.preflight import run_preflight
 from mas_sae.intervention.run_files.provenance import (
     device_name, frozen_content, provenance, require_same_experiment, write_frozen_run,
@@ -145,28 +145,28 @@ logger = logging.getLogger("intervention")
 
 
 # =====================================================================
-# PILOT: CHOOSE THE EDIT SIZE r
+# CHOOSE-R: CHOOSE THE EDIT SIZE r
 # =====================================================================
 
-def pilot(config, labels_stubbed: bool) -> None:
+def choose_r(config, labels_stubbed: bool) -> None:
     run_dir = config.output_dir
     e = config.experiment
-    _, pilot_episodes = study_and_pilot_episodes(config)
+    _, choose_r_episodes = study_and_choose_r_episodes(config)
 
     solver_model = load_solver(config)
     representations = on_device(load_representations(config), solver_model, roles=("primary",))
-    conditions = pilot_conditions(list(representations.values()), e.pilot_edit_sizes, e.number_of_random_draws)
-    record_pilot_run(run_dir, pilot_episodes, conditions)
+    conditions = choose_r_conditions(list(representations.values()), e.candidate_edit_sizes, e.number_of_random_draws)
+    record_choose_r_run(run_dir, choose_r_episodes, conditions)
 
-    results = ResultsFile(layout.pilot_rows(run_dir))
-    for episode in tqdm(pilot_episodes, desc="pilot episodes"):
+    results = ResultsFile(layout.choose_r_rows(run_dir))
+    for episode in tqdm(choose_r_episodes, desc="choose-r episodes"):
         generate_episode(solver_model, episode, conditions, representations, results)
 
-    labeled, excluded = label(results.rows, pilot_episodes, config, layout.pilot_dir(run_dir), labels_stubbed)
-    write_pilot_report(labeled, excluded, list(representations), e.pilot_edit_sizes, e.number_of_random_draws,
-                       config.analysis.n_bootstrap, layout.pilot_report_csv(run_dir),
-                       layout.pilot_report_md(run_dir), labels_stubbed)
-    print(f"Pilot report: {layout.pilot_report_md(run_dir)}\n"
+    labeled, excluded = label(results.rows, choose_r_episodes, config, layout.choose_r_dir(run_dir), labels_stubbed)
+    write_choose_r_report(labeled, excluded, list(representations), e.candidate_edit_sizes, e.number_of_random_draws,
+                       config.analysis.n_bootstrap, layout.choose_r_report_csv(run_dir),
+                       layout.choose_r_report_md(run_dir), labels_stubbed)
+    print(f"Choose-r report: {layout.choose_r_report_md(run_dir)}\n"
           "Choose r, write it into the config as experiment.edit_size, then run prepare.")
 
 
@@ -176,8 +176,8 @@ def pilot(config, labels_stubbed: bool) -> None:
 
 def prepare(config) -> None:
     run_dir = config.output_dir
-    study_episodes, pilot_episodes = study_and_pilot_episodes(config)
-    require_no_pilot_episode_in_study(run_dir, study_episodes)
+    study_episodes, choose_r_episodes = study_and_choose_r_episodes(config)
+    require_no_choose_r_episode_in_study(run_dir, study_episodes)
 
     representations = load_representations(config)
     conditions = study_conditions(representations, config.experiment.edit_size,
@@ -185,12 +185,12 @@ def prepare(config) -> None:
     solver_model = load_solver(config)
 
     # Freeze everything a worker must reproduce. A rerun of prepare must freeze the same run.
-    content = frozen_content(config, ids(study_episodes), ids(pilot_episodes),
+    content = frozen_content(config, ids(study_episodes), ids(choose_r_episodes),
                              frozen_feature_sets(representations), [c.key for c in conditions])
     frozen_sha = write_frozen_run(layout.frozen_run(run_dir), content,
                                   provenance(config, device_name(solver_model)),
                                   recorded={"edit_size": config.experiment.edit_size,
-                                            "pilot_report_sha256": sha256_file(layout.pilot_report_csv(run_dir)),
+                                            "choose_r_report_sha256": sha256_file(layout.choose_r_report_csv(run_dir)),
                                             "set_cosines": {r.name: r.set_cosine() for r in representations}})
 
     # Baseline: does the plain replay reproduce the stored A2s? If not, stop.
@@ -225,7 +225,7 @@ def run(config, shard: int) -> None:
     if not read_json(layout.baseline_check(run_dir))["passed"]:
         raise RuntimeError("The baseline check did not pass; no edit is run.")
 
-    study_episodes, pilot_episodes = study_and_pilot_episodes(config)
+    study_episodes, choose_r_episodes = study_and_choose_r_episodes(config)
     representations = load_representations(config) 
     conditions = study_conditions(representations, config.experiment.edit_size,
                                   config.experiment.number_of_random_draws)
@@ -233,7 +233,7 @@ def run(config, shard: int) -> None:
 
     # This worker must be running the frozen experiment, with the same code, packages and inputs.
     # The GPU model is recorded, not enforced: each episode's baseline check below is what guarantees it.
-    content = frozen_content(config, ids(study_episodes), ids(pilot_episodes),
+    content = frozen_content(config, ids(study_episodes), ids(choose_r_episodes),
                              frozen_feature_sets(representations), [c.key for c in conditions])
     require_same_experiment(frozen, content, provenance(config, device_name(solver_model)),
                             where=str(layout.frozen_run(run_dir)))
@@ -273,11 +273,11 @@ def run(config, shard: int) -> None:
 def merge(config, labels_stubbed: bool) -> None:
     run_dir, out = config.output_dir, layout.merge_dir(config.output_dir)
     frozen, shards = read_json(layout.frozen_run(run_dir)), read_json(layout.shards(run_dir))
-    study_episodes, pilot_episodes = study_and_pilot_episodes(config)
+    study_episodes, choose_r_episodes = study_and_choose_r_episodes(config)
     representations = load_representations(config)
     conditions = study_conditions(representations, config.experiment.edit_size,
                                   config.experiment.number_of_random_draws)
-    content = frozen_content(config, ids(study_episodes), ids(pilot_episodes),
+    content = frozen_content(config, ids(study_episodes), ids(choose_r_episodes),
                              frozen_feature_sets(representations), [c.key for c in conditions])
     require_same_experiment(frozen, content, None, where=str(layout.frozen_run(run_dir)))
 
@@ -363,20 +363,20 @@ def label(rows, episodes, config, work_dir: Path, labels_stubbed: bool):
                       client_factory, config.labeling.concurrency)
 
 
-def record_pilot_run(run_dir: Path, episodes, conditions) -> None:
-    """Write the pilot's episodes and conditions; a rerun must be the same pilot."""
+def record_choose_r_run(run_dir: Path, episodes, conditions) -> None:
+    """Write choose-r's episodes and conditions; a rerun must be the same choose-r run."""
     record = {"episode_ids": ids(episodes), "conditions": [c.key for c in conditions]}
-    path = layout.pilot_episodes(run_dir)
+    path = layout.choose_r_episodes(run_dir)
     if path.exists() and read_json(path) != record:
-        raise RuntimeError(f"{path} records a different pilot; use a new output_dir.")
+        raise RuntimeError(f"{path} records a different choose-r run; use a new output_dir.")
     path.parent.mkdir(parents=True, exist_ok=True)
     write_json(path, record)
 
 
-def require_no_pilot_episode_in_study(run_dir: Path, study_episodes) -> None:
-    overlap = set(read_json(layout.pilot_episodes(run_dir))["episode_ids"]) & set(ids(study_episodes))
+def require_no_choose_r_episode_in_study(run_dir: Path, study_episodes) -> None:
+    overlap = set(read_json(layout.choose_r_episodes(run_dir))["episode_ids"]) & set(ids(study_episodes))
     if overlap:
-        raise RuntimeError(f"{len(overlap)} pilot episodes are in the study cohort, e.g. {sorted(overlap)[:3]}.")
+        raise RuntimeError(f"{len(overlap)} choose-r episodes are in the study cohort, e.g. {sorted(overlap)[:3]}.")
 
 
 def read_json(path: Path):
@@ -393,7 +393,7 @@ def write_json(path: Path, value) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("stage", choices=["pilot", "prepare", "run", "merge"])
+    parser.add_argument("stage", choices=["choose-r", "prepare", "run", "merge"])
     parser.add_argument("--config", type=Path, required=True)
     parser.add_argument("--shard", type=int, help="which shard to run (run only)")
     parser.add_argument("--check-only", action="store_true", help="run the preflight and exit")
@@ -407,8 +407,8 @@ def main() -> None:
     if args.check_only:
         print(f"Preflight for {args.stage} passed.")
         return
-    if args.stage == "pilot":
-        pilot(config, args.stub_labeling)
+    if args.stage == "choose-r":
+        choose_r(config, args.stub_labeling)
     elif args.stage == "prepare":
         prepare(config)
     elif args.stage == "run":

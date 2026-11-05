@@ -2,7 +2,7 @@
 
 Eligible: the configured partition, Natural Critic, candidates presentation, one stored episode per
 question, and a stored Claude label of adoption or retention. The eligible episodes are sorted by
-question id and shuffled with the seed; the study takes positions 1..N of that order and the pilot
+question id and shuffled with the seed; the study takes positions 1..N of that order and choose-r
 the next ones, so the two never overlap and neither depends on outcomes.
 """
 
@@ -93,12 +93,12 @@ def seeded_order(episodes: list[Episode], seed: int) -> list[Episode]:
     return [episodes[i] for i in np.random.default_rng(seed).permutation(len(episodes))]
 
 
-def study_and_pilot_episodes(config: InterventionConfig) -> tuple[list[Episode], list[Episode]]:
-    """(study, pilot): positions 1..N and N+1..N+P of the seeded order. Refuses if too few are eligible."""
+def study_and_choose_r_episodes(config: InterventionConfig) -> tuple[list[Episode], list[Episode]]:
+    """(study, choose-r): positions 1..N and N+1..N+P of the seeded order. Refuses if too few are eligible."""
     experiment = config.experiment
     order = seeded_order(eligible_episodes(Path(config.inputs.interactions), Path(config.inputs.contexts),
                                            Path(config.inputs.stored_labels), config.partition), experiment.seed)
-    needed = experiment.number_of_episodes + experiment.number_of_pilot_episodes
+    needed = experiment.number_of_episodes + experiment.number_of_choose_r_episodes
     if len(order) < needed:
-        raise ValueError(f"Only {len(order)} eligible episodes; the study and pilot need {needed}.")
+        raise ValueError(f"Only {len(order)} eligible episodes; the study and choose-r need {needed}.")
     return order[:experiment.number_of_episodes], order[experiment.number_of_episodes:needed]

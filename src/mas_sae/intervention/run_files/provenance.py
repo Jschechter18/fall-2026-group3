@@ -67,10 +67,10 @@ def device_name(solver_model) -> str | None:
     return torch.cuda.get_device_name(device) if device.type == "cuda" else str(device)
 
 
-def frozen_content(config, episode_ids: list[str], pilot_episode_ids: list[str], feature_sets: dict,
+def frozen_content(config, episode_ids: list[str], choose_r_episode_ids: list[str], feature_sets: dict,
                    condition_keys: list[str]) -> dict:
     """Everything that defines the experiment, and a hash of each part."""
-    parts = {"config": config.as_dict(), "episode_ids": episode_ids, "pilot_episode_ids": pilot_episode_ids,
+    parts = {"config": config.as_dict(), "episode_ids": episode_ids, "choose_r_episode_ids": choose_r_episode_ids,
              "feature_sets": feature_sets, "conditions": condition_keys}
     return {**json.loads(json.dumps(parts)), "hashes": {k: sha256_json(v) for k, v in parts.items()}}
 
@@ -79,7 +79,7 @@ def write_frozen_run(path: Path, content: dict, prov: dict, recorded: dict) -> s
     """Write ``frozen_run.json`` once; a rerun of prepare must freeze the same content. Returns its sha256.
 
     ``recorded`` holds facts recorded at freezing that workers do not recompute (the edit size and
-    the pilot report's sha256: workers need not have the pilot's files)."""
+    the choose-r report's sha256: workers need not have choose-r's files)."""
     path = Path(path)
     if path.exists():
         require_same_experiment(json.loads(path.read_text()), content, prov, where=str(path))

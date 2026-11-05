@@ -131,7 +131,7 @@ def write_workspace(root, n_episodes=8, presentation="candidates"):
                    "device": "cuda:0", "cache_dir": "cache", "generation": {"max_new_tokens": 8, "do_sample": False}},
         "representations": {"Raw": {"kind": "activations", "path": "in/center.npy", "role": "control"},
                             "SAE": {"kind": "gemma_scope", "path": "in/sae", "role": "primary"}},
-        "experiment": {"number_of_episodes": 2, "number_of_pilot_episodes": 1, "number_of_shards": 1,
+        "experiment": {"number_of_episodes": 2, "number_of_choose_r_episodes": 1, "number_of_shards": 1,
                        "edit_size": 0.05, "number_of_targeted_features": N_FEATURES, "number_of_random_draws": N_DRAWS},
         "analysis": {"primary_representations": ["SAE"], "between_sae_contrasts": [], "exploratory_contrasts": [],
                      "direction_contrasts": [["both", "decrease"]], "n_bootstrap": 10, "n_permutations": 10},

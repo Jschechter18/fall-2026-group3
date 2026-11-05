@@ -1,4 +1,4 @@
-"""Generating one episode's conditions: the loop shared by the pilot and every run worker.
+"""Generating one episode's conditions: the loop shared by choose-r and every run worker.
 
 Per episode:
   1. Generate the baseline (no SAE, no edit). This also records layers 0..25 of the prefill and the
