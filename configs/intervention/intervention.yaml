@@ -47,7 +47,7 @@ experiment:
   number_of_episodes: 1000 # study: positions 1..1000 of the seeded order
   number_of_choose_r_episodes: 50 # choose-r: positions 1001..1050
   number_of_shards: 4
-  edit_size: null # r, |Δ| = r·|x|: set from the choose-r report before prepare
+  edit_size: 0.2 # r, |Δ| = r·|x|: set from the choose-r report before prepare
   # 0.30 added after the first choose-r run (20261106T000808809026Z-02871d677287, sizes 0.02-0.20):
   # the suggested rule is unchanged, and if no row passes at 0.30 the choice stays 0.20.
   # candidate_edit_sizes: [0.02, 0.05, 0.10, 0.20, 0.30]
