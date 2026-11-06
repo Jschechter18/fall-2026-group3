@@ -1,0 +1,8 @@
+{
+  "run_id": "20261106T000808809026Z-02871d677287",
+  "reconstructed": true,
+  "note": "This run predates versioned run folders: it was run with output_dir: results/intervention_layer25 on another instance and moved here on 2026-11-06. Neither value below was recorded. created_utc is the start of its Claude labeling (labeling/attempts/20261106T000808809026Z); generation began about 52 minutes earlier. git_commit is the HEAD of the branch at that time (merge of PR #228), the most likely but not a confirmed code state.",
+  "created_utc": "20261106T000808809026Z",
+  "git_commit": "02871d677287c449d830d5b8b71873beff48e20d",
+  "candidate_edit_sizes": [0.02, 0.05, 0.10, 0.20]
+}

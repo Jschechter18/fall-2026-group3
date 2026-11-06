@@ -82,10 +82,18 @@ class InterventionConfig:
     analysis: Analysis
     labeling: Labeling
     machine: Machine
-    output_dir: Path
+    output_root: Path        # every run gets its own folder <output_root>/<run_id>; nothing is written here directly
+    run_id: str | None = None  # None until choose-r creates the run; then set, like edit_size
+
+    @property
+    def run_dir(self) -> Path:
+        if self.run_id is None:
+            raise ValueError("run_id is not set: run choose-r to create a run, then set run_id in the config.")
+        return self.output_root / self.run_id
 
     def as_dict(self) -> dict:
-        return {**asdict(self), "output_dir": str(self.output_dir)}
+        """The experiment, without where it is stored: a run's identity is its folder, not its path."""
+        return {k: v for k, v in asdict(self).items() if k not in ("output_root", "run_id")}
 
     def names_with_role(self, role: str) -> list[str]:
         return [name for name, r in self.representations.items() if r.role == role]
@@ -116,9 +124,13 @@ def load_config(path: Path) -> InterventionConfig:
 
 
 def parse_config(raw: dict, source: str = "config") -> InterventionConfig:
+    if "output_dir" in raw:
+        raise ValueError(f"{source}: output_dir was replaced by output_root (the parent folder) and run_id "
+                         "(the run's folder inside it, created by choose-r). Set output_root to the old "
+                         "output_dir and run_id: null to start a new run.")
     top = {f.name for f in fields(InterventionConfig)}
     unknown = sorted(set(raw) - top)
-    missing = sorted(top - set(raw) - {"labeling", "machine"})
+    missing = sorted(top - set(raw) - {"labeling", "machine", "run_id"})
     if unknown:
         raise ValueError(f"Unknown keys in {source}: {unknown}")
     if missing:
@@ -134,7 +146,8 @@ def parse_config(raw: dict, source: str = "config") -> InterventionConfig:
         analysis=_section(Analysis, raw["analysis"], "analysis"),
         labeling=_section(Labeling, raw.get("labeling", {}), "labeling"),
         machine=_section(Machine, raw.get("machine", {}), "machine"),
-        output_dir=Path(raw["output_dir"]),
+        output_root=Path(raw["output_root"]),
+        run_id=raw.get("run_id"),
     )
     problems = validate(config)
     if problems:
@@ -192,4 +205,7 @@ def validate(config: InterventionConfig) -> list[str]:
         problems.append("analysis.n_bootstrap and n_permutations must be positive integers")
     if not positive_int(config.labeling.concurrency):
         problems.append("labeling.concurrency must be a positive integer")
+    if config.run_id is not None and (not isinstance(config.run_id, str) or not config.run_id
+                                      or Path(config.run_id).name != config.run_id or config.run_id in (".", "..")):
+        problems.append("run_id must be the name of one folder inside output_root (no slashes), or null")
     return problems

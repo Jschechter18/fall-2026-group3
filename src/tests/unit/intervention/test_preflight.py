@@ -48,8 +48,8 @@ def test_config_refuses_more_draws_per_question_than_the_pool_holds(workspace):
 def test_config_refuses_unknown_and_missing_keys(workspace):
     with pytest.raises(ValueError, match="Unknown keys in experiment"):
         parse_config({**workspace, "experiment": {**workspace["experiment"], "typo": 1}})
-    with pytest.raises(ValueError, match="missing required fields: \\['output_dir'\\]"):
-        parse_config({k: v for k, v in workspace.items() if k != "output_dir"})
+    with pytest.raises(ValueError, match="missing required fields: \\['output_root'\\]"):
+        parse_config({k: v for k, v in workspace.items() if k != "output_root"})
     with pytest.raises(ValueError, match="missing required fields: \\['edit_size'\\]"):
         parse_config({**workspace, "experiment": {k: v for k, v in workspace["experiment"].items() if k != "edit_size"}})
 
@@ -127,8 +127,27 @@ def test_no_cuda(workspace, monkeypatch):
 def test_unwritable_output_and_too_little_disk(workspace, tmp_path):
     (tmp_path / "out").write_text("a file, not a directory")
     assert "is not writable" in _problems(workspace, preflight.output_problems)[0]
-    raw = {**workspace, "output_dir": "out2", "machine": {"min_free_disk_gb": 1e9}}
+    raw = {**workspace, "output_root": "out2", "machine": {"min_free_disk_gb": 1e9}}
     assert "GB free in out2" in _problems(raw, preflight.output_problems)[0]
+
+
+def test_only_choose_r_may_start_a_run_and_every_stage_needs_an_existing_run_folder(workspace, tmp_path):
+    new = parse_config(workspace)                                              # run_id: null
+    assert preflight.run_problems(new, "choose-r") == []
+    for stage in ("prepare", "run", "merge"):
+        assert "run_id is not set" in preflight.run_problems(new, stage)[0]
+    named = parse_config({**workspace, "run_id": "20261106T000000000000Z-abc"})
+    for stage in ("choose-r", "prepare", "run", "merge"):                      # a typo'd or deleted run
+        assert "no run folder out/20261106T000000000000Z-abc" in preflight.run_problems(named, stage)[0]
+    (tmp_path / "out/20261106T000000000000Z-abc").mkdir(parents=True)
+    assert preflight.run_problems(named, "prepare") == []
+
+
+def test_config_refuses_the_old_output_dir_and_a_run_id_that_is_a_path(workspace):
+    with pytest.raises(ValueError, match="output_dir was replaced by output_root"):
+        parse_config({**workspace, "output_dir": "out"})
+    with pytest.raises(ValueError, match="run_id must be the name of one folder"):
+        parse_config({**workspace, "run_id": "../elsewhere"})
 
 
 def test_aws_credentials_that_do_not_work(workspace, monkeypatch):
@@ -146,7 +165,9 @@ def test_aws_credentials_that_do_not_work(workspace, monkeypatch):
     assert "do not work" in problem and "aws sso login --profile school" in problem
 
 
-def test_stage_requirements(workspace):
+def test_stage_requirements(workspace, tmp_path):
+    workspace = {**workspace, "run_id": "run"}
+    (tmp_path / "out/run").mkdir(parents=True)
     raw = {**workspace, "experiment": {**workspace["experiment"], "edit_size": None}}
     prepare = preflight.stage_problems(parse_config(raw), "prepare", None)
     assert any("edit_size is not set" in p for p in prepare) and any("no choose-r report" in p for p in prepare)

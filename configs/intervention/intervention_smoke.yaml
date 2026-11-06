@@ -86,4 +86,6 @@ machine:
   min_gpu_memory_gb: 20
   min_free_disk_gb: 10
 
-output_dir: results/intervention_smoke
+# Each run gets its own folder <output_root>/<run_id>; run_id: null -> choose-r creates one.
+output_root: results/intervention_smoke
+run_id: null

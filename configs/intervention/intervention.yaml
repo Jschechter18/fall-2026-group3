@@ -48,7 +48,9 @@ experiment:
   number_of_choose_r_episodes: 50 # choose-r: positions 1001..1050
   number_of_shards: 4
   edit_size: null # r, |Δ| = r·|x|: set from the choose-r report before prepare
-  candidate_edit_sizes: [0.02, 0.05, 0.10, 0.20]
+  # 0.30 added after the first choose-r run (20261106T000808809026Z-02871d677287, sizes 0.02-0.20):
+  # the suggested rule is unchanged, and if no row passes at 0.30 the choice stays 0.20.
+  candidate_edit_sizes: [0.02, 0.05, 0.10, 0.20, 0.30]
   number_of_targeted_features: 10
   number_of_random_draws: 3         # per question, distinct draws from the pool below
   random_draw_pool_size: 100        # the first 100 matched random draws in feature_sets.json
@@ -83,4 +85,8 @@ machine:
   min_gpu_memory_gb: 20
   min_free_disk_gb: 10
 
-output_dir: results/intervention_layer25
+# Each run gets its own folder <output_root>/<run_id>, named <UTC time>-<git commit>, so nothing is overwritten.
+# run_id: null -> choose-r creates a new run and prints its name; then set run_id to it for every later stage.
+output_root: results/intervention_layer25
+# Earlier runs: 20261106T000808809026Z-02871d677287 (choose-r, sizes 0.02-0.20; see its run.json).
+run_id: null

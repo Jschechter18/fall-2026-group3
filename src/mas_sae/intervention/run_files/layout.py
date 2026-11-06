@@ -1,6 +1,12 @@
-"""Where each stage writes its files, under the config's output_dir.
+"""Where each stage writes its files.
 
-  choose_r/episodes.json             choose-r's episode ids (positions N+1..N+P), refused by prepare
+Every run has its own folder, <output_root>/<run_id>, so a new run never overwrites an old one. choose-r
+creates it (with run_id: null in the config) and names it like the repo's SAE runs: the UTC start time
+and the first 12 characters of the git commit, e.g. 20261106T000808809026Z-02871d677287. Every later
+stage, and every rerun, finds it through the config's run_id. Inside a run's folder:
+
+  run.json                           when and from which commit the run was created
+  choose_r/episodes.json           choose-r's episode ids (positions N+1..N+P), refused by prepare
   choose_r/rows.jsonl                choose-r generations;  choose_r/labeling/  its Claude responses
   choose_r/choose_r_report.{md,csv}  the report the edit size is chosen from
   frozen_run.json                    everything a worker must reproduce, frozen by prepare
@@ -11,7 +17,21 @@
   merge/                             labels (labeling/, labeled_rows.jsonl), tables, summary.json
 """
 
+from datetime import datetime, timezone
 from pathlib import Path
+
+from mas_sae.experiments.artifacts import get_git_commit
+
+
+def new_run_id(now: datetime | None = None, commit: str | None = None) -> str:
+    """<UTC timestamp>-<12-character git commit>, the repo's run-folder convention."""
+    now = now or datetime.now(timezone.utc)
+    commit = commit or get_git_commit()
+    return f"{now.strftime('%Y%m%dT%H%M%S%fZ')}-{commit[:12] if commit != 'unknown' else 'nogit'}"
+
+
+def run_record(run_dir: Path) -> Path:
+    return Path(run_dir) / "run.json"
 
 
 def choose_r_dir(run_dir: Path) -> Path:

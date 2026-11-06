@@ -139,5 +139,5 @@ def write_workspace(root, n_episodes=8, presentation="candidates"):
         "analysis": {"primary_representations": ["SAE"], "between_sae_contrasts": [], "exploratory_contrasts": [],
                      "direction_contrasts": [["both", "decrease"]], "n_bootstrap": 10, "n_permutations": 10},
         "machine": {"min_gpu_memory_gb": 1, "min_free_disk_gb": 0},
-        "output_dir": "out",
+        "output_root": "out",
     }

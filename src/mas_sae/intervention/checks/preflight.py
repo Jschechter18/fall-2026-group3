@@ -86,8 +86,24 @@ def machine_problems(config) -> list[str]:
     return problems
 
 
+def run_problems(config, stage: str) -> list[str]:
+    """Which run this is: choose-r may start a new one (run_id null); every other stage needs an existing one."""
+    if config.run_id is None:
+        if stage == "choose-r":
+            return []
+        return [f"run_id is not set: run choose-r with run_id: null to create a run in {config.output_root}, "
+                "then set run_id to the folder it prints"]
+    if not config.run_dir.is_dir():
+        return [f"no run folder {config.run_dir}: run_id must name a folder choose-r created "
+                "(set run_id: null to start a new run)"]
+    return []
+
+
 def output_problems(config) -> list[str]:
-    out = Path(config.output_dir)
+    """Where this stage writes: the run's folder, or output_root when choose-r is about to create one."""
+    out = config.run_dir if config.run_id is not None else Path(config.output_root)
+    if config.run_id is not None and not out.is_dir():
+        return []                                   # reported by run_problems
     try:
         out.mkdir(parents=True, exist_ok=True)
         with tempfile.NamedTemporaryFile(dir=out):
@@ -120,7 +136,9 @@ def aws_credential_problems(config) -> list[str]:
 
 def stage_problems(config, stage: str, shard: int | None) -> list[str]:
     """What this stage needs from earlier stages."""
-    run_dir, problems = Path(config.output_dir), []
+    if config.run_id is None:
+        return []                                   # no run yet: reported by run_problems
+    run_dir, problems = config.run_dir, []
     if stage == "prepare":
         if config.experiment.edit_size is None:
             problems.append("experiment.edit_size is not set: run choose-r, choose r, and write it into the config")
@@ -141,8 +159,8 @@ def run_preflight(config, stage: str, shard: int | None = None, labels_stubbed: 
     """Raise one PreflightError listing everything this stage is missing.
 
     ``labels_stubbed`` (smoke runs only) skips the AWS check: no request is sent."""
-    problems = input_file_problems(config) + representation_problems(config) + output_problems(config)
-    problems += stage_problems(config, stage, shard)
+    problems = input_file_problems(config) + representation_problems(config) + run_problems(config, stage)
+    problems += output_problems(config) + stage_problems(config, stage, shard)
     if stage in GPU_STAGES:
         problems += solver_weight_problems(config) + machine_problems(config)
     if stage in LABELING_STAGES:

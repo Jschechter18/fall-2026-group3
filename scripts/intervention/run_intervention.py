@@ -95,10 +95,15 @@ SECONDARY (each its own Holm family, two-sided)
 
 HOW TO RUN
 ----------
-    python scripts/intervention/run_intervention.py choose-r --config configs/intervention.yaml
-    python scripts/intervention/run_intervention.py prepare --config configs/intervention.yaml
-    python scripts/intervention/run_intervention.py run     --config configs/intervention.yaml --shard K
-    python scripts/intervention/run_intervention.py merge   --config configs/intervention.yaml
+    python scripts/intervention/run_intervention.py choose-r --config configs/intervention/intervention.yaml
+    python scripts/intervention/run_intervention.py prepare --config configs/intervention/intervention.yaml
+    python scripts/intervention/run_intervention.py run     --config configs/intervention/intervention.yaml --shard K
+    python scripts/intervention/run_intervention.py merge   --config configs/intervention/intervention.yaml
+
+Every run gets its own folder, <output_root>/<run_id>, named <UTC time>-<12-character git commit> like
+the repo's SAE runs, so a new run never overwrites an old one. choose-r with run_id: null creates it and
+prints its name; set run_id to that name in the config (as you set edit_size) before any other stage
+or rerun. Every other stage refuses to start without an existing run folder.
 
 Every stage first runs the preflight, which lists everything the machine is missing in one error
 before any GPU work; `--check-only` runs it and exits. Every stage can be killed and rerun with the
@@ -107,7 +112,7 @@ continue a run frozen with different code, inputs or packages. The GPU model is 
 enforced; a worker whose baseline of an episode differs from prepare's excludes that episode, and
 merge refuses if more than (1 − min_baseline_label_match) of the episodes were excluded that way.
 
-    choose-r choose r: the choose-r episodes, the 3 primary SAEs, each size in candidate_edit_sizes.
+    choose-r choose r (and, with run_id: null, create the run): the choose-r episodes, the 3 primary SAEs, each size in candidate_edit_sizes.
              Writes choose_r/choose_r_report.md. Then stop, choose r, and set experiment.edit_size.
     prepare  freeze the run, generate and check the baseline of every study episode, write shards.
     run      one GPU worker, one shard. Needs frozen_run.json, shards.json, baseline.jsonl.
@@ -121,6 +126,7 @@ generated one at a time (not batched), so each row is exactly the plain generati
 import argparse
 import json
 import logging
+from dataclasses import replace
 from pathlib import Path
 
 from tqdm.auto import tqdm
@@ -136,7 +142,7 @@ from mas_sae.intervention.analysis.labeling import StubClaudeClient, create_clie
 from mas_sae.intervention.analysis.choose_r import write_choose_r_report
 from mas_sae.intervention.checks.preflight import run_preflight
 from mas_sae.intervention.run_files.provenance import (
-    device_name, frozen_content, provenance, require_same_experiment, write_frozen_run,
+    device_name, frozen_content, provenance, require_same_experiment, uncommitted_code_sha256, write_frozen_run,
 )
 from mas_sae.intervention.experiment.representations import frozen_feature_sets, load_representations
 from mas_sae.intervention.run_files.results_file import ResultsFile, read_rows
@@ -144,7 +150,7 @@ from mas_sae.intervention.run_files.shards import (
     mark_shard_complete, read_complete_shards, read_excluded, record_excluded, shard_rows_path, split_into_shards,
 )
 from mas_sae.intervention.generation.solver import generate_baseline, load_solver
-from mas_sae.experiments.artifacts import sha256_file
+from mas_sae.experiments.artifacts import get_git_commit, get_run_command, sha256_file
 
 logger = logging.getLogger("intervention")
 
@@ -153,8 +159,23 @@ logger = logging.getLogger("intervention")
 # CHOOSE-R: CHOOSE THE EDIT SIZE r
 # =====================================================================
 
+def start_run(config):
+    """Create a new run folder <output_root>/<run_id> and record where it came from. Never reuses one."""
+    run_id = layout.new_run_id()
+    run_dir = Path(config.output_root) / run_id
+    run_dir.mkdir(parents=True, exist_ok=False)
+    try:
+        uncommitted = uncommitted_code_sha256()
+    except Exception:  # noqa: BLE001 - not a git checkout; recorded, not enforced (prepare enforces code identity)
+        uncommitted = "unknown"
+    write_json(layout.run_record(run_dir), {
+        "run_id": run_id, "created_utc": run_id.split("-")[0], "git_commit": get_git_commit(),
+        "uncommitted_code_sha256": uncommitted, "command": get_run_command()})
+    return replace(config, run_id=run_id)
+
+
 def choose_r(config, labels_stubbed: bool) -> None:
-    run_dir = config.output_dir
+    run_dir = config.run_dir
     e = config.experiment
     _, choose_r_episodes = study_and_choose_r_episodes(config)
 
@@ -173,7 +194,8 @@ def choose_r(config, labels_stubbed: bool) -> None:
                        config.analysis.n_bootstrap, layout.choose_r_report_csv(run_dir),
                        layout.choose_r_report_md(run_dir), labels_stubbed)
     print(f"Choose-r report: {layout.choose_r_report_md(run_dir)}\n"
-          "Choose r, write it into the config as experiment.edit_size, then run prepare.")
+          f"Choose r, write it into the config as experiment.edit_size (with run_id: {config.run_id}), "
+          "then run prepare.")
 
 
 # =====================================================================
@@ -181,7 +203,7 @@ def choose_r(config, labels_stubbed: bool) -> None:
 # =====================================================================
 
 def prepare(config) -> None:
-    run_dir = config.output_dir
+    run_dir = config.run_dir
     study_episodes, choose_r_episodes = study_and_choose_r_episodes(config)
     require_no_choose_r_episode_in_study(run_dir, study_episodes)
 
@@ -225,7 +247,7 @@ def prepare(config) -> None:
 # =====================================================================
 
 def run(config, shard: int) -> None:
-    run_dir = config.output_dir
+    run_dir = config.run_dir
     frozen, shards = read_json(layout.frozen_run(run_dir)), read_json(layout.shards(run_dir))
     if sha256_file(layout.frozen_run(run_dir)) != shards["frozen_run_sha256"]:
         raise RuntimeError("frozen_run.json changed after the shards were written.")
@@ -280,7 +302,7 @@ def run(config, shard: int) -> None:
 # =====================================================================
 
 def merge(config, labels_stubbed: bool) -> None:
-    run_dir, out = config.output_dir, layout.merge_dir(config.output_dir)
+    run_dir, out = config.run_dir, layout.merge_dir(config.run_dir)
     frozen, shards = read_json(layout.frozen_run(run_dir)), read_json(layout.shards(run_dir))
     study_episodes, choose_r_episodes = study_and_choose_r_episodes(config)
     representations = load_representations(config)
@@ -385,7 +407,8 @@ def record_choose_r_run(run_dir: Path, episodes, conditions) -> None:
     record = {"episode_ids": ids(episodes), "conditions": [c.key for c in conditions]}
     path = layout.choose_r_episodes(run_dir)
     if path.exists() and read_json(path) != record:
-        raise RuntimeError(f"{path} records a different choose-r run; use a new output_dir.")
+        raise RuntimeError(f"{path} records a different choose-r run: set run_id: null "
+                           "and rerun choose-r to start a new run.")
     path.parent.mkdir(parents=True, exist_ok=True)
     write_json(path, record)
 
@@ -422,8 +445,13 @@ def main() -> None:
     config = load_config(args.config)
     run_preflight(config, args.stage, args.shard, labels_stubbed=args.stub_labeling)
     if args.check_only:
-        print(f"Preflight for {args.stage} passed.")
+        print(f"Preflight for {args.stage} passed."
+              + (f" A new run will be created in {config.output_root}." if config.run_id is None else ""))
         return
+    if args.stage == "choose-r" and config.run_id is None:
+        config = start_run(config)
+        print(f"New run {config.run_dir}.\nSet run_id: {config.run_id} in {args.config} before any other stage "
+              "or rerun (a rerun with run_id: null starts another new run).", flush=True)
     if args.stage == "choose-r":
         choose_r(config, args.stub_labeling)
     elif args.stage == "prepare":

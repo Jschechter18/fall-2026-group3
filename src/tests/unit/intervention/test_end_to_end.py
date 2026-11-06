@@ -2,6 +2,7 @@
 
 import importlib.util
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -55,8 +56,8 @@ def experiment(tmp_path, monkeypatch):
 
 def test_every_stage_runs_and_resumes(experiment, tmp_path):
     script, raw = experiment
-    config = parse_config(raw)
-    run_dir = Path(config.output_dir)
+    config = script.start_run(parse_config(raw))
+    run_dir = config.run_dir
 
     script.choose_r(config, labels_stubbed=True)
     assert layout.choose_r_report_md(run_dir).read_text().startswith("# Choose r: edit-size report")
@@ -88,18 +89,18 @@ def test_every_stage_runs_and_resumes(experiment, tmp_path):
 
 def test_a_worker_with_a_different_experiment_refuses_to_run(experiment):
     script, raw = experiment
-    config = parse_config(raw)
+    config = script.start_run(parse_config(raw))
     script.choose_r(config, labels_stubbed=True)
     script.prepare(config)
-    changed = parse_config({**raw, "experiment": {**raw["experiment"], "edit_size": 0.25}})
+    changed = parse_config({**raw, "run_id": config.run_id, "experiment": {**raw["experiment"], "edit_size": 0.25}})
     with pytest.raises(RuntimeError, match="frozen with different"):
         script.run(changed, 0)
 
 
 def test_a_worker_excludes_an_episode_whose_baseline_differs_and_merge_refuses_too_many(experiment):
     script, raw = experiment
-    config = parse_config(raw)
-    run_dir = Path(config.output_dir)
+    config = script.start_run(parse_config(raw))
+    run_dir = config.run_dir
     script.choose_r(config, labels_stubbed=True)
     script.prepare(config)
     episode_id = json.loads(layout.shards(run_dir).read_text())["shards"][0][0]
@@ -125,8 +126,19 @@ def test_prepare_stops_when_the_baseline_does_not_reproduce_the_stored_answers(e
     path.write_text("".join(json.dumps(r) + "\n" for r in rows))
     settings = tmp_path / "in/labels/run_settings.json"
     settings.write_text(json.dumps({**json.loads(settings.read_text()), "episodes_sha256": sha256_file(path)}))
-    config = parse_config(raw)
+    config = script.start_run(parse_config(raw))
     script.choose_r(config, labels_stubbed=True)
     with pytest.raises(RuntimeError, match="does not reproduce the stored answers"):
         script.prepare(config)
-    assert not layout.shards(Path(config.output_dir)).exists()
+    assert not layout.shards(config.run_dir).exists()
+
+
+def test_each_new_run_gets_its_own_folder_named_by_time_and_commit(experiment, tmp_path):
+    script, raw = experiment
+    first = script.start_run(parse_config(raw))
+    second = script.start_run(parse_config(raw))
+    assert first.run_dir != second.run_dir and first.run_dir.is_dir() and second.run_dir.is_dir()
+    assert first.run_dir.parent == Path("out")
+    assert re.fullmatch(r"\d{8}T\d{12}Z-([0-9a-f]{12}|nogit)", first.run_id)
+    record = json.loads(layout.run_record(first.run_dir).read_text())
+    assert record["run_id"] == first.run_id and "git_commit" in record
