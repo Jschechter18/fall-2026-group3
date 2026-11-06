@@ -43,6 +43,8 @@ demo/figs/
 # Coding agent helpers
 /.agents
 /.agents/skills
+/.claude
+/.claude/skills
 
 # Python packaging artifacts
 *.egg-info/
