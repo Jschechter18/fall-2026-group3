@@ -1,0 +1,1337 @@
+{
+  "primary": {
+    "claim": "some pre-specified SAE's features are causal",
+    "claim_holds": true,
+    "family": "3 SAEs \u00d7 3 arms, strata pooled, one-sided, Holm",
+    "table_P": [
+      {
+        "Representation": "L1 SAE",
+        "Arm": "decrease",
+        "N": 983,
+        "Targeted flip %": 6.714140386571719,
+        "Random flip % (mean of draws)": 4.916920990166158,
+        "\u0394 (pp) [95% CI]": "+1.8 [+0.4, +3.3]",
+        "p (one-sided)": 0.010298970102989701,
+        "p (Holm)": 0.05149485051494851,
+        "Survives Holm (\u03b1 = 0.05)": false
+      },
+      {
+        "Representation": "L1 SAE",
+        "Arm": "increase",
+        "N": 983,
+        "Targeted flip %": 5.595116988809766,
+        "Random flip % (mean of draws)": 5.561207188877585,
+        "\u0394 (pp) [95% CI]": "+0.0 [-1.3, +1.3]",
+        "p (one-sided)": 0.49925007499250074,
+        "p (Holm)": 0.9985001499850015,
+        "Survives Holm (\u03b1 = 0.05)": false
+      },
+      {
+        "Representation": "L1 SAE",
+        "Arm": "both",
+        "N": 983,
+        "Targeted flip %": 6.408952187182096,
+        "Random flip % (mean of draws)": 6.544591386910817,
+        "\u0394 (pp) [95% CI]": "-0.1 [-1.7, +1.4]",
+        "p (one-sided)": 0.5822417758224178,
+        "p (Holm)": 0.9985001499850015,
+        "Survives Holm (\u03b1 = 0.05)": false
+      },
+      {
+        "Representation": "Pretrained SAE",
+        "Arm": "decrease",
+        "N": 983,
+        "Targeted flip %": 5.0864699898270604,
+        "Random flip % (mean of draws)": 3.424889793150221,
+        "\u0394 (pp) [95% CI]": "+1.7 [+0.4, +2.9]",
+        "p (one-sided)": 0.0052994700529947,
+        "p (Holm)": 0.0370962903709629,
+        "Survives Holm (\u03b1 = 0.05)": true
+      },
+      {
+        "Representation": "Pretrained SAE",
+        "Arm": "increase",
+        "N": 983,
+        "Targeted flip %": 3.8657171922685656,
+        "Random flip % (mean of draws)": 2.7127839945744316,
+        "\u0394 (pp) [95% CI]": "+1.2 [+0.2, +2.1]",
+        "p (one-sided)": 0.010498950104989501,
+        "p (Holm)": 0.05149485051494851,
+        "Survives Holm (\u03b1 = 0.05)": false
+      },
+      {
+        "Representation": "Pretrained SAE",
+        "Arm": "both",
+        "N": 983,
+        "Targeted flip %": 6.205493387589013,
+        "Random flip % (mean of draws)": 3.7300779925398437,
+        "\u0394 (pp) [95% CI]": "+2.5 [+1.1, +3.9]",
+        "p (one-sided)": 0.00039996000399960006,
+        "p (Holm)": 0.0035996400359964006,
+        "Survives Holm (\u03b1 = 0.05)": true
+      },
+      {
+        "Representation": "Fine-tuned decoder",
+        "Arm": "decrease",
+        "N": 983,
+        "Targeted flip %": 4.883011190233978,
+        "Random flip % (mean of draws)": 3.2892505934214986,
+        "\u0394 (pp) [95% CI]": "+1.6 [+0.4, +2.9]",
+        "p (one-sided)": 0.0064993500649935,
+        "p (Holm)": 0.038996100389961,
+        "Survives Holm (\u03b1 = 0.05)": true
+      },
+      {
+        "Representation": "Fine-tuned decoder",
+        "Arm": "increase",
+        "N": 983,
+        "Targeted flip %": 4.170905391658189,
+        "Random flip % (mean of draws)": 3.0518819938962363,
+        "\u0394 (pp) [95% CI]": "+1.1 [+0.0, +2.3]",
+        "p (one-sided)": 0.0306969303069693,
+        "p (Holm)": 0.09209079092090791,
+        "Survives Holm (\u03b1 = 0.05)": false
+      },
+      {
+        "Representation": "Fine-tuned decoder",
+        "Arm": "both",
+        "N": 983,
+        "Targeted flip %": 5.595116988809766,
+        "Random flip % (mean of draws)": 3.560528992878942,
+        "\u0394 (pp) [95% CI]": "+2.0 [+0.7, +3.4]",
+        "p (one-sided)": 0.0008999100089991,
+        "p (Holm)": 0.0071992800719928,
+        "Survives Holm (\u03b1 = 0.05)": true
+      }
+    ]
+  },
+  "secondary": {
+    "table_1": [
+      {
+        "Representation": "Raw activations",
+        "Stratum (baseline \u2192 target)": "adoption \u2192 retention",
+        "Arm": "decrease adoption features",
+        "N": 496,
+        "Targeted flip %": 10.28225806451613,
+        "Random flip % (mean of draws)": 4.099462365591398,
+        "\u0394 (pp) [95% CI]": "+6.2 [+3.9, +8.6]",
+        "p": 9.999000099990002e-05,
+        "p (Holm)": 0.0005999400059994001,
+        "\u0394 log p(baseline first token)": -0.3121733144753808
+      },
+      {
+        "Representation": "Raw activations",
+        "Stratum (baseline \u2192 target)": "adoption \u2192 retention",
+        "Arm": "increase retention features",
+        "N": 496,
+        "Targeted flip %": 8.266129032258064,
+        "Random flip % (mean of draws)": 6.854838709677419,
+        "\u0394 (pp) [95% CI]": "+1.4 [-1.0, +3.9]",
+        "p": 0.28947105289471053,
+        "p (Holm)": 0.28947105289471053,
+        "\u0394 log p(baseline first token)": 0.3882149151356185
+      },
+      {
+        "Representation": "Raw activations",
+        "Stratum (baseline \u2192 target)": "adoption \u2192 retention",
+        "Arm": "both",
+        "N": 496,
+        "Targeted flip %": 11.088709677419354,
+        "Random flip % (mean of draws)": 5.846774193548387,
+        "\u0394 (pp) [95% CI]": "+5.2 [+2.6, +8.0]",
+        "p": 0.00029997000299970003,
+        "p (Holm)": 0.0014998500149985001,
+        "\u0394 log p(baseline first token)": -0.183773460069318
+      },
+      {
+        "Representation": "Raw activations",
+        "Stratum (baseline \u2192 target)": "retention \u2192 adoption",
+        "Arm": "decrease retention features",
+        "N": 487,
+        "Targeted flip %": 5.95482546201232,
+        "Random flip % (mean of draws)": 4.1067761806981515,
+        "\u0394 (pp) [95% CI]": "+1.8 [-0.3, +4.1]",
+        "p": 0.10578942105789421,
+        "p (Holm)": 0.21157884211578842,
+        "\u0394 log p(baseline first token)": -6.623645513994507
+      },
+      {
+        "Representation": "Raw activations",
+        "Stratum (baseline \u2192 target)": "retention \u2192 adoption",
+        "Arm": "increase adoption features",
+        "N": 487,
+        "Targeted flip %": 5.338809034907597,
+        "Random flip % (mean of draws)": 3.353867214236824,
+        "\u0394 (pp) [95% CI]": "+2.0 [+0.1, +4.0]",
+        "p": 0.053394660533946606,
+        "p (Holm)": 0.16018398160183983,
+        "\u0394 log p(baseline first token)": -0.15786685236565623
+      },
+      {
+        "Representation": "Raw activations",
+        "Stratum (baseline \u2192 target)": "retention \u2192 adoption",
+        "Arm": "both",
+        "N": 487,
+        "Targeted flip %": 5.95482546201232,
+        "Random flip % (mean of draws)": 3.0800821355236137,
+        "\u0394 (pp) [95% CI]": "+2.9 [+0.9, +5.0]",
+        "p": 0.006199380061993801,
+        "p (Holm)": 0.024797520247975203,
+        "\u0394 log p(baseline first token)": -5.76523982860814
+      },
+      {
+        "Representation": "L1 SAE",
+        "Stratum (baseline \u2192 target)": "adoption \u2192 retention",
+        "Arm": "decrease adoption features",
+        "N": 496,
+        "Targeted flip %": 9.879032258064516,
+        "Random flip % (mean of draws)": 5.846774193548386,
+        "\u0394 (pp) [95% CI]": "+4.0 [+1.7, +6.5]",
+        "p": 0.000999900009999,
+        "p (Holm)": 0.0059994000599940004,
+        "\u0394 log p(baseline first token)": 0.12857142970759514
+      },
+      {
+        "Representation": "L1 SAE",
+        "Stratum (baseline \u2192 target)": "adoption \u2192 retention",
+        "Arm": "increase retention features",
+        "N": 496,
+        "Targeted flip %": 4.435483870967742,
+        "Random flip % (mean of draws)": 5.846774193548387,
+        "\u0394 (pp) [95% CI]": "-1.4 [-3.2, +0.4]",
+        "p": 0.1523847615238476,
+        "p (Holm)": 0.46995300469953005,
+        "\u0394 log p(baseline first token)": 0.3650233927430779
+      },
+      {
+        "Representation": "L1 SAE",
+        "Stratum (baseline \u2192 target)": "adoption \u2192 retention",
+        "Arm": "both",
+        "N": 496,
+        "Targeted flip %": 8.46774193548387,
+        "Random flip % (mean of draws)": 6.922043010752688,
+        "\u0394 (pp) [95% CI]": "+1.5 [-0.9, +4.0]",
+        "p": 0.24117588241175883,
+        "p (Holm)": 0.48235176482351766,
+        "\u0394 log p(baseline first token)": 0.8001928092784554
+      },
+      {
+        "Representation": "L1 SAE",
+        "Stratum (baseline \u2192 target)": "retention \u2192 adoption",
+        "Arm": "decrease retention features",
+        "N": 487,
+        "Targeted flip %": 3.4907597535934287,
+        "Random flip % (mean of draws)": 3.969883641341547,
+        "\u0394 (pp) [95% CI]": "-0.5 [-2.3, +1.3]",
+        "p": 0.645035496450355,
+        "p (Holm)": 0.645035496450355,
+        "\u0394 log p(baseline first token)": 0.5876086976924554
+      },
+      {
+        "Representation": "L1 SAE",
+        "Stratum (baseline \u2192 target)": "retention \u2192 adoption",
+        "Arm": "increase adoption features",
+        "N": 487,
+        "Targeted flip %": 6.7761806981519515,
+        "Random flip % (mean of draws)": 5.270362765229295,
+        "\u0394 (pp) [95% CI]": "+1.5 [-0.3, +3.4]",
+        "p": 0.11748825117488251,
+        "p (Holm)": 0.46995300469953005,
+        "\u0394 log p(baseline first token)": -0.003434143131296236
+      },
+      {
+        "Representation": "L1 SAE",
+        "Stratum (baseline \u2192 target)": "retention \u2192 adoption",
+        "Arm": "both",
+        "N": 487,
+        "Targeted flip %": 4.312114989733059,
+        "Random flip % (mean of draws)": 6.160164271047227,
+        "\u0394 (pp) [95% CI]": "-1.8 [-3.7, +0.1]",
+        "p": 0.06369363063693631,
+        "p (Holm)": 0.3184681531846816,
+        "\u0394 log p(baseline first token)": 0.9227499498756297
+      },
+      {
+        "Representation": "Pretrained SAE",
+        "Stratum (baseline \u2192 target)": "adoption \u2192 retention",
+        "Arm": "decrease adoption features",
+        "N": 496,
+        "Targeted flip %": 5.846774193548387,
+        "Random flip % (mean of draws)": 4.099462365591398,
+        "\u0394 (pp) [95% CI]": "+1.7 [-0.1, +3.7]",
+        "p": 0.09659034096590341,
+        "p (Holm)": 0.26307369263073693,
+        "\u0394 log p(baseline first token)": -7.229423652686456
+      },
+      {
+        "Representation": "Pretrained SAE",
+        "Stratum (baseline \u2192 target)": "adoption \u2192 retention",
+        "Arm": "increase retention features",
+        "N": 496,
+        "Targeted flip %": 5.64516129032258,
+        "Random flip % (mean of draws)": 3.6962365591397845,
+        "\u0394 (pp) [95% CI]": "+1.9 [+0.4, +3.6]",
+        "p": 0.026797320267973202,
+        "p (Holm)": 0.133986601339866,
+        "\u0394 log p(baseline first token)": 0.24386865877296013
+      },
+      {
+        "Representation": "Pretrained SAE",
+        "Stratum (baseline \u2192 target)": "adoption \u2192 retention",
+        "Arm": "both",
+        "N": 496,
+        "Targeted flip %": 8.266129032258064,
+        "Random flip % (mean of draws)": 4.838709677419355,
+        "\u0394 (pp) [95% CI]": "+3.4 [+1.3, +5.6]",
+        "p": 0.0038996100389961006,
+        "p (Holm)": 0.023397660233976603,
+        "\u0394 log p(baseline first token)": -4.683651092575395
+      },
+      {
+        "Representation": "Pretrained SAE",
+        "Stratum (baseline \u2192 target)": "retention \u2192 adoption",
+        "Arm": "decrease retention features",
+        "N": 487,
+        "Targeted flip %": 4.312114989733059,
+        "Random flip % (mean of draws)": 2.737850787132101,
+        "\u0394 (pp) [95% CI]": "+1.6 [+0.1, +3.1]",
+        "p": 0.0425957404259574,
+        "p (Holm)": 0.1703829617038296,
+        "\u0394 log p(baseline first token)": 0.749257681028048
+      },
+      {
+        "Representation": "Pretrained SAE",
+        "Stratum (baseline \u2192 target)": "retention \u2192 adoption",
+        "Arm": "increase adoption features",
+        "N": 487,
+        "Targeted flip %": 2.0533880903490758,
+        "Random flip % (mean of draws)": 1.7111567419575633,
+        "\u0394 (pp) [95% CI]": "+0.3 [-0.5, +1.2]",
+        "p": 0.5367463253674633,
+        "p (Holm)": 0.5367463253674633,
+        "\u0394 log p(baseline first token)": 0.025947277435347627
+      },
+      {
+        "Representation": "Pretrained SAE",
+        "Stratum (baseline \u2192 target)": "retention \u2192 adoption",
+        "Arm": "both",
+        "N": 487,
+        "Targeted flip %": 4.1067761806981515,
+        "Random flip % (mean of draws)": 2.6009582477754964,
+        "\u0394 (pp) [95% CI]": "+1.5 [-0.1, +3.2]",
+        "p": 0.08769123087691232,
+        "p (Holm)": 0.26307369263073693,
+        "\u0394 log p(baseline first token)": 0.4186106625340842
+      },
+      {
+        "Representation": "Fine-tuned decoder",
+        "Stratum (baseline \u2192 target)": "adoption \u2192 retention",
+        "Arm": "decrease adoption features",
+        "N": 496,
+        "Targeted flip %": 5.241935483870968,
+        "Random flip % (mean of draws)": 4.032258064516129,
+        "\u0394 (pp) [95% CI]": "+1.2 [-0.5, +3.0]",
+        "p": 0.22867713228677133,
+        "p (Holm)": 0.45735426457354267,
+        "\u0394 log p(baseline first token)": -4.832340377488325
+      },
+      {
+        "Representation": "Fine-tuned decoder",
+        "Stratum (baseline \u2192 target)": "adoption \u2192 retention",
+        "Arm": "increase retention features",
+        "N": 496,
+        "Targeted flip %": 5.040322580645161,
+        "Random flip % (mean of draws)": 4.099462365591398,
+        "\u0394 (pp) [95% CI]": "+0.9 [-0.8, +2.8]",
+        "p": 0.3334666533346665,
+        "p (Holm)": 0.45735426457354267,
+        "\u0394 log p(baseline first token)": 0.1237702399282782
+      },
+      {
+        "Representation": "Fine-tuned decoder",
+        "Stratum (baseline \u2192 target)": "adoption \u2192 retention",
+        "Arm": "both",
+        "N": 496,
+        "Targeted flip %": 7.056451612903227,
+        "Random flip % (mean of draws)": 4.838709677419355,
+        "\u0394 (pp) [95% CI]": "+2.2 [+0.2, +4.3]",
+        "p": 0.042995700429957005,
+        "p (Holm)": 0.17198280171982802,
+        "\u0394 log p(baseline first token)": -1.0488786114836661
+      },
+      {
+        "Representation": "Fine-tuned decoder",
+        "Stratum (baseline \u2192 target)": "retention \u2192 adoption",
+        "Arm": "decrease retention features",
+        "N": 487,
+        "Targeted flip %": 4.517453798767967,
+        "Random flip % (mean of draws)": 2.5325119780971934,
+        "\u0394 (pp) [95% CI]": "+2.0 [+0.4, +3.7]",
+        "p": 0.0202979702029797,
+        "p (Holm)": 0.1217878212178782,
+        "\u0394 log p(baseline first token)": -0.26862565944353817
+      },
+      {
+        "Representation": "Fine-tuned decoder",
+        "Stratum (baseline \u2192 target)": "retention \u2192 adoption",
+        "Arm": "increase adoption features",
+        "N": 487,
+        "Targeted flip %": 3.285420944558522,
+        "Random flip % (mean of draws)": 1.9849418206707734,
+        "\u0394 (pp) [95% CI]": "+1.3 [-0.1, +2.7]",
+        "p": 0.0933906609339066,
+        "p (Holm)": 0.28017198280171984,
+        "\u0394 log p(baseline first token)": 0.020464190367332952
+      },
+      {
+        "Representation": "Fine-tuned decoder",
+        "Stratum (baseline \u2192 target)": "retention \u2192 adoption",
+        "Arm": "both",
+        "N": 487,
+        "Targeted flip %": 4.1067761806981515,
+        "Random flip % (mean of draws)": 2.2587268993839835,
+        "\u0394 (pp) [95% CI]": "+1.8 [+0.3, +3.6]",
+        "p": 0.028397160283971604,
+        "p (Holm)": 0.14198580141985803,
+        "\u0394 log p(baseline first token)": 0.2618846405051823
+      },
+      {
+        "Representation": "Fully fine-tuned \u2020",
+        "Stratum (baseline \u2192 target)": "adoption \u2192 retention",
+        "Arm": "decrease adoption features",
+        "N": 496,
+        "Targeted flip %": 5.241935483870968,
+        "Random flip % (mean of draws)": 4.50268817204301,
+        "\u0394 (pp) [95% CI]": "+0.7 [-1.1, +2.7]",
+        "p": 0.48535146485351466,
+        "p (Holm)": 1.0,
+        "\u0394 log p(baseline first token)": -2.2801401528940217
+      },
+      {
+        "Representation": "Fully fine-tuned \u2020",
+        "Stratum (baseline \u2192 target)": "adoption \u2192 retention",
+        "Arm": "increase retention features",
+        "N": 496,
+        "Targeted flip %": 7.459677419354839,
+        "Random flip % (mean of draws)": 4.032258064516129,
+        "\u0394 (pp) [95% CI]": "+3.4 [+1.5, +5.4]",
+        "p": 0.0008999100089991,
+        "p (Holm)": 0.0053994600539946005,
+        "\u0394 log p(baseline first token)": -0.06021585823829076
+      },
+      {
+        "Representation": "Fully fine-tuned \u2020",
+        "Stratum (baseline \u2192 target)": "adoption \u2192 retention",
+        "Arm": "both",
+        "N": 496,
+        "Targeted flip %": 8.266129032258064,
+        "Random flip % (mean of draws)": 5.376344086021505,
+        "\u0394 (pp) [95% CI]": "+2.9 [+0.9, +5.0]",
+        "p": 0.0066993300669933005,
+        "p (Holm)": 0.0334966503349665,
+        "\u0394 log p(baseline first token)": -6.980176456612131
+      },
+      {
+        "Representation": "Fully fine-tuned \u2020",
+        "Stratum (baseline \u2192 target)": "retention \u2192 adoption",
+        "Arm": "decrease retention features",
+        "N": 487,
+        "Targeted flip %": 2.6694045174537986,
+        "Random flip % (mean of draws)": 2.7378507871321016,
+        "\u0394 (pp) [95% CI]": "-0.1 [-1.5, +1.4]",
+        "p": 1.0,
+        "p (Holm)": 1.0,
+        "\u0394 log p(baseline first token)": 0.980993404586609
+      },
+      {
+        "Representation": "Fully fine-tuned \u2020",
+        "Stratum (baseline \u2192 target)": "retention \u2192 adoption",
+        "Arm": "increase adoption features",
+        "N": 487,
+        "Targeted flip %": 2.4640657084188913,
+        "Random flip % (mean of draws)": 2.0533880903490758,
+        "\u0394 (pp) [95% CI]": "+0.4 [-0.8, +1.8]",
+        "p": 0.6163383661633837,
+        "p (Holm)": 1.0,
+        "\u0394 log p(baseline first token)": 0.06771495491656178
+      },
+      {
+        "Representation": "Fully fine-tuned \u2020",
+        "Stratum (baseline \u2192 target)": "retention \u2192 adoption",
+        "Arm": "both",
+        "N": 487,
+        "Targeted flip %": 4.1067761806981515,
+        "Random flip % (mean of draws)": 3.0116358658453115,
+        "\u0394 (pp) [95% CI]": "+1.1 [-0.4, +2.7]",
+        "p": 0.205979402059794,
+        "p (Holm)": 0.823917608239176,
+        "\u0394 log p(baseline first token)": 0.20928238481524414
+      }
+    ],
+    "table_2_prespecified": [
+      {
+        "Family": "pre-specified",
+        "Contrast (A vs. B)": "L1 SAE vs. Pretrained SAE",
+        "Arm": "decrease",
+        "N": 983,
+        "\u0394_A \u2212 \u0394_B (pp) [95% CI]": "+0.1 [-1.8, +2.1]",
+        "p": 0.9231076892310769,
+        "p (Holm)": 1.0
+      },
+      {
+        "Family": "pre-specified",
+        "Contrast (A vs. B)": "L1 SAE vs. Pretrained SAE",
+        "Arm": "increase",
+        "N": 983,
+        "\u0394_A \u2212 \u0394_B (pp) [95% CI]": "-1.1 [-2.6, +0.4]",
+        "p": 0.14658534146585342,
+        "p (Holm)": 1.0
+      },
+      {
+        "Family": "pre-specified",
+        "Contrast (A vs. B)": "L1 SAE vs. Pretrained SAE",
+        "Arm": "both",
+        "N": 983,
+        "\u0394_A \u2212 \u0394_B (pp) [95% CI]": "-2.6 [-4.4, -0.8]",
+        "p": 0.0065993400659934,
+        "p (Holm)": 0.059394060593940604
+      },
+      {
+        "Family": "pre-specified",
+        "Contrast (A vs. B)": "Fine-tuned decoder vs. Pretrained SAE",
+        "Arm": "decrease",
+        "N": 983,
+        "\u0394_A \u2212 \u0394_B (pp) [95% CI]": "-0.1 [-1.1, +1.0]",
+        "p": 0.9457054294570543,
+        "p (Holm)": 1.0
+      },
+      {
+        "Family": "pre-specified",
+        "Contrast (A vs. B)": "Fine-tuned decoder vs. Pretrained SAE",
+        "Arm": "increase",
+        "N": 983,
+        "\u0394_A \u2212 \u0394_B (pp) [95% CI]": "-0.0 [-0.9, +0.9]",
+        "p": 1.0,
+        "p (Holm)": 1.0
+      },
+      {
+        "Family": "pre-specified",
+        "Contrast (A vs. B)": "Fine-tuned decoder vs. Pretrained SAE",
+        "Arm": "both",
+        "N": 983,
+        "\u0394_A \u2212 \u0394_B (pp) [95% CI]": "-0.4 [-1.5, +0.5]",
+        "p": 0.43145685431456854,
+        "p (Holm)": 1.0
+      },
+      {
+        "Family": "pre-specified",
+        "Contrast (A vs. B)": "L1 SAE vs. Fine-tuned decoder",
+        "Arm": "decrease",
+        "N": 983,
+        "\u0394_A \u2212 \u0394_B (pp) [95% CI]": "+0.2 [-1.7, +2.1]",
+        "p": 0.8602139786021398,
+        "p (Holm)": 1.0
+      },
+      {
+        "Family": "pre-specified",
+        "Contrast (A vs. B)": "L1 SAE vs. Fine-tuned decoder",
+        "Arm": "increase",
+        "N": 983,
+        "\u0394_A \u2212 \u0394_B (pp) [95% CI]": "-1.1 [-2.6, +0.5]",
+        "p": 0.1797820217978202,
+        "p (Holm)": 1.0
+      },
+      {
+        "Family": "pre-specified",
+        "Contrast (A vs. B)": "L1 SAE vs. Fine-tuned decoder",
+        "Arm": "both",
+        "N": 983,
+        "\u0394_A \u2212 \u0394_B (pp) [95% CI]": "-2.2 [-4.0, -0.3]",
+        "p": 0.026597340265973404,
+        "p (Holm)": 0.21277872212778723
+      }
+    ],
+    "table_D_directions": [
+      {
+        "Representation": "Raw activations",
+        "Contrast": "both \u2212 decrease",
+        "N": 983,
+        "\u0394 difference (pp) [95% CI]": "+0.0 [-1.9, +1.9]",
+        "p": 1.0,
+        "p (Holm)": 1.0
+      },
+      {
+        "Representation": "Raw activations",
+        "Contrast": "both \u2212 increase",
+        "N": 983,
+        "\u0394 difference (pp) [95% CI]": "+2.4 [+0.5, +4.3]",
+        "p": 0.0188981101889811,
+        "p (Holm)": 0.0566943305669433
+      },
+      {
+        "Representation": "Raw activations",
+        "Contrast": "increase \u2212 decrease",
+        "N": 983,
+        "\u0394 difference (pp) [95% CI]": "-2.3 [-4.4, -0.3]",
+        "p": 0.026297370262973702,
+        "p (Holm)": 0.0566943305669433
+      },
+      {
+        "Representation": "L1 SAE",
+        "Contrast": "both \u2212 decrease",
+        "N": 983,
+        "\u0394 difference (pp) [95% CI]": "-1.9 [-3.8, -0.1]",
+        "p": 0.04659534046595341,
+        "p (Holm)": 0.13978602139786023
+      },
+      {
+        "Representation": "L1 SAE",
+        "Contrast": "both \u2212 increase",
+        "N": 983,
+        "\u0394 difference (pp) [95% CI]": "-0.2 [-2.1, +1.8]",
+        "p": 0.8867113288671132,
+        "p (Holm)": 0.8867113288671132
+      },
+      {
+        "Representation": "L1 SAE",
+        "Contrast": "increase \u2212 decrease",
+        "N": 983,
+        "\u0394 difference (pp) [95% CI]": "-1.8 [-3.8, +0.3]",
+        "p": 0.10528947105289471,
+        "p (Holm)": 0.21057894210578942
+      },
+      {
+        "Representation": "Pretrained SAE",
+        "Contrast": "both \u2212 decrease",
+        "N": 983,
+        "\u0394 difference (pp) [95% CI]": "+0.8 [-0.5, +2.2]",
+        "p": 0.2605739426057394,
+        "p (Holm)": 0.5211478852114788
+      },
+      {
+        "Representation": "Pretrained SAE",
+        "Contrast": "both \u2212 increase",
+        "N": 983,
+        "\u0394 difference (pp) [95% CI]": "+1.3 [-0.1, +2.8]",
+        "p": 0.08339166083391661,
+        "p (Holm)": 0.25017498250174985
+      },
+      {
+        "Representation": "Pretrained SAE",
+        "Contrast": "increase \u2212 decrease",
+        "N": 983,
+        "\u0394 difference (pp) [95% CI]": "-0.5 [-2.1, +1.1]",
+        "p": 0.5686431356864313,
+        "p (Holm)": 0.5686431356864313
+      },
+      {
+        "Representation": "Fine-tuned decoder",
+        "Contrast": "both \u2212 decrease",
+        "N": 983,
+        "\u0394 difference (pp) [95% CI]": "+0.4 [-0.9, +1.8]",
+        "p": 0.5580441955804419,
+        "p (Holm)": 1.0
+      },
+      {
+        "Representation": "Fine-tuned decoder",
+        "Contrast": "both \u2212 increase",
+        "N": 983,
+        "\u0394 difference (pp) [95% CI]": "+0.9 [-0.4, +2.2]",
+        "p": 0.18688131186881313,
+        "p (Holm)": 0.5606439356064394
+      },
+      {
+        "Representation": "Fine-tuned decoder",
+        "Contrast": "increase \u2212 decrease",
+        "N": 983,
+        "\u0394 difference (pp) [95% CI]": "-0.5 [-2.0, +1.0]",
+        "p": 0.5602439756024398,
+        "p (Holm)": 1.0
+      },
+      {
+        "Representation": "Fully fine-tuned",
+        "Contrast": "both \u2212 decrease",
+        "N": 983,
+        "\u0394 difference (pp) [95% CI]": "+1.7 [+0.2, +3.1]",
+        "p": 0.026497350264973504,
+        "p (Holm)": 0.07949205079492051
+      },
+      {
+        "Representation": "Fully fine-tuned",
+        "Contrast": "both \u2212 increase",
+        "N": 983,
+        "\u0394 difference (pp) [95% CI]": "+0.1 [-1.3, +1.5]",
+        "p": 0.9601039896010399,
+        "p (Holm)": 0.9601039896010399
+      },
+      {
+        "Representation": "Fully fine-tuned",
+        "Contrast": "increase \u2212 decrease",
+        "N": 983,
+        "\u0394 difference (pp) [95% CI]": "+1.6 [-0.1, +3.3]",
+        "p": 0.07189281071892811,
+        "p (Holm)": 0.14378562143785623
+      }
+    ],
+    "reference_rows": [
+      {
+        "Condition": "Baseline (no SAE, no edit)",
+        "Stratum": "adoption \u2192 retention",
+        "N": 496,
+        "Flip %": 0.0,
+        "Meaning": "should be ~0%: the replay reproduces the stored labels"
+      },
+      {
+        "Condition": "L1 SAE spliced in, no edit",
+        "Stratum": "adoption \u2192 retention",
+        "N": 496,
+        "Flip %": 2.217741935483871,
+        "Meaning": "flips caused only by the SAE's reconstruction error"
+      },
+      {
+        "Condition": "Pretrained SAE spliced in, no edit",
+        "Stratum": "adoption \u2192 retention",
+        "N": 496,
+        "Flip %": 1.6129032258064515,
+        "Meaning": "flips caused only by the SAE's reconstruction error"
+      },
+      {
+        "Condition": "Fine-tuned decoder spliced in, no edit",
+        "Stratum": "adoption \u2192 retention",
+        "N": 496,
+        "Flip %": 1.6129032258064515,
+        "Meaning": "flips caused only by the SAE's reconstruction error"
+      },
+      {
+        "Condition": "Fully fine-tuned spliced in, no edit",
+        "Stratum": "adoption \u2192 retention",
+        "N": 496,
+        "Flip %": 1.8145161290322582,
+        "Meaning": "flips caused only by the SAE's reconstruction error"
+      },
+      {
+        "Condition": "Baseline (no SAE, no edit)",
+        "Stratum": "retention \u2192 adoption",
+        "N": 487,
+        "Flip %": 0.0,
+        "Meaning": "should be ~0%: the replay reproduces the stored labels"
+      },
+      {
+        "Condition": "L1 SAE spliced in, no edit",
+        "Stratum": "retention \u2192 adoption",
+        "N": 487,
+        "Flip %": 2.0533880903490758,
+        "Meaning": "flips caused only by the SAE's reconstruction error"
+      },
+      {
+        "Condition": "Pretrained SAE spliced in, no edit",
+        "Stratum": "retention \u2192 adoption",
+        "N": 487,
+        "Flip %": 2.2587268993839835,
+        "Meaning": "flips caused only by the SAE's reconstruction error"
+      },
+      {
+        "Condition": "Fine-tuned decoder spliced in, no edit",
+        "Stratum": "retention \u2192 adoption",
+        "N": 487,
+        "Flip %": 1.642710472279261,
+        "Meaning": "flips caused only by the SAE's reconstruction error"
+      },
+      {
+        "Condition": "Fully fine-tuned spliced in, no edit",
+        "Stratum": "retention \u2192 adoption",
+        "N": 487,
+        "Flip %": 1.8480492813141685,
+        "Meaning": "flips caused only by the SAE's reconstruction error"
+      }
+    ],
+    "table_3_diagnostics": [
+      {
+        "Representation": "Raw activations",
+        "Feature set": "adoption (targeted)",
+        "Applied \u2016\u0394\u2016/\u2016x\u2016 mean [min, max]": "0.2000 [0.1996, 0.2004]",
+        "% with an edited feature firing": NaN,
+        "Recon error (rel. to \u2016x\u2016)": NaN,
+        "cos(u_adoption, u_retention)": 0.0
+      },
+      {
+        "Representation": "Raw activations",
+        "Feature set": "retention (targeted)",
+        "Applied \u2016\u0394\u2016/\u2016x\u2016 mean [min, max]": "0.2000 [0.1996, 0.2004]",
+        "% with an edited feature firing": NaN,
+        "Recon error (rel. to \u2016x\u2016)": NaN,
+        "cos(u_adoption, u_retention)": 0.0
+      },
+      {
+        "Representation": "Raw activations",
+        "Feature set": "random draws",
+        "Applied \u2016\u0394\u2016/\u2016x\u2016 mean [min, max]": "0.2000 [0.1996, 0.2004]",
+        "% with an edited feature firing": NaN,
+        "Recon error (rel. to \u2016x\u2016)": NaN,
+        "cos(u_adoption, u_retention)": 0.0
+      },
+      {
+        "Representation": "L1 SAE",
+        "Feature set": "adoption (targeted)",
+        "Applied \u2016\u0394\u2016/\u2016x\u2016 mean [min, max]": "0.2000 [0.1982, 0.2018]",
+        "% with an edited feature firing": 100.0,
+        "Recon error (rel. to \u2016x\u2016)": 0.04856885725202177,
+        "cos(u_adoption, u_retention)": 0.7542432546615601
+      },
+      {
+        "Representation": "L1 SAE",
+        "Feature set": "retention (targeted)",
+        "Applied \u2016\u0394\u2016/\u2016x\u2016 mean [min, max]": "0.2001 [0.1989, 0.2011]",
+        "% with an edited feature firing": 63.88606307222787,
+        "Recon error (rel. to \u2016x\u2016)": 0.04856885725202177,
+        "cos(u_adoption, u_retention)": 0.7542432546615601
+      },
+      {
+        "Representation": "L1 SAE",
+        "Feature set": "random draws",
+        "Applied \u2016\u0394\u2016/\u2016x\u2016 mean [min, max]": "0.2000 [0.1985, 0.2016]",
+        "% with an edited feature firing": 58.34181078331638,
+        "Recon error (rel. to \u2016x\u2016)": 0.04856885725202177,
+        "cos(u_adoption, u_retention)": 0.7542432546615601
+      },
+      {
+        "Representation": "Pretrained SAE",
+        "Feature set": "adoption (targeted)",
+        "Applied \u2016\u0394\u2016/\u2016x\u2016 mean [min, max]": "0.2000 [0.1993, 0.2008]",
+        "% with an edited feature firing": 99.89827060020346,
+        "Recon error (rel. to \u2016x\u2016)": 0.12849247127407565,
+        "cos(u_adoption, u_retention)": 0.12840433418750763
+      },
+      {
+        "Representation": "Pretrained SAE",
+        "Feature set": "retention (targeted)",
+        "Applied \u2016\u0394\u2016/\u2016x\u2016 mean [min, max]": "0.2000 [0.1974, 0.2026]",
+        "% with an edited feature firing": 100.0,
+        "Recon error (rel. to \u2016x\u2016)": 0.12849247127407565,
+        "cos(u_adoption, u_retention)": 0.12840433418750763
+      },
+      {
+        "Representation": "Pretrained SAE",
+        "Feature set": "random draws",
+        "Applied \u2016\u0394\u2016/\u2016x\u2016 mean [min, max]": "0.2000 [0.1963, 0.2034]",
+        "% with an edited feature firing": 99.94913530010173,
+        "Recon error (rel. to \u2016x\u2016)": 0.12849247127407565,
+        "cos(u_adoption, u_retention)": 0.12840433418750763
+      },
+      {
+        "Representation": "Fine-tuned decoder",
+        "Feature set": "adoption (targeted)",
+        "Applied \u2016\u0394\u2016/\u2016x\u2016 mean [min, max]": "0.2000 [0.1993, 0.2009]",
+        "% with an edited feature firing": 99.89827060020346,
+        "Recon error (rel. to \u2016x\u2016)": 0.07002921129973834,
+        "cos(u_adoption, u_retention)": 0.1703108847141266
+      },
+      {
+        "Representation": "Fine-tuned decoder",
+        "Feature set": "retention (targeted)",
+        "Applied \u2016\u0394\u2016/\u2016x\u2016 mean [min, max]": "0.2000 [0.1974, 0.2025]",
+        "% with an edited feature firing": 100.0,
+        "Recon error (rel. to \u2016x\u2016)": 0.07002921129973834,
+        "cos(u_adoption, u_retention)": 0.1703108847141266
+      },
+      {
+        "Representation": "Fine-tuned decoder",
+        "Feature set": "random draws",
+        "Applied \u2016\u0394\u2016/\u2016x\u2016 mean [min, max]": "0.2000 [0.1965, 0.2036]",
+        "% with an edited feature firing": 99.94913530010173,
+        "Recon error (rel. to \u2016x\u2016)": 0.07002921129973834,
+        "cos(u_adoption, u_retention)": 0.1703108847141266
+      },
+      {
+        "Representation": "Fully fine-tuned",
+        "Feature set": "adoption (targeted)",
+        "Applied \u2016\u0394\u2016/\u2016x\u2016 mean [min, max]": "0.2000 [0.1974, 0.2025]",
+        "% with an edited feature firing": 99.89827060020346,
+        "Recon error (rel. to \u2016x\u2016)": 0.08879473379463533,
+        "cos(u_adoption, u_retention)": 0.26101231575012207
+      },
+      {
+        "Representation": "Fully fine-tuned",
+        "Feature set": "retention (targeted)",
+        "Applied \u2016\u0394\u2016/\u2016x\u2016 mean [min, max]": "0.2000 [0.1986, 0.2015]",
+        "% with an edited feature firing": 100.0,
+        "Recon error (rel. to \u2016x\u2016)": 0.08879473379463533,
+        "cos(u_adoption, u_retention)": 0.26101231575012207
+      },
+      {
+        "Representation": "Fully fine-tuned",
+        "Feature set": "random draws",
+        "Applied \u2016\u0394\u2016/\u2016x\u2016 mean [min, max]": "0.2000 [0.1966, 0.2036]",
+        "% with an edited feature firing": 99.81349610037302,
+        "Recon error (rel. to \u2016x\u2016)": 0.08879473379463533,
+        "cos(u_adoption, u_retention)": 0.26101231575012207
+      }
+    ],
+    "label_counts": [
+      {
+        "kind": "baseline",
+        "representation": "none",
+        "arm": "\u2014",
+        "source": "\u2014",
+        "adoption": 496,
+        "retention": 487,
+        "agreement": 0,
+        "out": 0
+      },
+      {
+        "kind": "reconstruction",
+        "representation": "L1 SAE",
+        "arm": "\u2014",
+        "source": "\u2014",
+        "adoption": 495,
+        "retention": 487,
+        "agreement": 0,
+        "out": 1
+      },
+      {
+        "kind": "reconstruction",
+        "representation": "Pretrained SAE",
+        "arm": "\u2014",
+        "source": "\u2014",
+        "adoption": 498,
+        "retention": 484,
+        "agreement": 1,
+        "out": 0
+      },
+      {
+        "kind": "reconstruction",
+        "representation": "Fine-tuned decoder",
+        "arm": "\u2014",
+        "source": "\u2014",
+        "adoption": 494,
+        "retention": 485,
+        "agreement": 1,
+        "out": 3
+      },
+      {
+        "kind": "reconstruction",
+        "representation": "Fully fine-tuned",
+        "arm": "\u2014",
+        "source": "\u2014",
+        "adoption": 494,
+        "retention": 487,
+        "agreement": 1,
+        "out": 1
+      },
+      {
+        "kind": "edit",
+        "representation": "L1 SAE",
+        "arm": "decrease",
+        "source": "targeted",
+        "adoption": 457,
+        "retention": 515,
+        "agreement": 0,
+        "out": 11
+      },
+      {
+        "kind": "edit",
+        "representation": "L1 SAE",
+        "arm": "decrease",
+        "source": "random",
+        "adoption": 1414,
+        "retention": 1441,
+        "agreement": 5,
+        "out": 89
+      },
+      {
+        "kind": "edit",
+        "representation": "L1 SAE",
+        "arm": "increase",
+        "source": "targeted",
+        "adoption": 496,
+        "retention": 468,
+        "agreement": 2,
+        "out": 17
+      },
+      {
+        "kind": "edit",
+        "representation": "L1 SAE",
+        "arm": "increase",
+        "source": "random",
+        "adoption": 1465,
+        "retention": 1452,
+        "agreement": 1,
+        "out": 31
+      },
+      {
+        "kind": "edit",
+        "representation": "L1 SAE",
+        "arm": "both",
+        "source": "targeted",
+        "adoption": 475,
+        "retention": 505,
+        "agreement": 1,
+        "out": 2
+      },
+      {
+        "kind": "edit",
+        "representation": "L1 SAE",
+        "arm": "both",
+        "source": "random",
+        "adoption": 1399,
+        "retention": 1341,
+        "agreement": 6,
+        "out": 203
+      },
+      {
+        "kind": "edit",
+        "representation": "Pretrained SAE",
+        "arm": "decrease",
+        "source": "targeted",
+        "adoption": 479,
+        "retention": 477,
+        "agreement": 1,
+        "out": 26
+      },
+      {
+        "kind": "edit",
+        "representation": "Pretrained SAE",
+        "arm": "decrease",
+        "source": "random",
+        "adoption": 1462,
+        "retention": 1467,
+        "agreement": 3,
+        "out": 17
+      },
+      {
+        "kind": "edit",
+        "representation": "Pretrained SAE",
+        "arm": "increase",
+        "source": "targeted",
+        "adoption": 478,
+        "retention": 505,
+        "agreement": 0,
+        "out": 0
+      },
+      {
+        "kind": "edit",
+        "representation": "Pretrained SAE",
+        "arm": "increase",
+        "source": "random",
+        "adoption": 1454,
+        "retention": 1484,
+        "agreement": 2,
+        "out": 9
+      },
+      {
+        "kind": "edit",
+        "representation": "Pretrained SAE",
+        "arm": "both",
+        "source": "targeted",
+        "adoption": 473,
+        "retention": 505,
+        "agreement": 1,
+        "out": 4
+      },
+      {
+        "kind": "edit",
+        "representation": "Pretrained SAE",
+        "arm": "both",
+        "source": "random",
+        "adoption": 1448,
+        "retention": 1478,
+        "agreement": 3,
+        "out": 20
+      },
+      {
+        "kind": "edit",
+        "representation": "Fine-tuned decoder",
+        "arm": "decrease",
+        "source": "targeted",
+        "adoption": 483,
+        "retention": 461,
+        "agreement": 1,
+        "out": 38
+      },
+      {
+        "kind": "edit",
+        "representation": "Fine-tuned decoder",
+        "arm": "decrease",
+        "source": "random",
+        "adoption": 1457,
+        "retention": 1472,
+        "agreement": 3,
+        "out": 17
+      },
+      {
+        "kind": "edit",
+        "representation": "Fine-tuned decoder",
+        "arm": "increase",
+        "source": "targeted",
+        "adoption": 487,
+        "retention": 496,
+        "agreement": 0,
+        "out": 0
+      },
+      {
+        "kind": "edit",
+        "representation": "Fine-tuned decoder",
+        "arm": "increase",
+        "source": "random",
+        "adoption": 1452,
+        "retention": 1488,
+        "agreement": 2,
+        "out": 7
+      },
+      {
+        "kind": "edit",
+        "representation": "Fine-tuned decoder",
+        "arm": "both",
+        "source": "targeted",
+        "adoption": 481,
+        "retention": 495,
+        "agreement": 0,
+        "out": 7
+      },
+      {
+        "kind": "edit",
+        "representation": "Fine-tuned decoder",
+        "arm": "both",
+        "source": "random",
+        "adoption": 1442,
+        "retention": 1482,
+        "agreement": 2,
+        "out": 23
+      },
+      {
+        "kind": "edit",
+        "representation": "Fully fine-tuned",
+        "arm": "decrease",
+        "source": "targeted",
+        "adoption": 481,
+        "retention": 496,
+        "agreement": 1,
+        "out": 5
+      },
+      {
+        "kind": "edit",
+        "representation": "Fully fine-tuned",
+        "arm": "decrease",
+        "source": "random",
+        "adoption": 1446,
+        "retention": 1480,
+        "agreement": 5,
+        "out": 18
+      },
+      {
+        "kind": "edit",
+        "representation": "Fully fine-tuned",
+        "arm": "increase",
+        "source": "targeted",
+        "adoption": 471,
+        "retention": 512,
+        "agreement": 0,
+        "out": 0
+      },
+      {
+        "kind": "edit",
+        "representation": "Fully fine-tuned",
+        "arm": "increase",
+        "source": "random",
+        "adoption": 1450,
+        "retention": 1483,
+        "agreement": 2,
+        "out": 14
+      },
+      {
+        "kind": "edit",
+        "representation": "Fully fine-tuned",
+        "arm": "both",
+        "source": "targeted",
+        "adoption": 472,
+        "retention": 507,
+        "agreement": 2,
+        "out": 2
+      },
+      {
+        "kind": "edit",
+        "representation": "Fully fine-tuned",
+        "arm": "both",
+        "source": "random",
+        "adoption": 1440,
+        "retention": 1486,
+        "agreement": 5,
+        "out": 18
+      },
+      {
+        "kind": "edit",
+        "representation": "Raw activations",
+        "arm": "decrease",
+        "source": "targeted",
+        "adoption": 468,
+        "retention": 416,
+        "agreement": 0,
+        "out": 99
+      },
+      {
+        "kind": "edit",
+        "representation": "Raw activations",
+        "arm": "decrease",
+        "source": "random",
+        "adoption": 1472,
+        "retention": 1431,
+        "agreement": 1,
+        "out": 45
+      },
+      {
+        "kind": "edit",
+        "representation": "Raw activations",
+        "arm": "increase",
+        "source": "targeted",
+        "adoption": 466,
+        "retention": 495,
+        "agreement": 3,
+        "out": 19
+      },
+      {
+        "kind": "edit",
+        "representation": "Raw activations",
+        "arm": "increase",
+        "source": "random",
+        "adoption": 1385,
+        "retention": 1505,
+        "agreement": 3,
+        "out": 56
+      },
+      {
+        "kind": "edit",
+        "representation": "Raw activations",
+        "arm": "both",
+        "source": "targeted",
+        "adoption": 457,
+        "retention": 460,
+        "agreement": 4,
+        "out": 62
+      },
+      {
+        "kind": "edit",
+        "representation": "Raw activations",
+        "arm": "both",
+        "source": "random",
+        "adoption": 1424,
+        "retention": 1481,
+        "agreement": 2,
+        "out": 42
+      }
+    ]
+  },
+  "exploratory": {
+    "table_2_exploratory": [
+      {
+        "Family": "exploratory \u2020",
+        "Contrast (A vs. B)": "Fully fine-tuned vs. Pretrained SAE",
+        "Arm": "decrease",
+        "N": 983,
+        "\u0394_A \u2212 \u0394_B (pp) [95% CI]": "-1.3 [-2.8, +0.1]",
+        "p": 0.09569043095690431,
+        "p (Holm)": 0.2870712928707129
+      },
+      {
+        "Family": "exploratory \u2020",
+        "Contrast (A vs. B)": "Fully fine-tuned vs. Pretrained SAE",
+        "Arm": "increase",
+        "N": 983,
+        "\u0394_A \u2212 \u0394_B (pp) [95% CI]": "+0.8 [-0.6, +2.2]",
+        "p": 0.29727027297270275,
+        "p (Holm)": 0.5945405459454055
+      },
+      {
+        "Family": "exploratory \u2020",
+        "Contrast (A vs. B)": "Fully fine-tuned vs. Pretrained SAE",
+        "Arm": "both",
+        "N": 983,
+        "\u0394_A \u2212 \u0394_B (pp) [95% CI]": "-0.5 [-2.0, +1.1]",
+        "p": 0.581041895810419,
+        "p (Holm)": 0.5945405459454055
+      }
+    ],
+    "note": "Fully fine-tuned \u2020 has its own feature sets; its Table 1 rows are exploratory."
+  },
+  "n_episodes_analysed": 983,
+  "excluded_episodes": {
+    "synthetic:3hop1__synthetic_40ae9916fb7443b6a17f684eecd27797__natural__candidates": "labeling failed: missing_field:solver_attempt_2",
+    "synthetic:3hop2__synthetic_88bb0c64a3d443aa9e8b33ab47dda6c1__natural__candidates": "labeling failed: missing_field:solver_attempt_2",
+    "synthetic:4hop1__synthetic_114af5c38de64744a2e79331f0c252b0__natural__candidates": "labeling failed: missing_field:solver_attempt_2",
+    "synthetic:4hop3__synthetic_0fc67b60d0d44d2ea635f6f272f617e1__natural__candidates": "labeling failed: missing_field:solver_attempt_2",
+    "musique:2hop__153369_86916__natural__candidates": "labeling failed: missing_field:solver_attempt_2",
+    "musique:3hop1__678887_593059_76293__natural__candidates": "labeling failed: missing_field:solver_attempt_2",
+    "synthetic:3hop2__synthetic_d2f1970b955e4f7badb3e1f5a32ec905__natural__candidates": "labeling failed: missing_field:solver_attempt_2",
+    "musique:2hop__173393_406192__natural__candidates": "labeling failed: missing_field:solver_attempt_2",
+    "synthetic:4hop3__synthetic_1372b97fc97a4a8d922e67c292dd29e6__natural__candidates": "labeling failed: missing_field:solver_attempt_2",
+    "synthetic:3hop1__synthetic_ef938d31234944f2b36819a6922b7924__natural__candidates": "labeling failed: missing_field:solver_attempt_2",
+    "synthetic:2hop__synthetic_4e6d7b0e5aa64cfe97ad2959cc0758a2__natural__candidates": "labeling failed: missing_field:solver_attempt_2",
+    "musique:2hop__332587_134984__natural__candidates": "labeling failed: missing_field:solver_attempt_2",
+    "synthetic:3hop1__synthetic_8871767797d4455ea2525947eadc32f4__natural__candidates": "labeling failed: missing_field:solver_attempt_2",
+    "synthetic:3hop1__synthetic_fd1f87ab75e1492790aa9141f54590da__natural__candidates": "labeling failed: missing_field:solver_attempt_2",
+    "synthetic:4hop2__synthetic_d7d14d5526ff4dc38ec91312b907284d__natural__candidates": "labeling failed: missing_field:solver_attempt_2",
+    "synthetic:3hop2__synthetic_af82cdb34e3540339cd8a36b0f25b0f8__natural__candidates": "labeling failed: missing_field:solver_attempt_2",
+    "synthetic:4hop1__synthetic_4b7fee1977074452812a1604f95ce683__natural__candidates": "labeling failed: missing_field:solver_attempt_2"
+  },
+  "baseline_check": {
+    "n_episodes": 1000,
+    "mismatch_counts": {
+      "exact_match": 1000
+    },
+    "label_match_rate": 1.0,
+    "n_prompts_not_compared": 0,
+    "criterion": {
+      "min_label_match": 0.98,
+      "max_prompt_differences": 0,
+      "label_match": "an identical A2 (reuses the stored label); anything else is a mismatch"
+    },
+    "passed": true,
+    "failures": []
+  },
+  "edit_size": 0.2,
+  "analysis_plan": {
+    "primary_representations": [
+      "L1 SAE",
+      "Pretrained SAE",
+      "Fine-tuned decoder"
+    ],
+    "between_sae_contrasts": [
+      [
+        "L1 SAE",
+        "Pretrained SAE"
+      ],
+      [
+        "Fine-tuned decoder",
+        "Pretrained SAE"
+      ],
+      [
+        "L1 SAE",
+        "Fine-tuned decoder"
+      ]
+    ],
+    "exploratory_contrasts": [
+      [
+        "Fully fine-tuned",
+        "Pretrained SAE"
+      ]
+    ],
+    "direction_contrasts": [
+      [
+        "both",
+        "decrease"
+      ],
+      [
+        "both",
+        "increase"
+      ],
+      [
+        "increase",
+        "decrease"
+      ]
+    ],
+    "primary_alternative": "greater",
+    "secondary_alternative": "two-sided",
+    "n_bootstrap": 10000,
+    "n_permutations": 10000
+  },
+  "labels_stubbed": false
+}

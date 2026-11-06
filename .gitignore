@@ -96,3 +96,6 @@ artifacts/*
 # Decoder adaptation weights; keep lightweight run metrics versionable.
 results/sae/decoder_finetuning/**/params.safetensors
 params.safetensors
+
+
+*.log
