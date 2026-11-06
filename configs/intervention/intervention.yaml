@@ -50,8 +50,8 @@ experiment:
   edit_size: 0.2 # r, |Δ| = r·|x|: set from the choose-r report before prepare
   # 0.30 added after the first choose-r run (20261106T000808809026Z-02871d677287, sizes 0.02-0.20):
   # the suggested rule is unchanged, and if no row passes at 0.30 the choice stays 0.20.
-  # candidate_edit_sizes: [0.02, 0.05, 0.10, 0.20, 0.30]
-  candidate_edit_sizes: [0.3, 0.5]
+  candidate_edit_sizes: [0.02, 0.05, 0.10, 0.20, 0.30]
+  # candidate_edit_sizes: [0.3, 0.5]
   number_of_targeted_features: 10
   number_of_random_draws: 3 # per question, distinct draws from the pool below
   random_draw_pool_size: 100 # the first 100 matched random draws in feature_sets.json
@@ -90,4 +90,4 @@ machine:
 # run_id: null -> choose-r creates a new run and prints its name; then set run_id to it for every later stage.
 output_root: results/intervention_layer25
 # Earlier runs: 20261106T000808809026Z-02871d677287 (choose-r, sizes 0.02-0.20; see its run.json).
-run_id: null
+run_id: 20261106T000808809026Z-02871d677287

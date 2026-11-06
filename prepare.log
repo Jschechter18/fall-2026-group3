@@ -1,0 +1,9 @@
+Traceback (most recent call last):
+  File "/home/ubuntu/capstone/fall-2026-group3/scripts/intervention/run_intervention.py", line 466, in <module>
+    main()
+  File "/home/ubuntu/capstone/fall-2026-group3/scripts/intervention/run_intervention.py", line 446, in main
+    run_preflight(config, args.stage, args.shard, labels_stubbed=args.stub_labeling)
+  File "/home/ubuntu/capstone/fall-2026-group3/src/mas_sae/intervention/checks/preflight.py", line 169, in run_preflight
+    raise PreflightError(f"Preflight for {stage!r} failed ({len(problems)} problems):\n  - "
+mas_sae.intervention.checks.preflight.PreflightError: Preflight for 'prepare' failed (1 problems):
+  - run_id is not set: run choose-r with run_id: null to create a run in results/intervention_layer25, then set run_id to the folder it prints
