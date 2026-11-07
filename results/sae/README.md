@@ -118,6 +118,23 @@ trials without study metadata continue in place. Existing artifacts are not
 migrated automatically. Older checkpoints without `last_checkpoint.pt` cannot
 be resumed through this workflow.
 
+## SAE versions
+
+After each successful `scripts/sae/train_sae.py` run, a row is appended to
+`results/sae/musique/runs/layer_<N>/sae_versions.csv`. Columns are `run_id`,
+`checkpoint_path` (relative to the repository root), `commit`, `test_score`,
+and `best_val_score`. Scores are reconstruction MSE plus the sparsity penalty;
+lower is better. Missing test scores are written as literal `null`.
+`test_score` is how completed versions are compared: the test partition only
+selects the version carried forward and is never used to fit or tune (see
+`docs/behavior_v01.md`, "Keeping evaluation honest").
+
+The checkpoint path points to `best_checkpoint.pt`, and test evaluation, when
+available, uses that checkpoint. Repeating an append for the same run ID leaves
+the existing row unchanged. Later evaluation of an existing version requires
+updating its row rather than appending a new version. CSV appends use a file lock
+on Linux/macOS so simultaneous runs do not duplicate headers or lose rows.
+
 ## Optional post-training refinement
 
 Refinement forks a completed, validation-only TopK source's **last training
