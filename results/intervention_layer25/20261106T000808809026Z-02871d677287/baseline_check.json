@@ -1,0 +1,15 @@
+{
+  "n_episodes": 1000,
+  "mismatch_counts": {
+    "exact_match": 1000
+  },
+  "label_match_rate": 1.0,
+  "n_prompts_not_compared": 0,
+  "criterion": {
+    "min_label_match": 0.98,
+    "max_prompt_differences": 0,
+    "label_match": "an identical A2 (reuses the stored label); anything else is a mismatch"
+  },
+  "passed": true,
+  "failures": []
+}

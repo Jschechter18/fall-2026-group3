@@ -1,0 +1,7 @@
+{
+  "run_id": "20261106T030649156970Z-7064c87d114f",
+  "created_utc": "20261106T030649156970Z",
+  "git_commit": "7064c87d114fa39576cfa80b56298d01a2a361c8",
+  "uncommitted_code_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "command": "/home/ubuntu/miniconda3/envs/capstone/bin/python scripts/intervention/run_intervention.py choose-r --config configs/intervention/intervention.yaml"
+}

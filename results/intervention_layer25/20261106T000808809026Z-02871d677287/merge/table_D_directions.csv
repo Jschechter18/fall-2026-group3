@@ -1,0 +1,16 @@
+Representation,Contrast,N,Δ difference (pp) [95% CI],p,p (Holm)
+Raw activations,both − decrease,983,"+0.0 [-1.9, +1.9]",1.0,1.0
+Raw activations,both − increase,983,"+2.4 [+0.5, +4.3]",0.0188981101889811,0.0566943305669433
+Raw activations,increase − decrease,983,"-2.3 [-4.4, -0.3]",0.026297370262973702,0.0566943305669433
+L1 SAE,both − decrease,983,"-1.9 [-3.8, -0.1]",0.04659534046595341,0.13978602139786023
+L1 SAE,both − increase,983,"-0.2 [-2.1, +1.8]",0.8867113288671132,0.8867113288671132
+L1 SAE,increase − decrease,983,"-1.8 [-3.8, +0.3]",0.10528947105289471,0.21057894210578942
+Pretrained SAE,both − decrease,983,"+0.8 [-0.5, +2.2]",0.2605739426057394,0.5211478852114788
+Pretrained SAE,both − increase,983,"+1.3 [-0.1, +2.8]",0.08339166083391661,0.25017498250174985
+Pretrained SAE,increase − decrease,983,"-0.5 [-2.1, +1.1]",0.5686431356864313,0.5686431356864313
+Fine-tuned decoder,both − decrease,983,"+0.4 [-0.9, +1.8]",0.5580441955804419,1.0
+Fine-tuned decoder,both − increase,983,"+0.9 [-0.4, +2.2]",0.18688131186881313,0.5606439356064394
+Fine-tuned decoder,increase − decrease,983,"-0.5 [-2.0, +1.0]",0.5602439756024398,1.0
+Fully fine-tuned,both − decrease,983,"+1.7 [+0.2, +3.1]",0.026497350264973504,0.07949205079492051
+Fully fine-tuned,both − increase,983,"+0.1 [-1.3, +1.5]",0.9601039896010399,0.9601039896010399
+Fully fine-tuned,increase − decrease,983,"+1.6 [-0.1, +3.3]",0.07189281071892811,0.14378562143785623

@@ -132,8 +132,10 @@ configured paths. The manifest freezes the resolved config/conditions and
 checks input and checkpoint hashes. No new worker scientific flags are needed.
 Do not change doses, policies, cohorts or draws inside an existing manifest.
 
-The adapted checkpoint is staged under
-`s3://dats-capstone/shared/group3/results/sae/decoder_finetuning/20261102T205853702830Z/best/`.
+The adapted checkpoint is the 10-epoch decoder-only fine-tune, staged under
+`s3://dats-capstone/shared/group3/results/sae/decoder_finetuning/20261104T164310458065Z/best/`.
+It replaces the earlier 5-epoch checkpoint `20261102T205853702830Z`. The encoder is unchanged, so the
+selected features are the same, but decoder-based quantities must be recomputed with the new checkpoint.
 Preparing local inputs does not launch EC2/GPU jobs. Machine assignment, SSO/VPN
 access and full-run approval remain operational steps after the timing pilot.
 If pilot outcomes are used to select doses, subsequent results on that same

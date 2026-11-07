@@ -1,0 +1,62 @@
+# Intervention feature sets (#224): top n_targeted adoption and retention features per representation.
+# Copy of feature_selection_pretrained_adapted_layer25.yaml without the TopK SAE, plus the fully fine-tuned SAE.
+#
+# Feature selection on mixed_final_001 with Claude labels, layer 25 (#191): the raw activations as a
+# basis (top neurons by the same rule as the SAE features, mean ablation, std-matched controls, plus
+# the full probe direction), the control the SAEs are compared against.
+# Same inputs and contract as configs/layer_selection_mixed_final_001.yaml. Fit and rank on train,
+# measure on validation; test and intervention are never read.
+capstone_data_root: .
+
+activations_dir: artifacts/collection/mixed_final_001/prepared/activations/mixed_final_001
+results_dir: artifacts/collection/mixed_final_001/prepared/results/mixed_final_001
+labels_csv: results/behavior/mixed_final_001_claude_probe/labels.csv
+manifest_csv: results/behavior/mixed_final_001_claude_probe/split_manifest.csv
+excluded_episodes_file: results/behavior/mixed_final_001_claude_probe/excluded_episodes.json
+
+index_column: full_index
+target_labels: [adoption, retention]
+label_column: behavior_label
+group_column: split_group_id
+
+layer: 25
+activation_file: "{split}_attempt2.pt"
+fit_partition: train
+eval_partition: validation
+
+saes:
+  Raw activations:
+    kind: activations
+    path: results/probe_mixed_final_001_layer25/centers/raw_layer25.npy
+
+  L1 SAE:
+    kind: custom
+    path: results/sae/musique/runs/layer_25/20261102T182346930753Z-150e78c341c6
+
+  Pretrained SAE:
+    kind: gemma_scope
+    path: results/sae/pretrained/gemma-scope-2-4b-it/resid_post_all/layer_25_width_16k_l0_big
+
+  # Decoder-only fine-tune, 10 epochs (same encoder as the Pretrained SAE); see configs/causal_mixed_layer25.yaml.
+  Fine-tuned decoder:
+    kind: gemma_scope
+    path: results/sae/decoder_finetuning/20261104T164310458065Z/best
+
+  # Full fine-tune of the Pretrained SAE, 5 epochs (encoder lr 1e-6, decoder lr 1e-5), so its encoder differs.
+  Fully fine-tuned:
+    kind: gemma_scope
+    path: results/sae/full_finetuning/20261104T151230848807Z/best
+
+output_dir: results/feature_selection_intervention_layer25
+
+seed: 42
+c_grid: [0.001, 0.01, 0.1, 1.0, 10.0]
+inner_folds: 3
+n_bootstrap: 1000
+
+# Feature selection and ablation comparisons
+n_targeted: 10
+n_top_report: 25
+n_random_draws: 100
+n_permutations: 10000
+
