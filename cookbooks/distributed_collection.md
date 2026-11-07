@@ -32,7 +32,7 @@ in the example are starting values, not a new agreed research protocol.
 
 ```bash
 export PYTHONPATH=src
-python scripts/distributed_collection.py prepare \
+python scripts/collection/distributed_collection.py prepare \
   --config configs/collection/distributed.yaml --num-chunks 8 \
   --output artifacts/collection/mixed_collection/manifest.json
 ```
@@ -83,7 +83,7 @@ files are unnecessary: the manifest contains the exact question payloads.
 Assign non-overlapping work chunk IDs manually.
 
 ```bash
-python scripts/collect_activations.py \
+python scripts/collection/collect_activations.py \
   --config configs/collection/distributed.yaml \
   --manifest artifacts/collection/mixed_collection/manifest.json \
   --chunk 0 1 2 3
@@ -124,7 +124,7 @@ or foreign chunk directories instead of choosing a result.
 Download all completed chunks beside the manifest, preserving directory names:
 
 ```bash
-python scripts/distributed_collection.py merge \
+python scripts/collection/distributed_collection.py merge \
   --manifest artifacts/collection/mixed_collection/manifest.json
 ```
 
@@ -146,7 +146,7 @@ an SAE training run. Checksums detect changes between merge and split.
 ## Freeze later partitions and export
 
 ```bash
-python scripts/distributed_collection.py split \
+python scripts/collection/distributed_collection.py split \
   --manifest artifacts/collection/mixed_collection/manifest.json \
   --config configs/collection/distributed.yaml
 ```

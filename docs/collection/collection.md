@@ -10,7 +10,7 @@
 After activating the Conda environment and installing the project, run the following command from the repository root:
 
 ```bash
-python scripts/get_musique_dataset.py
+python scripts/data/get_musique_dataset.py
 ```
 
 ## Activation Collection
@@ -26,12 +26,12 @@ See also the [two-EC2 smoke-test commands](../../cookbooks/distributed_collectio
 The following commands and paths describe the supported legacy collection path.
 Run from the repository root:
 
-    python scripts/collect_activations.py --config configs/collection/v1/smoke_train.yaml
+    python scripts/collection/collect_activations.py --config configs/collection/v1/smoke_train.yaml
 
 To run 100 existing synthetic sample questions through the solver–critic pipeline:
 
 ```bash
-PYTHONPATH=src python scripts/collect_activations.py \
+PYTHONPATH=src python scripts/collection/collect_activations.py \
   --config configs/collection/synthetic_sample_100q_pilot.yaml
 ```
 

@@ -28,10 +28,10 @@ Files in the run directory:
     feature_health.npz  per-feature arrays: health of both SAEs, and drift between them
 
 Example (from the repo root):
-    PYTHONPATH=src python scripts/sae/pretrained-tuning/finetune_pretrained_sae.py --train full \\
+    PYTHONPATH=src python scripts/sae/finetune_pretrained_sae.py --train full \\
         --sae-dir results/sae/pretrained/gemma-scope-2-4b-it/resid_post_all/layer_25_width_16k_l0_big \\
         --activations-dir artifacts/collection/mixed_final_001/prepared/activations/mixed_final_001/layer_25 \\
-        --layer 25 --probe-config configs/feature_selection_mixed_final_001_layer25.yaml
+        --layer 25 --probe-config configs/feature_selection/feature_selection_mixed_final_001_layer25.yaml
 """
 
 import argparse

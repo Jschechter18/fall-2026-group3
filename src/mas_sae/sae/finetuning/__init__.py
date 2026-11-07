@@ -1,6 +1,6 @@
 """Light fine-tuning of a pretrained Gemma Scope (JumpReLU) SAE on our activations.
 
-The entry point is scripts/sae/pretrained-tuning/finetune_pretrained_sae.py; its run() calls these
+The entry point is scripts/sae/finetune_pretrained_sae.py; its run() calls these
 modules in order:
 
     data        Split, load_splits, probe_cohort_rows, iterate_batches, features_for

@@ -125,7 +125,7 @@ def test_probe_package_from_the_partitioned_labels(build, prepared, tmp_path):
     build.main(_args(prepared, tmp_path / "labels"))
     ordinary = prepared / "results/fixture"
     spec = importlib.util.spec_from_file_location("export_final_labels_for_probes",
-                                                  SCRIPT.parent / "export_final_labels_for_probes.py")
+                                                  REPO_ROOT / "scripts/labels/export_final_labels_for_probes.py")
     export = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(export)
     export.main(["--labels", str(tmp_path / "labels/final_labels.jsonl"), "--counts", str(tmp_path / "labels/counts.json"),
@@ -147,7 +147,7 @@ CLASSES = ("adoption", "retention", "agreement", "out")
 
 def _exporter():
     spec = importlib.util.spec_from_file_location("export_final_labels_for_probes",
-                                                  SCRIPT.parent / "export_final_labels_for_probes.py")
+                                                  REPO_ROOT / "scripts/labels/export_final_labels_for_probes.py")
     export = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(export)
     return export

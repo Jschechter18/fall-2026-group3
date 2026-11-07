@@ -9,7 +9,7 @@ Preview the stored intervention episodes without credentials, API calls or
 output files:
 
 ```bash
-PYTHONPATH=src python scripts/run_claude_validation.py \
+PYTHONPATH=src python scripts/labels/run_claude_validation.py \
   --episodes artifacts/collection/mixed_final_001/prepared/results/mixed_final_001_intervention/intervention/interactions.jsonl \
   --partition intervention \
   --output results/claude_validation/mixed_final_001/intervention \
@@ -40,7 +40,7 @@ replaced.
 After labeling, package all four semantic classes with frozen membership:
 
 ```bash
-PYTHONPATH=src python scripts/export_final_labels_for_probes.py \
+PYTHONPATH=src python scripts/labels/export_final_labels_for_probes.py \
   --claude-runs results/claude_validation/mixed_final_001/intervention \
   --full-results artifacts/collection/mixed_final_001/prepared/results/mixed_final_001_intervention \
   --layout partitioned \

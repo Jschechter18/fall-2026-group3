@@ -3,11 +3,11 @@
 Run from the repository root in the capstone environment:
 
 ```bash
-time PYTHONPATH=src python scripts/sae/pretrained-tuning/finetune_pretrained_sae.py \
+time PYTHONPATH=src python scripts/sae/finetune_pretrained_sae.py \
   --sae-dir results/sae/pretrained/gemma-scope-2-4b-it/resid_post_all/layer_25_width_16k_l0_big \
   --activations-dir artifacts/collection/mixed_final_001/prepared/activations/mixed_final_001/layer_25 \
   --layer 25 \
-  --probe-config configs/feature_selection_mixed_final_001_layer25.yaml
+  --probe-config configs/feature_selection/feature_selection_mixed_final_001_layer25.yaml
 ```
 
 Defaults: 5 epochs, batch size 256, Adam decoder learning rate 1e-5, patience 5,
@@ -88,11 +88,11 @@ checkpoint). It trains `w_enc`, `b_enc`, the JumpReLU `threshold` and the decode
 third, separate checkpoint, kept beside the original and the decoder-only SAE:
 
 ```bash
-time PYTHONPATH=src python scripts/sae/pretrained-tuning/finetune_pretrained_sae.py --train full \
+time PYTHONPATH=src python scripts/sae/finetune_pretrained_sae.py --train full \
   --sae-dir results/sae/pretrained/gemma-scope-2-4b-it/resid_post_all/layer_25_width_16k_l0_big \
   --activations-dir artifacts/collection/mixed_final_001/prepared/activations/mixed_final_001/layer_25 \
   --layer 25 \
-  --probe-config configs/feature_selection_mixed_final_001_layer25.yaml
+  --probe-config configs/feature_selection/feature_selection_mixed_final_001_layer25.yaml
 ```
 
 Output goes to `results/sae/full_finetuning/<timestamp>/` with the same files as above.

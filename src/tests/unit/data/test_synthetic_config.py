@@ -29,7 +29,7 @@ def write_config(tmp_path, settings):
 
 def test_full_run_config_preserves_requested_settings(tmp_path, setup):
     original, captured = setup
-    config = yaml.safe_load(Path("configs/synthetic/opus5_v3_full.yaml").read_text())
+    config = yaml.safe_load(Path("configs/data/opus5_v3_full.yaml").read_text())
     config.update(original=str(original), dedup_original=[str(original)], output_dir=str(tmp_path / "run"))
     path = write_config(tmp_path, config)
     assert generation_cli.main(["--config", str(path)]) == 0

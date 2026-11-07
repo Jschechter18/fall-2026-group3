@@ -21,9 +21,9 @@ final prompt token, Claude's adoption/retention labels), read through the same l
   - validation: test Claude's descriptions (step 4, test)
 The intervention's study episodes are never read.
 
-    PYTHONPATH=src python scripts/intervention/interpretation/interpret_features.py
-    PYTHONPATH=src python scripts/intervention/interpretation/interpret_features.py --skip-claude
-    PYTHONPATH=src python scripts/intervention/interpretation/interpret_features.py --only "Pretrained SAE" --max-features 2
+    PYTHONPATH=src python scripts/intervention/interpret_features.py
+    PYTHONPATH=src python scripts/intervention/interpret_features.py --skip-claude
+    PYTHONPATH=src python scripts/intervention/interpret_features.py --only "Pretrained SAE" --max-features 2
 
 Writes a new folder under results/feature_interpretation_layer25/ with:
     feature_summary.csv     one row per feature: everything below, side by side

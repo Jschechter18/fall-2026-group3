@@ -54,7 +54,7 @@ cfg['output'] = {'run_name': os.environ['COLLECTION_RUN'], 'chunk_size': 4}
 (root/'collection.yaml').write_text(yaml.safe_dump(cfg, sort_keys=False))
 PY
 
-python scripts/distributed_collection.py prepare \
+python scripts/collection/distributed_collection.py prepare \
   --config "$RUN_DIR/collection.yaml" --num-chunks 2 --output "$RUN_DIR/manifest.json"
 aws s3 cp "$RUN_DIR/manifest.json" "$S3_RUN/manifest.json"
 aws s3 cp "$RUN_DIR/collection.yaml" "$S3_RUN/collection.yaml"
@@ -76,14 +76,14 @@ aws s3 cp "$S3_RUN/collection.yaml" "$RUN_DIR/collection.yaml"
 EC2 A owns chunk 0:
 
 ```bash
-python scripts/collect_activations.py --config "$RUN_DIR/collection.yaml" \
+python scripts/collection/collect_activations.py --config "$RUN_DIR/collection.yaml" \
   --manifest "$RUN_DIR/manifest.json" --chunk 0
 ```
 
 EC2 B owns chunk 1:
 
 ```bash
-python scripts/collect_activations.py --config "$RUN_DIR/collection.yaml" \
+python scripts/collection/collect_activations.py --config "$RUN_DIR/collection.yaml" \
   --manifest "$RUN_DIR/manifest.json" --chunk 1
 ```
 
@@ -120,8 +120,8 @@ After both workers finish:
 
 ```bash
 aws s3 sync "$S3_RUN/chunks/" "$RUN_DIR/chunks/"
-python scripts/distributed_collection.py merge --manifest "$RUN_DIR/manifest.json"
-python scripts/distributed_collection.py split \
+python scripts/collection/distributed_collection.py merge --manifest "$RUN_DIR/manifest.json"
+python scripts/collection/distributed_collection.py split \
   --manifest "$RUN_DIR/manifest.json" --config "$RUN_DIR/collection.yaml"
 
 python scripts/prepare_behavior_v01.py \

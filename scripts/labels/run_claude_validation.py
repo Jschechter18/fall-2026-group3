@@ -24,27 +24,27 @@ Requires AWS Bedrock credentials in ``.env`` (see README).  Use ``--dry-run``
 to preview without making API calls.
 
 Usage:
-    PYTHONPATH=src python scripts/run_claude_validation.py \\
+    PYTHONPATH=src python scripts/labels/run_claude_validation.py \\
         --episodes results/collection/natural_4b_full9_partitioned/train/interactions.jsonl \\
         --output results/claude_validation/pilot_10 \\
         --limit 10 \\
         --dry-run
 
     # Real pilot (after authorization):
-    PYTHONPATH=src python scripts/run_claude_validation.py \\
+    PYTHONPATH=src python scripts/labels/run_claude_validation.py \\
         --episodes results/collection/natural_4b_full9_partitioned/train/interactions.jsonl \\
         --output results/claude_validation/pilot_10 \\
         --limit 10
 
     # Label the held-out test partition separately for final evaluation:
-    PYTHONPATH=src python scripts/run_claude_validation.py \\
+    PYTHONPATH=src python scripts/labels/run_claude_validation.py \\
         --episodes artifacts/collection/mixed_final_001/prepared/results/mixed_final_001/test/interactions.jsonl \\
         --partition test \\
         --output results/claude_validation/mixed_final_001/test \\
         --concurrency 64
 
     # Label the stored intervention episodes with the same Claude semantic protocol:
-    PYTHONPATH=src python scripts/run_claude_validation.py \\
+    PYTHONPATH=src python scripts/labels/run_claude_validation.py \\
         --episodes artifacts/collection/mixed_final_001/prepared/results/mixed_final_001_intervention/intervention/interactions.jsonl \\
         --partition intervention \\
         --output results/claude_validation/mixed_final_001/intervention \\

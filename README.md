@@ -19,8 +19,8 @@ paths written by the stage before it. Run everything from the repository root wi
 | --- | --------------------------------------------------- | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
 | 1   | [Collection](#1-collection)                         | `configs/collection/distributed_final.yaml`                             | `artifacts/collection/mixed_final_001/prepared/` (S3)                                          |
 | 2   | [Claude behavior labels](#2-claude-behavior-labels) | none (CLI flags)                                                        | `results/claude_validation/mixed_final_001/`, `results/behavior/mixed_final_001_claude_probe/` |
-| 3   | [Layer selection](#3-layer-selection)               | `configs/layer_selection_mixed_final_001.yaml`                          | `results/layer_selection_mixed_final_001_quick/20261102T201434082931Z/` → layer 25             |
-| 4   | [SAEs](#4-saes)                                     | `configs/sae_hp_tuning/layer_25_mixed_final_001_baselines.yaml` + CLI   | 4 SAE folders, see below                                                                       |
+| 3   | [Layer selection](#3-layer-selection)               | `configs/layer_selection/layer_selection_mixed_final_001.yaml`                          | `results/layer_selection_mixed_final_001_quick/20261102T201434082931Z/` → layer 25             |
+| 4   | [SAEs](#4-saes)                                     | `configs/sae/layer_25_mixed_final_001_baselines.yaml` + CLI   | 4 SAE folders, see below                                                                       |
 | 5   | [Feature selection](#5-feature-selection)           | `configs/feature_selection/feature_selection_intervention_layer25.yaml` | `results/feature_selection_intervention_layer25/20261105T025730344698Z_pool/feature_sets.json` |
 | 6   | [Intervention](#6-intervention)                     | `configs/intervention/intervention.yaml`                                | `results/intervention_layer25/20261106T000808809026Z-02871d677287/merge/`                      |
 | 7   | [Analysis](#7-analysis)                             | none                                                                    | `notebooks/intervention/`, `results/feature_interpretation_layer25/`                           |
@@ -37,13 +37,13 @@ activations are saved at layers 4, 8, 17, 25, 29–33. The collection spread the
 EC2 machines.
 
 ```bash
-python scripts/distributed_collection.py prepare --config <run_dir>/collection.yaml --num-chunks <N> --output <run_dir>/manifest.json
-python scripts/collect_activations.py --config <run_dir>/collection.yaml --manifest <run_dir>/manifest.json --chunk <K ...>   # each worker
-python scripts/distributed_collection.py merge --manifest <run_dir>/manifest.json
-python scripts/distributed_collection.py split --manifest <run_dir>/manifest.json --config <run_dir>/collection.yaml
+python scripts/collection/distributed_collection.py prepare --config <run_dir>/collection.yaml --num-chunks <N> --output <run_dir>/manifest.json
+python scripts/collection/collect_activations.py --config <run_dir>/collection.yaml --manifest <run_dir>/manifest.json --chunk <K ...>   # each worker
+python scripts/collection/distributed_collection.py merge --manifest <run_dir>/manifest.json
+python scripts/collection/distributed_collection.py split --manifest <run_dir>/manifest.json --config <run_dir>/collection.yaml
 ```
 
-- **Inputs:** `data/MuSiQue/clean/{train,validation}.jsonl` (from `scripts/get_musique_dataset.py`)
+- **Inputs:** `data/MuSiQue/clean/{train,validation}.jsonl` (from `scripts/data/get_musique_dataset.py`)
   and `data/synthetic/final/accepted.jsonl` (version `synthetic-final-001`).
 - **Full walkthrough:** [cookbooks/runbooks/mixed_collection_pipeline.md](cookbooks/runbooks/mixed_collection_pipeline.md).
   It is written for the earlier `mixed_opus5_full_001` run name; the steps are the same. See also
@@ -62,11 +62,11 @@ adoption, retention, agreement or out. Only adoption vs. retention is used as th
 exact settings are in each run's `run_settings.json`.
 
 ```bash
-python scripts/run_claude_validation.py \
+python scripts/labels/run_claude_validation.py \
   --episodes artifacts/collection/mixed_final_001/prepared/results/mixed_final_001/<partition>/interactions.jsonl \
   --partition <partition> --output results/claude_validation/mixed_final_001/<partition>
 
-python scripts/export_final_labels_for_probes.py \
+python scripts/labels/export_final_labels_for_probes.py \
   --claude-runs results/claude_validation/mixed_final_001/train results/claude_validation/mixed_final_001/validation \
   --full-results artifacts/collection/mixed_final_001/prepared/results/mixed_final_001 \
   --layout partitioned --output results/behavior/mixed_final_001_claude_probe
@@ -85,8 +85,8 @@ Fits a tuned linear probe (adoption vs. retention) per layer on `train` and rank
 `validation`.
 
 ```bash
-python scripts/layer_selection.py --config configs/layer_selection_mixed_final_001.yaml --inspect   # check inputs first
-python scripts/layer_selection.py --config configs/layer_selection_mixed_final_001.yaml
+python scripts/layer_selection/layer_selection.py --config configs/layer_selection/layer_selection_mixed_final_001.yaml --inspect   # check inputs first
+python scripts/layer_selection/layer_selection.py --config configs/layer_selection/layer_selection_mixed_final_001.yaml
 ```
 
 - **Result:** layer 25 is best, with validation balanced accuracy 0.843 (CI 0.830–0.856). Layer 17
@@ -117,7 +117,7 @@ The study compares four layer-25 SAEs, plus raw activations as a control:
 [results/sae/README.md](results/sae/README.md).
 
 ```bash
-python scripts/sae/train_sae.py --hp-tune --config configs/sae_hp_tuning/layer_25_mixed_final_001_baselines.yaml
+python scripts/sae/train_sae.py --hp-tune --config configs/sae/layer_25_mixed_final_001_baselines.yaml
 python scripts/sae/train_sae.py --finish-run results/sae/musique/tuning/layer_25/<study_id>/trials/trial_0002 --epochs 200
 ```
 
@@ -130,13 +130,13 @@ hf download google/gemma-scope-2-4b-it --include "resid_post_all/layer_25_width_
 ```
 
 **Fine-tuned SAEs.** Both start from the original Pretrained SAE; add `--train full` for the full
-fine-tune. Details are in [scripts/sae/pretrained-tuning/PRETRAINED_FINETUNING.md](scripts/sae/pretrained-tuning/PRETRAINED_FINETUNING.md).
+fine-tune. Details are in [scripts/sae/PRETRAINED_FINETUNING.md](scripts/sae/PRETRAINED_FINETUNING.md).
 
 ```bash
-python scripts/sae/pretrained-tuning/finetune_pretrained_sae.py [--train full] \
+python scripts/sae/finetune_pretrained_sae.py [--train full] \
   --sae-dir results/sae/pretrained/gemma-scope-2-4b-it/resid_post_all/layer_25_width_16k_l0_big \
   --activations-dir artifacts/collection/mixed_final_001/prepared/activations/mixed_final_001/layer_25 \
-  --layer 25 --probe-config configs/feature_selection_mixed_final_001_layer25.yaml
+  --layer 25 --probe-config configs/feature_selection/feature_selection_mixed_final_001_layer25.yaml
 ```
 
 `decoder_finetuning/` and `full_finetuning/` hold several runs each. Only the two listed above are
@@ -149,7 +149,7 @@ For each representation, this ranks features by how well they separate adoption 
 features, plus 100 matched random draws per label as controls.
 
 ```bash
-python scripts/feature_selection.py --config configs/feature_selection/feature_selection_intervention_layer25.yaml
+python scripts/feature_selection/feature_selection.py --config configs/feature_selection/feature_selection_intervention_layer25.yaml
 python scripts/intervention/build_feature_set_pool.py \
   results/feature_selection_intervention_layer25/20261105T025730344698Z \
   results/feature_selection_intervention_layer25/20261105T025730344698Z_pool
@@ -162,7 +162,7 @@ python scripts/intervention/build_feature_set_pool.py \
   That mean vector is `results/probe_mixed_final_001_layer25/centers/raw_layer25.npy`, the config's
   `path` for `kind: activations`. Feature selection writes it if it is missing and refuses to run if
   a saved file doesn't match. It sits in that folder only because the earlier feature-selection run
-  (`configs/feature_selection_mixed_final_001_layer25.yaml`) wrote it first. `feature_sets.json`
+  (`configs/feature_selection/feature_selection_mixed_final_001_layer25.yaml`) wrote it first. `feature_sets.json`
   records its path and sha256, and stage 6 checks both and reads the file for the raw basis width.
   So moving it means rerunning feature selection; the contents would be the same.
 
@@ -195,7 +195,7 @@ A smoke run of the same pipeline: [configs/intervention/intervention_smoke.yaml]
 
 - **Choosing r:** `notebooks/intervention/choose_edit_size_pilot_analysis.ipynb`
 - **Main results:** `notebooks/intervention/full_study_results.ipynb`
-- **What the features mean:** `scripts/intervention/interpretation/interpret_features.py` →
+- **What the features mean:** `scripts/intervention/interpret_features.py` →
   `results/feature_interpretation_layer25/`, shown in `notebooks/intervention/feature_interpretation.ipynb`
 
 ### Earlier work, not part of the final results
@@ -212,7 +212,7 @@ The repository also holds earlier pipelines and runs. Don't cite them as final r
 ### Known gaps in this record
 
 - **Synthetic input:** the step that produced `data/synthetic/final/accepted.jsonl` is recorded only
-  by its version label. The generation config is likely `configs/synthetic/opus5_v3_full.yaml`,
+  by its version label. The generation config is likely `configs/data/opus5_v3_full.yaml`,
   but this is unconfirmed.
 - **Pretrained SAE download:** the repository doesn't record how the folder was downloaded. The
   command above gives the same folder layout.
@@ -254,7 +254,7 @@ pytest
 | Distributed collection, end to end (collection → Claude labels)   | [cookbooks/runbooks/mixed_collection_pipeline.md](cookbooks/runbooks/mixed_collection_pipeline.md), [cookbooks/distributed_collection.md](cookbooks/distributed_collection.md)                                                 |
 | Episode records, provenance, activation layout                    | [docs/collection/episode_record.md](docs/collection/episode_record.md), [docs/collection/collection_provenance.md](docs/collection/collection_provenance.md), [docs/collection/activations.md](docs/collection/activations.md) |
 | SAE training, tuning and `sae_versions.csv`                       | [results/sae/README.md](results/sae/README.md)                                                                                                                                                                                 |
-| Pretrained SAE fine-tuning                                        | [scripts/sae/pretrained-tuning/PRETRAINED_FINETUNING.md](scripts/sae/pretrained-tuning/PRETRAINED_FINETUNING.md)                                                                                                               |
+| Pretrained SAE fine-tuning                                        | [scripts/sae/PRETRAINED_FINETUNING.md](scripts/sae/PRETRAINED_FINETUNING.md)                                                                                                               |
 | Intervention design and analysis plan                             | docstring of [scripts/intervention/run_intervention.py](scripts/intervention/run_intervention.py)                                                                                                                              |
 
 ## Project Structure
@@ -262,16 +262,19 @@ pytest
 ```text
 .
 ├── artifacts/                    # Distributed collection outputs (gitignored; synced from S3)
-├── configs/                      # Run configuration files
-│   ├── collection/               # Activation-collection configs (final: distributed_final.yaml)
-│   ├── feature_selection/        # Feature-selection configs (final: *_intervention_layer25.yaml)
-│   ├── intervention/             # Intervention experiment configs
-│   └── sae_hp_tuning/            # SAE hyperparameter searches
+├── configs/                      # Run configuration files, by pipeline stage
+│   ├── data/                     # Synthetic data generation
+│   ├── collection/               # Activation collection (final: distributed_final.yaml)
+│   ├── layer_selection/          # Layer selection
+│   ├── feature_selection/        # Feature selection (final: *_intervention_layer25.yaml)
+│   ├── sae/                      # SAE training (final L1 SAE study)
+│   ├── intervention/             # Intervention experiment
+│   └── sae_hp_tuning/            # Earlier SAE hyperparameter searches
 ├── cookbooks/                    # Setup and how-to guides; runbooks/ holds the collection runbook
 ├── data/                         # Downloaded project datasets (gitignored)
 ├── demo/                         # Demonstrations
 │   └── fig/                      # Demo figures
-├── docs/                         # Reference documentation and history, by stage: collection/, labels/, sae/, causal_replay/, intervention/; diagrams/ holds editable + SVG figures
+├── docs/                         # Reference documentation and history, by stage: collection/, labels/, sae/, causal_replay/; diagrams/ holds editable + SVG figures
 ├── examples/                     # Small Claude/Bedrock examples
 ├── notebooks/                    # All Jupyter notebooks, by stage: data/, collection/, labels/, sae/, causal_replay/, intervention/ (final results)
 ├── presentation/                 # Presentation materials
@@ -287,7 +290,8 @@ pytest
 │   ├── Word/                     # Word version of the paper
 │   └── references/               # Reference PDFs for the literature review
 ├── results/                      # Experimental outputs and results
-├── scripts/                      # Executable Python entry-point scripts
+├── scripts/                      # Entry-point scripts, by pipeline stage: data/, collection/, labels/,
+│                                 #   layer_selection/, feature_selection/, sae/, intervention/
 ├── src/
 │   ├── component/                # Reusable, non-pipeline components
 │   ├── docs/                     # Project documentation

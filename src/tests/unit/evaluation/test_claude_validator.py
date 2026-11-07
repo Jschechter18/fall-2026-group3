@@ -36,7 +36,7 @@ from repo_paths import REPO_ROOT
 
 def _load_cli():
     """scripts/ is not on the test path, so load the CLI by file like the other script tests."""
-    path = REPO_ROOT / "scripts" / "run_claude_validation.py"
+    path = REPO_ROOT / "scripts" / "labels" / "run_claude_validation.py"
     spec = importlib.util.spec_from_file_location("run_claude_validation", path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
