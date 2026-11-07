@@ -163,24 +163,23 @@
 
 ---
 
-## Date: Week 11 - Month Day Year
+## Date: Week 11 - 11 3 2026
 
 - Topics of discussion
-  - Item1
-  - Item2
-  - Item3
+  - Showed our successfully claude api data generation, and labels
+  - Last step is running our intervention pipeline
+  - Showed results for feature selection
 
 - Action Items:
 
-* [ ] Action Item 1
-* [ ] Action Item 2
-* [ ] Action Item 3
-* [ ] Action Item 4
-* [ ] Action Item 5
+* [ ] Rewrite cleaner code for intervention pipeline
+* [ ] Clean up codebase to be easier to navigate and follow
+* [ ] Perform some analysis on initial results
+* [ ] Plan to have technical work (mostly) complete by week of 11/17
 
 ---
 
-## Date: Week 12 - Month Day Year
+## Date: Week 12 - 11 10 2026
 
 - Topics of discussion
   - Item1
