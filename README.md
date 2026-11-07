@@ -5,6 +5,26 @@ Master's Data Science Capstone project.
 Setup: [Getting started](#getting-started) and [cookbooks/setup.md](cookbooks/setup.md). Notes for the
 instructor and AI reviewer: [Messages for Professor/AI Reviewer](#messages-for-professorai-reviewer).
 
+## Getting started
+
+```bash
+git clone git@github.com:Jschechter18/fall-2026-group3.git
+cd fall-2026-group3
+conda env create -f environment.yml    # Python 3.11, environment "capstone"
+conda activate capstone
+python -m pip install -e .
+```
+
+Full instructions are in [cookbooks/setup.md](cookbooks/setup.md):
+
+- **Claude on Amazon Bedrock:** used by stages 2 and 6.
+- **Hugging Face model access:** the Gemma licence and pinned model revisions.
+- **Amazon S3:** where the collection artifacts, activations and SAE checkpoints are stored.
+- **Jupyter kernel:** for the analysis notebooks.
+
+When `environment.yml` changes, run `conda env update -f environment.yml --prune`. When you add a
+dependency, add it to `environment.yml` so that everyone uses the same environment.
+
 ## Experimental pipeline
 
 **Question:** when a Critic gives the Solver (Gemma-3-4B-it) a different answer, are SAE features in
@@ -19,8 +39,8 @@ paths written by the stage before it. Run everything from the repository root wi
 | --- | --------------------------------------------------- | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
 | 1   | [Collection](#1-collection)                         | `configs/collection/distributed_final.yaml`                             | `artifacts/collection/mixed_final_001/prepared/` (S3)                                          |
 | 2   | [Claude behavior labels](#2-claude-behavior-labels) | none (CLI flags)                                                        | `results/claude_validation/mixed_final_001/`, `results/behavior/mixed_final_001_claude_probe/` |
-| 3   | [Layer selection](#3-layer-selection)               | `configs/layer_selection/layer_selection_mixed_final_001.yaml`                          | `results/layer_selection_mixed_final_001_quick/20261102T201434082931Z/` → layer 25             |
-| 4   | [SAEs](#4-saes)                                     | `configs/sae/layer_25_mixed_final_001_baselines.yaml` + CLI   | 4 SAE folders, see below                                                                       |
+| 3   | [Layer selection](#3-layer-selection)               | `configs/layer_selection/layer_selection_mixed_final_001.yaml`          | `results/layer_selection_mixed_final_001_quick/20261102T201434082931Z/` → layer 25             |
+| 4   | [SAEs](#4-saes)                                     | `configs/sae/layer_25_mixed_final_001_baselines.yaml` + CLI             | 4 SAE folders, see below                                                                       |
 | 5   | [Feature selection](#5-feature-selection)           | `configs/feature_selection/feature_selection_intervention_layer25.yaml` | `results/feature_selection_intervention_layer25/20261105T025730344698Z_pool/feature_sets.json` |
 | 6   | [Intervention](#6-intervention)                     | `configs/intervention/intervention.yaml`                                | `results/intervention_layer25/20261106T000808809026Z-02871d677287/merge/`                      |
 | 7   | [Analysis](#7-analysis)                             | none                                                                    | `notebooks/intervention/`, `results/feature_interpretation_layer25/`                           |
@@ -216,36 +236,6 @@ The repository also holds earlier pipelines and runs. Don't cite them as final r
   feature selection (stage 5).
 - **Earlier label versions:** `results/behavior/` contains older label packages besides `mixed_final_001_claude_probe`.
 
-### Known gaps in this record
-
-- **Synthetic input:** the step that produced `data/synthetic/final/accepted.jsonl` is recorded only
-  by its version label. The generation config is likely `configs/data/opus5_v3_full.yaml`,
-  but this is unconfirmed.
-- **Pretrained SAE download:** the repository doesn't record how the folder was downloaded. The
-  command above gives the same folder layout.
-- **S3 path:** the S3 location of `artifacts/collection/mixed_final_001/` follows the runbook
-  convention (`s3://dats-capstone/shared/group3/artifacts/collection/<run>/`) and has not been checked.
-
-## Getting started
-
-```bash
-git clone git@github.com:Jschechter18/fall-2026-group3.git
-cd fall-2026-group3
-conda env create -f environment.yml    # Python 3.11, environment "capstone"
-conda activate capstone
-python -m pip install -e .
-```
-
-Full instructions are in [cookbooks/setup.md](cookbooks/setup.md):
-
-- **Claude on Amazon Bedrock:** used by stages 2 and 6.
-- **Hugging Face model access:** the Gemma licence and pinned model revisions.
-- **Amazon S3:** where the collection artifacts, activations and SAE checkpoints are stored.
-- **Jupyter kernel:** for the analysis notebooks.
-
-When `environment.yml` changes, run `conda env update -f environment.yml --prune`. When you add a
-dependency, add it to `environment.yml` so that everyone uses the same environment.
-
 ## Testing
 
 ```bash
@@ -261,7 +251,7 @@ pytest
 | Distributed collection, end to end (collection → Claude labels)   | [cookbooks/runbooks/mixed_collection_pipeline.md](cookbooks/runbooks/mixed_collection_pipeline.md), [cookbooks/distributed_collection.md](cookbooks/distributed_collection.md)                                                 |
 | Episode records, provenance, activation layout                    | [docs/collection/episode_record.md](docs/collection/episode_record.md), [docs/collection/collection_provenance.md](docs/collection/collection_provenance.md), [docs/collection/activations.md](docs/collection/activations.md) |
 | SAE training, tuning and `sae_versions.csv`                       | [results/sae/README.md](results/sae/README.md)                                                                                                                                                                                 |
-| Pretrained SAE fine-tuning                                        | [scripts/sae/PRETRAINED_FINETUNING.md](scripts/sae/PRETRAINED_FINETUNING.md)                                                                                                               |
+| Pretrained SAE fine-tuning                                        | [scripts/sae/PRETRAINED_FINETUNING.md](scripts/sae/PRETRAINED_FINETUNING.md)                                                                                                                                                   |
 | Intervention design and analysis plan                             | docstring of [scripts/intervention/run_intervention.py](scripts/intervention/run_intervention.py)                                                                                                                              |
 
 ## Project Structure
