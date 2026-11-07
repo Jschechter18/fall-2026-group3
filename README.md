@@ -2,7 +2,7 @@
 
 Master's Data Science Capstone project.
 
-Setup: [Getting started](#getting-started) and [docs/setup.md](docs/setup.md). Notes for the
+Setup: [Getting started](#getting-started) and [cookbooks/setup.md](cookbooks/setup.md). Notes for the
 instructor and AI reviewer: [Messages for Professor/AI Reviewer](#messages-for-professorai-reviewer).
 
 ## Experimental pipeline
@@ -47,9 +47,9 @@ python scripts/distributed_collection.py split --manifest <run_dir>/manifest.jso
   and `data/synthetic/final/accepted.jsonl` (version `synthetic-final-001`).
 - **Full walkthrough:** [cookbooks/runbooks/mixed_collection_pipeline.md](cookbooks/runbooks/mixed_collection_pipeline.md).
   It is written for the earlier `mixed_opus5_full_001` run name; the steps are the same. See also
-  [docs/distributed_collection.md](docs/distributed_collection.md).
+  [cookbooks/distributed_collection.md](cookbooks/distributed_collection.md).
 - **Output:** `artifacts/collection/mixed_final_001/prepared/`, which is gitignored. You don't need
-  to rerun collection; download this folder from S3 (see [docs/setup.md](docs/setup.md#s3-directory-layout)).
+  to rerun collection; download this folder from S3 (see [cookbooks/setup.md](cookbooks/setup.md#s3-directory-layout)).
   - `activations/mixed_final_001/layer_NN/{train,validation,test}_attempt{1,2}.pt`
   - `activations/mixed_final_001_intervention/layer_NN/`
   - `results/mixed_final_001/{train,validation,test}/interactions.jsonl`, plus `partitions.csv` and `split_manifest.csv`
@@ -73,7 +73,8 @@ python scripts/export_final_labels_for_probes.py \
 ```
 
 - **Raw labels:** `results/claude_validation/mixed_final_001/{train,validation,test,intervention}/`.
-  The `intervention/` folder supplies the stored labels that stage 6 tries to flip.
+  The `intervention/` folder supplies the stored labels that stage 6 tries to flip. How to run it:
+  [cookbooks/claude_intervention_labels.md](cookbooks/claude_intervention_labels.md).
 - **Label package for probes:** `results/behavior/mixed_final_001_claude_probe/`
   (`labels.csv`, `split_manifest.csv`, `excluded_episodes.json`, `counts.json`). This is the only
   label input for stages 3–5.
@@ -203,7 +204,7 @@ The repository also holds earlier pipelines and runs. Don't cite them as final r
 
 - **Earlier collections:** `configs/collection/v1`, `v2`, `v3` (e.g. `natural_4b_full`), plus the synthetic pilots.
 - **The earlier causal pipeline:** `causal_replay`, `src/mas_sae/causal/`, `configs/causal_*.yaml`,
-  `results/causal_*`. See [docs/distributed_causal_replay.md](docs/distributed_causal_replay.md).
+  `results/causal_*`. See [docs/causal_replay/distributed_causal_replay.md](docs/causal_replay/distributed_causal_replay.md).
   The stage-6 intervention replaced it. Exception: `mas_sae.causal.offline` is still used by
   feature selection (stage 5).
 - **Earlier label versions:** `results/behavior/` contains older label packages besides `mixed_final_001_claude_probe`.
@@ -228,7 +229,7 @@ conda activate capstone
 python -m pip install -e .
 ```
 
-Full instructions are in [docs/setup.md](docs/setup.md):
+Full instructions are in [cookbooks/setup.md](cookbooks/setup.md):
 
 - **Claude on Amazon Bedrock:** used by stages 2 and 6.
 - **Hugging Face model access:** the Gemma licence and pinned model revisions.
@@ -246,15 +247,15 @@ pytest
 
 ## Documentation
 
-| Topic                                                             | Where                                                                                                                                                                |
-| ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Environment, Bedrock, Hugging Face, S3, Jupyter                   | [docs/setup.md](docs/setup.md)                                                                                                                                       |
-| Collection tooling, condition policy, earlier single-machine runs | [docs/collection.md](docs/collection.md)                                                                                                                             |
-| Distributed collection, end to end (collection → Claude labels)   | [cookbooks/runbooks/mixed_collection_pipeline.md](cookbooks/runbooks/mixed_collection_pipeline.md), [docs/distributed_collection.md](docs/distributed_collection.md) |
-| Episode records, provenance, activation layout                    | [docs/episode_record.md](docs/episode_record.md), [docs/collection_provenance.md](docs/collection_provenance.md), [docs/activations.md](docs/activations.md)         |
-| SAE training, tuning and `sae_versions.csv`                       | [results/sae/README.md](results/sae/README.md)                                                                                                                       |
-| Pretrained SAE fine-tuning                                        | [scripts/sae/pretrained-tuning/PRETRAINED_FINETUNING.md](scripts/sae/pretrained-tuning/PRETRAINED_FINETUNING.md)                                                     |
-| Intervention design and analysis plan                             | docstring of [scripts/intervention/run_intervention.py](scripts/intervention/run_intervention.py)                                                                    |
+| Topic                                                             | Where                                                                                                                                                                                                                          |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Environment, Bedrock, Hugging Face, S3, Jupyter                   | [cookbooks/setup.md](cookbooks/setup.md)                                                                                                                                                                                       |
+| Collection tooling, condition policy, earlier single-machine runs | [docs/collection/collection.md](docs/collection/collection.md)                                                                                                                                                                 |
+| Distributed collection, end to end (collection → Claude labels)   | [cookbooks/runbooks/mixed_collection_pipeline.md](cookbooks/runbooks/mixed_collection_pipeline.md), [cookbooks/distributed_collection.md](cookbooks/distributed_collection.md)                                                 |
+| Episode records, provenance, activation layout                    | [docs/collection/episode_record.md](docs/collection/episode_record.md), [docs/collection/collection_provenance.md](docs/collection/collection_provenance.md), [docs/collection/activations.md](docs/collection/activations.md) |
+| SAE training, tuning and `sae_versions.csv`                       | [results/sae/README.md](results/sae/README.md)                                                                                                                                                                                 |
+| Pretrained SAE fine-tuning                                        | [scripts/sae/pretrained-tuning/PRETRAINED_FINETUNING.md](scripts/sae/pretrained-tuning/PRETRAINED_FINETUNING.md)                                                                                                               |
+| Intervention design and analysis plan                             | docstring of [scripts/intervention/run_intervention.py](scripts/intervention/run_intervention.py)                                                                                                                              |
 
 ## Project Structure
 
@@ -266,13 +267,13 @@ pytest
 │   ├── feature_selection/        # Feature-selection configs (final: *_intervention_layer25.yaml)
 │   ├── intervention/             # Intervention experiment configs
 │   └── sae_hp_tuning/            # SAE hyperparameter searches
-├── cookbooks/                    # Notebooks, tutorials and runbooks
+├── cookbooks/                    # Setup and how-to guides; runbooks/ holds the collection runbook
 ├── data/                         # Downloaded project datasets (gitignored)
 ├── demo/                         # Demonstrations
 │   └── fig/                      # Demo figures
-├── docs/                         # Technical documentation; diagrams/ holds editable + SVG figures
+├── docs/                         # Reference documentation and history, by stage: collection/, labels/, sae/, causal_replay/, intervention/; diagrams/ holds editable + SVG figures
 ├── examples/                     # Small Claude/Bedrock examples
-├── notebooks/                    # Analysis notebooks (intervention/: final results)
+├── notebooks/                    # All Jupyter notebooks, by stage: data/, collection/, labels/, sae/, causal_replay/, intervention/ (final results)
 ├── presentation/                 # Presentation materials
 ├── proposal/                     # Project proposal and its diagram
 ├── reports/                      # Project and progress reports

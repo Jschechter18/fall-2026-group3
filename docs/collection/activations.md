@@ -15,7 +15,7 @@ Only Solver activations are captured. The hidden size for Gemma-3-4b-it is 2560.
 
 The paths below use the legacy collection roots. Distributed runs use the same
 three tensor filenames inside `prepared/activations/<run>/layer_NN/`; see the
-[workflow guide](distributed_collection.md) for the complete bundle layout.
+[workflow guide](../../cookbooks/distributed_collection.md) for the complete bundle layout.
 
 ```
 data/activations/<run>/layer_NN/<source_split>_attempt1.pt   # one row per collected question
@@ -52,7 +52,7 @@ Intervention baselines are exported under a separate run name.
 In new final exports, `source_split` is the actual storage folder and
 `original_source_split` retains dataset origin. `full_index` and attempt indices
 refer to the final split's tensor rows; `collection_activation_index` records
-the original merged row. See the [workflow guide](distributed_collection.md).
+the original merged row. See the [workflow guide](../../cookbooks/distributed_collection.md).
 
 ### Historical MuSiQue exports
 
@@ -68,7 +68,7 @@ name; causal replay later regenerates A2 live.
 The following diagram records the historical MuSiQue allocation. Use the current
 workflow above for new mixed-dataset runs.
 
-![Historical MuSiQue partition workflow](diagrams/data_split_workflow.svg)
+![Historical MuSiQue partition workflow](../diagrams/data_split_workflow.svg)
 
 Editable source: `docs/diagrams/data_split_workflow.drawio`. The overall experimental pipeline diagram is `proposal/revised_capstone_diagram.drawio` (`.drawio.svg` beside it), embedded in `proposal/proposal.md`.
 

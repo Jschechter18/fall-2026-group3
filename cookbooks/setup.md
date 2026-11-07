@@ -244,7 +244,7 @@ Local paths are mirrored beneath the group S3 prefix:
 | `results/collection/` (`interactions.jsonl`) | `s3://dats-capstone/shared/group3/results/collection/` |
 
 The `artifacts/collection/` row follows the convention in
-[the mixed collection runbook](../cookbooks/runbooks/mixed_collection_pipeline.md). To get the final
+[the mixed collection runbook](runbooks/mixed_collection_pipeline.md). To get the final
 collection, sync `s3://dats-capstone/shared/group3/artifacts/collection/mixed_final_001/` to
 `artifacts/collection/mixed_final_001/`, with `--dryrun` first as below.
 

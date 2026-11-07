@@ -20,9 +20,9 @@ Two choose-r runs, both in `results/intervention_layer25/` (versioned run folder
 
 ## Why the effect is small
 
-The edit happens **once**, at layer 25, at the **final prompt token** of the prefill ([solver.py:82-95](../src/mas_sae/intervention/generation/solver.py)). Generated tokens are never edited. The edit reaches the answer only through that token's cached keys and values, and the model can still copy the Critic's answer from the unedited prompt tokens. The model is also very sure: 45 of 50 episodes have a first answer token with probability above 0.99.
+The edit happens **once**, at layer 25, at the **final prompt token** of the prefill ([solver.py:82-95](../../src/mas_sae/intervention/generation/solver.py)). Generated tokens are never edited. The edit reaches the answer only through that token's cached keys and values, and the model can still copy the Critic's answer from the unedited prompt tokens. The model is also very sure: 45 of 50 episodes have a first answer token with probability above 0.99.
 
-This position is a deliberate choice: activations, SAEs and features were all built at the final prompt token ([capture.py:61-64](../src/mas_sae/activations/capture.py)). **Nothing upstream (collection, SAE training, feature selection, probes) needs redoing** to try another steering strategy. Only the intervention changes.
+This position is a deliberate choice: activations, SAEs and features were all built at the final prompt token ([capture.py:61-64](../../src/mas_sae/activations/capture.py)). **Nothing upstream (collection, SAE training, feature selection, probes) needs redoing** to try another steering strategy. Only the intervention changes.
 
 ## Next steps, in order
 

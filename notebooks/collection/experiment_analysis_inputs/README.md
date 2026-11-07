@@ -1,4 +1,4 @@
-# Inputs for cookbooks/experiment_analysis.ipynb
+# Inputs for notebooks/collection/experiment_analysis.ipynb
 
 Small development artifacts the notebook reads from the repository; everything else comes from the artifacts root.
 

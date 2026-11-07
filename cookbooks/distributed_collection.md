@@ -24,7 +24,8 @@ flowchart TD
 
 ## Prepare once, without loading models
 
-Start from [the example YAML](../configs/collection/distributed.yaml). It reuses
+Start from [the example YAML](../configs/collection/distributed.yaml). (The final
+`mixed_final_001` run used [distributed_final.yaml](../configs/collection/distributed_final.yaml).) It reuses
 the existing role/model, protocol, and activation settings. Review the run name,
 intervention reservation, and split proportions for your experiment. Fractions
 in the example are starting values, not a new agreed research protocol.

@@ -3,9 +3,9 @@
 The implementation is complete and locally validated. Live EC2/S3 smoke
 validation remains to be run before scaling.
 
-Use the [workflow guide](distributed_collection.md) for current commands,
+Use the [workflow guide](../../cookbooks/distributed_collection.md) for current commands,
 configuration, output paths, and downstream integration. Use the
-[two-EC2 smoke procedure](distributed_collection_smoke_test.md) for operational
+[two-EC2 smoke procedure](../../cookbooks/distributed_collection_smoke_test.md) for operational
 validation. This record retains the accepted design decisions without repeating
 operator instructions.
 

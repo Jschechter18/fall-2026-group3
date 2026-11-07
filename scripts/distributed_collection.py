@@ -1,4 +1,4 @@
-"""Run the distributed collection CLI; see docs/distributed_collection.md."""
+"""Run the distributed collection CLI; see cookbooks/distributed_collection.md."""
 from mas_sae.experiments.distributed_collection.cli import main
 
 

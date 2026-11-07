@@ -4,7 +4,7 @@ One line of `interactions.jsonl` is one episode: a question, the Solver's first
 answer, the Critic's review, the Solver's second answer, and the recorded
 metadata. Examples below use the existing Gemma/Qwen roles.
 
-For [distributed mixed-dataset runs](distributed_collection.md), the shared
+For [distributed mixed-dataset runs](../../cookbooks/distributed_collection.md), the shared
 manifest retains the exact input payloads; the separate intervention bundle
 also contains `contexts.jsonl` for causal replay. Historical MuSiQue runs recover
 paragraphs by original question ID and dataset revision.
@@ -54,7 +54,7 @@ Correctness is kept apart from behaviour on purpose: a wrong Critic can still be
 
 ## Behaviour: what Gemma did
 
-For the feedback runs, the labels to use are the official Behavior v0.1.2 labels (policy `v0.1.2-qc`, `results/behavior/behavior_v012_official_20261011/labels.csv`; see `behavior_v01.md`). They are joined to the record by `question_id`.
+For the feedback runs, the labels to use are the official Behavior v0.1.2 labels (policy `v0.1.2-qc`, `results/behavior/behavior_v012_official_20261011/labels.csv`; see `docs/labels/behavior_v01.md`). They are joined to the record by `question_id`.
 
 | Field (in `labels.csv`) | Meaning |
 |---|---|
@@ -66,7 +66,7 @@ For the feedback runs, the labels to use are the official Behavior v0.1.2 labels
 | `primary_target` | the probe's target when eligible: 1 = adopted the Critic, 0 = kept A1 or gave a third answer |
 | `eligible_strict`, `strict_target` | same, but only adopt versus keep (third answers excluded) |
 | `exclusion_reasons` | why an episode is not eligible, e.g. `no_conflict`, `critic_refusal`, `a2_nonanswer`, `a1_critic_containment` |
-| `human_validated_behavior_v1` | still empty; the human labels from the QC live in the private evidence folders named in `behavior_v01.md` |
+| `human_validated_behavior_v1` | still empty; the human labels from the QC live in the private evidence folders named in `docs/labels/behavior_v01.md` |
 
 Older behaviour fields on the record itself (`solver_behavior`, `critic_position_relation`, `direct_critic_adoption`, `solver_copied_nonanswer`, `solver_accepted_feedback`, `solver_changed_answer`) come from the earlier `lexical_v2` rule set and are kept for comparison only.
 

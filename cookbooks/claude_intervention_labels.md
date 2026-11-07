@@ -28,6 +28,15 @@ retention enter the binary table; agreement/out and technical failures retain
 their audit records. The existing explicit noncommittal-critic shortcut is
 recorded with its rule source, rather than represented as a Claude judgment.
 
+The final intervention (stage 6 of the [README pipeline](../README.md#6-intervention)) reads this
+run folder directly as `inputs.stored_labels` in `configs/intervention/intervention.yaml`. It needs
+nothing below this point.
+
+## Earlier pipeline: causal replay
+
+The rest of this page belongs to the earlier causal replay pipeline, which the stage-6 intervention
+replaced.
+
 After labeling, package all four semantic classes with frozen membership:
 
 ```bash
@@ -45,7 +54,7 @@ coordinator with `scripts/causal_replay.py --label-only RUN` (add `--dry-run`
 to preview without API calls). Model/prompt settings come from the frozen
 stored-label run. Successful judgments resume from the audit cache; technical
 failures stop analysis by default and are retried on the next invocation.
-See `docs/distributed_causal_replay.md` for the complete workflow.
+See `docs/causal_replay/distributed_causal_replay.md` for the complete workflow.
 
 The previously generated `mixed_final_001_intervention_candidate` package is
 rule-based, is no longer referenced by these presets, and is not a substitute

@@ -1,7 +1,7 @@
 # Final candidate behavior labels (2026-10-27)
 
 Policy `candidate-final-2026-10-27` for the `natural_4b_full9_candidates` run: one label per sampled question (22,355).
-The approved counts and checksums are in `counts.json`; the walkthrough is `cookbooks/final_behavior_labeling_before_after.ipynb`;
+The approved counts and checksums are in `counts.json`; the walkthrough is `notebooks/labels/final_behavior_labeling_before_after.ipynb`;
 `AUDIT.md` shows how every label was decided, with question IDs.
 
 | File | What it is |

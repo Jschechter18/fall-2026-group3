@@ -211,7 +211,7 @@ paid calls; the software does not launch a benchmark automatically. Compare
 `accepted_per_minute`, elapsed time, p50/p95 latency, SDK retries and terminal API
 errors. More concurrency is useful only while actual throughput improves.
 
-`notebooks/synthetic_data_generation_sample.ipynb` calls the same runner with
+`notebooks/data/synthetic_data_generation_sample.ipynb` calls the same runner with
 `CONCURRENCY`, subtype quotas, and both original splits. Generation is disabled by
 default. Existing saved batches are retained; loading and inspection
 cells make no calls. For a prior run, set `REVIEW_RUN_DIR` to its saved path.
