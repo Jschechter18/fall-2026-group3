@@ -2,7 +2,6 @@
 import pytest
 import torch
 import yaml
-from pathlib import Path
 
 from mas_sae.sae.hyperparamters import Hyperparameters, validate_hyperparameters
 from mas_sae.sae.model_runner import ModelRunner
@@ -10,6 +9,7 @@ from mas_sae.sae.sparse_autoencoder import SparseAutoencoder
 from mas_sae.sae.training import _saved_hyperparameters
 from mas_sae.sae.tuning import expand_search_space
 from dataclasses import asdict
+from repo_paths import REPO_ROOT
 
 
 @pytest.mark.parametrize('mode', ['l1', 'topk'])
@@ -48,7 +48,7 @@ def test_legacy_config_and_sweep():
     legacy = asdict(Hyperparameters())
     legacy.pop('weight_l2_coefficient')
     assert _saved_hyperparameters(legacy).weight_l2_coefficient == 0
-    root = Path(__file__).resolve().parents[3]
+    root = REPO_ROOT
     config = yaml.safe_load((root / 'configs/sae_hp_tuning/layer_25_l1_weight_l2.yaml').read_text())
     candidates = expand_search_space(config)
     assert len(candidates) == 4

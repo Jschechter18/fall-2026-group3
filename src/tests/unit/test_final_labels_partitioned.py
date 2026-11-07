@@ -3,7 +3,6 @@
 import importlib.util
 import json
 import shutil
-from pathlib import Path
 
 import pytest
 
@@ -12,8 +11,9 @@ pytest.importorskip("torch")  # the distributed-collection fixtures build activa
 from mas_sae.experiments.distributed_collection import core  # noqa: E402
 from mas_sae.experiments.records import read_jsonl, write_jsonl  # noqa: E402
 from test_distributed_collection import collect, fixture_collector, make_config, prepare  # noqa: E402
+from repo_paths import REPO_ROOT
 
-SCRIPT = Path(__file__).resolve().parents[3] / "scripts/build_final_labels_partitioned.py"
+SCRIPT = REPO_ROOT / "scripts/build_final_labels_partitioned.py"
 
 
 def _load():

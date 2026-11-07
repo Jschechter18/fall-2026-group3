@@ -5,6 +5,7 @@ import pytest
 
 from mas_sae.experiments.adoption_experiment import ARMS, feedback_for, run_experiment, sample_rows
 from mas_sae.agents.solver import Solver
+from repo_paths import REPO_ROOT
 
 
 def episode(qid, correct=True):
@@ -103,7 +104,7 @@ def test_load_sample_accepts_existing_manifest_and_rejects_tampering(tmp_path):
     from mas_sae.experiments.adoption_experiment import load_sample
 
     # Compatibility with the existing checksum format, not a newly generated one.
-    original = Path(__file__).resolve().parents[3] / "results/adoption_experiment/sample_100q/sample.json"
+    original = REPO_ROOT / "results/adoption_experiment/sample_100q/sample.json"
     packet, checksum = load_sample(original)
     assert len(packet["rows"]) == 100
     assert checksum == json.loads(original.read_text())["sha256"]

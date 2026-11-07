@@ -1,6 +1,5 @@
 import csv
 import json
-from pathlib import Path
 import subprocess
 import sys
 
@@ -19,8 +18,9 @@ from mas_sae.evaluation.feedback_audit import (
     human_comparison,
     wilson_interval,
 )
+from repo_paths import REPO_ROOT
 
-REPO = Path(__file__).resolve().parents[3]
+REPO = REPO_ROOT
 
 
 def review(verdict, advocated, explanation):

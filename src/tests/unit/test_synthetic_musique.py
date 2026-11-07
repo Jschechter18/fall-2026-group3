@@ -1,16 +1,16 @@
 import json
 from concurrent.futures import ThreadPoolExecutor
-from pathlib import Path
 
 import pytest
 
 from mas_sae.data.synthetic import DuplicateIndex, normalize_question, validate_candidate
 from mas_sae.data.synthetic.cli import main
+from repo_paths import REPO_ROOT
 
 
 @pytest.fixture
 def candidate():
-    path = Path(__file__).parents[1] / "fixtures/synthetic_musique/valid.json"
+    path = REPO_ROOT / "src/tests/fixtures/synthetic_musique/valid.json"
     return json.loads(path.read_text())
 
 

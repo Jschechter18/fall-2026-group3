@@ -3,15 +3,15 @@
 import hashlib
 import importlib.util
 import json
-from pathlib import Path
 
 import pandas as pd
 import pytest
 
 from mas_sae.experiments.records import write_jsonl
 from mas_sae.probe import behavior_data as bd
+from repo_paths import REPO_ROOT
 
-SCRIPTS = Path(__file__).resolve().parents[3] / "scripts"
+SCRIPTS = REPO_ROOT / "scripts"
 
 
 def _load(name):

@@ -2,7 +2,6 @@
 import json
 import runpy
 import sys
-from pathlib import Path
 from types import SimpleNamespace
 
 import numpy as np
@@ -17,6 +16,7 @@ from mas_sae.experiments.artifacts import sha256_file
 from mas_sae.probe.feature_selection import ActivationBasis
 from mas_sae.probe import feature_selection
 from mas_sae.probe.matched_edits import direction_scores
+from repo_paths import REPO_ROOT
 
 
 def cfg(tmp_path, **kw):
@@ -119,7 +119,7 @@ def test_reference_cli_reports_signed_neuron_statistics(tmp_path, monkeypatch, c
     monkeypatch.setattr(feature_selection, "reference_activations", lambda *args: {
         "Raw": {"features": {"0": {"std": 2.}}, "latents": {"basis": "activations"}},
         "SAE": {"features": {"0": {"ref": 1.}}, "latents": {}}})
-    script = Path(__file__).resolve().parents[3] / "scripts/feature_reference_activations.py"
+    script = REPO_ROOT / "scripts/feature_reference_activations.py"
     monkeypatch.setattr(sys, "argv", [str(script), "--config", str(config), "--summary", str(summary)])
     runpy.run_path(str(script), run_name="__main__")
     assert "Raw: 1 features, std median" in capsys.readouterr().out
@@ -168,7 +168,7 @@ def test_all_controls_generate_and_analyse_with_one_shared_random_set(tmp_path, 
 
 
 def test_presets_and_worker_policy_metadata(tmp_path):
-    root = Path(__file__).resolve().parents[3]
+    root = REPO_ROOT
     broad = replay.ReplayConfig.from_yaml(root / "configs/causal_mixed_layer25.yaml")
     focused = replay.ReplayConfig.from_yaml(root / "configs/causal_topk_mixed_layer25.yaml")
     assert len(broad.saes) == 5 and broad.probe_direction
@@ -184,7 +184,7 @@ def test_presets_and_worker_policy_metadata(tmp_path):
 def test_pretrained_and_reconstruction_control_presets():
     # #220: Exp 2 (original and decoder-fine-tuned pretrained SAEs) at the TopK run's standard, and Control 1
     # (each SAE with no ablation, on the reconstruction splice) as its own run
-    root = Path(__file__).resolve().parents[3]
+    root = REPO_ROOT
     focused = replay.ReplayConfig.from_yaml(root / "configs/causal_topk_mixed_layer25.yaml")
     exp2 = replay.ReplayConfig.from_yaml(root / "configs/causal_pretrained_layer25.yaml")
     control = replay.ReplayConfig.from_yaml(root / "configs/causal_reconstruction_control_layer25.yaml")

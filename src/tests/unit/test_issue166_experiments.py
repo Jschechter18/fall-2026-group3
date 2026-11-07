@@ -2,14 +2,14 @@
 
 import importlib.util
 import json
-from pathlib import Path
 
 import pytest
 
 from mas_sae.evaluation.claude_agreement import label_distribution, wilson
 from mas_sae.experiments.records import write_jsonl
+from repo_paths import REPO_ROOT
 
-SCRIPTS = Path(__file__).resolve().parents[3] / "scripts"
+SCRIPTS = REPO_ROOT / "scripts"
 
 
 def _load(name):

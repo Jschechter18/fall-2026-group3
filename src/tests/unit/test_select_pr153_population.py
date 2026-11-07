@@ -3,15 +3,15 @@
 import hashlib
 import importlib.util
 import json
-from pathlib import Path
 
 import pytest
 
 from mas_sae.experiments.records import write_jsonl
+from repo_paths import REPO_ROOT
 
 
 def _load():
-    path = Path(__file__).resolve().parents[3] / "scripts" / "select_pr153_population.py"
+    path = REPO_ROOT / "scripts" / "select_pr153_population.py"
     spec = importlib.util.spec_from_file_location("select_pr153_population", path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

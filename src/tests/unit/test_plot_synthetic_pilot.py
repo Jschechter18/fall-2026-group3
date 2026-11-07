@@ -1,11 +1,11 @@
 """Synthetic-pilot paper figure (#174, #179): counts per cohort, collection failures as Out, refusals."""
 import importlib.util
 import json
-from pathlib import Path
 
 import pytest
+from repo_paths import REPO_ROOT
 
-SCRIPT = Path(__file__).resolve().parents[3] / "scripts/plot_synthetic_pilot.py"
+SCRIPT = REPO_ROOT / "scripts/plot_synthetic_pilot.py"
 
 
 @pytest.fixture

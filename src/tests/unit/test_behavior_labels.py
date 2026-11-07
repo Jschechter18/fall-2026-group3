@@ -1,7 +1,6 @@
 from copy import deepcopy
 import hashlib
 import json
-from pathlib import Path
 import re
 
 import pytest
@@ -18,8 +17,9 @@ from mas_sae.evaluation.behavior_labels import (
     classify_candidate,
     write_labels,
 )
+from repo_paths import REPO_ROOT
 
-REPO = Path(__file__).resolve().parents[3]
+REPO = REPO_ROOT
 COMMITTED_LABELS = REPO / "results/behavior/behavior_v011_split80_10_10_20261006/labels.csv"
 
 

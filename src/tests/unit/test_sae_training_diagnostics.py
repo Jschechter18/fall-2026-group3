@@ -11,6 +11,7 @@ import torch
 from mas_sae.sae.hyperparamters import Hyperparameters
 from mas_sae.sae.dataloader import create_sae_dataloader
 from mas_sae.sae import training
+from repo_paths import REPO_ROOT
 
 
 @pytest.mark.parametrize("mode", ["l1", "topk"])
@@ -94,7 +95,7 @@ def test_training_writes_diagnostics_and_frozen_feature_artifact(
 
 @pytest.mark.parametrize("evaluate_test", [False, True])
 def test_training_cli_delegates_to_shared_trainer(tmp_path, monkeypatch, evaluate_test):
-    script = Path(__file__).resolve().parents[3] / "scripts" / "sae" / "train_sae.py"
+    script = REPO_ROOT / "scripts" / "sae" / "train_sae.py"
     spec = importlib.util.spec_from_file_location("train_sae_cli", script)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

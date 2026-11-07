@@ -6,6 +6,7 @@ from mas_sae.agents.critic import Critic
 from mas_sae.agents.solver import Solver
 from mas_sae.experiments.anonymized_adoption import CandidateSolver
 from mas_sae.experiments.natural_adoption import run_natural, screen_natural
+from repo_paths import REPO_ROOT
 
 
 def inputs(target="Rome", a1="Paris"):
@@ -86,7 +87,7 @@ def test_paired_run_preserves_natural_inputs_and_exports_separate_table(
     import runpy
     import sys
     from pathlib import Path
-    root = Path(__file__).resolve().parents[3]
+    root = REPO_ROOT
     report = tmp_path / "report"
     monkeypatch.setattr(sys, "argv", ["summarize_adoption_results.py",
         "--results-root", str(adoption_results_root),
@@ -129,7 +130,7 @@ def test_prepare_natural_cli_freezes_fresh_train_only_sample(tmp_path, monkeypat
     import sys
     from mas_sae.experiments.adoption_experiment import digest
 
-    root = Path(__file__).resolve().parents[3]
+    root = REPO_ROOT
     row, audit = inputs()
     previous_row = dict(row, question_id="2hop__old")
     heldout = dict(row, question_id="2hop__heldout")

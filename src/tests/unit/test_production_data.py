@@ -1,7 +1,6 @@
 from collections import Counter
 import csv
 import json
-from pathlib import Path
 import random
 
 import pytest
@@ -35,6 +34,7 @@ from mas_sae.data.production import (
 from mas_sae.evaluation.behavior_labels import V011, V020_CANDIDATE, classify_candidate, read_labels, write_labels
 from mas_sae.experiments.artifacts import sha256_file
 from mas_sae.experiments.records import read_jsonl, write_jsonl
+from repo_paths import REPO_ROOT
 
 PROPORTIONS = {"train": 0.6, "test": 0.2, "intervention": 0.2}
 
@@ -689,7 +689,7 @@ def test_package_built_under_another_cut_is_caught_before_export():
 
 # ------------------------------------------------------------------ the committed mapping
 
-COMMITTED = (Path(__file__).resolve().parents[3] / "results" / "behavior"
+COMMITTED = (REPO_ROOT / "results" / "behavior"
              / "behavior_v011_split80_10_10_20261006")
 
 

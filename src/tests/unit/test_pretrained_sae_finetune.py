@@ -12,9 +12,10 @@ from safetensors.torch import save_file
 from mas_sae.experiments.artifacts import sha256_file
 from mas_sae.sae.finetuning import cache, data, evaluation, loop, selection
 from mas_sae.sae.pretrained import JumpReLUSAE, load_gemma_scope_sae
+from repo_paths import REPO_ROOT
 
 spec = importlib.util.spec_from_file_location('pretrained_sae_finetune',
-    Path(__file__).resolve().parents[3] / 'scripts/sae/pretrained-tuning/finetune_pretrained_sae.py')
+    REPO_ROOT / 'scripts/sae/pretrained-tuning/finetune_pretrained_sae.py')
 ft = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(ft)
 

@@ -9,8 +9,9 @@ import yaml
 from mas_sae.evaluation.paired_ablation import (analyses, arm_outcomes, exact_mcnemar, paired_difference_ci,
                                                 paired_test)
 from mas_sae.experiments.artifacts import sha256_file
+from repo_paths import REPO_ROOT
 
-SCRIPT = Path(__file__).resolve().parents[3] / "scripts/experiments/compare_paired_ablation.py"
+SCRIPT = REPO_ROOT / "scripts/experiments/compare_paired_ablation.py"
 IDS = ["2hop__a", "3hop1__b", "3hop2__c", "4hop1__d"]
 
 

@@ -2,15 +2,15 @@
 import importlib.util
 import json
 import random
-from pathlib import Path
 
 import pytest
 
 from mas_sae.data.synthetic.generation import ParagraphPool, assemble_candidate
 from test_related_fillers import TOPICAL, UNRELATED
 from test_synthetic_generation import RAW_2HOP
+from repo_paths import REPO_ROOT
 
-SCRIPT = Path(__file__).resolve().parents[3] / "scripts/experiments/swap_synthetic_fillers.py"
+SCRIPT = REPO_ROOT / "scripts/experiments/swap_synthetic_fillers.py"
 
 
 @pytest.fixture

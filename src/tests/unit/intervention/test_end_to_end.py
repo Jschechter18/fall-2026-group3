@@ -14,8 +14,9 @@ from mas_sae.intervention.experiment.config import parse_config
 from mas_sae.intervention.experiment.episodes import eligible_episodes
 from mas_sae.intervention.run_files.provenance import IDENTITY_KEYS
 from mas_sae.intervention.generation.solver import generate_baseline
+from repo_paths import REPO_ROOT
 
-SCRIPT = Path(__file__).resolve().parents[4] / "scripts/intervention/run_intervention.py"
+SCRIPT = REPO_ROOT / "scripts/intervention/run_intervention.py"
 
 
 def _load_script():

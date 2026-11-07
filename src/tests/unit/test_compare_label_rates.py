@@ -2,11 +2,11 @@
 
 import importlib.util
 import json
-from pathlib import Path
 
 import pytest
+from repo_paths import REPO_ROOT
 
-SCRIPT = Path(__file__).resolve().parents[3] / "scripts/experiments/compare_label_rates.py"
+SCRIPT = REPO_ROOT / "scripts/experiments/compare_label_rates.py"
 
 
 @pytest.fixture

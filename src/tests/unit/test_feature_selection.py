@@ -12,6 +12,7 @@ from mas_sae.causal import offline
 from mas_sae.probe import feature_selection as fs
 from mas_sae.probe import layer_selection as ls
 from mas_sae.sae.pretrained import JumpReLUSAE, load_gemma_scope_sae
+from repo_paths import REPO_ROOT
 
 
 def _jump_relu(d_in=4, d_sae=6, seed=0):
@@ -181,7 +182,7 @@ def test_config_passes_excluded_episodes_to_the_loader(tmp_path):
 
 def test_committed_config_loads_with_three_saes():
     from pathlib import Path
-    repo = Path(__file__).resolve().parents[3]
+    repo = REPO_ROOT
     cfg = fs.FeatureSelectionConfig.from_yaml(repo / "configs/feature_selection_layer33.yaml")
     assert set(cfg.saes) == {"TopK SAE", "L1 SAE", "Pretrained SAE"}
     assert (cfg.layer, cfg.fit_partition, cfg.eval_partition) == (33, "train", "validation")

@@ -4,6 +4,7 @@ import torch
 from mas_sae.sae.sparse_autoencoder import SparseAutoencoder
 from mas_sae.sae.model_runner import ModelRunner
 from mas_sae.sae.resampling import resample_features
+from repo_paths import REPO_ROOT
 
 
 def setup():
@@ -60,7 +61,7 @@ def test_paired_workflow_smoke(tmp_path, monkeypatch):
     import sys
     from pathlib import Path
     import yaml
-    script = Path(__file__).resolve().parents[3] / 'scripts/sae/improvement-trials/experiment_sae_resampling.py'
+    script = REPO_ROOT / 'scripts/sae/improvement-trials/experiment_sae_resampling.py'
     spec = importlib.util.spec_from_file_location('resampling_experiment', script)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

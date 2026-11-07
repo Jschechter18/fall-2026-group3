@@ -16,6 +16,7 @@ import torch
 from mas_sae.experiments.artifacts import sha256_file
 from mas_sae.probe import behavior_data as bd
 from mas_sae.probe import layer_selection as ls
+from repo_paths import REPO_ROOT
 
 CLASSES = ["adopted_critic", "retained_a1", "third_answer"]   # solver_response values
 CODE = {"adopted_critic": 0, "retained_a1": 1, "third_answer": 1}      # planted signal: dim 0 = adopted, dim 1 = not
@@ -530,7 +531,7 @@ def test_malformed_eligibility_stops_selection_instead_of_dropping_rows():
 
 
 def test_defaults_and_entry_point_use_the_official_full9_export():
-    repo = Path(__file__).resolve().parents[3]
+    repo = REPO_ROOT
     cfg = ls.LayerSelectionConfig.from_yaml(repo / "configs/layer_selection_full9.yaml")
     default = ls.LayerSelectionConfig()
     for c in (cfg, default):

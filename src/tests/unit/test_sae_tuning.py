@@ -12,6 +12,7 @@ import torch
 from mas_sae.sae import training, tuning
 from mas_sae.sae.dataloader import create_sae_dataloader
 from mas_sae.sae.hyperparamters import Hyperparameters
+from repo_paths import REPO_ROOT
 
 
 @pytest.fixture
@@ -356,7 +357,7 @@ def test_failure_is_recorded(setup, config, monkeypatch):
     ["--finish-run", "run", "--epochs", "3", "--evaluate-test"],
 ])
 def test_cli_rejects_incompatible_modes(args, monkeypatch):
-    script = Path(__file__).resolve().parents[3] / "scripts/sae/train_sae.py"
+    script = REPO_ROOT / "scripts/sae/train_sae.py"
     spec = importlib.util.spec_from_file_location("train_cli", script)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -379,7 +380,7 @@ def test_finishing_respects_early_stopping(setup):
 
 def test_cli_loads_yaml_and_delegates_tuning(config, tmp_path, monkeypatch):
     import yaml
-    script = Path(__file__).resolve().parents[3] / "scripts/sae/train_sae.py"
+    script = REPO_ROOT / "scripts/sae/train_sae.py"
     spec = importlib.util.spec_from_file_location("tune_cli", script)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

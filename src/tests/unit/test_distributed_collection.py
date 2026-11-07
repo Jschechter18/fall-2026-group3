@@ -1,7 +1,6 @@
 """Scientific identity, checkpoints, and serial/distributed equivalence without model downloads."""
 import copy
 import json
-from pathlib import Path
 
 import pytest
 import torch
@@ -13,6 +12,7 @@ from mas_sae.experiments.artifacts import write_json_atomic
 from mas_sae.experiments.collection_config import load_collection_config
 from mas_sae.experiments.distributed_collection import core, dataset
 from mas_sae.models.roles import resolve_roles
+from repo_paths import REPO_ROOT
 
 SITES = ["model.layers.8", "model.layers.17"]
 
@@ -282,7 +282,7 @@ def test_manifest_tampering_and_multiple_presentations_fail_before_collection(tm
 def test_collection_entrypoint_loads_models_once_for_all_assigned_chunks(tmp_path, monkeypatch):
     import importlib.util
     from types import SimpleNamespace
-    spec = importlib.util.spec_from_file_location("collection_entry", Path(__file__).resolve().parents[3]/"scripts/collect_activations.py")
+    spec = importlib.util.spec_from_file_location("collection_entry", REPO_ROOT/"scripts/collect_activations.py")
     entry = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(entry)
     config = make_config(tmp_path)

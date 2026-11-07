@@ -11,6 +11,7 @@ import torch
 from mas_sae.causal import distributed, offline, replay
 from mas_sae.causal.smoke import smoke_components, tiny_features, tiny_saes
 from mas_sae.evaluation import behavior_labels as bl
+from repo_paths import REPO_ROOT
 
 
 class Echo(torch.nn.Module):
@@ -185,7 +186,7 @@ def test_config_requires_paths_and_valid_saes(tmp_path):
 
 def test_committed_configs_load():
     from pathlib import Path
-    repo = Path(__file__).resolve().parents[3]
+    repo = REPO_ROOT
     real = replay.ReplayConfig.from_yaml(repo / "configs/causal_replay_layer33.yaml")
     smoke = replay.ReplayConfig.from_yaml(repo / "configs/causal_replay_smoke_validation.yaml")
     assert set(real.saes) == {"TopK SAE", "L1 SAE", "Pretrained SAE"} == set(smoke.saes)
@@ -1370,7 +1371,7 @@ def test_check_script_compares_with_rows_written_one_generation_per_condition(tm
     run_dir = replay.replay(cfg, episodes.head(2), comp, tmp_path / "run")
     monkeypatch.setattr(replay, "generate_all", every)
     monkeypatch.setattr(replay, "load_components", lambda c, e: comp)
-    script = Path(__file__).resolve().parents[3] / "scripts/check_replay_reuse.py"
+    script = REPO_ROOT / "scripts/check_replay_reuse.py"
     rows = run_dir / "per_row.jsonl"
     qids = episodes.head(2).question_id.astype(str).tolist()
 

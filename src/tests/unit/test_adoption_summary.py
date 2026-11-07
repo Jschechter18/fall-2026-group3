@@ -1,13 +1,13 @@
 import json
-from pathlib import Path
 import runpy
 
 import pytest
 
 from mas_sae.experiments.records import read_jsonl
+from repo_paths import REPO_ROOT
 
 
-ROOT = Path(__file__).resolve().parents[3]
+ROOT = REPO_ROOT
 PUBLISHED_RESULTS = ROOT / 'results/adoption_experiment'
 PUBLISHED_EPISODES = [
     PUBLISHED_RESULTS / folder / 'episodes.jsonl'

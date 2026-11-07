@@ -19,6 +19,7 @@ from mas_sae.experiments.artifacts import sha256_file
 from mas_sae.experiments.records import read_jsonl, write_jsonl
 from mas_sae.models.claude import ClaudeResult
 from mas_sae.probe.feature_selection import ActivationBasis
+from repo_paths import REPO_ROOT
 
 MODEL = "claude-sonnet-4-5-20250929"
 
@@ -187,7 +188,7 @@ def test_dry_run_never_constructs_a_client_or_writes_outputs(inputs, tmp_path, m
 
 def test_coordinator_cli_dry_run_uses_the_frozen_run_config(inputs, tmp_path, monkeypatch, capsys):
     run = bundle(inputs, tmp_path / "run", monkeypatch)
-    script = Path(__file__).resolve().parents[3] / "scripts/causal_replay.py"
+    script = REPO_ROOT / "scripts/causal_replay.py"
     monkeypatch.setattr(semantic, "_create_client", MagicMock(side_effect=AssertionError("network")))
     monkeypatch.setattr(sys, "argv", [str(script), "--label-only", str(run), "--dry-run"])
     runpy.run_path(str(script), run_name="__main__")

@@ -31,11 +31,12 @@ from mas_sae.evaluation.claude_validator import (
 )
 from mas_sae.experiments.records import write_jsonl
 from mas_sae.models.claude import ClaudeResult
+from repo_paths import REPO_ROOT
 
 
 def _load_cli():
     """scripts/ is not on the test path, so load the CLI by file like the other script tests."""
-    path = Path(__file__).resolve().parents[3] / "scripts" / "run_claude_validation.py"
+    path = REPO_ROOT / "scripts" / "run_claude_validation.py"
     spec = importlib.util.spec_from_file_location("run_claude_validation", path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

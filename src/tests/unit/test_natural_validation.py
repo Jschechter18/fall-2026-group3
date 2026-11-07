@@ -6,7 +6,6 @@ model is loaded and nothing is downloaded.
 import copy
 import json
 import re
-from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
@@ -19,8 +18,9 @@ from mas_sae.agents.solver import Solver
 from mas_sae.experiments import natural_validation as nv
 from mas_sae.experiments.artifacts import sha256_text
 from mas_sae.models import roles
+from repo_paths import REPO_ROOT
 
-REPO = Path(__file__).resolve().parents[3]
+REPO = REPO_ROOT
 CONFIG_PATH = REPO / "configs/validation/natural_critics_gemma12b_qwen14b.yaml"
 FIXTURE = REPO / "src/tests/fixtures/qwen3_14b_chat_template.json"
 
