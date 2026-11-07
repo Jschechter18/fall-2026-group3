@@ -129,7 +129,7 @@ Models used by the Solver-Critic pipeline (all from Hugging Face):
   (the validated snapshot recovered during the team's provenance review).
 - **Cross-model Natural Critic used in protocol validation:**
   `Qwen/Qwen3-4B-Instruct-2507`, revision `cdbee75f17c01a7cc42f958dc650907174af0554`.
-- **Production roles (`configs/collection/v2/natural_4b_full_*.yaml`):**
+- **Production roles (`configs/archive/collection/v2/natural_4b_full_*.yaml`):**
   Gemma-3-4B-it as Solver and Validator, Qwen3-4B-Instruct-2507 as Natural
   Critic, at the revisions above. Gemma-3-12B in BF16 does not fit one A10G.
 - **Final collection (`configs/collection/distributed_final.yaml`, run `mixed_final_001`):**

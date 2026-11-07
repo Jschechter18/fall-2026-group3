@@ -202,7 +202,14 @@ A smoke run of the same pipeline: [configs/intervention/intervention_smoke.yaml]
 
 The repository also holds earlier pipelines and runs. Don't cite them as final results:
 
-- **Earlier collections:** `configs/collection/v1`, `v2`, `v3` (e.g. `natural_4b_full`), plus the synthetic pilots.
+- **Earlier collections:** `configs/archive/collection/v1`, `v2` (e.g. `natural_4b_full`) and
+  `configs/collection/v3`.
+- **Mini experiments:** side studies with their own question and answer, in `scripts/experiments/`
+  and `configs/experiments/`: `adoption/` (feedback, instruction and anonymity, #138),
+  `synthetic_pilot/` (#174, #179), `sae_improvement/` (resampling, refinement, weight L2),
+  `critic_selection/` and `edit_size/`. Their results stay in their original `results/` folders.
+- **Archived code:** pipelines the study replaced, in `scripts/archive/` (`lexical_labels_v01/`,
+  `early_smoke_tests/`, `single_machine_collection/`) and `configs/archive/`.
 - **The earlier causal pipeline:** `causal_replay`, `src/mas_sae/causal/`, `configs/causal_*.yaml`,
   `results/causal_*`. See [docs/causal_replay/distributed_causal_replay.md](docs/causal_replay/distributed_causal_replay.md).
   The stage-6 intervention replaced it. Exception: `mas_sae.causal.offline` is still used by
@@ -269,7 +276,8 @@ pytest
 │   ├── feature_selection/        # Feature selection (final: *_intervention_layer25.yaml)
 │   ├── sae/                      # SAE training (final L1 SAE study)
 │   ├── intervention/             # Intervention experiment
-│   └── sae_hp_tuning/            # Earlier SAE hyperparameter searches
+│   ├── experiments/              # Mini experiments (synthetic_pilot/, sae_improvement/)
+│   └── archive/                  # Configs of replaced pipelines and earlier runs
 ├── cookbooks/                    # Setup and how-to guides; runbooks/ holds the collection runbook
 ├── data/                         # Downloaded project datasets (gitignored)
 ├── demo/                         # Demonstrations
@@ -291,7 +299,8 @@ pytest
 │   └── references/               # Reference PDFs for the literature review
 ├── results/                      # Experimental outputs and results
 ├── scripts/                      # Entry-point scripts, by pipeline stage: data/, collection/, labels/,
-│                                 #   layer_selection/, feature_selection/, sae/, intervention/
+│                                 #   layer_selection/, feature_selection/, sae/, intervention/;
+│                                 #   experiments/ (mini experiments) and archive/ (replaced pipelines)
 ├── src/
 │   ├── component/                # Reusable, non-pipeline components
 │   ├── docs/                     # Project documentation

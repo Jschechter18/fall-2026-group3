@@ -11,7 +11,7 @@ from mas_sae.evaluation.paired_ablation import (analyses, arm_outcomes, exact_mc
 from mas_sae.experiments.artifacts import sha256_file
 from repo_paths import REPO_ROOT
 
-SCRIPT = REPO_ROOT / "scripts/experiments/compare_paired_ablation.py"
+SCRIPT = REPO_ROOT / "scripts/experiments/synthetic_pilot/compare_paired_ablation.py"
 IDS = ["2hop__a", "3hop1__b", "3hop2__c", "4hop1__d"]
 
 

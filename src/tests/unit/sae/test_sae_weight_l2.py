@@ -49,7 +49,7 @@ def test_legacy_config_and_sweep():
     legacy.pop('weight_l2_coefficient')
     assert _saved_hyperparameters(legacy).weight_l2_coefficient == 0
     root = REPO_ROOT
-    config = yaml.safe_load((root / 'configs/sae_hp_tuning/layer_25_l1_weight_l2.yaml').read_text())
+    config = yaml.safe_load((root / 'configs/experiments/sae_improvement/layer_25_l1_weight_l2.yaml').read_text())
     candidates = expand_search_space(config)
     assert len(candidates) == 4
     assert candidates[0][1].weight_l2_coefficient == 0

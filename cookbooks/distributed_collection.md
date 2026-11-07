@@ -189,15 +189,19 @@ has stopped. No reader hooks or multi-tree publication recovery are required.
 
 ## Labels and downstream experiments
 
+> The final study labels episodes with Claude instead (stage 2 of the
+> [README pipeline](../README.md#2-claude-behavior-labels)). The rule-based labels below are the
+> earlier lexical labels; their script is archived under `scripts/archive/lexical_labels_v01/`.
+
 Generate labels against each final run, retaining existing label rules:
 
 ```bash
-python scripts/prepare_behavior_v01.py \
+python scripts/archive/lexical_labels_v01/prepare_behavior_v01.py \
   --full-results artifacts/collection/mixed_collection/prepared/results/mixed_collection \
   --layout partitioned --label-policy v0.2.0-candidate \
   --output artifacts/collection/mixed_collection/labels
 
-python scripts/prepare_behavior_v01.py \
+python scripts/archive/lexical_labels_v01/prepare_behavior_v01.py \
   --full-results artifacts/collection/mixed_collection/prepared/results/mixed_collection_intervention \
   --layout partitioned --label-policy v0.2.0-candidate \
   --output artifacts/collection/mixed_collection/intervention-labels

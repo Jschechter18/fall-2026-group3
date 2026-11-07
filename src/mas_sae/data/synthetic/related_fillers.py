@@ -1,6 +1,6 @@
 """Related filler paragraphs: the pool paragraphs most similar to a question and its evidence (#156).
 
-Applied to finished synthetic records by ``scripts/experiments/swap_synthetic_fillers.py``; the
+Applied to finished synthetic records by ``scripts/experiments/synthetic_pilot/swap_synthetic_fillers.py``; the
 generator itself is unchanged and keeps drawing random fillers.
 """
 import random

@@ -247,7 +247,7 @@ def test_collection_config_v1_has_no_sampling_sections(
     tmp_path: Path,
 ) -> None:
     config = load_collection_config(
-        Path("configs/collection/v1/train_100q.yaml")
+        Path("configs/archive/collection/v1/train_100q.yaml")
     )
 
     assert "sampling" not in config["dataset"]
@@ -256,7 +256,7 @@ def test_collection_config_v1_has_no_sampling_sections(
 
 def test_collection_config_v2_smoke_loads() -> None:
     config = load_collection_config(
-        Path("configs/collection/v2/smoke_train.yaml")
+        Path("configs/archive/collection/v2/smoke_train.yaml")
     )
 
     assert config["dataset"]["sampling"]["strategy"] == "stratified"
@@ -341,7 +341,7 @@ def test_collection_config_rejects_non_string_protocol_version(
 
 def test_collection_config_v2_smoke_carries_v2_label() -> None:
     config = load_collection_config(
-        Path("configs/collection/v2/smoke_train.yaml")
+        Path("configs/archive/collection/v2/smoke_train.yaml")
     )
 
     assert config["collection"]["protocol_version"] == "v2"
@@ -349,7 +349,7 @@ def test_collection_config_v2_smoke_carries_v2_label() -> None:
 
 def test_collection_config_v1_has_no_protocol_version() -> None:
     config = load_collection_config(
-        Path("configs/collection/v1/train_100q.yaml")
+        Path("configs/archive/collection/v1/train_100q.yaml")
     )
 
     assert "protocol_version" not in config["collection"]
@@ -366,7 +366,7 @@ def test_invalid_conditions(value):
 
 @pytest.mark.parametrize("value", [None, [], "natural", {}, ["bad"], ["natural", "natural"]])
 def test_explicit_invalid_condition_config_fails(tmp_path, value):
-    config = yaml.safe_load(open("configs/collection/v2/smoke_train.yaml"))
+    config = yaml.safe_load(open("configs/archive/collection/v2/smoke_train.yaml"))
     config["collection"]["active_conditions"] = value
     path = tmp_path / "invalid.yaml"
     path.write_text(yaml.safe_dump(config))
@@ -378,7 +378,7 @@ def test_explicit_invalid_condition_config_fails(tmp_path, value):
 
 @pytest.mark.parametrize("value", [["natural"], ["controlled_correct"], ["controlled_incorrect"]])
 def test_explicit_valid_condition_config(tmp_path, value):
-    config = yaml.safe_load(open("configs/collection/v2/smoke_train.yaml"))
+    config = yaml.safe_load(open("configs/archive/collection/v2/smoke_train.yaml"))
     config["collection"]["active_conditions"] = value
     path = tmp_path / "valid.yaml"
     path.write_text(yaml.safe_dump(config))
@@ -387,7 +387,7 @@ def test_explicit_valid_condition_config(tmp_path, value):
 
 
 def test_omitted_conditions_preserve_legacy():
-    config = load_collection_config("configs/collection/v2/smoke_train.yaml")
+    config = load_collection_config("configs/archive/collection/v2/smoke_train.yaml")
     assert "active_conditions" not in config["collection"]
     assert [c.value for c in resolve_conditions()] == ["natural", "controlled_correct", "controlled_incorrect"]
 
@@ -410,7 +410,7 @@ def test_explicit_role_config_roundtrip(tmp_path):
 
 def test_production_template_requires_team_decisions():
     with pytest.raises(ValueError):
-        load_collection_config("configs/collection/v2/natural_production.yaml")
+        load_collection_config("configs/archive/collection/v2/natural_production.yaml")
 
 
 # ``collection.a2_presentations`` and ``sampling.strategy: listed``.
@@ -418,7 +418,7 @@ def test_production_template_requires_team_decisions():
 
 @pytest.mark.parametrize("value", [[], ["feedback", "feedback"], ["letters"], "candidates"])
 def test_invalid_presentations(tmp_path, value):
-    config = yaml.safe_load(open("configs/collection/v2/smoke_train.yaml"))
+    config = yaml.safe_load(open("configs/archive/collection/v2/smoke_train.yaml"))
     config["collection"]["a2_presentations"] = value
     path = tmp_path / "invalid.yaml"
     path.write_text(yaml.safe_dump(config))
@@ -439,7 +439,7 @@ def test_presentations_omitted_keep_the_feedback_prompt():
     ({"strategy": "listed", "question_ids_file": "ids.json", "hop_proportions": {"2hop": 1.0}}, False),
 ])
 def test_listed_sampling_needs_exactly_an_ids_file(tmp_path, sampling, valid):
-    config = yaml.safe_load(open("configs/collection/v2/smoke_train.yaml"))
+    config = yaml.safe_load(open("configs/archive/collection/v2/smoke_train.yaml"))
     config["dataset"]["sampling"] = sampling
     path = tmp_path / "listed.yaml"
     path.write_text(yaml.safe_dump(config))

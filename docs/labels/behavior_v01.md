@@ -117,7 +117,7 @@ Questions that were part of earlier development data (the 2,500-question layer s
 
 ### Activation files by partition
 
-The collection run stores tensors by MuSiQue source split (`train.pt`, `validation.pt`), which mix partitions. `scripts/export_partition_activations.py` writes the same layout under a new run name with the partition in place of the source split, by gathering rows from the existing tensors through the manifest:
+The collection run stores tensors by MuSiQue source split (`train.pt`, `validation.pt`), which mix partitions. `scripts/archive/single_machine_collection/export_partition_activations.py` writes the same layout under a new run name with the partition in place of the source split, by gathering rows from the existing tensors through the manifest:
 
 ```text
 <export root>/data/activations/<export run>/layer_NN/{train,validation,test}[_attempt1|_attempt2].pt
@@ -130,11 +130,11 @@ By default one export run holds `train`, `validation` and `test` in the same `la
 
 ## Human check
 
-The labels are string rules, so they were checked by people. The blind packet is sampled from the train partition only: every "kept" case in train plus 40 from each other situation, shuffled together. A packet sampled under an earlier split is not reused, because it would show annotators test or intervention questions. Annotators see the question, the source paragraphs, A1, the Critic's feedback and A2, and none of our labels. A second annotator independently labels 120 of the rows. `scripts/qc_agreement.py` then reports agreement and lists the disagreements. Instructions are in `docs/labels/qc_guide.md`.
+The labels are string rules, so they were checked by people. The blind packet is sampled from the train partition only: every "kept" case in train plus 40 from each other situation, shuffled together. A packet sampled under an earlier split is not reused, because it would show annotators test or intervention questions. Annotators see the question, the source paragraphs, A1, the Critic's feedback and A2, and none of our labels. A second annotator independently labels 120 of the rows. `scripts/archive/lexical_labels_v01/qc_agreement.py` then reports agreement and lists the disagreements. Instructions are in `docs/labels/qc_guide.md`.
 
 ### Outcome (2026-10-11)
 
-The packet was issued from `behavior_v011_split80_10_10_20261006/qc/` (559 rows, 120 of them also given to a second annotator). Annotator A labelled all 559 rows and annotator B the 120. `scripts/qc_agreement.py` on the completed files: `feedback_type` 115/120 (kappa 0.94), `solver_response` 110/120 (kappa 0.89), `eligible_primary` 100/120 (kappa 0.47; 14 of the 20 disagreements are "no" against "uncertain"). The 29 rows with any disagreement were adjudicated (24 decisions followed B, 4 followed A, 1 neither). Against the adjudicated reference the rules agree on all three fields for 169/559 rows. The strata were chosen to be hard, so that figure is not population accuracy.
+The packet was issued from `behavior_v011_split80_10_10_20261006/qc/` (559 rows, 120 of them also given to a second annotator). Annotator A labelled all 559 rows and annotator B the 120. `scripts/archive/lexical_labels_v01/qc_agreement.py` on the completed files: `feedback_type` 115/120 (kappa 0.94), `solver_response` 110/120 (kappa 0.89), `eligible_primary` 100/120 (kappa 0.47; 14 of the 20 disagreements are "no" against "uncertain"). The 29 rows with any disagreement were adjudicated (24 decisions followed B, 4 followed A, 1 neither). Against the adjudicated reference the rules agree on all three fields for 169/559 rows. The strata were chosen to be hard, so that figure is not population accuracy.
 
 Two findings for anyone using the labels:
 
@@ -152,15 +152,15 @@ Evidence (private, not committed, contains the unblinded key): `~/capstone-artif
 | `src/mas_sae/evaluation/behavior_labels.py` | The labelling rules, and reading and writing `labels.csv` |
 | `src/mas_sae/evaluation/behavior_qc.py` | Builds the blind QC packet and scores annotator agreement |
 | `src/mas_sae/data/production.py` | The split table and the loader that enforces it |
-| `scripts/prepare_behavior_v01.py` | Runs the steps above on the finished production run |
-| `scripts/qc_agreement.py` | Compares two completed annotator files |
+| `scripts/archive/lexical_labels_v01/prepare_behavior_v01.py` | Runs the steps above on the finished production run |
+| `scripts/archive/lexical_labels_v01/qc_agreement.py` | Compares two completed annotator files |
 
 The scripts only read arguments and call the package functions. Existing project helpers are reused for JSONL reading, file hashing, safe output folders and the pinned MuSiQue loader.
 
 ## Rebuilding and using the labels
 
 ```bash
-PYTHONPATH=src python scripts/prepare_behavior_v01.py \
+PYTHONPATH=src python scripts/archive/lexical_labels_v01/prepare_behavior_v01.py \
     --artifacts /home/ubuntu/capstone-artifacts \
     --output /home/ubuntu/capstone-artifacts/<new folder> \
     --train-proportion 0.8 --test-proportion 0.1 --intervention-proportion 0.1 \
@@ -197,7 +197,7 @@ Use `strict_target` and `eligible_strict` for behavioral probes. The historical 
 Every relation records its basis (`exact`, `question_alias`, `text_rule` or `letter`). `resolved_candidate` and `resolved_via` identify which candidate matched and how. `feedback_coherence` remains diagnostic and does not decide eligibility. Candidate policy provenance explicitly includes the equivalence method, alias fields, ambiguity rules and first-token subset definition. `counts.json` records strict and first-token class counts by partition/correctness, both exclusion summaries, interaction hashes and rule-file hashes. Earlier v0.1.1/v0.1.2 policy definitions, hashes and outputs are unchanged. Existing QC evidence is preserved; it is not new validation of this prompt's labels.
 
 ```bash
-PYTHONPATH=src python scripts/prepare_behavior_v01.py --full-results <run results> \
+PYTHONPATH=src python scripts/archive/lexical_labels_v01/prepare_behavior_v01.py --full-results <run results> \
     --frozen-partitions <approved partitions.csv> \
     --label-policy v0.2.0-candidate --output <artifacts>/<new folder>
 ```
@@ -209,7 +209,7 @@ PYTHONPATH=src python scripts/prepare_behavior_v01.py --full-results <run result
 The cut above is reproducible only from the exact same question set. Removing even one question can move many other assignments when the split is re-derived. So the assignment was made once and is frozen in `partitions.csv`, committed at `results/behavior/behavior_v011_split80_10_10_20261006/partitions.csv` next to the `split_manifest.csv`, `labels.csv` and `counts.json` it came from. Every later run takes its partitions from that file and never derives them again:
 
 ```bash
-PYTHONPATH=src python scripts/prepare_behavior_v01.py \
+PYTHONPATH=src python scripts/archive/lexical_labels_v01/prepare_behavior_v01.py \
     --full-results <artifacts>/<rerun>/results \
     --output <artifacts>/<new package folder> \
     --frozen-partitions results/behavior/behavior_v011_split80_10_10_20261006/partitions.csv \
@@ -223,11 +223,11 @@ What this guarantees:
 - Every package built from the frozen file carries the same full frozen mapping as its `partitions.csv`, however much of it the run covers. Only `split_manifest.csv` is run-specific.
 - A question the frozen file does not know stops the run. Adding questions is a new manifest version made by a person, not something the script decides.
 - The rerun's `split_manifest.csv` has the same columns as before, so every reader (`read_manifest`, the export, the layer-selection loader) works unchanged.
-- `scripts/export_partition_activations.py` checks the package manifest against the frozen file before writing anything, so a package built under a different cut is refused.
+- `scripts/archive/single_machine_collection/export_partition_activations.py` checks the package manifest against the frozen file before writing anything, so a package built under a different cut is refused.
 
 `partitions.csv` fields: `question_id`; `source_split`, the MuSiQue split the question came from; `partition`, the only column anyone reads to choose data; `hop_group`, what the stratification used. Everything else in `split_manifest.csv` (`collection_split`, `scan_split`, the development flags, the two index columns) describes one run and is rebuilt per run.
 
-The nine-layer collection `natural_4b_full9` (`configs/collection/v2/natural_4b_full9_{train,validation}.yaml`) is the first run built this way: the same models, budgets and seed as the recorded four-layer run, layers 4, 8, 17, 25, 29, 30, 31, 32 and 33, a new run name, and no collection-time `experiment_split`. Its 30-question smoke config (`natural_4b_full9_smoke_30q.yaml`) doubles as a drift check against the recorded run, which covered every train question. The historical configs are left as they were, because the resumable collection checks them.
+The nine-layer collection `natural_4b_full9` (`configs/archive/collection/v2/natural_4b_full9_{train,validation}.yaml`) is the first run built this way: the same models, budgets and seed as the recorded four-layer run, layers 4, 8, 17, 25, 29, 30, 31, 32 and 33, a new run name, and no collection-time `experiment_split`. Its 30-question smoke config (`natural_4b_full9_smoke_30q.yaml`) doubles as a drift check against the recorded run, which covered every train question. The historical configs are left as they were, because the resumable collection checks them.
 
 ```python
 from mas_sae.data.production import load_labeled_rows, load_production_activations

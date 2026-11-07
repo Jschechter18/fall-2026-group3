@@ -26,13 +26,13 @@ See also the [two-EC2 smoke-test commands](../../cookbooks/distributed_collectio
 The following commands and paths describe the supported legacy collection path.
 Run from the repository root:
 
-    python scripts/collection/collect_activations.py --config configs/collection/v1/smoke_train.yaml
+    python scripts/collection/collect_activations.py --config configs/archive/collection/v1/smoke_train.yaml
 
 To run 100 existing synthetic sample questions through the solver–critic pipeline:
 
 ```bash
 PYTHONPATH=src python scripts/collection/collect_activations.py \
-  --config configs/collection/synthetic_sample_100q_pilot.yaml
+  --config configs/experiments/synthetic_pilot/synthetic_sample_100q_pilot.yaml
 ```
 
 This pilot uses Gemma 3 4B as solver, Qwen3 4B as critic, the natural critic
@@ -92,7 +92,7 @@ membership instead.
 
 Here `<split>` is the MuSiQue source split (train or validation), which mixes
 the research partitions. For SAE and probe work use an exported partition run
-instead: `scripts/export_partition_activations.py` writes the same layout under
+instead: `scripts/archive/single_machine_collection/export_partition_activations.py` writes the same layout under
 a new run name with the partition (train, validation, test) in place of the
 source split, following the frozen `split_manifest.csv`. See
 `docs/labels/behavior_v01.md`, section "Keeping evaluation honest".

@@ -40,7 +40,7 @@ def prepare_inputs(cfg: replay.ReplayConfig) -> None:
                                 "--full-results", str(collection), "--layout", "partitioned",
                                 "--coverage", "subset", "--output", str(labels.parent)], cwd=root, check=True)
             else:
-                subprocess.run([sys.executable, str(SCRIPTS / "prepare_behavior_v01.py"),
+                subprocess.run([sys.executable, str(SCRIPTS / "archive" / "lexical_labels_v01" / "prepare_behavior_v01.py"),
                                 "--full-results", str(collection), "--layout", "partitioned",
                                 "--coverage", "subset", "--label-policy", cfg.label_policy,
                                 "--output", str(labels.parent)], cwd=root, check=True)

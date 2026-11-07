@@ -61,7 +61,7 @@ def test_paired_workflow_smoke(tmp_path, monkeypatch):
     import sys
     from pathlib import Path
     import yaml
-    script = REPO_ROOT / 'scripts/sae/improvement-trials/experiment_sae_resampling.py'
+    script = REPO_ROOT / 'scripts/experiments/sae_improvement/experiment_sae_resampling.py'
     spec = importlib.util.spec_from_file_location('resampling_experiment', script)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -82,7 +82,7 @@ def test_paired_workflow_smoke(tmp_path, monkeypatch):
     location.mkdir(parents=True)
     for split in ['train', 'validation']:
         torch.save(x, location / f'{split}.pt')
-    monkeypatch.setattr(module, '__file__', str(tmp_path / 'scripts/sae/improvement-trials/experiment.py'))
+    monkeypatch.setattr(module, '__file__', str(tmp_path / 'scripts/experiments/sae_improvement/experiment.py'))
     settings = tmp_path / 'experiment.yaml'
     settings.write_text(yaml.safe_dump(dict(source_trial=str(source), output_dir=str(tmp_path / 'output'),
                                           additional_epochs=1, resampling_budget=2, seeds=[7], branches=[

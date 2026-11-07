@@ -92,7 +92,7 @@ def test_paired_run_preserves_natural_inputs_and_exports_separate_table(
     monkeypatch.setattr(sys, "argv", ["summarize_adoption_results.py",
         "--results-root", str(adoption_results_root),
         "--natural-run", str(output), "--output", str(report)])
-    runpy.run_path(str(root / "scripts/experiments/summarize_adoption_results.py"), run_name="__main__")
+    runpy.run_path(str(root / "scripts/experiments/adoption/summarize_adoption_results.py"), run_name="__main__")
     assert (report / "natural_slide_table.csv").exists()
     assert "separate paired sample" in (report / "presentation_summary.md").read_text()
     from mas_sae.experiments.natural_adoption import load_natural_run
@@ -150,10 +150,10 @@ def test_prepare_natural_cli_freezes_fresh_train_only_sample(tmp_path, monkeypat
     output = tmp_path / "sample"
     monkeypatch.setattr(sys, "argv", ["adoption_experiment.py", "prepare-natural",
         "--interactions", str(source), "--partitions", str(partitions),
-        "--config", str(root / "configs/collection/v2/natural_4b_full_train.yaml"),
+        "--config", str(root / "configs/archive/collection/v2/natural_4b_full_train.yaml"),
         "--audit", str(audit_path), "--exclude-sample", str(prior_path),
         "--size", "1", "--output", str(output)])
-    runpy.run_path(str(root / "scripts/experiments/adoption_experiment.py"), run_name="__main__")
+    runpy.run_path(str(root / "scripts/experiments/adoption/adoption_experiment.py"), run_name="__main__")
     packet = json.loads((output / "sample.json").read_text())
     checksum = packet.pop("sha256")
     assert digest(packet) == checksum

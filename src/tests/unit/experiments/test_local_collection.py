@@ -67,7 +67,7 @@ def test_local_file_validation_and_short_pool(local_dataset):
 
 def test_local_config_validation(local_dataset, tmp_path):
     path, _ = local_dataset
-    config = yaml.safe_load(open("configs/collection/v2/smoke_train.yaml"))
+    config = yaml.safe_load(open("configs/archive/collection/v2/smoke_train.yaml"))
     config["dataset"] = {"path": str(path), "source_split": "train", "num_questions": 6}
     config_path = tmp_path / "config.yaml"
     config_path.write_text(yaml.safe_dump(config))

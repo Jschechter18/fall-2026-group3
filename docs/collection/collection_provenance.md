@@ -36,8 +36,8 @@ remain supported.
 | `results/collection/<run>/<split>/interactions.jsonl` | `collection_artifacts.py` | The episode records (S3 for the production run). |
 | `data/activations/<run>/_progress/<split>/provenance.json` | `collection_progress.py` | The run identity used by `--resume`. For the production run this file is committed as `results/collection/natural_4b_full/<split>_provenance.json`. |
 | `data/activations/<run>/_progress/<split>/chunk_XXXXXXXX/` | `collection_progress.py` | Per-chunk `metadata.json`, `records.jsonl`, `exclusions.jsonl`, `activations.pt` until the run is merged. |
-| `results/collection/<export run>/export_summary.json` | `scripts/export_partition_activations.py` | Commit, manifest and labels hashes, frozen-partition path and hash, layers, counts, file hashes of a partition export. |
-| `results/sae/musique/runs/layer_NN/<run id>/manifest.json` | `scripts/train_sae.py` | SAE training provenance, including sha256 of the activation files used. |
+| `results/collection/<export run>/export_summary.json` | `scripts/archive/single_machine_collection/export_partition_activations.py` | Commit, manifest and labels hashes, frozen-partition path and hash, layers, counts, file hashes of a partition export. |
+| `results/sae/musique/runs/layer_NN/<run id>/manifest.json` | `scripts/sae/train_sae.py` | SAE training provenance, including sha256 of the activation files used. |
 
 ## Legacy resume identity (`provenance.json`)
 
@@ -66,7 +66,7 @@ Version labels are recorded here as configuration; the capabilities list is what
 
 | Item | Value |
 |---|---|
-| Config | `configs/collection/v2/natural_4b_full_{train,validation}.yaml`; resolved copies committed per split |
+| Config | `configs/archive/collection/v2/natural_4b_full_{train,validation}.yaml`; resolved copies committed per split |
 | Code | commit `4e00dd22`, tracked diff empty, untracked `src/`/`scripts/` empty |
 | Dataset | `dgslibisey/MuSiQue` at `c8f4f8c9465fb69d31a8eae894c3fd509c4ca321` |
 | Solver and Validator | `google/gemma-3-4b-it` at `093f9f388b31de276ce2de164bdc2081324b9767`, bf16, `cuda:0` |

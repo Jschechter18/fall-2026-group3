@@ -28,7 +28,7 @@ explanation removal.
 Prepare without a model (already prepared in `natural_sample_matched`):
 
 ```bash
-python scripts/experiments/adoption_experiment.py prepare-natural-matched \
+python scripts/experiments/adoption/adoption_experiment.py prepare-natural-matched \
   --sample results/adoption_experiment/sample_100q/sample.json \
   --controlled-run results/adoption_experiment/controlled_100q \
   --randomized-run results/adoption_experiment/randomized_order_100q \
@@ -38,7 +38,7 @@ python scripts/experiments/adoption_experiment.py prepare-natural-matched \
 Generate the missing paired Natural A2 responses on the GPU machine:
 
 ```bash
-python scripts/experiments/adoption_experiment.py run-natural \
+python scripts/experiments/adoption/adoption_experiment.py run-natural \
   --sample results/adoption_experiment/archive/natural_sample_matched/sample.json \
   --order-seed 42 \
   --output results/adoption_experiment/archive/natural_paired_matched
@@ -47,7 +47,7 @@ python scripts/experiments/adoption_experiment.py run-natural \
 Then generate the aligned visualization:
 
 ```bash
-PYTHONPATH=src python scripts/experiments/summarize_adoption_results.py \
+PYTHONPATH=src python scripts/experiments/adoption/summarize_adoption_results.py \
   --results-root results/adoption_experiment \
   --natural-run results/adoption_experiment/archive/natural_paired_matched \
   --matched-cohort --chart --replace-output \
@@ -112,13 +112,13 @@ correctness uses automated matching.
 From the repository root in the existing capstone environment:
 
 ```bash
-PYTHONPATH=src python scripts/experiments/adoption_experiment.py prepare \
+PYTHONPATH=src python scripts/experiments/adoption/adoption_experiment.py prepare \
   --interactions /path/to/natural_4b_full/train/interactions.jsonl \
   --partitions results/behavior/behavior_v011_split80_10_10_20261006/partitions.csv \
-  --config configs/collection/v2/natural_4b_full_train.yaml \
+  --config configs/archive/collection/v2/natural_4b_full_train.yaml \
   --size 100 --seed 42 --output /tmp/adoption_experiment_sample
 
-PYTHONPATH=src python scripts/experiments/adoption_experiment.py run \
+PYTHONPATH=src python scripts/experiments/adoption/adoption_experiment.py run \
   --sample /tmp/adoption_experiment_sample/sample.json \
   --output /tmp/adoption_experiment_run
 ```
@@ -162,7 +162,7 @@ Reuse the existing prepared sample; do not rerun preparation or overwrite the
 completed ablation run:
 
 ```bash
-python scripts/experiments/adoption_experiment.py run-controlled \
+python scripts/experiments/adoption/adoption_experiment.py run-controlled \
   --sample results/adoption_experiment/sample_100q/sample.json \
   --output results/adoption_experiment/controlled_100q
 ```
@@ -242,7 +242,7 @@ the wrong-recommendation arms. No activations are captured in this extension.
 Replay the exact saved recommendations from the completed controlled experiment:
 
 ```bash
-python scripts/experiments/adoption_experiment.py run-verification \
+python scripts/experiments/adoption/adoption_experiment.py run-verification \
   --sample results/adoption_experiment/sample_100q/sample.json \
   --controlled-run results/adoption_experiment/controlled_100q \
   --output results/adoption_experiment/verification_100q
@@ -307,7 +307,7 @@ later extend this to activation collection.
 ## Anonymous versus source-labeled candidates
 
 ```bash
-python scripts/experiments/adoption_experiment.py run-anonymization \
+python scripts/experiments/adoption/adoption_experiment.py run-anonymization \
   --sample results/adoption_experiment/sample_100q/sample.json \
   --controlled-run results/adoption_experiment/controlled_100q \
   --output results/adoption_experiment/anonymization_100q
@@ -399,7 +399,7 @@ assess the source-label effect.
 ## Randomized order with labeled candidates
 
 ```bash
-python scripts/experiments/adoption_experiment.py run-randomized-order \
+python scripts/experiments/adoption/adoption_experiment.py run-randomized-order \
   --sample results/adoption_experiment/sample_100q/sample.json \
   --controlled-run results/adoption_experiment/controlled_100q \
   --order-seed 42 \
@@ -476,10 +476,10 @@ of #115. Optionally supply its train-only `audit.csv` with `--audit` for additio
 coherence screening.
 
 ```bash
-PYTHONPATH=src python scripts/experiments/adoption_experiment.py prepare-natural \
+PYTHONPATH=src python scripts/experiments/adoption/adoption_experiment.py prepare-natural \
   --interactions /path/to/original/train/interactions.jsonl \
   --partitions results/behavior/behavior_v011_split80_10_10_20261006/partitions.csv \
-  --config configs/collection/v2/natural_4b_full_train.yaml \
+  --config configs/archive/collection/v2/natural_4b_full_train.yaml \
   --exclude-sample results/adoption_experiment/sample_100q/sample.json \
   --size 50 --seed 42 --output /tmp/adoption_natural_sample
 ```
@@ -510,7 +510,7 @@ The sample records screening counts, source hashes and its own checksum.
 ### Run and inspect the paired comparison
 
 ```bash
-PYTHONPATH=src python scripts/experiments/adoption_experiment.py run-natural \
+PYTHONPATH=src python scripts/experiments/adoption/adoption_experiment.py run-natural \
   --sample /tmp/adoption_natural_sample/sample.json \
   --order-seed 42 --output /tmp/adoption_natural_run
 ```
@@ -540,7 +540,7 @@ original-versus-historical A2 reproduction, and candidate-order breakdowns.
 Optionally append the separate Natural table to a **new** presentation export:
 
 ```bash
-PYTHONPATH=src python scripts/experiments/summarize_adoption_results.py \
+PYTHONPATH=src python scripts/experiments/adoption/summarize_adoption_results.py \
   --results-root results/adoption_experiment \
   --natural-run /tmp/adoption_natural_run \
   --output /tmp/adoption_combined_summary
@@ -567,7 +567,7 @@ order, scoring policies and output schemas are unchanged by this refactor.
 To place the two screened Natural rows above the seven controlled protocols:
 
 ```bash
-PYTHONPATH=src python scripts/experiments/summarize_adoption_results.py \
+PYTHONPATH=src python scripts/experiments/adoption/summarize_adoption_results.py \
   --results-root results/adoption_experiment \
   --natural-run results/adoption_experiment/archive/natural_paired_50q_screened \
   --output /tmp/adoption_presentation_updated --chart

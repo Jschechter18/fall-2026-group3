@@ -124,10 +124,10 @@ python scripts/collection/distributed_collection.py merge --manifest "$RUN_DIR/m
 python scripts/collection/distributed_collection.py split \
   --manifest "$RUN_DIR/manifest.json" --config "$RUN_DIR/collection.yaml"
 
-python scripts/prepare_behavior_v01.py \
+python scripts/archive/lexical_labels_v01/prepare_behavior_v01.py \
   --full-results "$RUN_DIR/prepared/results/$COLLECTION_RUN" \
   --layout partitioned --label-policy v0.2.0-candidate --output "$RUN_DIR/labels"
-python scripts/prepare_behavior_v01.py \
+python scripts/archive/lexical_labels_v01/prepare_behavior_v01.py \
   --full-results "$RUN_DIR/prepared/results/${COLLECTION_RUN}_intervention" \
   --layout partitioned --label-policy v0.2.0-candidate --output "$RUN_DIR/intervention-labels"
 ```

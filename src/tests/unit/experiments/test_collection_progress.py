@@ -259,7 +259,7 @@ def test_manifest_hash_sees_split_reassignment():
 
 @pytest.mark.parametrize("chunk_size, valid", [(3, True), (0, False), (True, False), ("3", False)])
 def test_chunk_size_validation(tmp_path, chunk_size, valid):
-    config = yaml.safe_load(open("configs/collection/v2/smoke_train.yaml"))
+    config = yaml.safe_load(open("configs/archive/collection/v2/smoke_train.yaml"))
     config["output"]["chunk_size"] = chunk_size
     path = tmp_path / "config.yaml"
     path.write_text(yaml.safe_dump(config))

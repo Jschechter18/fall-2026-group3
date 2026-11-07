@@ -3,8 +3,8 @@
 Run from the repository root in the training environment:
 
 ```bash
-PYTHONPATH=src python scripts/sae/train_sae.py --hp-tune --config configs/sae_hp_tuning/layer_25_l1_weight_l2.yaml --dry-run
-PYTHONPATH=src python scripts/sae/train_sae.py --hp-tune --config configs/sae_hp_tuning/layer_25_l1_weight_l2.yaml
+PYTHONPATH=src python scripts/sae/train_sae.py --hp-tune --config configs/experiments/sae_improvement/layer_25_l1_weight_l2.yaml --dry-run
+PYTHONPATH=src python scripts/sae/train_sae.py --hp-tune --config configs/experiments/sae_improvement/layer_25_l1_weight_l2.yaml
 ```
 
 This is an explicit L2 weight penalty, not AdamW weight decay. It is supported
