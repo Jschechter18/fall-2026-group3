@@ -311,5 +311,3 @@ pytest
 ```
 
 The project structure may change as development progresses.
-
-## Messages for Professor/AI Reviewer:
