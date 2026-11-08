@@ -2,144 +2,279 @@
 
 Master's Data Science Capstone project.
 
-Distributed collection: [workflow guide](docs/distributed_collection.md) and
-[two-EC2 smoke-test commands](docs/distributed_collection_smoke_test.md).
-Distributed causal replay: [map-reduce workflow](docs/distributed_causal_replay.md).
+Setup: [Getting started](#getting-started) and [cookbooks/setup.md](cookbooks/setup.md). Notes for the
+instructor and AI reviewer: [Messages for Professor/AI Reviewer](#messages-for-professorai-reviewer).
 
-## Messages for Professor/AI Reviewer:
-
-# Instructor Review 3 Response:
-
-- we no longer require Conditions B and C for the controlled incorrect/incorrect feedback. We spoke with Professor Jafari and he approved and agreed, saying to leave you a note inside the README.md file informing you that this is no longer part of our experiment.
-- We are confused about the branch protection ruleset. We added rulesets to protect main already. Not sure why this is still being flagged.
-
-## Getting Started
-
-### 1. Clone the Repository
+## Getting started
 
 ```bash
-git clone <git@github.com:Jschechter18/fall-2026-group3.git>
+git clone git@github.com:Jschechter18/fall-2026-group3.git
 cd fall-2026-group3
-```
-
-### 2. Install Conda
-
-This project uses Conda to manage the Python environment and dependencies.
-
-If Conda is not already installed, install either **Miniconda** or **Anaconda** before continuing.
-
-### 3. Create the Environment
-
-The project's dependencies are defined in `environment.yml`.
-
-From the root directory of the repository, run:
-
-```bash
-conda env create -f environment.yml
-```
-
-This will create the `capstone` environment with the appropriate Python version and project dependencies.
-
-### 4. Activate the Environment
-
-```bash
+conda env create -f environment.yml    # Python 3.11, environment "capstone"
 conda activate capstone
-```
-
-### 5. Install the project
-
-```bash
 python -m pip install -e .
 ```
 
-Verify that the environment is using Python 3.11:
+Full instructions are in [cookbooks/setup.md](cookbooks/setup.md):
+
+- **Claude on Amazon Bedrock:** used by stages 2 and 6.
+- **Hugging Face model access:** the Gemma licence and pinned model revisions.
+- **Amazon S3:** where the collection artifacts, activations and SAE checkpoints are stored.
+- **Jupyter kernel:** for the analysis notebooks.
+
+When `environment.yml` changes, run `conda env update -f environment.yml --prune`. When you add a
+dependency, add it to `environment.yml` so that everyone uses the same environment.
+
+## Experimental pipeline
+
+**Question:** when a Critic gives the Solver (Gemma-3-4B-it) a different answer, are SAE features in
+the Solver's layer-25 residual stream causal for whether it _adopts_ the Critic's answer or
+_retains_ its own?
+
+The final results come from one chain of runs, listed below. Every later stage reads the exact
+paths written by the stage before it. Run everything from the repository root with
+`conda activate capstone` and `export PYTHONPATH=src`.
+
+| #   | Stage                                               | Config                                                                  | Final output                                                                                   |
+| --- | --------------------------------------------------- | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| 1   | [Collection](#1-collection)                         | `configs/collection/distributed_final.yaml`                             | `artifacts/collection/mixed_final_001/prepared/` (S3)                                          |
+| 2   | [Claude behavior labels](#2-claude-behavior-labels) | none (CLI flags)                                                        | `results/claude_validation/mixed_final_001/`, `results/behavior/mixed_final_001_claude_probe/` |
+| 3   | [Layer selection](#3-layer-selection)               | `configs/layer_selection/layer_selection_mixed_final_001.yaml`          | `results/layer_selection_mixed_final_001_quick/20261102T201434082931Z/` → layer 25             |
+| 4   | [SAEs](#4-saes)                                     | `configs/sae/layer_25_mixed_final_001_baselines.yaml` + CLI             | 4 SAE folders, see below                                                                       |
+| 5   | [Feature selection](#5-feature-selection)           | `configs/feature_selection/feature_selection_intervention_layer25.yaml` | `results/feature_selection_intervention_layer25/20261105T025730344698Z_pool/feature_sets.json` |
+| 6   | [Intervention](#6-intervention)                     | `configs/intervention/intervention.yaml`                                | `results/intervention_layer25/20261106T000808809026Z-02871d677287/merge/`                      |
+| 7   | [Analysis](#7-analysis)                             | none                                                                    | `notebooks/intervention/`, `results/feature_interpretation_layer25/`                           |
+
+Partitions are fixed in stage 1 and respected everywhere after it. Probes, SAEs and feature
+selection fit on `train` and measure on `validation`. `test` is never read. The `intervention`
+partition (10% of questions, reserved before collection) is used only in stage 6.
+
+### 1. Collection
+
+Mixed MuSiQue + synthetic questions. Each question goes Solver A1 → Natural Critic
+(Qwen3-4B-Instruct-2507, blind first) → Solver A2, with the candidates presentation. Solver
+activations are saved at layers 4, 8, 17, 25, 29–33. The collection spread the work across several
+EC2 machines.
 
 ```bash
-python --version
+python scripts/collection/distributed_collection.py prepare --config <run_dir>/collection.yaml --num-chunks <N> --output <run_dir>/manifest.json
+python scripts/collection/collect_activations.py --config <run_dir>/collection.yaml --manifest <run_dir>/manifest.json --chunk <K ...>   # each worker
+python scripts/collection/distributed_collection.py merge --manifest <run_dir>/manifest.json
+python scripts/collection/distributed_collection.py split --manifest <run_dir>/manifest.json --config <run_dir>/collection.yaml
 ```
 
-You should see:
+- **Inputs:** `data/MuSiQue/clean/{train,validation}.jsonl` (from `scripts/data/get_musique_dataset.py`)
+  and `data/synthetic/final/accepted.jsonl` (version `synthetic-final-001`).
+- **Full walkthrough:** [cookbooks/runbooks/mixed_collection_pipeline.md](cookbooks/runbooks/mixed_collection_pipeline.md).
+  It is written for the earlier `mixed_opus5_full_001` run name; the steps are the same. See also
+  [cookbooks/distributed_collection.md](cookbooks/distributed_collection.md).
+- **Output:** `artifacts/collection/mixed_final_001/prepared/`, which is gitignored. You don't need
+  to rerun collection; download this folder from S3 (see [cookbooks/setup.md](cookbooks/setup.md#s3-directory-layout)).
+  - `activations/mixed_final_001/layer_NN/{train,validation,test}_attempt{1,2}.pt`
+  - `activations/mixed_final_001_intervention/layer_NN/`
+  - `results/mixed_final_001/{train,validation,test}/interactions.jsonl`, plus `partitions.csv` and `split_manifest.csv`
+  - `results/mixed_final_001_intervention/intervention/interactions.jsonl` and `contexts.jsonl`
 
-```text
-Python 3.11.x
-```
+### 2. Claude behavior labels
 
-### Updating the Environment
-
-If `environment.yml` changes after you have already created the environment, update your local environment with:
+Claude Sonnet 4.5 on Bedrock (prompt `claude_binary_v3_candidates`, temperature 0) labels each A2 as
+adoption, retention, agreement or out. Only adoption vs. retention is used as the target. The
+exact settings are in each run's `run_settings.json`.
 
 ```bash
-conda env update -f environment.yml --prune
+python scripts/labels/run_claude_validation.py \
+  --episodes artifacts/collection/mixed_final_001/prepared/results/mixed_final_001/<partition>/interactions.jsonl \
+  --partition <partition> --output results/claude_validation/mixed_final_001/<partition>
+
+python scripts/labels/export_final_labels_for_probes.py \
+  --claude-runs results/claude_validation/mixed_final_001/train results/claude_validation/mixed_final_001/validation \
+  --full-results artifacts/collection/mixed_final_001/prepared/results/mixed_final_001 \
+  --layout partitioned --output results/behavior/mixed_final_001_claude_probe
 ```
 
-This installs new dependencies and removes dependencies that are no longer specified in the environment file.
+- **Raw labels:** `results/claude_validation/mixed_final_001/{train,validation,test,intervention}/`.
+  The `intervention/` folder supplies the stored labels that stage 6 tries to flip. How to run it:
+  [cookbooks/claude_intervention_labels.md](cookbooks/claude_intervention_labels.md).
+- **Label package for probes:** `results/behavior/mixed_final_001_claude_probe/`
+  (`labels.csv`, `split_manifest.csv`, `excluded_episodes.json`, `counts.json`). This is the only
+  label input for stages 3–5.
 
-### Set Up Claude Access Through Amazon Bedrock
+### 3. Layer selection
 
-The Claude examples use AWS credentials for Amazon Bedrock, rather than an
-Anthropic API key. Install or update the Conda environment first; it includes
-`boto3` and `python-dotenv`.
-
-#### Get temporary AWS credentials
-
-1. Sign in to the school AWS access portal using the URL provided by the professor
-   or school administrator. Ask them for the URL if you do not have it.
-2. Expand your assigned AWS account and locate the role authorized to use Bedrock.
-3. Select **Access keys** (sometimes labeled **Command line or programmatic access**)
-   beside that role.
-4. In the manual credentials section, copy the **access key ID**, **secret access
-   key**, and **session token** from the same session.
-
-See the [AWS instructions for obtaining temporary credentials](https://docs.aws.amazon.com/singlesignon/latest/userguide/howtogetcredentials.html#how-to-get-temp-credentials-manual).
-If the required account or role is missing, contact the professor or school
-administrator. S3 access alone does not establish permission to invoke Bedrock.
-
-#### Create your local `.env` file
-
-Create a file named `.env` in the repository root, alongside `environment.yml`.
-If it already exists, add or update these entries without removing other settings:
-
-```dotenv
-aws_access_key_id=YOUR_ACCESS_KEY_ID
-aws_secret_access_key=YOUR_SECRET_ACCESS_KEY
-aws_session_token=YOUR_SESSION_TOKEN
-```
-
-Use these lowercase variable names exactly: the current example reads them with
-`os.getenv()`. Paste only the credential values, without shell `export` commands
-or a `[BedRock_LLM_API]` section header. No `CONFIG_FILE` setting is needed for
-this example. `load_dotenv()` reads the file; it does not create it.
-
-The file is ignored by Git. Keep real credentials out of tracked files, including
-`example.env`, and do not share them in messages or screenshots. Temporary
-credentials expire; obtain a fresh set and replace all three values when needed,
-then restart the script or notebook session.
-
-#### Run the example
-
-From the repository root with the `capstone` environment activated and the project
-installed, run:
+Fits a tuned linear probe (adoption vs. retention) per layer on `train` and ranks the layers on
+`validation`.
 
 ```bash
-python examples/claude/ask_claude_api.py
+python scripts/layer_selection/layer_selection.py --config configs/layer_selection/layer_selection_mixed_final_001.yaml --inspect   # check inputs first
+python scripts/layer_selection/layer_selection.py --config configs/layer_selection/layer_selection_mixed_final_001.yaml
 ```
 
-This makes a real, billable Bedrock request. An expired-token error means the
-temporary credentials need refreshing. An `AccessDenied` error may require the
-professor or administrator to grant the role access to the requested Bedrock
-model or inference profile.
+- **Result:** layer 25 is best, with validation balanced accuracy 0.843 (CI 0.830–0.856). Layer 17
+  is next at 0.828.
+- **Location:** the committed run is `results/layer_selection_mixed_final_001_quick/20261102T201434082931Z/`
+  (`layer_comparison.csv`). It used the config's probe search but set `n_permutations: 0` and wrote
+  to a `_quick` folder, through a copy of the config that is not in the repository. So the
+  label-shuffle control (a p-value and selectivity for each layer) was not run. The ranking,
+  balanced accuracy and bootstrap CIs don't depend on that control. Running the committed config
+  as is takes about 10 CPU-hours for the 100 shuffles and writes to
+  `results/layer_selection_mixed_final_001`, which has no committed run.
+- `results/layer_selection_mixed_final_001_attempt1_quick/` is the same quick check on attempt-1
+  activations (before the Critic's feedback). It is a side check, not the selection.
+
+### 4. SAEs
+
+The study compares four layer-25 SAEs, plus raw activations as a control:
+
+| Name in configs                | Kind                                         | Folder                                                                                |
+| ------------------------------ | -------------------------------------------- | ------------------------------------------------------------------------------------- |
+| L1 SAE                         | trained here                                 | `results/sae/musique/runs/layer_25/20261102T182346930753Z-150e78c341c6`               |
+| Pretrained SAE                 | Gemma Scope 2, `kind: gemma_scope`           | `results/sae/pretrained/gemma-scope-2-4b-it/resid_post_all/layer_25_width_16k_l0_big` |
+| Fine-tuned decoder             | decoder-only fine-tune of the Pretrained SAE | `results/sae/decoder_finetuning/20261104T164310458065Z/best`                          |
+| Fully fine-tuned (exploratory) | full fine-tune of the Pretrained SAE         | `results/sae/full_finetuning/20261104T151230848807Z/best`                             |
+
+**L1 SAE.** Run a grid search, then finish the chosen trial (trial 2 of study
+`results/sae/musique/tuning/layer_25/20261102T130735203392Z-150e78c341c6/`). Details are in
+[results/sae/README.md](results/sae/README.md).
+
+```bash
+python scripts/sae/train_sae.py --hp-tune --config configs/sae/layer_25_mixed_final_001_baselines.yaml
+python scripts/sae/train_sae.py --finish-run results/sae/musique/tuning/layer_25/<study_id>/trials/trial_0002 --epochs 200
+```
+
+**Pretrained SAE.** Download the folder (`config.json` + `params.safetensors`) from
+[google/gemma-scope-2-4b-it](https://huggingface.co/google/gemma-scope-2-4b-it):
+
+```bash
+hf download google/gemma-scope-2-4b-it --include "resid_post_all/layer_25_width_16k_l0_big/*" \
+  --local-dir results/sae/pretrained/gemma-scope-2-4b-it
+```
+
+**Fine-tuned SAEs.** Both start from the original Pretrained SAE; add `--train full` for the full
+fine-tune. Details are in [scripts/sae/PRETRAINED_FINETUNING.md](scripts/sae/PRETRAINED_FINETUNING.md).
+
+```bash
+python scripts/sae/finetune_pretrained_sae.py [--train full] \
+  --sae-dir results/sae/pretrained/gemma-scope-2-4b-it/resid_post_all/layer_25_width_16k_l0_big \
+  --activations-dir artifacts/collection/mixed_final_001/prepared/activations/mixed_final_001/layer_25 \
+  --layer 25 --probe-config configs/feature_selection/feature_selection_mixed_final_001_layer25.yaml
+```
+
+`decoder_finetuning/` and `full_finetuning/` hold several runs each. Only the two listed above are
+used, and the configs in stages 5 and 6 name them.
+
+### 5. Feature selection
+
+For each representation, this ranks features by how well they separate adoption from retention
+(fit on `train`, measured on `validation`). It keeps the top 10 adoption and top 10 retention
+features, plus 100 matched random draws per label as controls.
+
+```bash
+python scripts/feature_selection/feature_selection.py --config configs/feature_selection/feature_selection_intervention_layer25.yaml
+python scripts/intervention/build_feature_set_pool.py \
+  results/feature_selection_intervention_layer25/20261105T025730344698Z \
+  results/feature_selection_intervention_layer25/20261105T025730344698Z_pool
+```
+
+- **Input to stage 6:** `…_pool/feature_sets.json`. The second command copies the run's
+  `feature_sets.json` and adds the full pool of random draws. The original run folder is unchanged.
+- **Raw-activation center:** the Raw activations control is treated as a pseudo-SAE whose latent
+  _i_ is neuron _i_ minus its mean over the `train` rows, so zeroing a latent is a mean ablation.
+  That mean vector is `results/probe_mixed_final_001_layer25/centers/raw_layer25.npy`, the config's
+  `path` for `kind: activations`. Feature selection writes it if it is missing and refuses to run if
+  a saved file doesn't match. It sits in that folder only because the earlier feature-selection run
+  (`configs/feature_selection/feature_selection_mixed_final_001_layer25.yaml`) wrote it first. `feature_sets.json`
+  records its path and sha256, and stage 6 checks both and reads the file for the raw basis width.
+  So moving it means rerunning feature selection; the contents would be the same.
+
+### 6. Intervention
+
+At layer 25, at the last prompt token of the A2 prefill, each episode is steered along the
+targeted features and along matched random features. The outcome is whether Claude's label of the
+regenerated A2 flips. The design, edit definitions and pre-registered analysis plan are in the
+docstring of [scripts/intervention/run_intervention.py](scripts/intervention/run_intervention.py)
+and in the config's `analysis` section.
+
+```bash
+python scripts/intervention/run_intervention.py choose-r --config configs/intervention/intervention.yaml   # pick edit size r
+python scripts/intervention/run_intervention.py prepare  --config configs/intervention/intervention.yaml   # freeze run, baselines, shards
+python scripts/intervention/run_intervention.py run      --config configs/intervention/intervention.yaml --shard K   # K = 0..3, one per GPU
+python scripts/intervention/run_intervention.py merge    --config configs/intervention/intervention.yaml   # label, tables, figures
+```
+
+Each run gets its own folder, `results/intervention_layer25/<UTC time>-<git commit>/`. The config's
+`run_id` selects which folder the later stages use.
+
+| Run                                   | What it is                                                                                                                                                                                                                                                |
+| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `20261106T000808809026Z-02871d677287` | **The study.** choose-r at r ∈ {0.02, 0.05, 0.10, 0.20}, then the full 1,000-episode study at r = 0.2. `merge/` holds the results: `summary.json`, `table_1.*`, `table_2_exploratory.*`, `figures/`. `frozen_run.json` records every input path and hash. |
+| `20261106T030649156970Z-7064c87d114f` | Exploratory choose-r at r ∈ {0.3, 0.5}. No row met the rule, so r stayed 0.2.                                                                                                                                                                             |
+
+A smoke run of the same pipeline: [configs/intervention/intervention_smoke.yaml](configs/intervention/intervention_smoke.yaml).
+
+### 7. Analysis
+
+- **Choosing r:** `notebooks/intervention/choose_edit_size_pilot_analysis.ipynb`
+- **Main results:** `notebooks/intervention/full_study_results.ipynb`
+- **What the features mean:** `scripts/intervention/interpret_features.py` →
+  `results/feature_interpretation_layer25/`, shown in `notebooks/intervention/feature_interpretation.ipynb`
+
+### Earlier work, not part of the final results
+
+The repository also holds earlier pipelines and runs. Don't cite them as final results:
+
+- **Earlier collections:** `configs/archive/collection/v1`, `v2` (e.g. `natural_4b_full`) and
+  `configs/collection/v3`.
+- **Mini experiments:** side studies with their own question and answer, in `scripts/experiments/`
+  and `configs/experiments/`: `adoption/` (feedback, instruction and anonymity, #138),
+  `synthetic_pilot/` (#174, #179), `sae_improvement/` (resampling, refinement, weight L2),
+  `critic_selection/` and `edit_size/`. Their results stay in their original `results/` folders.
+- **Archived code:** pipelines the study replaced, in `scripts/archive/` (`lexical_labels_v01/`,
+  `early_smoke_tests/`, `single_machine_collection/`) and `configs/archive/`.
+- **The earlier causal pipeline:** `causal_replay`, `src/mas_sae/causal/`, `configs/causal_*.yaml`,
+  `results/causal_*`. See [docs/causal_replay/distributed_causal_replay.md](docs/causal_replay/distributed_causal_replay.md).
+  The stage-6 intervention replaced it. Exception: `mas_sae.causal.offline` is still used by
+  feature selection (stage 5).
+- **Earlier label versions:** `results/behavior/` contains older label packages besides `mixed_final_001_claude_probe`.
+
+## Testing
+
+```bash
+pytest
+```
+
+## Documentation
+
+| Topic                                                             | Where                                                                                                                                                                                                                          |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Environment, Bedrock, Hugging Face, S3, Jupyter                   | [cookbooks/setup.md](cookbooks/setup.md)                                                                                                                                                                                       |
+| Collection tooling, condition policy, earlier single-machine runs | [docs/collection/collection.md](docs/collection/collection.md)                                                                                                                                                                 |
+| Distributed collection, end to end (collection → Claude labels)   | [cookbooks/runbooks/mixed_collection_pipeline.md](cookbooks/runbooks/mixed_collection_pipeline.md), [cookbooks/distributed_collection.md](cookbooks/distributed_collection.md)                                                 |
+| Episode records, provenance, activation layout                    | [docs/collection/episode_record.md](docs/collection/episode_record.md), [docs/collection/collection_provenance.md](docs/collection/collection_provenance.md), [docs/collection/activations.md](docs/collection/activations.md) |
+| SAE training, tuning and `sae_versions.csv`                       | [results/sae/README.md](results/sae/README.md)                                                                                                                                                                                 |
+| Pretrained SAE fine-tuning                                        | [scripts/sae/PRETRAINED_FINETUNING.md](scripts/sae/PRETRAINED_FINETUNING.md)                                                                                                                                                   |
+| Intervention design and analysis plan                             | docstring of [scripts/intervention/run_intervention.py](scripts/intervention/run_intervention.py)                                                                                                                              |
 
 ## Project Structure
 
 ```text
 .
-├── configs/                      # Versioned run configuration files
-│   └── collection/               # Activation-collection configs (v1/, v2/)
-├── cookbooks/                    # Jupyter notebooks and tutorials
-├── data/                         # Downloaded project datasets
+├── artifacts/                    # Distributed collection outputs (gitignored; synced from S3)
+├── configs/                      # Run configuration files, by pipeline stage
+│   ├── data/                     # Synthetic data generation
+│   ├── collection/               # Activation collection (final: distributed_final.yaml)
+│   ├── layer_selection/          # Layer selection
+│   ├── feature_selection/        # Feature selection (final: *_intervention_layer25.yaml)
+│   ├── sae/                      # SAE training (final L1 SAE study)
+│   ├── intervention/             # Intervention experiment
+│   ├── experiments/              # Mini experiments (synthetic_pilot/, sae_improvement/)
+│   └── archive/                  # Configs of replaced pipelines and earlier runs
+├── cookbooks/                    # Setup and how-to guides; runbooks/ holds the collection runbook
+├── data/                         # Downloaded project datasets (gitignored)
 ├── demo/                         # Demonstrations
 │   └── fig/                      # Demo figures
-├── docs/                         # Technical documentation; diagrams/ holds editable + SVG figures
+├── docs/                         # Reference documentation and history, by stage: collection/, labels/, sae/, causal_replay/; diagrams/ holds editable + SVG figures
+├── examples/                     # Small Claude/Bedrock examples
+├── notebooks/                    # All Jupyter notebooks, by stage: data/, collection/, labels/, sae/, causal_replay/, intervention/ (final results)
 ├── presentation/                 # Presentation materials
 ├── proposal/                     # Project proposal and its diagram
 ├── reports/                      # Project and progress reports
@@ -153,413 +288,29 @@ model or inference profile.
 │   ├── Word/                     # Word version of the paper
 │   └── references/               # Reference PDFs for the literature review
 ├── results/                      # Experimental outputs and results
-├── scripts/                      # Executable Python entry-point scripts
+├── scripts/                      # Entry-point scripts, by pipeline stage: data/, collection/, labels/,
+│                                 #   layer_selection/, feature_selection/, sae/, intervention/;
+│                                 #   experiments/ (mini experiments) and archive/ (replaced pipelines)
 ├── src/
 │   ├── component/                # Reusable, non-pipeline components
 │   ├── docs/                     # Project documentation
 │   ├── mas_sae/                  # Reusable Python package
 │   │   ├── activations/          # Activation capture and layer sites
 │   │   ├── agents/               # Solver and critic agent logic
-│   │   ├── causal/               # Causal feature-intervention logic
+│   │   ├── causal/               # Earlier causal replay pipeline (offline.py still used by feature selection)
 │   │   ├── data/                 # Dataset loading and processing
-│   │   ├── evaluation/           # Evaluation functions and metrics
+│   │   ├── evaluation/           # Evaluation functions, metrics and Claude labeling
 │   │   ├── experiments/          # Collection pipeline, configs, and run artifacts
+│   │   ├── intervention/         # The intervention experiment (stage 6)
 │   │   ├── models/               # Language-model loading and interaction
-│   │   ├── probe/                # Linear probe and interpretability (SHAP/LIME)
+│   │   ├── probe/                # Layer selection, feature selection and probes
 │   │   └── sae/                  # Sparse-autoencoder functionality
 │   ├── shellscripts/             # Shell utility scripts
 │   └── tests/                    # Unit and integration tests
 ├── environment.yml               # Conda environment and dependencies
 ├── pyproject.toml                # Python package configuration
 ├── pytest.ini                    # Pytest configuration
-└── README.md                     # Setup and project documentation
+└── README.md                     # Experimental pipeline and quick start
 ```
 
 The project structure may change as development progresses.
-
-## Development
-
-When adding a new dependency, add it to `environment.yml` so that all team members use a consistent environment.
-
-After modifying `environment.yml`, update your environment:
-
-```bash
-conda env update -f environment.yml --prune
-```
-
-## Persistent Storage with Amazon S3
-
-Generated activations and SAE checkpoints are not committed to Git. The team uses Amazon S3 to transfer these artifacts between compute instances and preserve them outside an individual EC2 instance.
-
-Remote artifacts are stored under:
-
-```text
-s3://dats-capstone/shared/group3/
-```
-
-### Install the AWS CLI
-
-On the course Ubuntu EC2 instance, install AWS CLI v2 for the current user:
-
-```bash
-curl -fsSL https://awscli.amazonaws.com/v2/install.sh | bash
-export PATH="$HOME/.local/bin:$PATH"
-hash -r
-```
-
-Verify the installation:
-
-```bash
-aws --version
-```
-
-See the [official AWS CLI installation instructions](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) for other platforms.
-
-### Configure School SSO Access
-
-The course account uses AWS IAM Identity Center. Do not use long-lived IAM access keys.
-
-1. Sign in to the school AWS access portal.
-2. Expand the assigned AWS account.
-3. Find the student role.
-4. Select **Access keys**.
-5. Under **AWS IAM Identity Center credentials (Recommended)**, copy the:
-   - SSO start URL
-   - SSO region
-
-Configure a named CLI profile:
-
-```bash
-aws configure sso --profile school --use-device-code
-```
-
-Use the following values when prompted:
-
-```text
-SSO session name: school
-SSO start URL: <copy from the AWS access portal>
-SSO region: us-east-1
-SSO registration scopes: sso:account:access
-Default client Region: us-east-1
-CLI default output format: json
-```
-
-If asked whether to configure AWS skills and an AWS MCP server, select **No**. They are not required for S3 synchronization.
-
-The device-login process displays a URL and code. Open the URL on a computer with a browser, enter the code, and authorize the school AWS session.
-
-For subsequent sessions, renew authentication with:
-
-```bash
-aws sso login --profile school --use-device-code
-```
-
-Verify the active identity:
-
-```bash
-aws sts get-caller-identity --profile school
-```
-
-If this command reports expired credentials, rerun `aws sso login`.
-
-### S3 Directory Layout
-
-Local paths are mirrored beneath the group S3 prefix:
-
-| Local path          | S3 prefix                                            |
-| ------------------- | ---------------------------------------------------- |
-| `data/activations/` | `s3://dats-capstone/shared/group3/data/activations/` |
-| `results/sae/`      | `s3://dats-capstone/shared/group3/results/sae/`      |
-| `results/causal_replay/` | `s3://dats-capstone/shared/group3/results/causal_replay/` |
-| `results/collection/` (`interactions.jsonl`) | `s3://dats-capstone/shared/group3/results/collection/` |
-
-### Upload Activations
-
-Always preview a synchronization first:
-
-```bash
-aws s3 sync \
-  data/activations/ \
-  s3://dats-capstone/shared/group3/data/activations/ \
-  --dryrun \
-  --profile school
-```
-
-If the preview is correct, upload the files:
-
-```bash
-aws s3 sync \
-  data/activations/ \
-  s3://dats-capstone/shared/group3/data/activations/ \
-  --profile school
-```
-
-Verify the remote contents:
-
-```bash
-aws s3 ls \
-  s3://dats-capstone/shared/group3/data/activations/ \
-  --recursive \
-  --profile school
-```
-
-### Download Activations
-
-To restore activations from S3, reverse the source and destination:
-
-```bash
-aws s3 sync \
-  s3://dats-capstone/shared/group3/data/activations/ \
-  data/activations/ \
-  --dryrun \
-  --profile school
-```
-
-After reviewing the preview:
-
-```bash
-aws s3 sync \
-  s3://dats-capstone/shared/group3/data/activations/ \
-  data/activations/ \
-  --profile school
-```
-
-### Upload an SAE Checkpoint Directory
-
-Replace `<layer>` and `<run-id>` with the applicable experiment values:
-
-```bash
-aws s3 sync \
-  results/sae/musique/runs/<layer>/<run-id>/checkpoints/ \
-  s3://dats-capstone/shared/group3/results/sae/musique/runs/<layer>/<run-id>/checkpoints/ \
-  --dryrun \
-  --profile school
-```
-
-After reviewing the preview, remove `--dryrun`:
-
-```bash
-aws s3 sync \
-  results/sae/musique/runs/<layer>/<run-id>/checkpoints/ \
-  s3://dats-capstone/shared/group3/results/sae/musique/runs/<layer>/<run-id>/checkpoints/ \
-  --profile school
-```
-
-To restore that checkpoint directory, reverse the paths:
-
-```bash
-aws s3 sync \
-  s3://dats-capstone/shared/group3/results/sae/musique/runs/<layer>/<run-id>/checkpoints/ \
-  results/sae/musique/runs/<layer>/<run-id>/checkpoints/ \
-  --profile school
-```
-
-### Synchronization Safety
-
-- Use `--dryrun` before uploads and downloads.
-- Do not use `--delete` unless remote or local deletion is explicitly intended.
-- `sync` skips matching files and transfers missing or changed files.
-- Uploading to an existing S3 key can replace that object.
-- S3 authentication does not change the local `ActivationStore`; experiments continue reading and writing local paths.
-- Never commit or share AWS access keys, secret keys, session tokens, or screenshots containing them.
-- Do not place AWS credentials in `data_sync.py`, configuration files, notebooks, or the repository.
-- An `AccessDenied` error means authentication succeeded but the school role lacks permission for the requested bucket or prefix.
-
-## Jupyter Notebooks
-
-After environment is set up, when using a jupyter notebook, make sure to run the following command to ensure you can select the capstone environment inside the kernel:
-
-```bash
-python -m ipykernel install --user \
-  --name capstone \
-  --display-name "Python 3.11 (capstone)"
-```
-
-## Data Collection
-
-After activating the Conda environment and installing the project, run the following command from the repository root:
-
-```bash
-python scripts/get_musique_dataset.py
-```
-
-## Activation Collection
-
-For new mixed-dataset runs across EC2 workers, follow the
-[distributed collection workflow](docs/distributed_collection.md): prepare one
-manifest, collect assigned chunks, merge, then split/export. Intervention
-membership is reserved upfront, and its baselines are included in collection.
-
-### Existing single-machine MuSiQue runs
-
-The following commands and paths describe the supported legacy collection path.
-Run from the repository root:
-
-    python scripts/collect_activations.py --config configs/collection/v1/smoke_train.yaml
-
-To run 100 existing synthetic sample questions through the solver–critic pipeline:
-
-```bash
-PYTHONPATH=src python scripts/collect_activations.py \
-  --config configs/collection/synthetic_sample_100q_pilot.yaml
-```
-
-This pilot uses Gemma 3 4B as solver, Qwen3 4B as critic, the natural critic
-condition, candidate presentation for the solver's second answer, and nine
-activation layers. It selects 34 two-hop, 33 three-hop, and 33 four-hop questions
-with seed 42. It requires the configured models and a suitable CUDA GPU.
-Results go to `results/collection/synthetic_sample_100q_pilot/train/` and
-activations under `data/activations/synthetic_sample_100q_pilot/layer_<N>/`.
-Add `--resume` to continue an interrupted run from its saved chunks.
-
-Collection configs can set `dataset.path` to a local MuSiQue-format JSONL file,
-including synthetic `accepted.jsonl`, instead of loading from Hugging Face.
-Paths are relative to the working directory; omit `dataset.revision` for local
-files. `dataset.source_split` labels the output directory and does not filter the
-file. Existing sampling strategies and `dataset.num_questions` apply to that
-file. The input file hash is saved in provenance and checked on resume. To use
-another sample, change `dataset.path` and choose a new `output.run_name`.
-
-Collection run definitions are versioned under `configs/collection/`. Once a
-config has produced a recorded experiment run, keep that version unchanged and
-create a new version directory for protocol changes.
-
-Use the corresponding train or validation config for larger runs.
-
-Activation tensors are saved under:
-
-    data/activations/<run_name>/layer_<N>/
-
-Each source split produces:
-
-- <split>\_attempt1.pt
-- <split>\_attempt2.pt
-- <split>.pt
-
-<split>.pt is the SAE-facing tensor with Attempt 1 rows followed by Attempt 2 rows.
-
-Run metadata and reproducibility information are saved under:
-
-    results/collection/<run_name>/<split>/
-
-This directory contains interactions.jsonl, resolved_config.yaml, summary.json,
-collected_question_ids.json and exclusions.jsonl. The record fields are defined
-in `docs/episode_record.md`, the provenance files and the identity used by
-`--resume` in `docs/collection_provenance.md`, and the capture position, tensor
-layout and row indices in `docs/activations.md` (including a historical MuSiQue
-partition diagram).
-
-The metadata of the finished production run (`natural_4b_full`: summaries,
-resolved configs, question lists, provenance) and of its partition export are
-committed under `results/collection/`. The labels, the partition manifest and
-the frozen question-to-partition mapping are committed under
-`results/behavior/behavior_v011_split80_10_10_20261006/`. Tensors and
-`interactions.jsonl` stay in S3. Re-runs of these historical experiments take
-their partitions from that mapping; see `docs/behavior_v01.md`, "Re-running the
-collection". New mixed-dataset runs use their own prepared manifest and exported
-membership instead.
-
-## SAE versions
-
-For grouped hyperparameter searches, trial comparisons, and continuing a selected
-trial, see [SAE training and tuning](results/sae/README.md).
-
-After each successful `scripts/sae/train_sae.py` run, a row is appended to
-`results/sae/musique/runs/layer_<N>/sae_versions.csv`. Columns are `run_id`,
-`checkpoint_path` (relative to the repository root), `commit`, `test_score`,
-and `best_val_score`. Scores are reconstruction MSE plus the sparsity penalty;
-lower is better. Missing test scores are written as literal `null`.
-`test_score` is how completed versions are compared: the test partition only
-selects the version carried forward and is never used to fit or tune (see
-`docs/behavior_v01.md`, "Keeping evaluation honest").
-
-The checkpoint path points to `best_checkpoint.pt`, and test evaluation, when
-available, uses that checkpoint. Repeating an append for the same run ID leaves
-the existing row unchanged. Later evaluation of an existing version requires
-updating its row rather than appending a new version. CSV appends use a file lock
-on Linux/macOS so simultaneous runs do not duplicate headers or lose rows.
-
-Here `<split>` is the MuSiQue source split (train or validation), which mixes
-the research partitions. For SAE and probe work use an exported partition run
-instead: `scripts/export_partition_activations.py` writes the same layout under
-a new run name with the partition (train, validation, test) in place of the
-source split, following the frozen `split_manifest.csv`. See
-`docs/behavior_v01.md`, section "Keeping evaluation honest".
-
-## Testing
-
-After activating the Conda environment and installing the project, run:
-
-```bash
-pytest
-```
-
-## Model Access
-
-Models used by the Solver-Critic pipeline (all from Hugging Face):
-
-- **Baseline / current Solver (all checked-in runnable configs):**
-  `google/gemma-3-4b-it`, revision `093f9f388b31de276ce2de164bdc2081324b9767`
-  (the validated snapshot recovered during the team's provenance review).
-- **Cross-model Natural Critic used in protocol validation:**
-  `Qwen/Qwen3-4B-Instruct-2507`, revision `cdbee75f17c01a7cc42f958dc650907174af0554`.
-- **Production roles (`configs/collection/v2/natural_4b_full_*.yaml`):**
-  Gemma-3-4B-it as Solver and Validator, Qwen3-4B-Instruct-2507 as Natural
-  Critic, at the revisions above. Gemma-3-12B in BF16 does not fit one A10G.
-
-Setup (once per machine):
-
-1. Create or log in to a Hugging Face account: https://huggingface.co/
-2. Accept the Gemma license at https://huggingface.co/google/gemma-3-4b-it
-   (Gemma is gated; Qwen is not).
-3. Create a **read** token at https://huggingface.co/settings/tokens.
-   Never commit or share the token.
-4. In the `capstone` environment run `hf auth login` and paste the token,
-   then confirm with `hf auth whoami`.
-5. Weights download on first use and are cached under `checkpoints/huggingface/`.
-
-Rules so runs stay comparable across machines:
-
-- Put the exact model `id` **and** `revision` in the experiment config
-  (`roles.solver`, `roles.critic`, `roles.validator`); the legacy `model.id`
-  form is still accepted for V1 configs.
-- Do not silently substitute a newer `main` revision; a run's
-  `resolved_config.yaml` records the resolved revision of every role.
-- Explicit `dtype` and `device`/`device_map` are required; there is no
-  automatic quantization, dtype fallback, or placement change.
-
-## Collection condition policy
-
-- Natural, Controlled Correct (B) and Controlled Incorrect (C) remain
-  supported; `collection.active_conditions` selects a nonempty subset.
-  Omitting it keeps V1's three-condition behaviour; `null` or `[]` is an error.
-- The current production policy activates **Natural only**. B and C stay
-  implemented and tested but inactive; disabled conditions generate no
-  targets and no episodes.
-- Natural is blind-first: the Critic answers independently, then reviews
-  Solver A1. It never sees gold answers or aliases.
-- Solver A1 is generated once per question and reused by every enabled condition.
-- Only Solver activations are captured; Critic and Validator activations never are.
-- Solver, Critic and Validator are independent role specs; identical specs
-  share weights, different specs load separately.
-- Raw Critic outputs are kept (`critic_blind_raw_output`, `critic_raw_output`)
-  so both steps can be re-parsed later.
-- Behaviour labels (`behavior_schema_version: lexical_v2`) are conservative
-  lexical heuristics, not semantic judgments: `critic_position_relation`,
-  `solver_behavior`, `direct_critic_adoption`, `solver_copied_nonanswer`.
-  Refusals, malformed output and unresolved cases are never counted as
-  rejection, and a lexical difference is not proven disagreement. Legacy
-  `solver_accepted_feedback` counts are reported separately under
-  `legacy_acceptance_counts`.
-- Questions whose blind answer or controlled target cannot be constructed are
-  skipped and written to `exclusions.jsonl`; `collected_question_ids.json`
-  lists the questions that produced activation rows.
-- Generation telemetry records token counts and whether the budget was reached.
-- Collection saves progress in chunks (`output.chunk_size`, default 250);
-  restart an interrupted collection with `--resume`.
-- Train and validation progress are tracked separately under one `run_name`.
-- Resume refuses if the config, questions, revisions, code or environment
-  changed.
-- Production collects full MuSiQue train (19,938) and validation (2,417)
-  under one `run_name`, from Solver layers 8, 17, 25 and 33.
-- Token budgets: Solver 64, Critic 256, Validator 4.

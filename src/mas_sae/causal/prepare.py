@@ -35,12 +35,12 @@ def prepare_inputs(cfg: replay.ReplayConfig) -> None:
             if cfg.label_policy == "claude":
                 from .semantic import read_source
                 read_source(cfg)  # never generate rule-based substitutes for missing Claude outputs
-                subprocess.run([sys.executable, str(SCRIPTS / "export_final_labels_for_probes.py"),
+                subprocess.run([sys.executable, str(SCRIPTS / "labels" / "export_final_labels_for_probes.py"),
                                 "--claude-runs", str(root / cfg.claude["source_run"]),
                                 "--full-results", str(collection), "--layout", "partitioned",
                                 "--coverage", "subset", "--output", str(labels.parent)], cwd=root, check=True)
             else:
-                subprocess.run([sys.executable, str(SCRIPTS / "prepare_behavior_v01.py"),
+                subprocess.run([sys.executable, str(SCRIPTS / "archive" / "lexical_labels_v01" / "prepare_behavior_v01.py"),
                                 "--full-results", str(collection), "--layout", "partitioned",
                                 "--coverage", "subset", "--label-policy", cfg.label_policy,
                                 "--output", str(labels.parent)], cwd=root, check=True)

@@ -6,7 +6,7 @@ Finishing a selected trial evaluates the test set when test.pt exists.
 
 python scripts/sae/train_sae.py \
   --hp-tune \
-  --config configs/sae_hp_tuning/layer_33.yaml \
+  --config configs/sae/layer_25_mixed_final_001_baselines.yaml \
   --dry-run
 """
 

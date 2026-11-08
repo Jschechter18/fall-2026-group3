@@ -31,8 +31,8 @@ results/sae/musique/
 ## Run a study
 
 ```bash
-python scripts/sae/train_sae.py --hp-tune --config configs/sae_hp_tuning/hp_sweep.yaml --dry-run
-python scripts/sae/train_sae.py --hp-tune --config configs/sae_hp_tuning/hp_sweep.yaml
+python scripts/sae/train_sae.py --hp-tune --config configs/sae/hp_sweep.yaml --dry-run
+python scripts/sae/train_sae.py --hp-tune --config configs/sae/hp_sweep.yaml
 ```
 
 `--hp-tune` and `--config` require each other. The YAML owns the activation run,
@@ -118,6 +118,23 @@ trials without study metadata continue in place. Existing artifacts are not
 migrated automatically. Older checkpoints without `last_checkpoint.pt` cannot
 be resumed through this workflow.
 
+## SAE versions
+
+After each successful `scripts/sae/train_sae.py` run, a row is appended to
+`results/sae/musique/runs/layer_<N>/sae_versions.csv`. Columns are `run_id`,
+`checkpoint_path` (relative to the repository root), `commit`, `test_score`,
+and `best_val_score`. Scores are reconstruction MSE plus the sparsity penalty;
+lower is better. Missing test scores are written as literal `null`.
+`test_score` is how completed versions are compared: the test partition only
+selects the version carried forward and is never used to fit or tune (see
+`docs/labels/behavior_v01.md`, "Keeping evaluation honest").
+
+The checkpoint path points to `best_checkpoint.pt`, and test evaluation, when
+available, uses that checkpoint. Repeating an append for the same run ID leaves
+the existing row unchanged. Later evaluation of an existing version requires
+updating its row rather than appending a new version. CSV appends use a file lock
+on Linux/macOS so simultaneous runs do not duplicate headers or lose rows.
+
 ## Optional post-training refinement
 
 Refinement forks a completed, validation-only TopK source's **last training
@@ -126,12 +143,12 @@ It runs separately from normal training and does not modify or register the sour
 The source must include `config.json` and `checkpoints/last_checkpoint.pt`;
 when present, its manifest must report `completed`.
 
-Copy `configs/sae_refinement/layer_25_residual_warmup.yaml`, set the source and a
+Copy `configs/experiments/sae_improvement/layer_25_residual_warmup.yaml`, set the source and a
 new output directory, then run from the repository root:
 
 ```bash
-PYTHONPATH=src python scripts/sae/improvement-trials/refine_sae.py --config configs/sae_refinement/layer_25_residual_warmup.yaml --dry-run
-PYTHONPATH=src python scripts/sae/improvement-trials/refine_sae.py --config configs/sae_refinement/layer_25_residual_warmup.yaml
+PYTHONPATH=src python scripts/experiments/sae_improvement/refine_sae.py --config configs/experiments/sae_improvement/layer_25_residual_warmup.yaml --dry-run
+PYTHONPATH=src python scripts/experiments/sae_improvement/refine_sae.py --config configs/experiments/sae_improvement/layer_25_residual_warmup.yaml
 ```
 
 The default comparison uses matched warmup-control and residual-warmup branches:
@@ -156,12 +173,12 @@ checkpoints preserve the tested protocol; no automatic promotion occurs.
 Record the selected checkpoint explicitly (it must appear in the comparison):
 
 ```bash
-PYTHONPATH=src python scripts/sae/improvement-trials/refine_sae.py --config configs/sae_refinement/layer_25_residual_warmup.yaml --select-checkpoint results/sae/musique/refinement/layer_25/residual_warmup/seed_42/residual_warmup/final_checkpoint.pt
+PYTHONPATH=src python scripts/experiments/sae_improvement/refine_sae.py --config configs/experiments/sae_improvement/layer_25_residual_warmup.yaml --select-checkpoint results/sae/musique/refinement/layer_25/residual_warmup/seed_42/residual_warmup/final_checkpoint.pt
 ```
 
 `selection.json` records checkpoint hashes and source lineage. Resuming regenerates
 comparison artifacts but leaves this explicit selection record intact. Pass its
 checkpoint path to downstream consumers using `load_sae_checkpoint`; rerun feature
 selection and causal analysis because refinement changes the dictionary. The
-legacy `scripts/sae/improvement-trials/experiment_sae_resampling.py` uses the same engine and retains its
+legacy `scripts/experiments/sae_improvement/experiment_sae_resampling.py` uses the same engine and retains its
 old `source_trial` configs and branch artifact names.
