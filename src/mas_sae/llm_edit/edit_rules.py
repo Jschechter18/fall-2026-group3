@@ -62,6 +62,15 @@ def edit_problems(original_w_dec: np.ndarray, selected: dict[str, list[int]], fe
     return problems
 
 
+def require_valid_edits(original_w_dec: np.ndarray, selected: dict[str, list[int]], edits: list[Edit],
+                        source: str) -> None:
+    """Stop if any edit breaks the rules: the controls must follow the same rules as the LLM."""
+    problems = [f"feature {e.feature}: {p}" for e in edits
+                for p in edit_problems(original_w_dec, selected, e.feature, e.row)]
+    if problems:
+        raise SystemExit(f"The {source} breaks the edit rules:\n  - " + "\n  - ".join(problems))
+
+
 def cosine_similarity(a, b) -> float:
     a, b = np.asarray(a, dtype=np.float64), np.asarray(b, dtype=np.float64)
     return float(a @ b / (np.linalg.norm(a) * np.linalg.norm(b)))

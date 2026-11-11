@@ -21,6 +21,18 @@ def unit(v: np.ndarray) -> np.ndarray:
     return v / np.linalg.norm(v)
 
 
+def rotated_toward(row: np.ndarray, target: np.ndarray, cosine: float) -> np.ndarray:
+    """|r|·(c·u + sqrt(1 − c²)·p): cosine c with r, as far toward `target` as c allows, same length.
+
+    p is the unit part of `target` perpendicular to u = r/|r|; moving along p is the shortest way from u
+    toward `target`, so for a fixed cosine with r this is the row closest to `target`. The controls use
+    it with target ±d (mechanical edit) and with a random Gaussian vector (random edit)."""
+    length = np.linalg.norm(np.asarray(row, dtype=np.float64))
+    u = unit(row)
+    p = unit(target - (target @ u) * u)
+    return length * (cosine * u + np.sqrt(1 - cosine ** 2) * p)
+
+
 def mean_difference_direction(inputs_dir: Path) -> np.ndarray:
     """d from the sandbox inputs (the stage-5 train rows): adoption mean minus retention mean, unit length."""
     X = np.load(Path(inputs_dir) / "X_train.npy", mmap_mode="r")

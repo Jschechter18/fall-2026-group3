@@ -29,8 +29,9 @@ import numpy as np
 from mas_sae.experiments.artifacts import get_git_commit, get_run_command, sha256_file, write_json_atomic
 from mas_sae.intervention.experiment.config import load_config
 from mas_sae.intervention.run_files.layout import new_run_id
-from mas_sae.llm_edit.directions import direction_report, mean_difference_direction, unit
-from mas_sae.llm_edit.edit_rules import COSINE_CAP, Edit, apply_edits, cosine_similarity, edit_problems, write_edits_py
+from mas_sae.llm_edit.directions import direction_report, mean_difference_direction, rotated_toward
+from mas_sae.llm_edit.edit_rules import (COSINE_CAP, Edit, apply_edits, cosine_similarity, require_valid_edits,
+                                         write_edits_py)
 from mas_sae.llm_edit.edited_sae import SAE_DIR, original_sae, save_edited_sae
 from mas_sae.llm_edit.steer_test import Steerer
 
@@ -48,7 +49,7 @@ def run(steer_test: bool) -> Path:
     d = mean_difference_direction(SANDBOX_INPUTS)
 
     edits = mechanical_edits(original_w_dec, selected, d)
-    require_valid(original_w_dec, selected, edits)
+    require_valid_edits(original_w_dec, selected, edits, "mechanical edit")
     edited = apply_edits(original_w_dec, edits)
 
     run_dir = OUTPUT_ROOT / new_run_id()
@@ -80,24 +81,6 @@ def mechanical_edits(original_w_dec: np.ndarray, selected: dict[str, list[int]],
             why = f"mechanical: {label} row rotated toward {'d' if label == 'adoption' else '-d'} to cosine {TARGET_COSINE}"
             edits.append(Edit(len(edits) + 1, feature, row.astype(np.float32), why))
     return edits
-
-
-def rotated_toward(row: np.ndarray, target: np.ndarray, cosine: float) -> np.ndarray:
-    """|r|·(c·u + sqrt(1 − c²)·p): cosine c with r, as far toward `target` as c allows, same length.
-
-    p is the unit part of `target` perpendicular to u = r/|r|; moving along p is the shortest way from u
-    toward `target`, so for a fixed cosine with r this is the row closest to `target`."""
-    length = np.linalg.norm(row.astype(np.float64))
-    u = unit(row)
-    p = unit(target - (target @ u) * u)
-    return length * (cosine * u + np.sqrt(1 - cosine ** 2) * p)
-
-
-def require_valid(original_w_dec, selected, edits: list[Edit]) -> None:
-    """The control must follow the same rules as the LLM (mas_sae.llm_edit.edit_rules)."""
-    problems = [f"feature {e.feature}: {p}" for e in edits for p in edit_problems(original_w_dec, selected, e.feature, e.row)]
-    if problems:
-        raise SystemExit("The mechanical edit breaks the edit rules:\n  - " + "\n  - ".join(problems))
 
 
 def run_record(run_dir, sae_dir, edits, original_w_dec, edited, selected, d) -> dict:
