@@ -481,6 +481,8 @@ aws s3 sync \
 
 The current CLI refuses test and intervention labeling. An explicit later implementation/policy decision is needed before claiming all-partition Claude labels or final held-out evaluation. The failed dataset-redundancy audit remains disabled; behavior labeling does not close semantic question-quality gaps.
 
+> **Superseded (2026-11-11, #236):** `scripts/labels/run_claude_validation.py` now labels the train, validation, test and intervention partitions; test and intervention each require an explicit `--partition`. The final labels for all four partitions are in `results/claude_validation/mixed_final_001/` (README, stage 2).
+
 This runbook is a command and source review, not a production execution certificate. No GPU episode collection, paid labeling, or live S3 transfer was executed to produce it. Offline checks: 169 synthetic tests passed earlier; this build passed 147 distributed/Claude tests with network blocked. The mixed config also prepared six real sample records using cached main.
 
 Source snapshots: synthetic branch 646da88fe4b7; cached origin/main e1ee614ddd6c. Live main could not be refreshed through local Git; confirm current implementations before deployment. Config: configs/collection/mixed_opus5_full_001.yaml.
