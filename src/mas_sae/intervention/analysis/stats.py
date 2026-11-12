@@ -10,12 +10,19 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
+
+if TYPE_CHECKING:
+    from numpy.typing import ArrayLike
 
 CHUNK = 1000        # bootstrap / permutation replicates computed at a time, to bound memory
 
 
 def bootstrap_ci(d: np.ndarray, n_bootstrap: int, seed: int) -> list[float]:
+    """[2.5%, 97.5%] percentiles of mean(d) over ``n_bootstrap`` resamples of ``d``'s entries with
+    replacement."""
     rng = np.random.default_rng(seed)
     means = []
     for start in range(0, n_bootstrap, CHUNK):
@@ -26,6 +33,8 @@ def bootstrap_ci(d: np.ndarray, n_bootstrap: int, seed: int) -> list[float]:
 
 
 def permutation_p(d: np.ndarray, alternative: str, n_permutations: int, seed: int) -> float:
+    """Sign-flip permutation p-value of mean(d), "greater" or "two-sided", as
+    (1 + number of permutations at least as extreme) / (1 + n_permutations). Seeded with ``seed + 1``."""
     rng = np.random.default_rng(seed + 1)
     observed = d.mean()
     as_extreme = 0
@@ -41,7 +50,8 @@ def permutation_p(d: np.ndarray, alternative: str, n_permutations: int, seed: in
     return (1 + as_extreme) / (1 + n_permutations)
 
 
-def paired_difference(a, b, alternative: str, n_bootstrap: int, n_permutations: int, seed: int) -> dict:
+def paired_difference(a: ArrayLike, b: ArrayLike, alternative: str, n_bootstrap: int, n_permutations: int,
+                      seed: int) -> dict:
     """a − b paired by question (one value of each per question, in the same order)."""
     a, b = np.asarray(a, float), np.asarray(b, float)
     if a.shape != b.shape or a.ndim != 1 or not len(a):

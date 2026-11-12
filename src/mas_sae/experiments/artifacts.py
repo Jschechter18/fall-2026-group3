@@ -1,5 +1,12 @@
+"""Run-provenance helpers shared across the pipeline.
+
+Run ids, Git state, SHA-256 of files/text/JSON, atomic JSON writes, overwrite guards, staged
+directory publishing, and the SAE run directory with its ``manifest.json``.
+"""
+
 from __future__ import annotations
 
+from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import datetime, timezone
 import csv
@@ -34,6 +41,7 @@ def build_run_id(timestamp: datetime, git_commit: str) -> str:
 
 
 def get_git_commit() -> str:
+    """HEAD commit SHA of the repository at the working directory, or "unknown" if Git fails."""
     try:
         return subprocess.run(
             ["git", "rev-parse", "HEAD"],
@@ -134,7 +142,7 @@ def file_facts(
 
 
 @contextmanager
-def staged_output(destination: str | Path):
+def staged_output(destination: str | Path) -> Iterator[Path]:
     """Build a directory privately and publish it with one atomic rename."""
     destination = Path(destination)
     ensure_output_available(destination)
@@ -245,6 +253,8 @@ def build_manifest(
     timestamp: datetime,
     git_commit: str,
 ) -> dict[str, object]:
+    """Initial ``manifest.json`` of a run directory: identity, layer, creation time, commit,
+    command line, ``status="running"`` and an empty ``error_message``."""
     return {
         "run_id": run_id,
         "run_name": run_name,

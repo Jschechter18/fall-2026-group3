@@ -1,7 +1,21 @@
+"""Settings for training one SparseAutoencoder (stage 4), and their validation.
+
+Tuning studies (tuning.expand_search_space) start from these defaults and override them per
+group; every resolved field is saved in the run's config.json.
+"""
+
 from dataclasses import dataclass
 
 @dataclass
 class Hyperparameters:
+    """Training settings for one SAE run; defaults apply wherever a study or the CLI sets nothing.
+
+    input_dim is overwritten by train_sae from the activation width, and hidden_dim is unused by
+    the architecture. top_k applies only to sparsity_mode 'topk', sparsity_coefficient only to
+    'l1'. AuxK (aux_*) is enabled by aux_coefficient > 0 and requires TopK. The *_window_examples
+    fields count training examples. Checked by validate_hyperparameters.
+    """
+
     seed: int = 42
     epochs: int = 200
     batch_size: int = 256
@@ -9,7 +23,7 @@ class Hyperparameters:
     
     lr: float = 3e-4
     
-    input_dim: int = 2560 # the number of features for gemma 4b layer 33
+    input_dim: int = 2560 # Gemma 3 4B residual width; training overwrites it from the activations
     hidden_dim: int = 8 # never actually used - this was here incase we ever wanted an intermediate hidden layer
     latent_dim: int = 12888
     

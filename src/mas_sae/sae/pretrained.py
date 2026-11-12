@@ -71,6 +71,10 @@ class JumpReLUSAE(nn.Module):
         self.threshold = nn.Parameter(threshold, requires_grad=False)
 
     def encoder(self, activation: Tensor) -> Tensor:
+        """Raw activations (..., input_dim) -> nonnegative features (..., latent_dim).
+
+        The gate passes no gradient to the threshold; full fine-tuning uses encoder_ste instead.
+        """
         pre = activation @ self.w_enc + self.b_enc
         # relu as well as the gate, so a negative threshold can never let a negative latent through
         return torch.relu(pre) * (pre > self.threshold)
@@ -88,9 +92,11 @@ class JumpReLUSAE(nn.Module):
         return features, _StepSTE.apply(pre, threshold, bandwidth).sum(dim=1)
 
     def decoder(self, sparse_features: Tensor) -> Tensor:
+        """Features (..., latent_dim) -> reconstruction z @ W_dec + b_dec in raw activation units."""
         return sparse_features @ self.w_dec + self.b_dec
 
     def forward(self, x: Tensor) -> tuple[Tensor, Tensor]:
+        """Returns (features, reconstruction), as SparseAutoencoder.forward does."""
         sparse_features = self.encoder(x)
         return sparse_features, self.decoder(sparse_features)
 

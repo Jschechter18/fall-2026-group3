@@ -1,10 +1,17 @@
 """Independent model roles with explicit loaders and no precision fallback."""
+from __future__ import annotations
+
 import json
 import math
+from collections.abc import Mapping
+from typing import TYPE_CHECKING, Any
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from mas_sae.agents.base import validate_chat_template_kwargs
 from mas_sae.models.loader import load_gemma
+
+if TYPE_CHECKING:
+    from mas_sae.agents.base import Agent
 
 DTYPES = {"bfloat16": torch.bfloat16, "float16": torch.float16, "float32": torch.float32}
 DEFAULT_TOKENS = {"solver": 32, "critic": 128, "validator": 4}
@@ -13,7 +20,7 @@ DEFAULT_TOKENS = {"solver": 32, "critic": 128, "validator": 4}
 AGENT_ONLY_KEYS = ("generation", "chat_template_kwargs")
 
 
-def resolve_role_spec(role, spec, *, default_max_new_tokens):
+def resolve_role_spec(role: str, spec: Any, *, default_max_new_tokens: int) -> dict[str, Any]:
     """Validate one model-role spec and fill generation defaults."""
     if not isinstance(spec, dict):
         raise ValueError(f"{role} must be a mapping")
@@ -58,7 +65,14 @@ def resolve_role_spec(role, spec, *, default_max_new_tokens):
     return resolved
 
 
-def resolve_roles(config):
+def resolve_roles(config: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
+    """Resolve the ``solver``, ``critic`` and ``validator`` specs from a collection config.
+
+    Takes either an explicit ``roles`` mapping (exactly those three roles) or the legacy
+    ``model.id``, which gives all three roles that checkpoint with the ``gemma3`` loader
+    (bfloat16, ``device_map="auto"``, no revision). Each spec goes through ``resolve_role_spec``
+    with the role's default ``max_new_tokens`` (``DEFAULT_TOKENS``).
+    """
     if "roles" in config:
         if "model" in config:
             raise ValueError("Use either roles or legacy model, not both")
@@ -76,12 +90,17 @@ def resolve_roles(config):
             for role, spec in raw.items()}
 
 
-def weight_identity(spec):
+def weight_identity(spec: dict[str, Any]) -> str:
     """Canonical key of the weights a spec loads, ignoring agent-only settings."""
     return json.dumps({k: v for k, v in spec.items() if k not in AGENT_ONLY_KEYS}, sort_keys=True)
 
 
-def load_spec(spec):
+def load_spec(spec: dict[str, Any]) -> tuple[Any, Any]:
+    """Load ``(model, processor)`` for one resolved spec, in eval mode.
+
+    ``gemma3`` uses ``load_gemma`` (model plus multimodal processor); ``qwen3`` loads a causal LM
+    and its tokenizer and raises unless the checkpoint's ``model_type`` is ``qwen3``.
+    """
     common = {"cache_dir": spec.get("cache_dir", "checkpoints/huggingface"),
               "revision": spec["revision"]}
     placement = {"device_map": spec.get("device_map", {"": spec.get("device")})}
@@ -96,7 +115,9 @@ def load_spec(spec):
     return model, tokenizer
 
 
-def load_role_models(specs):
+def load_role_models(specs: dict[str, dict[str, Any]]) -> dict[str, tuple[Any, Any]]:
+    """Load ``(model, processor)`` per role; roles whose specs share a ``weight_identity`` get the
+    same loaded objects, so the checkpoint is loaded once."""
     cache, roles = {}, {}
     for role, spec in specs.items():
         key = weight_identity(spec)
@@ -106,7 +127,9 @@ def load_role_models(specs):
     return roles
 
 
-def configure_agent(agent, spec):
+def configure_agent(agent: Agent, spec: dict[str, Any]) -> None:
+    """Apply a resolved spec's generation settings, chat-template options and text-only flag
+    (set for ``qwen3``) to an agent, and keep the spec on it as ``agent.model_spec``."""
     agent.max_new_tokens = spec["generation"]["max_new_tokens"]
     agent.generation_settings = {k: v for k, v in spec["generation"].items() if k != "max_new_tokens"}
     agent.text_only = spec["loader"] == "qwen3"

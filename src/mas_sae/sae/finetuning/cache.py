@@ -7,6 +7,8 @@ A build writes to a hidden temporary directory and is renamed into place only wh
 lock file stops two processes building the same cache at once.
 """
 
+from __future__ import annotations
+
 import hashlib
 import json
 import logging
@@ -14,12 +16,18 @@ import os
 from pathlib import Path
 import shutil
 import tempfile
+from typing import TYPE_CHECKING
 
 import numpy as np
 import torch
 from tqdm.auto import tqdm
 
 from mas_sae.experiments.artifacts import sha256_json, write_json_atomic
+
+if TYPE_CHECKING:
+    from mas_sae.sae.pretrained import JumpReLUSAE
+
+    from .data import Split
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +36,7 @@ BYTES_PER_FLOAT32 = 4
 CACHE_DISK_HEADROOM_BYTES = 1024 ** 2
 
 
-def encoder_digest(model):
+def encoder_digest(model: JumpReLUSAE) -> str:
     """SHA-256 of the encoder tensors (names, shapes, dtypes and bytes). Equal digests mean identical features."""
     digest = hashlib.sha256()
     for name in ENCODER_KEYS:
@@ -40,14 +48,17 @@ def encoder_digest(model):
     return digest.hexdigest()
 
 
-def attach_feature_cache(split, model, cache_dir, batch_size, device):
+def attach_feature_cache(split: Split, model: JumpReLUSAE, cache_dir: str | Path, batch_size: int,
+                         device: str | torch.device) -> None:
     """Point split.cached_features at the (possibly newly built) on-disk encoder output."""
     identity = {'split': split.name, 'activation_sha256': split.sha256}
     split.cached_features, split.cache_path = cached_features(
         model, split.activations, identity, cache_dir, batch_size, device)
 
 
-def cached_features(model, activations, identity, cache_dir, batch_size, device):
+def cached_features(model: JumpReLUSAE, activations: torch.Tensor, identity: dict[str, str],
+                    cache_dir: str | Path, batch_size: int,
+                    device: str | torch.device) -> tuple[np.ndarray, Path]:
     """Return (memory-mapped float32 features, cache directory), building the cache if it doesn't exist.
 
     `identity` names the input (split name and activation file hash). The encoder digest is added to it,

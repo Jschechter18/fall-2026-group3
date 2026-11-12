@@ -1,5 +1,7 @@
 """Streaming accumulators: per-feature sums over batches, so no (examples x features) matrix is ever kept."""
 
+from collections.abc import Sequence
+
 import torch
 
 # Log10 histogram of nonzero activation magnitudes, for approximate quantiles (0.01-decade bins).
@@ -7,12 +9,12 @@ LOG10_RANGE = (-6.0, 6.0)
 HISTOGRAM_BINS = 1200
 
 
-def label(q):
+def label(q: float) -> str:
     """0.5 -> 'p50', 0.01 -> 'p1'."""
     return f'p{q * 100:g}'
 
 
-def quantiles(values, qs):
+def quantiles(values: torch.Tensor, qs: Sequence[float]) -> dict[str, float | None]:
     """{'p50': ..., ...} for a tensor, ignoring nan. Values are None when nothing is left."""
     values = values.detach().double().flatten().cpu()
     values = values[~values.isnan()]
@@ -29,12 +31,13 @@ def _zeros(n, device):
 class FeatureStats:
     """One model's features on one split: firing counts, activation mass and a magnitude histogram."""
 
-    def __init__(self, n_features, device):
+    def __init__(self, n_features: int, device: str | torch.device):
         self.n = 0
         self.count, self.mass, self.max = _zeros(n_features, device), _zeros(n_features, device), _zeros(n_features, device)
         self.histogram = _zeros(HISTOGRAM_BINS, device)
 
-    def add(self, features):
+    def add(self, features: torch.Tensor) -> None:
+        """Accumulate one batch of features (examples x n_features)."""
         active = features > 0
         values = features.double()
         self.n += len(features)
@@ -47,19 +50,19 @@ class FeatureStats:
             logs = nonzero.log10().clamp(*LOG10_RANGE)
             self.histogram += torch.histc(logs, bins=HISTOGRAM_BINS, min=LOG10_RANGE[0], max=LOG10_RANGE[1]).double()
 
-    def frequency(self):
+    def frequency(self) -> torch.Tensor:
         """Per feature: share of examples on which it fires."""
         return self.count / max(self.n, 1)
 
-    def alive(self):
+    def alive(self) -> torch.Tensor:
         """Per feature: fired at least once."""
         return self.count > 0
 
-    def mean_magnitude(self):
+    def mean_magnitude(self) -> torch.Tensor:
         """Per feature: mean value when active (nan for a dead feature)."""
         return torch.where(self.alive(), self.mass / self.count.clamp(min=1), torch.full_like(self.mass, float('nan')))
 
-    def magnitude_quantiles(self, qs):
+    def magnitude_quantiles(self, qs: Sequence[float]) -> dict[str, float | None]:
         """Approximate quantiles of every nonzero activation value, read off the log10 histogram."""
         total = self.histogram.sum()
         if total == 0:
@@ -81,11 +84,12 @@ class RunningCorrelation:
     Only five running sums per feature are kept, so neither full matrix is ever held in memory.
     """
 
-    def __init__(self, n_features, device):
+    def __init__(self, n_features: int, device: str | torch.device):
         self.n = 0
         self.sum_a, self.sum_b, self.sum_aa, self.sum_bb, self.sum_ab = (_zeros(n_features, device) for _ in range(5))
 
-    def add(self, a, b):
+    def add(self, a: torch.Tensor, b: torch.Tensor) -> None:
+        """Accumulate one batch; a and b are (examples x n_features) on the same examples."""
         a, b = a.double(), b.double()
         self.n += len(a)
         self.sum_a += a.sum(dim=0)
@@ -94,7 +98,7 @@ class RunningCorrelation:
         self.sum_bb += (b * b).sum(dim=0)
         self.sum_ab += (a * b).sum(dim=0)
 
-    def result(self):
+    def result(self) -> tuple[torch.Tensor, torch.Tensor]:
         """Returns (correlation, defined). Correlation is nan where either side never varies, e.g. a dead feature."""
         mean_a, mean_b = self.sum_a / self.n, self.sum_b / self.n
         var_a = self.sum_aa / self.n - mean_a ** 2
@@ -109,13 +113,14 @@ class RunningCorrelation:
 class PairedStats:
     """The original (a) and adapted (b) SAE's features on the same examples, side by side."""
 
-    def __init__(self, n_features, device):
+    def __init__(self, n_features: int, device: str | torch.device):
         self.original = FeatureStats(n_features, device)
         self.adapted = FeatureStats(n_features, device)
         self.correlation = RunningCorrelation(n_features, device)
         self._jaccard = []
 
-    def add(self, a, b):
+    def add(self, a: torch.Tensor, b: torch.Tensor) -> None:
+        """Accumulate one batch: original features a and adapted features b on the same examples."""
         self.original.add(a)
         self.adapted.add(b)
         self.correlation.add(a, b)
@@ -125,6 +130,6 @@ class PairedStats:
         # An example where neither model fires anything counts as perfect agreement.
         self._jaccard.append(torch.where(either > 0, both / either.clamp(min=1), torch.ones_like(both)).cpu())
 
-    def jaccard(self):
+    def jaccard(self) -> torch.Tensor:
         """Per example: |both fire| / |either fires|."""
         return torch.cat(self._jaccard) if self._jaccard else torch.empty(0, dtype=torch.float64)

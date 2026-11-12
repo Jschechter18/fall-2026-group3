@@ -12,6 +12,9 @@ and its results are never part of the study tables. The report is for choosing r
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+from typing import TYPE_CHECKING
+
 import numpy as np
 import pandas as pd
 
@@ -20,12 +23,16 @@ from mas_sae.intervention.generation.edits import ARMS
 from mas_sae.intervention.experiment.episodes import OPPOSITE
 from mas_sae.intervention.analysis.tables import to_markdown
 
+if TYPE_CHECKING:
+    from pathlib import Path
+
 REPEAT_RUN = 5            # this many identical tokens in a row makes an answer degenerate
 MAX_BAD_PCT = 5.0         # suggested rule: under this % of out and of degenerate answers
 EXAMPLES_PER_SIZE = 5
 
 
 def longest_repeat_run(token_ids: list[int]) -> int:
+    """Length of the longest run of one token repeated back to back (0 for no tokens)."""
     longest = run = 0
     for i, t in enumerate(token_ids):
         run = run + 1 if i and t == token_ids[i - 1] else 1
@@ -40,10 +47,15 @@ def is_degenerate(row: dict) -> bool:
 
 
 def is_flip(row: dict) -> bool:
+    """Whether the row's label is the opposite of its stored label."""
     return row["label"] == OPPOSITE[row["stored_label"]]
 
 
-def choose_r_table(rows: list[dict], representations: list[str], sizes, n_draws: int, n_bootstrap: int) -> pd.DataFrame:
+def choose_r_table(rows: list[dict], representations: list[str], sizes: Sequence[float], n_draws: int,
+                   n_bootstrap: int) -> pd.DataFrame:
+    """One row per size × representation × arm: targeted and mean random flip %, their paired Δ with a
+    bootstrap 95% CI over episodes, % out and % degenerate (targeted and random rows together), and
+    whether the suggested rule is met. ``n_draws`` is not used."""
     df = pd.DataFrame([r for r in rows if r["kind"] == "edit"])
     df["flip"] = df.apply(is_flip, axis=1).astype(float)
     df["degenerate"] = df.apply(is_degenerate, axis=1)
@@ -76,8 +88,12 @@ def examples(rows: list[dict], size: float) -> pd.DataFrame:
                          for r in targeted[:EXAMPLES_PER_SIZE]])
 
 
-def write_choose_r_report(rows: list[dict], excluded: dict, representations: list[str], sizes, n_draws: int,
-                       n_bootstrap: int, csv_path, md_path, labels_stubbed: bool) -> pd.DataFrame:
+def write_choose_r_report(rows: list[dict], excluded: dict, representations: list[str], sizes: Sequence[float],
+                       n_draws: int, n_bootstrap: int, csv_path: Path, md_path: Path,
+                       labels_stubbed: bool) -> pd.DataFrame:
+    """Write the choose-r table to ``csv_path`` and the markdown report to ``md_path`` (episode and
+    exclusion counts, the baseline flip rate, the suggested rule, the table and example answers per
+    size); returns the table."""
     table = choose_r_table(rows, representations, sizes, n_draws, n_bootstrap)
     table.to_csv(csv_path, index=False)
     baseline_flips = np.mean([is_flip(r) for r in rows if r["kind"] == "baseline"])

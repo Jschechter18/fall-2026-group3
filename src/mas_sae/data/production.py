@@ -34,11 +34,13 @@ takes its partitions from that file (``build_partition_manifest(frozen=...)``)
 and only rebuilds the activation indices; it never derives membership again.
 """
 from collections import Counter
+from collections.abc import Collection, Container, Iterable, Mapping, Sequence
 import csv
 import json
 from pathlib import Path
 import random
 import re
+from typing import Any
 
 import torch
 
@@ -95,7 +97,8 @@ MISSING_IDS_FILE = "missing_question_ids.json"   # frozen questions a partial ru
 COVERAGE_MODES = ("complete", "subset")
 
 
-def interaction_paths(results_dir, partitions=None, *, layout="legacy"):
+def interaction_paths(results_dir: str | Path, partitions: Collection[str] | None = None, *,
+                      layout: str = "legacy") -> list[Path]:
     """Interaction files for a layout; partitioned runs declare folders in run_layout.json."""
     results_dir = Path(results_dir)
     if layout not in {"legacy", "partitioned"}:
@@ -129,7 +132,8 @@ def interaction_paths(results_dir, partitions=None, *, layout="legacy"):
     return [results_dir / source_split / "interactions.jsonl" for source_split in sorted(sources)]
 
 
-def read_run_interactions(results_dir, *, layout="legacy"):
+def read_run_interactions(results_dir: str | Path, *,
+                          layout: str = "legacy") -> list[dict[str, Any]]:
     """All episodes from the selected layout, including test for distributed runs."""
     rows = []
     for path in interaction_paths(results_dir, layout=layout):
@@ -157,7 +161,8 @@ def _check_indices_are_unique(rows, run):
         used.add(position)
 
 
-def assign_partitions(question_ids_by_source, *, proportions, seed):
+def assign_partitions(question_ids_by_source: Mapping[str, Iterable[str]], *,
+                      proportions: Mapping[str, float], seed: int) -> dict[str, str]:
     """Return {question_id: partition} from the question set, proportions and seed only.
 
     ``question_ids_by_source`` maps a MuSiQue source split to its question ids.
@@ -185,8 +190,15 @@ def assign_partitions(question_ids_by_source, *, proportions, seed):
     return assignment
 
 
-def build_partition_manifest(full_rows, scan_rows=(), qc100_ids=(), *, proportions=None, seed=None,
-                             frozen=None, coverage="complete", layout="legacy", exclusions=()):
+def build_partition_manifest(full_rows: Sequence[dict[str, Any]],
+                             scan_rows: Sequence[dict[str, Any]] = (),
+                             qc100_ids: Iterable[str] = (), *,
+                             proportions: Mapping[str, float] | None = None,
+                             seed: int | None = None,
+                             frozen: dict[str, dict[str, Any]] | None = None,
+                             coverage: str = "complete", layout: str = "legacy",
+                             exclusions: Sequence[dict[str, Any]] = (),
+                             ) -> dict[str, dict[str, Any]]:
     """Build {question_id: record} from the full run, the layer scan and the old QC sample.
 
     Without ``frozen`` the partition is derived: ``proportions`` and ``seed``
@@ -267,7 +279,9 @@ def build_partition_manifest(full_rows, scan_rows=(), qc100_ids=(), *, proportio
     return manifest
 
 
-def apply_frozen_partitions(manifest, frozen, *, coverage="complete"):
+def apply_frozen_partitions(manifest: dict[str, dict[str, Any]],
+                            frozen: dict[str, dict[str, Any]], *,
+                            coverage: str = "complete") -> dict[str, Any]:
     """Give every manifest record the partition ``frozen`` holds for it; derive nothing.
 
     Raises on a collected id that is not in ``frozen``, on a source split or hop
@@ -295,14 +309,16 @@ def apply_frozen_partitions(manifest, frozen, *, coverage="complete"):
     return result
 
 
-def partition_coverage(manifest, frozen):
+def partition_coverage(manifest: dict[str, dict[str, Any]],
+                       frozen: dict[str, dict[str, Any]]) -> dict[str, Any]:
     """How much of the frozen mapping a run covers: counts and the ids it lacks."""
     missing_ids = sorted(set(frozen) - set(manifest))
     return {"expected": len(frozen), "collected": len(manifest),
             "missing": len(missing_ids), "missing_ids": missing_ids}
 
 
-def check_manifest_matches_frozen(manifest, frozen):
+def check_manifest_matches_frozen(manifest: dict[str, dict[str, Any]],
+                                  frozen: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
     """Raise unless every manifest question has the partition and source split ``frozen`` records."""
     for qid, record in manifest.items():
         fixed = frozen.get(qid)
@@ -315,7 +331,9 @@ def check_manifest_matches_frozen(manifest, frozen):
     return manifest
 
 
-def check_scan_repeats_full_run(full_rows, scan_rows, fields):
+def check_scan_repeats_full_run(full_rows: Iterable[dict[str, Any]],
+                                scan_rows: Iterable[dict[str, Any]],
+                                fields: Collection[str]) -> None:
     """The scan must repeat the full run on every field that decides a label.
 
     ``fields`` is the label policy's ``input_fields``. Otherwise the full run's
@@ -332,7 +350,7 @@ def check_scan_repeats_full_run(full_rows, scan_rows, fields):
                 raise ValueError(f"{row['question_id']}: scan and full run disagree on {field}")
 
 
-def split_audit(manifest):
+def split_audit(manifest: dict[str, dict[str, Any]]) -> dict[str, Any]:
     """Partition sizes, their make-up, and how earlier development data overlaps the held-out sets."""
     records = list(manifest.values())
     in_scan = [m for m in records if m["scan_split"]]
@@ -359,12 +377,14 @@ def split_audit(manifest):
 MUSIQUE_ID = re.compile(r"\b\d+hop\d*__\d+(?:_\d+)+\b")
 
 
-def question_ids_in(path):
+def question_ids_in(path: str | Path) -> set[str]:
     """Every MuSiQue question id that appears anywhere in a file, whatever its format."""
     return set(MUSIQUE_ID.findall(Path(path).read_text(encoding="utf-8", errors="ignore")))
 
 
-def sample_partition_questions(manifest, *, partition, num_questions, seed, exclude=frozenset()):
+def sample_partition_questions(manifest: dict[str, dict[str, Any]], *, partition: str,
+                               num_questions: int, seed: int,
+                               exclude: Container[str] = frozenset()) -> list[str]:
     """A seeded sample of one partition's questions, in proportion to its hop groups.
 
     Questions flagged ``in_development_data`` and any id in ``exclude`` are
@@ -386,7 +406,9 @@ def sample_partition_questions(manifest, *, partition, num_questions, seed, excl
     return picked
 
 
-def write_manifest(path, manifest):
+def write_manifest(path: str | Path, manifest: dict[str, dict[str, Any]]) -> None:
+    """Write ``split_manifest.csv``: ``MANIFEST_FIELDS`` first, then any extra record keys in
+    first-seen order. ``None`` is written as a blank cell."""
     with open(path, "w", newline="") as f:
         extra = list(dict.fromkeys(k for r in manifest.values() for k in r if k not in MANIFEST_FIELDS))
         writer = csv.DictWriter(f, fieldnames=MANIFEST_FIELDS + extra)
@@ -395,7 +417,14 @@ def write_manifest(path, manifest):
             writer.writerow({k: "" if v is None else v for k, v in record.items()})
 
 
-def read_manifest(path):
+def read_manifest(path: str | Path) -> dict[str, dict[str, Any]]:
+    """Read a ``split_manifest.csv`` back into {question_id: record}; raises on a repeated id.
+
+    Restores types from the CSV strings: ``full_index`` / ``scan_index`` become ints (blank is
+    None) and ``collection_seed`` an int. Exposure flags go through the strict ``optional_bool``
+    when the file has a ``dataset_source`` column (mixed runs); in a legacy manifest
+    ``in_qc100`` / ``in_development_data`` are True only for the exact string ``"True"``.
+    """
     from mas_sae.data.partition_adapter import optional_bool
 
     with open(path, newline="") as f:
@@ -420,7 +449,8 @@ def read_manifest(path):
     return manifest
 
 
-def write_partitions(path, manifest, *, layout="legacy"):
+def write_partitions(path: str | Path, manifest: dict[str, dict[str, Any]], *,
+                     layout: str = "legacy") -> None:
     """Write the frozen mapping: the manifest columns that never change between runs."""
     fields = PARTITION_FIELDS
     if layout == "partitioned":
@@ -434,7 +464,9 @@ def write_partitions(path, manifest, *, layout="legacy"):
             writer.writerow({field: record.get(field) for field in fields})
 
 
-def write_package_tables(output_dir, manifest, frozen=None, *, layout="legacy", exclusions=()):
+def write_package_tables(output_dir: str | Path, manifest: dict[str, dict[str, Any]],
+                         frozen: dict[str, dict[str, Any]] | None = None, *, layout: str = "legacy",
+                         exclusions: Iterable[dict[str, Any]] = ()) -> dict[str, Any] | None:
     """Write a package's ``split_manifest.csv``, ``partitions.csv`` and, for a partial run,
     ``missing_question_ids.json``.
 
@@ -463,7 +495,7 @@ def write_package_tables(output_dir, manifest, frozen=None, *, layout="legacy", 
     return coverage
 
 
-def read_partitions(path, *, layout="legacy"):
+def read_partitions(path: str | Path, *, layout: str = "legacy") -> dict[str, dict[str, Any]]:
     """Read a frozen mapping and check it is well formed.
 
     Accepts ``partitions.csv`` or a full ``split_manifest.csv`` (extra columns
@@ -522,7 +554,8 @@ def read_partitions(path, *, layout="legacy"):
     return frozen
 
 
-def authorize_rows(rows, manifest, *, purpose):
+def authorize_rows(rows: list[dict[str, Any]], manifest: dict[str, dict[str, Any]], *,
+                   purpose: str) -> list[dict[str, Any]]:
     """Raise unless every row is in the partition that ``purpose`` may read.
 
     The partition is looked up by question ID in the manifest. A row's own
@@ -544,7 +577,7 @@ def authorize_rows(rows, manifest, *, purpose):
     return rows
 
 
-def check_package_sources(package_dir, paths):
+def check_package_sources(package_dir: str | Path, paths: Iterable[str | Path]) -> None:
     """Raise unless every interaction file in ``paths`` is one the package was built from.
 
     Labels are joined to episodes by question id, so a re-collected, resumed or
@@ -561,7 +594,9 @@ def check_package_sources(package_dir, paths):
                              "its labels may not describe these episodes")
 
 
-def load_labeled_rows(results_dir, package_dir, *, partitions=None, layout="legacy"):
+def load_labeled_rows(results_dir: str | Path, package_dir: str | Path, *,
+                      partitions: Collection[str] | None = None, layout: str = "legacy",
+                      ) -> tuple[list[dict[str, Any]], dict[str, dict[str, Any]]]:
     """Join a run's interactions with the labels and the partition manifest.
 
     ``results_dir`` holds ``train/`` and ``validation/`` folders, each with an
@@ -597,8 +632,10 @@ def load_labeled_rows(results_dir, package_dir, *, partitions=None, layout="lega
     return rows, manifest
 
 
-def load_production_activations(rows, manifest, activation_root, *,
-                                purpose, layer, attempt=2, run="full"):
+def load_production_activations(rows: list[dict[str, Any]], manifest: dict[str, dict[str, Any]],
+                                activation_root: str | Path, *,
+                                purpose: str, layer: int, attempt: int = 2, run: str = "full",
+                                ) -> torch.Tensor:
     """Return one activation vector per row, in row order.
 
     purpose   'fit', 'tune', 'evaluate' or 'intervene'. Rows from a partition
@@ -660,9 +697,13 @@ DEVELOPMENT_PARTITIONS = ("train", "validation")
 EXPORT_PARTITIONS = ("train", "validation", "test")
 
 
-def export_partition_activations(rows, manifest, activation_root, *, run, layers,
-                                 export_activation_root, export_result_root, export_run_name,
-                                 partitions=EXPORT_PARTITIONS):
+def export_partition_activations(rows: Iterable[dict[str, Any]],
+                                 manifest: dict[str, dict[str, Any]],
+                                 activation_root: str | Path, *, run: str, layers: Sequence[int],
+                                 export_activation_root: str | Path, export_result_root: str | Path,
+                                 export_run_name: str,
+                                 partitions: Collection[str] = EXPORT_PARTITIONS,
+                                 ) -> dict[str, dict[str, Any]]:
     """Write one run's activations and episodes regrouped by partition.
 
     The output has the layout the collection pipeline already produces, with the

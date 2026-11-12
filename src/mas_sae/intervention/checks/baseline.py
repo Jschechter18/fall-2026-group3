@@ -9,15 +9,23 @@ label); any other answer counts as a mismatch. This can only make the check stri
 from __future__ import annotations
 
 import re
+from typing import TYPE_CHECKING
 
 import pandas as pd
 
+if TYPE_CHECKING:
+    from mas_sae.intervention.experiment.episodes import Episode
+
 
 def normalize(text: str) -> str:
+    """Lowercased, punctuation turned into spaces, whitespace collapsed: separates formatting-only
+    differences from text differences."""
     return " ".join(re.sub(r"[^\w\s]", " ", str(text).lower()).split())
 
 
-def mismatch_kind(row: dict, episode) -> str:
+def mismatch_kind(row: dict, episode: Episode) -> str:
+    """How a baseline row compares with the stored episode: "prompt_differs" (checked first, only when
+    collection's prompt hash is known), "exact_match", "formatting_only" or "text_differs"."""
     if episode.stored_prompt_sha256 is not None and row["prompt_sha256"] != episode.stored_prompt_sha256:
         return "prompt_differs"
     if row["answer"] == episode.stored_solver_attempt_2:

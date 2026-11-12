@@ -1,3 +1,5 @@
+"""Torch Dataset/DataLoader over one saved activation split, the input to SAE training (stage 4)."""
+
 from pathlib import Path
 
 import torch
@@ -7,6 +9,8 @@ from mas_sae.data.activation_store import ActivationStore
 
 
 class ActivationDataset(Dataset):
+    """All rows of <location>/<split>.pt, loaded into memory at construction; one row per item."""
+
     def __init__(
         self,
         split: str,
@@ -36,7 +40,7 @@ def create_sae_dataloader(
     Parameters
     ----------
     batch_size : int
-        Number of activations per batch. Multiples of 2 are ideal.
+        Number of activations per batch. Powers of 2 are ideal.
     split : str
         Which split of the dataset to load (e.g., "train", "val", "test").
     num_workers : int

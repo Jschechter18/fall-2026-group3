@@ -20,7 +20,12 @@ from mas_sae.sae.training import finish_run, train_sae
 from mas_sae.sae.tuning import expand_search_space, run_tuning
 
 
-def main():
+def main() -> None:
+    """Dispatch to a tuning study (--hp-tune), finishing a trial (--finish-run) or a single run.
+
+    Rejects incompatible flag combinations before anything is loaded; a single run uses
+    Hyperparameters defaults plus --sparsity-mode / --top-k.
+    """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--hp-tune", action="store_true")
     parser.add_argument("--config", type=Path)

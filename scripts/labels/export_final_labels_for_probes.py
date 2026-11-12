@@ -179,7 +179,10 @@ def unpartitioned(rows: list[dict], frozen: dict, labels: dict[str, dict]) -> di
     return excluded
 
 
-def main(argv=None) -> None:
+def main(argv: list[str] | None = None) -> None:
+    """Build the label package in ``--output`` (which must not exist) from ``--labels``/``--counts``
+    or ``--claude-runs``; see the module docstring. Writes ``labels.csv``, the package tables,
+    ``excluded_episodes.json`` and ``counts.json``, and raises if an input changed meanwhile."""
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     source = parser.add_mutually_exclusive_group(required=True)
     source.add_argument("--labels", type=Path, help="final_labels.jsonl of a PR #153 build (with --counts)")

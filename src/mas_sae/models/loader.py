@@ -1,3 +1,5 @@
+"""Load a Gemma 3 checkpoint and its processor: the ``gemma3`` role loader, used for the Solver."""
+
 from typing import Any
 
 import torch

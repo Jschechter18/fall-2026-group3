@@ -18,6 +18,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
@@ -254,7 +255,8 @@ def merge_chunks(
     return merge_checkpoint_paths(paths, question_ids=question_ids, candidate_sites=candidate_sites)
 
 
-def merge_checkpoint_paths(paths, *, question_ids, candidate_sites):
+def merge_checkpoint_paths(paths: Sequence[Path], *, question_ids: list[str],
+                           candidate_sites: list[str]) -> CollectionResult:
     """Merge ordered checkpoints across workers using the same index reconstruction."""
     membership = [qid for path in paths for qid in json.loads((path / "metadata.json").read_text())["question_ids"]]
     if membership != question_ids or len(set(question_ids)) != len(question_ids):

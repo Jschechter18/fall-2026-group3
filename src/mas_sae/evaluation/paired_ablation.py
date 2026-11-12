@@ -22,6 +22,7 @@ two-sided McNemar p-value.
 """
 import math
 from collections import Counter
+from collections.abc import Callable
 
 from mas_sae.data.musique import hop_type
 from mas_sae.evaluation.claude_agreement import wilson
@@ -168,7 +169,8 @@ def correctness_cell(episode: dict | None) -> str:
     return f"A1 {side(episode['solver_attempt_1_correct'])} / Critic {side(episode.get('critic_feedback_correct'))}"
 
 
-def breakdown(outcomes: dict[str, str], episodes: dict[str, dict], key) -> dict[str, dict[str, int]]:
+def breakdown(outcomes: dict[str, str], episodes: dict[str, dict],
+              key: Callable[[str, dict | None], str]) -> dict[str, dict[str, int]]:
     """Outcome counts within each group given by ``key(question_id, episode)``; descriptive only."""
     groups: dict[str, Counter] = {}
     for qid, outcome in outcomes.items():

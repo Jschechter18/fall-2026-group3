@@ -123,11 +123,14 @@ other condition (the edit is at layer 25), and x is encoded once per SAE encoder
 generated one at a time (not batched), so each row is exactly the plain generation's.
 """
 
+from __future__ import annotations
+
 import argparse
 import json
 import logging
 from dataclasses import replace
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from tqdm.auto import tqdm
 
@@ -152,6 +155,13 @@ from mas_sae.intervention.run_files.shards import (
 from mas_sae.intervention.generation.solver import generate_baseline, load_solver
 from mas_sae.experiments.artifacts import get_git_commit, get_run_command, sha256_file
 
+if TYPE_CHECKING:
+    from mas_sae.intervention.experiment.conditions import Condition
+    from mas_sae.intervention.experiment.config import InterventionConfig
+    from mas_sae.intervention.experiment.episodes import Episode
+    from mas_sae.intervention.experiment.representations import Representation
+    from mas_sae.intervention.generation.solver import SolverModel
+
 logger = logging.getLogger("intervention")
 
 
@@ -159,7 +169,7 @@ logger = logging.getLogger("intervention")
 # CHOOSE-R: CHOOSE THE EDIT SIZE r
 # =====================================================================
 
-def start_run(config):
+def start_run(config: InterventionConfig) -> InterventionConfig:
     """Create a new run folder <output_root>/<run_id> and record where it came from. Never reuses one."""
     run_id = layout.new_run_id()
     run_dir = Path(config.output_root) / run_id
@@ -174,7 +184,9 @@ def start_run(config):
     return replace(config, run_id=run_id)
 
 
-def choose_r(config, labels_stubbed: bool) -> None:
+def choose_r(config: InterventionConfig, labels_stubbed: bool) -> None:
+    """Choose-r stage: generate the choose-r episodes at every candidate edit size for the primary
+    SAEs, label them, and write the choose-r report. Refuses a rerun with other episodes or conditions."""
     run_dir = config.run_dir
     e = config.experiment
     _, choose_r_episodes = study_and_choose_r_episodes(config)
@@ -202,7 +214,10 @@ def choose_r(config, labels_stubbed: bool) -> None:
 # PREPARE: FREEZE THE RUN, CHECK THE BASELINE, WRITE THE SHARDS
 # =====================================================================
 
-def prepare(config) -> None:
+def prepare(config: InterventionConfig) -> None:
+    """Prepare stage: refuse if a choose-r episode is in the study, freeze ``frozen_run.json`` (a rerun
+    must freeze the same content), generate every study episode's baseline and check it against the
+    stored A2s, then write ``shards.json``. Raises RuntimeError, before any edit, if the check fails."""
     run_dir = config.run_dir
     study_episodes, choose_r_episodes = study_and_choose_r_episodes(config)
     require_no_choose_r_episode_in_study(run_dir, study_episodes)
@@ -246,7 +261,11 @@ def prepare(config) -> None:
 # RUN: ONE SHARD OF EPISODES ON ONE GPU WORKER
 # =====================================================================
 
-def run(config, shard: int) -> None:
+def run(config: InterventionConfig, shard: int) -> None:
+    """Run stage, one GPU worker: generate every condition of the shard's episodes into
+    ``shard_K.jsonl`` and write its completion marker. Refuses if ``frozen_run.json`` changed after
+    sharding, the baseline check failed, or this machine's experiment, code, packages or inputs differ
+    from the frozen run. Episodes whose regenerated baseline differs from prepare's are excluded."""
     run_dir = config.run_dir
     frozen, shards = read_json(layout.frozen_run(run_dir)), read_json(layout.shards(run_dir))
     if sha256_file(layout.frozen_run(run_dir)) != shards["frozen_run_sha256"]:
@@ -301,7 +320,12 @@ def run(config, shard: int) -> None:
 # MERGE: COMBINE THE SHARDS, LABEL EVERY ANSWER, COMPUTE THE TABLES
 # =====================================================================
 
-def merge(config, labels_stubbed: bool) -> None:
+def merge(config: InterventionConfig, labels_stubbed: bool) -> None:
+    """Merge stage: check the config still defines the frozen experiment and every shard is complete
+    and made for this frozen run, label every row (a stub for smoke runs), and write
+    ``labeled_rows.jsonl``, the tables and ``summary.json`` to ``merge/``. Raises RuntimeError if
+    more episodes were excluded for a baseline mismatch than (1 − min_baseline_label_match) of the
+    study allows."""
     run_dir, out = config.run_dir, layout.merge_dir(config.run_dir)
     frozen, shards = read_json(layout.frozen_run(run_dir)), read_json(layout.shards(run_dir))
     study_episodes, choose_r_episodes = study_and_choose_r_episodes(config)
@@ -333,7 +357,10 @@ def merge(config, labels_stubbed: bool) -> None:
           f"{len(excluded)} episodes excluded. Tables and summary.json in {out}.")
 
 
-def write_tables(labeled, excluded, config, frozen, baseline_check, out: Path, labels_stubbed: bool) -> dict:
+def write_tables(labeled: list[dict], excluded: dict[str, str], config: InterventionConfig, frozen: dict,
+                 baseline_check: dict, out: Path, labels_stubbed: bool) -> dict:
+    """Write each table (Table P, 1, 2, D, 3, reference rows, label counts) as CSV and markdown to
+    ``out``, and return the summary also written to ``summary.json``."""
     e, plan = config.experiment, config.analysis
     roles = {name: spec.role for name, spec in config.representations.items()}
     saes = [name for name, role in roles.items() if role != "control"]
@@ -374,23 +401,26 @@ def write_tables(labeled, excluded, config, frozen, baseline_check, out: Path, l
 # SMALL HELPERS
 # =====================================================================
 
-def ids(episodes) -> list[str]:
+def ids(episodes: list[Episode]) -> list[str]:
+    """The episodes' ids, in order."""
     return [episode.episode_id for episode in episodes]
 
 
-def random_draws(config, episodes) -> dict[str, list[int]]:
+def random_draws(config: InterventionConfig, episodes: list[Episode]) -> dict[str, list[int]]:
     """{episode id: its pool indices, one per random draw slot}, fixed by the seed and the question id."""
     e = config.experiment
     return {episode.episode_id: random_draws_for(episode.question_id, e.seed, e.random_draw_pool_size,
                                                  e.number_of_random_draws) for episode in episodes}
 
 
-def on_device(representations, solver_model, roles=None) -> dict:
+def on_device(representations: list[Representation], solver_model: SolverModel,
+              roles: tuple[str, ...] | None = None) -> dict:
     """{name: representation} on the Solver's device, optionally only those with the given roles."""
     return {r.name: r.to(solver_model.model.device) for r in representations if roles is None or r.role in roles}
 
 
-def label(rows, episodes, config, work_dir: Path, labels_stubbed: bool):
+def label(rows: list[dict], episodes: list[Episode], config: InterventionConfig, work_dir: Path,
+          labels_stubbed: bool) -> tuple[list[dict], dict]:
     """Label every row with the stored labels' Claude labeler (or, for smoke runs only, a stub)."""
     protocol = read_protocol(Path(config.inputs.stored_labels))
     if labels_stubbed:
@@ -402,7 +432,7 @@ def label(rows, episodes, config, work_dir: Path, labels_stubbed: bool):
                       client_factory, config.labeling.concurrency)
 
 
-def record_choose_r_run(run_dir: Path, episodes, conditions) -> None:
+def record_choose_r_run(run_dir: Path, episodes: list[Episode], conditions: list[Condition]) -> None:
     """Write choose-r's episodes and conditions; a rerun must be the same choose-r run."""
     record = {"episode_ids": ids(episodes), "conditions": [c.key for c in conditions]}
     path = layout.choose_r_episodes(run_dir)
@@ -413,17 +443,20 @@ def record_choose_r_run(run_dir: Path, episodes, conditions) -> None:
     write_json(path, record)
 
 
-def require_no_choose_r_episode_in_study(run_dir: Path, study_episodes) -> None:
+def require_no_choose_r_episode_in_study(run_dir: Path, study_episodes: list[Episode]) -> None:
+    """Raise RuntimeError if a study episode is one of the choose-r episodes the run recorded."""
     overlap = set(read_json(layout.choose_r_episodes(run_dir))["episode_ids"]) & set(ids(study_episodes))
     if overlap:
         raise RuntimeError(f"{len(overlap)} choose-r episodes are in the study cohort, e.g. {sorted(overlap)[:3]}.")
 
 
-def read_json(path: Path):
+def read_json(path: Path) -> dict:
+    """Parse the JSON file at ``path``."""
     return json.loads(Path(path).read_text())
 
 
-def write_json(path: Path, value) -> None:
+def write_json(path: Path, value: dict) -> None:
+    """Write ``value`` to ``path`` as indented JSON, with non-JSON values as strings."""
     Path(path).write_text(json.dumps(value, indent=2, default=str))
 
 
@@ -432,6 +465,8 @@ def write_json(path: Path, value) -> None:
 # =====================================================================
 
 def main() -> None:
+    """Parse the command line, run the preflight (``--check-only`` stops there), create the run for
+    choose-r with run_id: null, and run the requested stage."""
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("stage", choices=["choose-r", "prepare", "run", "merge"])
     parser.add_argument("--config", type=Path, required=True)

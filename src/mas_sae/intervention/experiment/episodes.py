@@ -23,6 +23,8 @@ OPPOSITE = {"adoption": "retention", "retention": "adoption"}
 
 @dataclass(frozen=True)
 class Episode:
+    """One eligible stored episode: the question and paragraphs it was collected with, A1, C1, the
+    candidate order, the stored A2, and the stored Claude label (the stratum) with its reason."""
     episode_id: str
     question_id: str
     question: str
@@ -33,7 +35,7 @@ class Episode:
     stored_solver_attempt_2: str      # the stored A2
     stored_label: str                 # adoption | retention: the stratum
     stored_reason: str                # Claude's reason for the stored label
-    stored_prompt_sha256: str | None  # token ids of the A2 prompt at collection
+    stored_prompt_sha256: str | None  # sha256 of the A2 prompt token ids at collection
 
     @property
     def target_label(self) -> str:
@@ -42,6 +44,7 @@ class Episode:
 
 
 def read_jsonl(path: Path) -> list[dict]:
+    """Every non-blank line of a JSONL file, parsed."""
     with Path(path).open() as f:
         return [json.loads(line) for line in f if line.strip()]
 

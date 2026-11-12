@@ -19,10 +19,12 @@ def split_into_shards(episode_ids: list[str], number_of_shards: int) -> list[lis
 
 
 def shard_rows_path(run_dir: Path, shard: int) -> Path:
+    """``shard_K.jsonl``: worker K's generated rows."""
     return Path(run_dir) / f"shard_{shard}.jsonl"
 
 
 def shard_marker_path(run_dir: Path, shard: int) -> Path:
+    """``shard_K.complete.json``: worker K's completion marker."""
     return Path(run_dir) / f"shard_{shard}.complete.json"
 
 
@@ -32,17 +34,20 @@ def shard_excluded_path(run_dir: Path, shard: int) -> Path:
 
 
 def read_excluded(run_dir: Path, shard: int) -> dict[str, str]:
+    """The shard's {episode_id: why} exclusions so far; empty if none were recorded."""
     path = shard_excluded_path(run_dir, shard)
     return json.loads(path.read_text()) if path.exists() else {}
 
 
 def record_excluded(run_dir: Path, shard: int, episode_id: str, reason: str) -> dict[str, str]:
+    """Add one exclusion to the shard's ``shard_K.excluded.json``; returns all of its exclusions."""
     excluded = {**read_excluded(run_dir, shard), episode_id: reason}
     shard_excluded_path(run_dir, shard).write_text(json.dumps(excluded, indent=2))
     return excluded
 
 
 def expected_keys(episode_ids: list[str], condition_keys: list[str]) -> set[tuple[str, str]]:
+    """Every (episode_id, condition key) pair the episodes should have."""
     return {(e, c) for e in episode_ids for c in condition_keys}
 
 

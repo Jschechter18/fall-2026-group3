@@ -1,3 +1,9 @@
+"""The stage-1 Solver: Attempt 1 from the context paragraphs, then Attempt 2 after the Critic.
+
+Attempt 2 is prompted either with the Critic's full feedback (``revise``) or with Attempt 1 and
+the Critic's recommendation as two labeled candidates (``choose``).
+"""
+
 from __future__ import annotations
 
 from typing import Any
@@ -54,6 +60,7 @@ class Solver(Agent):
     def format_paragraphs(
         paragraphs: list[dict[str, Any]],
     ) -> str:
+        """Render paragraphs as ``[idx] title: paragraph_text`` blocks separated by blank lines."""
         return "\n\n".join(
             f"[{paragraph['idx']}] "
             f"{paragraph['title']}: "
@@ -66,6 +73,7 @@ class Solver(Agent):
         question: str,
         paragraphs: list[dict[str, Any]],
     ) -> str:
+        """The Attempt 1 prompt (``SOLVE_PROMPT_V1``)."""
         context = self.format_paragraphs(paragraphs)
 
         return self.SOLVE_PROMPT_V1.format(
@@ -80,6 +88,7 @@ class Solver(Agent):
         previous_answer: str,
         feedback: str,
     ) -> str:
+        """The Attempt 2 prompt for the feedback presentation (``REVISE_PROMPT_V1``)."""
         context = self.format_paragraphs(paragraphs)
 
         return self.REVISE_PROMPT_V1.format(
@@ -97,6 +106,11 @@ class Solver(Agent):
         recommendation: str,
         order: str,
     ) -> str:
+        """The Attempt 2 prompt for the candidates presentation (``CANDIDATE_PROMPT``).
+
+        ``order`` (one of ``CANDIDATE_ORDERS``) decides whether Attempt 1 or the Critic's
+        recommendation is Candidate A; raises ValueError on any other value.
+        """
         if order not in self.CANDIDATE_ORDERS:
             raise ValueError(
                 f"order must be one of {list(self.CANDIDATE_ORDERS)}, got {order!r}"
@@ -125,6 +139,7 @@ class Solver(Agent):
         question: str,
         paragraphs: list[dict[str, Any]],
     ) -> str:
+        """Generate Attempt 1."""
         return self._generate(
             self.build_prompt(question, paragraphs)
         )
@@ -136,6 +151,7 @@ class Solver(Agent):
         previous_answer: str,
         feedback: str,
     ) -> str:
+        """Generate Attempt 2 from the Critic's feedback text."""
         return self._generate(
             self.build_revise_prompt(
                 question,
@@ -153,6 +169,7 @@ class Solver(Agent):
         recommendation: str,
         order: str,
     ) -> str:
+        """Generate Attempt 2 as a choice between Attempt 1 and the Critic's recommendation."""
         return self._generate(
             self.build_candidate_prompt(
                 question,

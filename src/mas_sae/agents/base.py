@@ -1,3 +1,9 @@
+"""Shared chat-template generation for the stage-1 agents (Solver, Critic, Validator).
+
+Generation is greedy by default; each call records token counts and a digest of the exact
+prompt tokens for provenance.
+"""
+
 from __future__ import annotations
 
 import hashlib
@@ -58,6 +64,7 @@ class ProcessorProtocol(Protocol):
         *args: Any,
         **kwargs: Any,
     ) -> Any:
+        """Build model inputs from chat messages (called with tokenize=True, return_dict=True)."""
         ...
 
     def decode(
@@ -66,6 +73,7 @@ class ProcessorProtocol(Protocol):
         *,
         skip_special_tokens: bool = False,
     ) -> str:
+        """Turn generated token ids back into text."""
         ...
 
 

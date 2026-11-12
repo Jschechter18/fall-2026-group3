@@ -1,16 +1,24 @@
 """Dictionary geometry and thresholds, from the weights alone (no activations needed)."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import torch
 from torch.nn.functional import cosine_similarity, normalize
 
 from .stats import quantiles
+
+if TYPE_CHECKING:
+    from mas_sae.sae.pretrained import JumpReLUSAE
 
 NEAR_DUPLICATE_COSINES = (0.9, 0.95)
 CHUNK = 2048     # decoder rows compared at once: CHUNK x n_features similarities in memory
 
 
 @torch.no_grad()
-def nearest_neighbour_cosine(w_dec, among=None, chunk=CHUNK):
+def nearest_neighbour_cosine(w_dec: torch.Tensor, among: torch.Tensor | None = None,
+                             chunk: int = CHUNK) -> tuple[torch.Tensor, torch.Tensor, float | None]:
     """Per feature: the largest |cosine| between its decoder row and any other feature's.
 
     Returns (max |cos| over all features, max |cos| over `among` (nan outside it), mean |cos| over all
@@ -43,7 +51,8 @@ def _near_duplicates(nearest):
 
 
 @torch.no_grad()
-def parameter_health(model, alive=None):
+def parameter_health(model: JumpReLUSAE,
+                     alive: torch.Tensor | None = None) -> tuple[dict, dict[str, torch.Tensor]]:
     """Returns (summary, per-feature arrays) for a JumpReLU SAE's weights.
 
     `alive` (optional bool mask) adds versions restricted to features that fire on our data: a dead

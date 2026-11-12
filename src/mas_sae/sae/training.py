@@ -42,6 +42,7 @@ class TrainingResult:
 
     @property
     def checkpoint_path(self) -> Path:
+        """The run's checkpoints/best_checkpoint.pt, the file downstream stages load."""
         return self.run_directory / "checkpoints" / "best_checkpoint.pt"
 
 
@@ -478,7 +479,7 @@ def finish_run(run_directory: Path, epochs: int, project_root: Path) -> Training
     run_directory : Path
         The directory of the run to be finished.
     epochs : int
-        The number of epochs to continue training for.
+        The total epoch budget, counting the epochs already trained (not an additional count).
     project_root : Path
         The root directory of the project.
     

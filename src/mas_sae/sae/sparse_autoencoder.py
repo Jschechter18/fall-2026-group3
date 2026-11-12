@@ -1,9 +1,21 @@
+"""The SAE trained in this repo (stage 4): one-layer ReLU encoder, L1 or TopK sparsity."""
+
 import torch
 from torch import nn, Tensor
 from torch.nn import functional as F
 
 
 class SparseAutoencoder(nn.Module):
+    """Linear + ReLU encoder (input_dim -> latent_dim) and linear decoder back to input_dim.
+
+    Inputs are divided by the input_scale buffer before encoding and reconstructions multiplied by
+    it, so outputs are in original activation units; train_sae sets it to the RMS of the training
+    activations (default 1.0). sparsity_mode 'l1' leaves the ReLU features dense (the penalty is in
+    the loss); 'topk' keeps the top_k largest per example. Decoder columns start at unit norm and,
+    with tied_initialization, the encoder weight starts as the decoder weight transposed.
+    hidden_dim is stored and saved in checkpoints but does not affect the architecture.
+    """
+
     def __init__(
         self, input_dim: int, hidden_dim: int, latent_dim: int,
         sparsity_mode: str = "l1", top_k: int | None = None, tied_initialization: bool = True,
@@ -179,7 +191,7 @@ class SparseAutoencoder(nn.Module):
         return sparse_features, self.decoder(sparse_features), pre_topk
 
     @torch.no_grad()
-    def normalize_decoder_weights(self):
+    def normalize_decoder_weights(self) -> None:
         """Normalize each decoder column to prevent sparsity-penalty scaling."""
         decoder_weight = self.decoder_layer[0].weight
         norms = torch.linalg.vector_norm(decoder_weight, dim=0, keepdim=True).clamp_min(1e-8)

@@ -1,6 +1,13 @@
+"""Patience-based early stopping on validation loss for SAE training (stage 4)."""
 
 
 class EarlyStoppingCallback:
+    """Counts epochs since validation loss last fell by more than min_delta below best_loss.
+
+    best_loss moves only on such an improvement, so smaller gains accumulate until they clear the
+    threshold. best_loss and counter are part of the continuation state saved by training_state.
+    """
+
     def __init__(self, patience: int, min_delta: float=0.0):
         self.patience = patience
         self.min_delta = min_delta

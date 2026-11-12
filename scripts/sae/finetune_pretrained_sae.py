@@ -34,10 +34,13 @@ Example (from the repo root):
         --layer 25 --probe-config configs/feature_selection/feature_selection_mixed_final_001_layer25.yaml
 """
 
+from __future__ import annotations
+
 import argparse
 import copy
 import logging
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
 import torch
@@ -47,6 +50,9 @@ from mas_sae.experiments.reproducibility import seed_everything
 from mas_sae.sae.finetuning import cache, data, evaluation, loop, reporting, selection, trainers
 from mas_sae.sae.pretrained import load_gemma_scope_sae
 from mas_sae.utils.versioning import create_versioned_run_dir
+
+if TYPE_CHECKING:
+    from mas_sae.sae.pretrained import JumpReLUSAE
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +71,7 @@ BIAS_ONLY_HEALTH_NOTE = 'Identical to the original: only b_dec differs, so featu
 # 1. The pipeline
 # =============================================================================================
 
-def run(args):
+def run(args: argparse.Namespace) -> Path:
     """The whole pipeline, top to bottom. Returns the run directory."""
     validate_args(args)
     seed_everything(args.seed)
@@ -133,7 +139,7 @@ def run(args):
 # 2. Script-only steps: argument checks, model loading, the run directory
 # =============================================================================================
 
-def validate_args(args):
+def validate_args(args: argparse.Namespace) -> None:
     """Reject bad settings before any data is loaded."""
     for name in ('epochs', 'batch_size', 'patience'):
         if getattr(args, name) < 1:
@@ -153,7 +159,7 @@ def validate_args(args):
         raise ValueError('max_alive_change must be nonnegative (inf disables it).')
 
 
-def load_model(args, device):
+def load_model(args: argparse.Namespace, device: torch.device) -> tuple[JumpReLUSAE, dict]:
     """Load the source SAE (never modified on disk). Returns (model on device, its config.json)."""
     model, sae_config = load_gemma_scope_sae(args.sae_dir, expected_layer=args.layer)
     # Checked here, before minutes of data loading, rather than when training starts.
@@ -163,7 +169,9 @@ def load_model(args, device):
     return model.to(device), sae_config
 
 
-def start_run_dir(args, splits, source_encoder_sha256, trainer):
+def start_run_dir(args: argparse.Namespace, splits: dict[str, data.Split],
+                  source_encoder_sha256: str,
+                  trainer: trainers.DecoderOnlyTrainer | trainers.FullTrainer) -> tuple[Path, dict]:
     """Create <output-dir>/<timestamp>/ and write manifest.json with status 'running'.
 
     Returns (run directory, manifest dict); run() marks the manifest completed at the end.
@@ -191,7 +199,8 @@ def start_run_dir(args, splits, source_encoder_sha256, trainer):
 # Command line
 # =============================================================================================
 
-def build_parser():
+def build_parser() -> argparse.ArgumentParser:
+    """Command-line options, grouped as inputs, training, full-mode-only and outputs."""
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
 
     inputs = parser.add_argument_group('inputs')
@@ -243,7 +252,8 @@ def build_parser():
     return parser
 
 
-def main():
+def main() -> None:
+    """Parse arguments, log at INFO, run the pipeline and print the run directory."""
     args = build_parser().parse_args()
     logging.basicConfig(level=logging.INFO, format='%(levelname)s %(message)s')
     print(run(args))

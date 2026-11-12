@@ -1,3 +1,5 @@
+"""Seeding, config digests and pinned-revision checks used to make runs reproducible."""
+
 import random
 import re
 from typing import Any
