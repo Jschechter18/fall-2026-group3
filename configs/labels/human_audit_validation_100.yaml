@@ -1,0 +1,25 @@
+# Human audit of the final Claude labels (#237): 100 validation episodes, stratified by Claude's
+# label and dataset source, seeded, labeled blind by the three of us.
+# Build the annotation packet once:
+#   python scripts/labels/build_human_audit_packet.py --config configs/labels/human_audit_validation_100.yaml
+# The output folder is never overwritten: a second build with the same output refuses.
+# Inputs: the committed Claude run for the validation partition and the collection's episodes file
+# it labeled (gitignored; copy it from S3 or another checkout). The build refuses an episodes file
+# whose sha256 differs from the labeling run's run_settings.json.
+claude_run: results/claude_validation/mixed_final_001/validation
+interactions: artifacts/collection/mixed_final_001/prepared/results/mixed_final_001/validation/interactions.jsonl
+output: results/human_audit/validation_100
+partition: validation          # test and intervention episodes are never sampled
+seed: 20261112
+# Episodes per (Claude label, dataset source): 25 per label, 50 per source, 100 in all. The sample is
+# balanced, not proportional to the partition, so its agreement is a stratified-audit result.
+quotas:
+  adoption:  {musique: 13, synthetic: 12}
+  retention: {musique: 12, synthetic: 13}
+  agreement: {musique: 13, synthetic: 12}
+  out:       {musique: 12, synthetic: 13}
+# Annotators and how many items each labels (each item is labeled by one person).
+annotators:
+  israel: 34
+  josh: 33
+  raye: 33
