@@ -1,0 +1,9 @@
+Condition,Stratum,N,Flip %,Meaning
+"Baseline (no SAE, no edit)",adoption → retention,498,0.0,should be ~0%: the replay reproduces the stored labels
+"LLM-edited SAE spliced in, no edit",adoption → retention,498,3.614457831325301,flips caused only by the SAE's reconstruction error
+"Mechanical edit spliced in, no edit",adoption → retention,498,6.2248995983935735,flips caused only by the SAE's reconstruction error
+"Random edit spliced in, no edit",adoption → retention,498,2.208835341365462,flips caused only by the SAE's reconstruction error
+"Baseline (no SAE, no edit)",retention → adoption,497,0.0,should be ~0%: the replay reproduces the stored labels
+"LLM-edited SAE spliced in, no edit",retention → adoption,497,2.414486921529175,flips caused only by the SAE's reconstruction error
+"Mechanical edit spliced in, no edit",retention → adoption,497,3.420523138832998,flips caused only by the SAE's reconstruction error
+"Random edit spliced in, no edit",retention → adoption,497,2.414486921529175,flips caused only by the SAE's reconstruction error

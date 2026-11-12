@@ -217,6 +217,55 @@ A smoke run of the same pipeline: [configs/intervention/intervention_smoke.yaml]
 - **Main results:** `notebooks/intervention/full_study_results.ipynb`
 - **What the features mean:** `scripts/intervention/interpret_features.py` →
   `results/feature_interpretation_layer25/`, shown in `notebooks/intervention/feature_interpretation.ipynb`
+- **Exploratory, LLM-edited SAE:** `notebooks/intervention/llm_edited_sae_analysis.ipynb` (see below)
+
+### Exploratory: LLM-edited SAE (not part of the pre-registered study)
+
+**Question:** can an LLM improve the Pretrained SAE by hand, with no training, so its 20 selected
+features steer better? Claude Opus 5 edited only those features' decoder rows (each row keeps its
+length and a cosine ≥ 0.95 with the original) in a locked Docker sandbox, on train data. Two
+controls make the same kind of edit without an LLM: a **mechanical** edit (rows rotated toward the
+train mean-difference direction) and a **random** edit (the LLM edit's angles, random directions).
+
+**Result (stage 6, r = 0.2):**
+- **The edits make the features steer 3–5× harder:**
+  - Pretrained SAE: Δ from +1.2 to +2.5 pp.
+  - Mechanical edit: +6.2 to +6.4.
+  - LLM edit: +8.5 to +9.5.
+  - Random edit: +0.6 to +1.5.
+- **The LLM edit beats the mechanical one** by +2.1 to +3.1 pp, but mostly by pushing harder: it also gives
+  more off-target answers, mostly "The evidence is insufficient."
+- **Where to read more:**
+  - The notebook: the summary, the limits, and where this fits in the paper.
+  - [cookbooks/LLM_EDITED_SAE.md](cookbooks/LLM_EDITED_SAE.md): the full design and decisions.
+
+| Step                    | Command (`scripts/sae/`, unless shown)                                                          | Output                                                                                        |
+| ----------------------- | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| Train contexts          | `llm_edit_train_contexts.py`                                                                    | `artifacts/llm_edit/train_contexts.jsonl`                                                     |
+| Sandbox inputs          | `llm_edit_sandbox_inputs.py`                                                                    | `artifacts/llm_edit/sandbox_inputs/`                                                          |
+| Mechanical control      | `mechanical_edit_sae.py --steer-test`                                                           | `results/sae/mechanical_edit/20261111T211535990035Z-6a61cf6c6b31/`                            |
+| Claude's edit (Bedrock) | `sg docker -c "PYTHONPATH=src python scripts/sae/llm_edit_sae.py"`                              | `results/sae/llm_edited/20261111T213251406629Z-c53c08f04ab9/`                                 |
+| Random control          | `random_edit_sae.py --steer-test`                                                               | `results/sae/random_edit/20261111T234022791132Z-c53c08f04ab9/`                                |
+| Audit                   | `audit_llm_edit.py`                                                                             | `results/sae/llm_edit_audit/20261111T235919947163Z-ea73ace51fec/`                             |
+| Held-out `steer_test`   | `heldout_steer_test.py`                                                                         | `results/sae/llm_edit_heldout/20261112T011537298517Z-d90b8c2b79fd/`                           |
+| Stage 5                 | `scripts/feature_selection/feature_selection.py --config configs/feature_selection/feature_selection_llm_edited_layer25.yaml`, then `llm_edit_feature_sets.py` | `results/feature_selection_llm_edited_layer25/20261112T002233925900Z_study_pool/`             |
+| Stage 6                 | `run_intervention.py` (choose-r, prepare, run, merge) with `configs/intervention/intervention_llm_edited.yaml` | `results/intervention_llm_edited_layer25/20261112T005617641082Z-f48aae4eb4fa/`                |
+
+- **Run order:** the mechanical control was built before Claude's edit, so it was fixed in advance.
+  The random control copies the angles of Claude's edit, so it comes after it.
+- **Environment:** run with `conda activate capstone` and `export PYTHONPATH=src`.
+  - Claude's edit run needs Docker and Bedrock, and it costs money ($6.45).
+  - Stage 6 labels with Bedrock (Sonnet 4.5, like the study).
+  - Every other step uses the GPU or the CPU only.
+- **Random pool:** stage 5 on another machine picks the same features but a slightly different
+  random-control pool. `llm_edit_feature_sets.py` therefore gives the edited SAEs the study's
+  Pretrained SAE pool, so their random-control generations reproduce the study's token for token.
+- **Where the files are:**
+  - Each edited SAE's record is in git: `edits.py`, `rows/`, `run.json`, `sae/config.json`, and the
+    LLM run's `transcript.jsonl`.
+  - Its `sae/params.safetensors` is gitignored and mirrored to `s3://dats-capstone/shared/group3/results/sae/`.
+  - `artifacts/llm_edit/` is not on S3. To recreate it, rerun the first two steps. They make no Bedrock
+    calls, and `sandbox_inputs/inputs.json` records the original sha256s to compare against.
 
 ### Earlier work, not part of the final results
 
@@ -242,6 +291,9 @@ The repository also holds earlier pipelines and runs. Don't cite them as final r
 pytest
 ```
 
+`src/tests/unit/llm_edit/test_sandbox_docker.py` skips itself unless Docker is usable and
+`artifacts/llm_edit/sandbox_inputs/` exists.
+
 ## Documentation
 
 | Topic                                                             | Where                                                                                                                                                                                                                          |
@@ -253,6 +305,7 @@ pytest
 | SAE training, tuning and `sae_versions.csv`                       | [results/sae/README.md](results/sae/README.md)                                                                                                                                                                                 |
 | Pretrained SAE fine-tuning                                        | [scripts/sae/PRETRAINED_FINETUNING.md](scripts/sae/PRETRAINED_FINETUNING.md)                                                                                                                                                   |
 | Intervention design and analysis plan                             | docstring of [scripts/intervention/run_intervention.py](scripts/intervention/run_intervention.py)                                                                                                                              |
+| Exploratory LLM-edited SAE: design, decisions, phases             | [cookbooks/LLM_EDITED_SAE.md](cookbooks/LLM_EDITED_SAE.md)                                                                                                                                                       |
 
 ## Project Structure
 
@@ -302,6 +355,7 @@ pytest
 │   │   ├── evaluation/           # Evaluation functions, metrics and Claude labeling
 │   │   ├── experiments/          # Collection pipeline, configs, and run artifacts
 │   │   ├── intervention/         # The intervention experiment (stage 6)
+│   │   ├── llm_edit/             # Exploratory LLM-edited SAE: sandbox, edit rules, steer_test
 │   │   ├── models/               # Language-model loading and interaction
 │   │   ├── probe/                # Layer selection, feature selection and probes
 │   │   └── sae/                  # Sparse-autoencoder functionality

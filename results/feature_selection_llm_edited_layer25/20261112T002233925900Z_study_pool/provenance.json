@@ -1,0 +1,18 @@
+{
+  "command": "/home/ubuntu/miniconda3/envs/capstone/bin/python scripts/sae/llm_edit_feature_sets.py",
+  "git_commit": "a69c4816a42dd20abc88980b8a48e19f1ce69a03",
+  "copied_from": {
+    "entry": "results/feature_selection_intervention_layer25/20261105T025730344698Z_pool/feature_sets.json [Pretrained SAE]",
+    "sha256": "a79281a1293f3547b0a932f942a8c74edb128b63a27e9e055e4a0bbad760924a"
+  },
+  "paths_from": {
+    "run": "results/feature_selection_llm_edited_layer25/20261112T002233925900Z",
+    "sha256": "30234a8f0c3b55084c8974586cdf531dc485b382bbbf1946d4a295d4b71c0468"
+  },
+  "random_draws_identical_to_this_machines_stage5": {
+    "LLM-edited SAE": 76,
+    "Mechanical edit": 76,
+    "Random edit": 76
+  },
+  "why": "same encoder, so the same features; the study's pool keeps decision 10's exact reproduction check"
+}

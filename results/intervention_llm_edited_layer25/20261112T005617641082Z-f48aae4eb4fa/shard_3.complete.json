@@ -1,0 +1,7 @@
+{
+  "shard": 3,
+  "row_count": 10000,
+  "rows_sha256": "d2364d022f6e558194bc77ebbc6db28b543e49a7a0b419f5b9495fdb00732fcf",
+  "frozen_run_sha256": "73ac5df72595fcb3c1b5ae72d6d86b0efe5404214b18ec9035dc5a8e30c56dcc",
+  "excluded": {}
+}

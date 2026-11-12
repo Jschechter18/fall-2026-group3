@@ -1,0 +1,12 @@
+Experiment,Condition,Outcome,Acceptance Rate (%),Δ vs. SAE Control (pp),95% CI for Δ,p-value
+Baseline,No SAE (observed Solver behavior),observed,50.97613882863341,,,
+Baseline,No SAE (readout on original activations),probe-predicted,50.513869524002075,,,
+LLM-edited SAE,No ablation,probe-predicted,0.05449954769574106,Reference,,
+LLM-edited SAE,Random ablation,probe-predicted,0.05163807072676718,-0.002861477033967324,"[-0.01, 0.00]",0.33566643335666435
+LLM-edited SAE,Targeted ablation,probe-predicted,0.002236270665889606,-0.05226327732829919,"[-0.08, -0.03]",9.999000099990002e-05
+Mechanical edit,No ablation,probe-predicted,0.1019466551952064,Reference,,
+Mechanical edit,Random ablation,probe-predicted,0.09645354584790766,-0.005493108694337774,"[-0.02, 0.00]",0.24857514248575144
+Mechanical edit,Targeted ablation,probe-predicted,0.005502903150045313,-0.09644375174578061,"[-0.14, -0.06]",9.999000099990002e-05
+Random edit,No ablation,probe-predicted,8.291038125753403,Reference,,
+Random edit,Random ablation,probe-predicted,8.054697513580322,-0.2363396993513373,"[-0.32, -0.16]",9.999000099990002e-05
+Random edit,Targeted ablation,probe-predicted,3.921826183795929,-4.369210714425712,"[-4.70, -4.02]",9.999000099990002e-05

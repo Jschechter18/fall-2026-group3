@@ -1,0 +1,11 @@
+| Family | Contrast (A vs. B) | Arm | N | Δ_A − Δ_B (pp) [95% CI] | p | p (Holm) |
+|---|---|---|---|---|---|---|
+| pre-specified | LLM-edited SAE vs. Mechanical edit | decrease | 995 | +2.2 [+0.8, +3.7] | 0.005 | 0.005 |
+| pre-specified | LLM-edited SAE vs. Mechanical edit | increase | 995 | +2.6 [+1.4, +3.8] | 0.0002 | 0.0008999 |
+| pre-specified | LLM-edited SAE vs. Mechanical edit | both | 995 | +3.0 [+1.6, +4.4] | 0.0002 | 0.0008999 |
+| pre-specified | LLM-edited SAE vs. Random edit | decrease | 995 | +7.1 [+5.0, +9.2] | 9.999e-05 | 0.0008999 |
+| pre-specified | LLM-edited SAE vs. Random edit | increase | 995 | +7.8 [+5.9, +9.8] | 9.999e-05 | 0.0008999 |
+| pre-specified | LLM-edited SAE vs. Random edit | both | 995 | +8.9 [+6.8, +11.2] | 9.999e-05 | 0.0008999 |
+| pre-specified | Mechanical edit vs. Random edit | decrease | 995 | +4.9 [+2.9, +6.9] | 9.999e-05 | 0.0008999 |
+| pre-specified | Mechanical edit vs. Random edit | increase | 995 | +5.2 [+3.5, +6.9] | 9.999e-05 | 0.0008999 |
+| pre-specified | Mechanical edit vs. Random edit | both | 995 | +5.9 [+4.0, +7.9] | 9.999e-05 | 0.0008999 |

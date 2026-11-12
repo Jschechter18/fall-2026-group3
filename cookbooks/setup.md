@@ -65,6 +65,16 @@ conda env update -f environment.yml --prune
 
 This installs new dependencies and removes dependencies that are no longer specified in the environment file.
 
+### Docker (only for the LLM-edited SAE experiment)
+
+Only `scripts/sae/llm_edit_sae.py` (the exploratory LLM-edited SAE run) and its sandbox tests use
+Docker.
+- **The container:** Claude's code runs in a stock `ubuntu:26.04` container with no network, with
+  this conda environment mounted read-only (`src/mas_sae/llm_edit/sandbox.py`).
+- **Permissions:** your user needs to be in the `docker` group. In a shell opened before you were
+  added, wrap the command in `sg docker -c "…"`.
+- Nothing else in the pipeline needs Docker.
+
 ## Set Up Claude Access Through Amazon Bedrock
 
 The Claude examples use AWS credentials for Amazon Bedrock, rather than an
@@ -247,6 +257,13 @@ The `artifacts/collection/` row follows the convention in
 [the mixed collection runbook](runbooks/mixed_collection_pipeline.md). To get the final
 collection, sync `s3://dats-capstone/shared/group3/artifacts/collection/mixed_final_001/` to
 `artifacts/collection/mixed_final_001/`, with `--dryrun` first as below.
+
+`results/sae/` also holds the three SAEs of the exploratory LLM-edited SAE experiment:
+`llm_edited/`, `mechanical_edit/` and `random_edit/`.
+- **What's in git:** each run's `edits.py`, `rows/`, `run.json` and `sae/config.json`, plus the LLM
+  run's `transcript.jsonl`.
+- **What's only on S3:** `sae/params.safetensors`, which is gitignored like every `params.safetensors`.
+- To restore the weights, sync each run's `sae/` folder from the same S3 prefix.
 
 ### Upload Activations
 

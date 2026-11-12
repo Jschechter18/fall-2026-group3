@@ -1,0 +1,10 @@
+Representation,Contrast,N,Δ difference (pp) [95% CI],p,p (Holm)
+LLM-edited SAE,both − decrease,995,"+1.0 [-0.1, +2.2]",0.09109089091090891,0.2732726727327267
+LLM-edited SAE,both − increase,995,"+0.8 [-0.5, +2.1]",0.24937506249375063,0.49875012498750126
+LLM-edited SAE,increase − decrease,995,"+0.2 [-1.3, +1.8]",0.8104189581041896,0.8104189581041896
+Mechanical edit,both − decrease,995,"+0.2 [-1.2, +1.7]",0.7925207479252074,1.0
+Mechanical edit,both − increase,995,"+0.4 [-1.0, +1.8]",0.5901409859014098,1.0
+Mechanical edit,increase − decrease,995,"-0.2 [-1.8, +1.5]",0.8745125487451255,1.0
+Random edit,both − decrease,995,"-0.8 [-2.1, +0.5]",0.2655734426557344,0.7967203279672033
+Random edit,both − increase,995,"-0.3 [-1.6, +1.1]",0.7068293170682932,1.0
+Random edit,increase − decrease,995,"-0.5 [-2.0, +1.1]",0.5845415458454155,1.0

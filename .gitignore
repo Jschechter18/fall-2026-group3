@@ -99,5 +99,11 @@ artifacts/*
 results/sae/decoder_finetuning/**/params.safetensors
 params.safetensors
 
+# LLM-edited SAE experiment (llm_edited/, mechanical_edit/, random_edit/): per-run working files.
+# edits.py + rows/*.npy are the authoritative record and stay versioned; mirror these to
+# s3://dats-capstone/shared/group3/results/sae/ with the SAE weights.
+/results/sae/*/*/outbox/
+/results/sae/*/*/steer_test/
+
 
 *.log

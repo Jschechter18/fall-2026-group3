@@ -1,0 +1,10 @@
+Edit size r,Representation,Arm,N,Targeted flip %,Random flip %,Δ (pp),Δ 95% CI,% out,% degenerate,Meets suggested rule
+0.2,LLM-edited SAE,decrease,50,8.0,7.333333333333332,0.6666666666666674,"[-6.0, +7.3]",5.5,0.0,False
+0.2,LLM-edited SAE,increase,50,10.0,5.333333333333333,4.666666666666667,"[+0.0, +10.7]",4.0,0.0,False
+0.2,LLM-edited SAE,both,50,10.0,6.0,4.0,"[-2.7, +11.3]",6.0,0.0,False
+0.2,Mechanical edit,decrease,50,8.0,7.333333333333332,0.6666666666666672,"[-4.7, +6.0]",3.5000000000000004,0.0,False
+0.2,Mechanical edit,increase,50,10.0,5.333333333333333,4.666666666666667,"[+0.0, +10.7]",1.5,0.0,False
+0.2,Mechanical edit,both,50,10.0,6.0,4.0,"[-2.7, +11.3]",4.5,0.0,False
+0.2,Random edit,decrease,50,2.0,7.333333333333332,-5.333333333333333,"[-11.3, -0.7]",1.0,0.0,False
+0.2,Random edit,increase,50,8.0,5.333333333333333,2.666666666666667,"[-0.7, +7.3]",0.0,0.0,False
+0.2,Random edit,both,50,4.0,6.0,-1.9999999999999998,"[-6.7, +2.0]",1.5,0.0,False
