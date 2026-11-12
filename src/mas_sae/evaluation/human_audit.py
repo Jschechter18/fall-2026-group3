@@ -206,7 +206,7 @@ def build_packet(config: dict[str, Any], root: Path = Path(".")) -> dict[str, An
             raise ValueError("An annotation row carries a field outside the blind columns.")
         path = output / "annotations" / f"{name}.csv"
         ensure_output_available(path)
-        write_csv(path, rows)
+        write_csv(path, rows, lineterminator="\n")  # LF, so the recorded hash matches the committed file
         files[str(path.relative_to(output))] = sha256_file(path)
     guide = output / "GUIDE.md"
     guide.write_text(guide_text(config["annotators"]), encoding="utf-8")

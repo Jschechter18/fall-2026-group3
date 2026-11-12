@@ -74,13 +74,15 @@ def read_jsonl(
         ]
 
 
-def write_csv(path: str | Path, rows: list[dict[str, Any]]) -> None:
+def write_csv(path: str | Path, rows: list[dict[str, Any]], *, lineterminator: str = "\r\n") -> None:
     """Write a nonempty flat table using the first row's column order.
 
     Nested values must be serialized by the caller. Unlike append_jsonl, this
-    overwrites the file and does not create its parent directory.
+    overwrites the file and does not create its parent directory. Pass
+    ``lineterminator="\\n"`` for a file whose recorded hash must match its committed
+    copy: the repository stores text with LF endings, so a CRLF file changes on commit.
     """
     with Path(path).open("w", newline="", encoding="utf-8") as file:
-        writer = csv.DictWriter(file, fieldnames=list(rows[0]))
+        writer = csv.DictWriter(file, fieldnames=list(rows[0]), lineterminator=lineterminator)
         writer.writeheader()
         writer.writerows(rows)

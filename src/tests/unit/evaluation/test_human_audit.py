@@ -1,6 +1,7 @@
 """Tests for the human-audit packet (#237): sampling, assignment, blinding and the build's refusals."""
 
 import csv
+import hashlib
 import json
 from collections import Counter
 
@@ -110,6 +111,16 @@ def test_build_packet_writes_blind_files_and_a_key(tmp_path):
     assert {it["item_id"] for it in items} == {r["item_id"] for rs in rows.values() for r in rs}
     assert selection["output_sha256"]["annotations/israel.csv"] == sha256_file(out / "annotations" / "israel.csv")
     assert "adoption" in (out / "GUIDE.md").read_text() and "Two refusals are the same position" in (out / "GUIDE.md").read_text()
+
+
+def test_recorded_hashes_survive_lf_normalization(tmp_path):
+    # The repository stores text with LF endings (core.autocrlf=input), so a recorded hash only
+    # matches the committed file if the file is written without carriage returns.
+    selection = build_packet(write_inputs(tmp_path, pool()), root=tmp_path)
+    for name in selection["output_sha256"]:
+        data = (tmp_path / "out" / name).read_bytes()
+        assert b"\r" not in data
+        assert hashlib.sha256(data.replace(b"\r\n", b"\n")).hexdigest() == selection["output_sha256"][name]
 
 
 def test_build_packet_is_reproducible(tmp_path):
