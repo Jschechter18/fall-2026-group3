@@ -163,6 +163,25 @@ def test_build_packet_leaves_out_failures_and_rule_labels(tmp_path):
     assert "musique:q201__natural__candidates" not in {it["episode_id"] for it in selection["items"]}
 
 
+@pytest.mark.parametrize("changed", ["run/raw_results.jsonl", "run/run_settings.json", "episodes.jsonl"])
+def test_build_packet_refuses_an_input_that_changes_during_the_build(tmp_path, monkeypatch, changed):
+    import mas_sae.evaluation.human_audit as audit
+
+    config = write_inputs(tmp_path, pool())
+    real_read = audit.read_jsonl
+
+    def read_then_touch(path):
+        rows = real_read(path)
+        with (tmp_path / changed).open("a") as f:
+            f.write(" ")
+        return rows
+
+    monkeypatch.setattr(audit, "read_jsonl", read_then_touch)
+    with pytest.raises(ValueError, match="changed while the packet was built"):
+        build_packet(config, root=tmp_path)
+    assert not (tmp_path / "out").exists()
+
+
 def test_build_packet_refuses_rows_outside_the_partition(tmp_path):
     rows = [label_row(i, r["claude_label"], r["dataset_source"], partition="test") for i, r in enumerate(pool())]
     config = write_inputs(tmp_path, rows)

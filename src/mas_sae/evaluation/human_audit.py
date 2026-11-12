@@ -192,6 +192,7 @@ def build_packet(config: dict[str, Any], root: Path = Path(".")) -> dict[str, An
     check_selection(items, labels, config)
 
     for path, digest in [(raw_path, hashes[str(raw_path.relative_to(root))]),
+                         (settings_path, hashes[str(settings_path.relative_to(root))]),
                          (interactions_path, hashes[config["interactions"]])]:
         if sha256_file(path) != digest:
             raise ValueError(f"{path} changed while the packet was built.")
