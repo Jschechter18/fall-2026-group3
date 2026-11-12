@@ -5,7 +5,7 @@ A collection run is identified by `output.run_name` in its config. Everything ne
 ## Manifest-based distributed runs
 
 For current commands and paths, use the
-[distributed collection guide](../../cookbooks/distributed_collection.md). The shared
+[distributed collection guide](../distributed_collection.md). The shared
 `manifest.json` identifies the exact question pool, frozen intervention
 membership, seeds, candidate orders, and work chunks.
 
