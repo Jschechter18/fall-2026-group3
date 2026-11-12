@@ -1,4 +1,4 @@
-"""Held-out steer_test for the LLM-edited SAE experiment (cookbooks/LLM_EDITED_SAE_PROMPT.md).
+"""Held-out steer_test for the LLM-edited SAE experiment (cookbooks/LLM_EDITED_SAE.md).
 
 The LLM saw steer_test results on episodes 0..199 of the seeded train order and chose its edit from
 them, so its 24 flips there are in-sample. This runs the same test (the stage-6 "both" arm, r from

@@ -1,4 +1,4 @@
-"""Phase 1 of the LLM-edited SAE experiment (LLM_EDITED_SAE_PROMPT.md): train contexts, no model runs.
+"""Phase 1 of the LLM-edited SAE experiment (cookbooks/LLM_EDITED_SAE.md): train contexts, no model runs.
 
 steer_test regenerates the Solver's second answer (A2) on train episodes, which needs each episode's
 passages. Collection wrote a contexts.jsonl only for the intervention partition

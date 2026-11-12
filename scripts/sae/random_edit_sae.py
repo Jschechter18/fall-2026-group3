@@ -1,4 +1,4 @@
-"""Phase 4 of the LLM-edited SAE experiment (cookbooks/LLM_EDITED_SAE_PROMPT.md): the random-edit control.
+"""Phase 4 of the LLM-edited SAE experiment (cookbooks/LLM_EDITED_SAE.md): the random-edit control.
 
 The same 20 rows, each rotated by the same angle as in the LLM's final edit, but toward a random
 direction. It tests "any rotation of this size changes steering this much", so the LLM edit only
@@ -94,7 +94,7 @@ def run_record(run_dir, sae_dir, llm_run, edits, original_w_dec, llm_w_dec, llm_
               llm_run / "edits.py", SANDBOX_INPUTS / "inputs.json"]
     return {
         "run_id": run_dir.name, "command": get_run_command(), "git_commit": get_git_commit(),
-        "formula": "cookbooks/LLM_EDITED_SAE_PROMPT.md, Section 6 (same angles as the LLM's final edit, random directions)",
+        "formula": "cookbooks/LLM_EDITED_SAE.md, Section 6 (same angles as the LLM's final edit, random directions)",
         "llm_run": str(llm_run), "seed": SEED, "cosine_cap": COSINE_CAP,
         "d_sha256": hashlib.sha256(np.ascontiguousarray(d, dtype=np.float64).tobytes()).hexdigest(),
         "inputs_sha256": {str(p): sha256_file(p) for p in inputs},

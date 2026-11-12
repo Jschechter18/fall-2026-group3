@@ -1,4 +1,4 @@
-"""Phase 6 of the LLM-edited SAE experiment (cookbooks/LLM_EDITED_SAE_PROMPT.md): stage 6's feature_sets.json.
+"""Phase 6 of the LLM-edited SAE experiment (cookbooks/LLM_EDITED_SAE.md): stage 6's feature_sets.json.
 
 Each edited SAE has the Pretrained SAE's encoder, so by construction it has the Pretrained SAE's
 features: the same selected sets and the same random-control pool. This writes a feature_sets.json

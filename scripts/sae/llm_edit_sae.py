@@ -1,4 +1,4 @@
-"""Phase 3 of the LLM-edited SAE experiment (cookbooks/LLM_EDITED_SAE_PROMPT.md): the harness.
+"""Phase 3 of the LLM-edited SAE experiment (cookbooks/LLM_EDITED_SAE.md): the harness.
 
 Claude (on Bedrock) edits the decoder rows of the Pretrained SAE's 20 selected features by hand, in
 a multi-turn conversation. Each turn it replies with exactly one of:

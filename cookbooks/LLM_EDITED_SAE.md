@@ -1,61 +1,33 @@
-# Prompt: build and run the LLM-edited SAE experiment (exploratory)
+# LLM-edited SAE experiment (exploratory): design and record
 
-Paste this whole file to Claude Code on the EC2 machine, from the repository root. It is written
-for a session that has none of the conversation in which this was designed, so everything needed
-is here. Facts marked **verified** were checked against this repository on 2026-11-11. Items
-marked **verify** were not checked yet; check them before relying on them.
+An exploratory side experiment, not part of the pre-registered study: Claude hand-edits the decoder
+rows of the Pretrained SAE's 20 selected features, and the edited SAE is compared with the
+Pretrained SAE, a mechanical edit and a random edit through stages 5 and 6.
 
-**Status (2026-11-11): Phases 0–2 are done, and Phase 3 is built and smoke-tested.** The open
-decisions were settled with grill-me and are written into this file (Section 3, Section 6, and
-Phases 2, 3, 4 and 7). Phase 1 wrote `artifacts/llm_edit/train_contexts.jsonl`; Phase 2 wrote
-`artifacts/llm_edit/sandbox_inputs/` and the sandbox (`src/mas_sae/llm_edit/`); Phase 3's harness is
-`scripts/sae/llm_edit_sae.py`. Next: the real editing run (ask first: it costs money).
-
-**Deadline:** the stage-6 labeler is Claude Sonnet 4.5 (`us.anthropic.claude-sonnet-4-5-20250929-v1:0`,
-read from the stored labels' `run_settings.json`). It is deprecated and retires on the Claude API on
-2026-11-30, and Bedrock already lists it as LEGACY. The new stage-6 run's `merge` must finish before
-it is retired. Don't switch labelers: the new groups must be labeled exactly like the study run.
-
----
-
-## 0. How to work
-
-**Skills.** Use these if they are installed on this machine:
-
-- **grill-me**: Phase 0 is done (decisions below). Use it again only if a new open decision comes
-  up. Ask one question at a time, with your recommendation.
-- **recycle-code**: use it for every piece of new code. Most of this experiment reuses existing
-  code (Section 4). Do not rewrite what exists.
-- **explain-to-me**: use it whenever you explain a concept, a result or a design choice to me.
-- **readable-code**: use it (installed on the EC2 machine). Also follow the readable-script
-  rules below.
-
-**Readable-script rules** (my standing preference for experiment scripts):
-
-- Put the pipeline first: a short `run()` that reads as a table of contents of named steps. Step
-  functions go below it, then helpers, then the command line.
-- Keep one script in one file unless reuse genuinely needs a module.
-- Use descriptive names and explain non-obvious math in comments.
-- Match the existing scripts' style. `scripts/intervention/run_intervention.py` and
-  `scripts/intervention/interpret_features.py` are good models.
-
-**House rules:**
-
-- **No commits.** Never run `git commit`, `git tag` or `git push`. Leave changes uncommitted. At
-  the end of each phase, tell me what changed and what passed, and suggest a commit message.
-- **Don't touch the main study's results** (Section 2), and don't edit existing configs. Make
-  new configs and new output folders.
-- **Don't remove** `src/component/`, `src/docs/`, `src/shellscripts/`, `demo/` or `documents/`.
-  The professor wants them there.
-- **Stop and ask before spending money:** any Bedrock run beyond a smoke test, and any stage-6
-  run. Give me an estimate first.
-- **Don't guess.** If a fact in this file turns out wrong, stop, tell me, and propose a fix.
-- **Environment:** `conda activate capstone` and `export PYTHONPATH=src`, run from the
-  repository root. Data and SAEs come from S3; see `cookbooks/setup.md`.
+**Status (2026-11-12): done.**
+- **Results:** `notebooks/intervention/llm_edited_sae_analysis.ipynb`, which has the summary, the
+  limits and where this fits in the paper.
+- **Commands and output folders:** `README.md`, under "Exploratory: LLM-edited SAE".
+- **This file:** the design record.
+  - Sections 1–6: the question, the context, the decisions and the formula for the mechanical control.
+  - Section 7: the phases, each as planned, then a **Done** note with what was run.
+  - Section 8: the success criteria, fixed before the results.
+  - Facts marked **verified** were checked against the repository on 2026-11-11.
+  - Until 2026-11-12 this file was `cookbooks/LLM_EDITED_SAE_PROMPT.md`, the name the saved `run.json`
+    files still cite.
+- **Constraints the work followed:**
+  - No changes to the main study's results, configs or pipeline code. New configs and output
+    folders only.
+  - Every paid run (Bedrock beyond a smoke test, and stage 6) was estimated and approved first.
+- **Labeler deadline (met):** stage 6 labels with Claude Sonnet 4.5
+  (`us.anthropic.claude-sonnet-4-5-20250929-v1:0`, read from the stored labels'
+  `run_settings.json`), like the study run.
+  - It retires on 2026-11-30, so `merge` had to finish first. It finished on 2026-11-12.
+  - The labeler was not switched: the new groups had to be labeled exactly like the study.
 
 ---
 
-## 1. What we are adding, in one paragraph
+## 1. The experiment in one paragraph
 
 The main study steers the Solver (Gemma-3-4B-it) at layer 25 along SAE features and counts
 adopt ↔ retain flips (stage 6). Here we ask: **can an LLM improve the pretrained SAE by hand, with
@@ -98,7 +70,7 @@ configs/feature_selection/feature_selection_intervention_layer25.yaml`, then
 
 ---
 
-## 3. Design decisions already made
+## 3. Design decisions
 
 1. **One edited SAE, both directions.** Stage 6 uses the adoption set and the retention set on
    every episode (arms increase, decrease, both). So Claude edits the 10 adoption rows toward
@@ -211,10 +183,10 @@ unit directions perpendicular to each row, with a fixed seed.
 
 ## 7. Phases
 
-Work phase by phase. End each one with a short report: what was built, what was checked, and
-what's next.
+The work ran in ten phases. Each lists what was planned, written as the steps were set out at
+the time, then a **Done** note with what was actually run and its outputs.
 
-### Phase 0: Grill me, and check the machine (done 2026-11-11)
+### Phase 0: Open decisions and machine check (done 2026-11-11)
 
 **Decisions:**
 
@@ -269,8 +241,8 @@ Claude's code runs here. Snippets need CPU only; Gemma runs outside (Phase 3).
   - **Why 8 GB:** the machine has 15.4 GiB and no swap, and the kernel stays alive while
     `steer_test` holds Gemma in a host process. 16 GB is not possible.
   - **Mounts:** one read-only sandbox input folder written by the harness (SAE params, `X_train`,
-    `y_train`, `meta_train`, `Z_train`, `hints`, `selected`), and one writable run folder. Don't
-    mount the repository, validation, test or intervention data.
+    `y_train`, `meta_train`, `Z_train`, `hints`, `selected`), and one writable run folder. The
+    repository, validation, test and intervention data are not mounted.
   - **`mas_sae` is not importable inside**, by design: it is an editable install pointing at the
     repo's `src/`, which isn't mounted. So `encode`, `decode` and the other helpers are short
     self-contained functions, and a host-side test checks them against `mas_sae`'s
@@ -341,12 +313,12 @@ Claude's code runs here. Snippets need CPU only; Gemma runs outside (Phase 3).
   - Snippet output is truncated to 4,000 characters before it goes back to Claude.
   - **A dollar cap, only as a guard against a runaway loop: $5,000** (raised from $60 after
     Phase 3; money is not a constraint, and the snippet and `steer_test` budgets are what shape the
-    run). Cost is tracked from each response's `usage`. At 80%, tell Claude to wrap up; at 100%,
-    stop and save the last valid edit. Estimated cost of a full run: about $15–35 at Anthropic list
+    run). Cost is tracked from each response's `usage`. At 80%, the harness tells Claude to wrap up; at
+    100%, it stops and saves the last valid edit. Estimated cost of a full run: about $15–35 at Anthropic list
     prices for Opus 5 (Bedrock prices separately). The smoke run's three turns cost $0.70.
 - **Protocol:** Claude answers each turn with either one fenced `python` block (run in the
   sandbox; the output goes back, truncated), or `steer_test()` (run by the harness; the result
-  goes back), or `DONE`. Enforce the budgets, and tell Claude what's left after each turn. A reply
+  goes back), or `DONE`. The harness enforces the budgets and tells Claude what's left after each turn. A reply
   with no action, or more than one, is not run; after 5 such replies the run stops.
 - **The first message** (added after the smoke run, approved; the brief is unchanged) also says:
   "`apply_edit(feature, new_row, why)` takes one feature id, a 2560-number row and a reason. Send
@@ -361,7 +333,7 @@ Claude's code runs here. Snippets need CPU only; Gemma runs outside (Phase 3).
     Generations with the unedited SAE are cached after the first call. Each call takes about 2–4
     GPU-minutes at 0.644 s per generation (measured in the study run).
   - Why 200 and not 20: flips are rare, so at n = 20 a call sees about one flip and can't tell
-    edits apart. Don't tell Claude any stage-6 flip rate (decision 7).
+    edits apart. Claude is never told any stage-6 flip rate (decision 7).
   - It classifies each answer cheaply against the episode's A1 and the Critic's answer with
     `answer_matches` / `normalize_answer` in `src/mas_sae/evaluation/scoring.py`. No Bedrock
     calls.
@@ -387,10 +359,10 @@ Claude's code runs here. Snippets need CPU only; Gemma runs outside (Phase 3).
   - `run.json`: model, effort, budgets, rules text, git commit, input hashes, and the sandbox's
     memory limit, `ubuntu:26.04` image digest and package lists (`conda list --explicit` and
     `pip freeze`)
-- **First a smoke run:** 3 turns, 1 `steer_test` with `n = 2`. Then stop and show me the
-  transcript before the real run (it costs money; see the house rules).
+- **First a smoke run:** 3 turns, 1 `steer_test` with `n = 2`. Its transcript was reviewed before
+  the real run was approved.
 
-**The brief Claude receives** (approved in Phase 0). Claude is not told about the mechanical or
+**The brief Claude received** (approved in Phase 0; quoted exactly, so it addresses Claude). Claude is not told about the mechanical or
 random controls, so it can't aim at or away from one formula, and it sees no stage-6 numbers:
 
 > You are editing a sparse autoencoder (SAE) by hand. **Setting:** a Solver model answers a
@@ -436,12 +408,24 @@ random controls, so it can't aim at or away from one formula, and it sees no sta
 > Explain your reasoning before each edit. Finish with DONE and a summary: what you changed, why,
 > and what you'd expect.
 
+- **Done (2026-11-11):**
+  - Smoke run: `results/sae/llm_edited/20261111T205606308454Z-6a61cf6c6b31-smoke`.
+  - Real run: `results/sae/llm_edited/20261111T213251406629Z-c53c08f04ab9`.
+    - 28 turns, 24 snippets and 3 `steer_test` calls, ended by DONE; $6.45.
+    - The final decoder is the round-1 edit, which Claude restored in round 3.
+    - Its train `steer_test`: 24 flips vs 13 unedited, 47 neither candidate.
+
 ### Phase 4: Controls
 
 - `scripts/sae/mechanical_edit_sae.py`: the formula in Section 6, written to
   `results/sae/mechanical_edit/<run>/`.
 - `scripts/sae/random_edit_sae.py` (included, decided in Phase 0): same angles as Claude's edit,
   random directions, fixed seed.
+- **Done:**
+  - Mechanical: `results/sae/mechanical_edit/20261111T211535990035Z-6a61cf6c6b31`, built before the LLM run.
+  - Random: `results/sae/random_edit/20261111T234022791132Z-c53c08f04ab9`, seed 42.
+  - The random edit's 20 rotations largely cancel, so its set direction barely moves: cosine 0.95
+    with the original, vs 0.38 for the LLM edit. A "coherent random" control would be a stronger test.
 
 ### Phase 5: Audit (`scripts/sae/audit_llm_edit.py`)
 
@@ -452,7 +436,16 @@ random controls, so it can't aim at or away from one formula, and it sees no sta
   edited SAEs.
 - Report the run's token use and cost.
 - Scan the transcript for blocked imports, gradient use and suspicious loops, and report counts
-  of snippets and `steer_test` calls. Show me `edits.py`.
+  of snippets and `steer_test` calls. Print `edits.py` for review.
+- **Done:** `results/sae/llm_edit_audit/20261111T235919947163Z-ea73ace51fec/audit.json`.
+  - All three SAEs replay to their saved hashes, only the 20 rows changed, and no edit breaks a rule.
+  - The transcript scan found no guard hits, no leak of host-only text, and no gradients, optimizers
+    or loops around `apply_edit`.
+  - "Both" set direction's cosine with `d`: LLM 0.761, mechanical 0.877, random 0.269.
+- **Added: a held-out `steer_test`** (`scripts/sae/heldout_steer_test.py`, train episodes 200–599, which
+  nobody saw). Output: `results/sae/llm_edit_heldout/20261112T011537298517Z-d90b8c2b79fd`.
+  - Flips: unedited 13, LLM 36, mechanical 29, random 10.
+  - LLM vs mechanical: McNemar p = 0.21.
 
 ### Phase 6: Stage 5 for the new groups
 
@@ -460,7 +453,7 @@ random controls, so it can't aim at or away from one formula, and it sees no sta
   new file. List only the new groups under `saes` (`kind: gemma_scope`), with a new `output_dir`.
   Run `feature_selection.py`, then `build_feature_set_pool.py`.
 - **Check:** each new group's selected 10 + 10 features equal the Pretrained SAE's, and its
-  random pool equals the Pretrained SAE's (decision 4). If either differs, stop and tell me.
+  random pool equals the Pretrained SAE's (decision 4). A difference stops the work for a decision.
 - **Done (2026-11-12):** config `configs/feature_selection/feature_selection_llm_edited_layer25.yaml`,
   run `results/feature_selection_llm_edited_layer25/20261112T002233925900Z`. The selected features
   match exactly, in order. The random pools do **not**: only 76 of 100 draws are identical, and the
@@ -497,7 +490,7 @@ random controls, so it can't aim at or away from one formula, and it sees no sta
     (`choose_r_conditions` in `src/mas_sae/intervention/experiment/conditions.py`), and the
     validator accepts a config with no raw-activations control group.
 - Rejected alternatives: a pipeline change to support no primary groups, and one to copy the
-  random rows from the study run instead of regenerating them. Don't change pipeline code.
+  random rows from the study run instead of regenerating them. Pipeline code was not changed.
 - **The random rows are duplicates, on purpose.** Each new group's random-control rows reproduce
   the study run's Pretrained SAE random rows (decision 10). That's 9 of every 13 generations,
   and about $95 of the labeling. It's accepted: it buys an exact reproduction check.
@@ -508,8 +501,17 @@ random controls, so it can't aim at or away from one formula, and it sees no sta
     (targeted + 3 random draws)) ≈ 2.3 A10G-hours, plus about 13,000 labels ≈ $45.
   - **Total for 3 groups:** about 7 A10G-hours and about $140. This machine has one GPU (A10G), so
     shards run one after another.
-  - Ask before starting, and finish `merge` before the Sonnet 4.5 labeler is retired (see the
-    deadline at the top).
+  - Approved before starting. `merge` had to finish before the Sonnet 4.5 labeler retires (see the
+    labeler deadline at the top).
+- **Done (2026-11-12):** config `configs/intervention/intervention_llm_edited.yaml`, run
+  `results/intervention_llm_edited_layer25/20261112T005617641082Z-f48aae4eb4fa`.
+  - choose-r, prepare (1,000/1,000 baselines), 4 shards (none excluded) and merge all finished.
+    Merge excluded 5 episodes whose labeling failed.
+  - The shards took about 1.8 h each, about 7 A10G-hours in all, as estimated above.
+  - All 27,000 random-control generations reproduce the study's text token for token.
+  - 4 rows (2 labeling requests) got a different Sonnet 4.5 label than in the study, because the
+    labeler isn't fully repeatable. They are reported in the notebook and change no contrast by more
+    than 0.1 pp.
 
 ### Phase 8: Analysis (a new notebook in `notebooks/intervention/`)
 
@@ -518,13 +520,17 @@ random controls, so it can't aim at or away from one formula, and it sees no sta
 - **Sanity check first:** the new run's random-control rows should be identical to the study
   run's Pretrained SAE random rows, with the same generated text and labels, so the flip rates
   match exactly (decisions 4 and 10). Report any row that differs. A difference means the
-  cross-run pairing is not valid, so stop and tell me.
+  cross-run pairing is not valid, and the analysis stops.
 - Report, for each group and arm: targeted flip %, random flip %, the difference with CI
   (`stats.paired_difference`), and raw flip rates. Then the paired contrasts: LLM-edited vs.
   pretrained, LLM-edited vs. mechanical, and LLM-edited vs. random edit. All exploratory, with no
   Holm correction claims. The new run's `summary.json` says "primary" and "pre-specified"
   (hard-coded wording); ignore that.
 - Show `edits.py` and a short summary of Claude's reasoning from the transcript.
+- **Done:** `notebooks/intervention/llm_edited_sae_analysis.ipynb`, with figures in the run's
+  `merge/figures/llm_edit_analysis/`.
+  - Beyond the plan, it adds an analysis of off-target answers ("a bigger push, not a better aim").
+  - It also has a Summary and a section on where this fits in the paper.
 
 ### Phase 9: Documentation
 
@@ -533,6 +539,12 @@ random controls, so it can't aim at or away from one formula, and it sees no sta
 - Write a one-page summary of the results for the paper's exploratory section. Cover the
   method, the controls, the results and the limits (post-hoc; label-guided; the guards are not
   airtight; the blog is not peer-reviewed).
+- **Done (2026-11-12):**
+  - The README entry is under "Exploratory: LLM-edited SAE", after stage 7. It is not under
+    "Earlier work", because that section is for replaced pipelines.
+  - The one-page summary was dropped by decision. Instead, the notebook's Summary, Section 6
+    (limits) and Section 7 (where it fits in the paper) cover the same ground.
+  - `cookbooks/setup.md` notes the new S3 folders and the Docker requirement.
 
 ---
 

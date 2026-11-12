@@ -1,6 +1,6 @@
 """Host side of the LLM-edit sandbox: Claude's snippets run in a Docker container with no network.
 
-The container (decided in Phase 0 of LLM_EDITED_SAE_PROMPT.md):
+The container (decided in Phase 0 of cookbooks/LLM_EDITED_SAE.md):
   - the stock ubuntu image with the host's conda env mounted read-only at its host path, so package
     versions match the host's (the env's editable mas_sae install points at the repository, which is
     not mounted, so mas_sae cannot be imported inside);

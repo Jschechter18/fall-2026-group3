@@ -1,4 +1,4 @@
-"""Phase 4 of the LLM-edited SAE experiment (cookbooks/LLM_EDITED_SAE_PROMPT.md): the mechanical control.
+"""Phase 4 of the LLM-edited SAE experiment (cookbooks/LLM_EDITED_SAE.md): the mechanical control.
 
 The same kind of edit as the LLM's, by a fixed formula and no LLM (cookbook Section 6). Built BEFORE the
 real LLM run, so the control is fixed before anyone sees the LLM's edits.
@@ -87,7 +87,7 @@ def run_record(run_dir, sae_dir, edits, original_w_dec, edited, selected, d) -> 
     inputs = [SAE_DIR / "params.safetensors", SAE_DIR / "config.json", SANDBOX_INPUTS / "inputs.json", STUDY_CONFIG]
     return {
         "run_id": run_dir.name, "command": get_run_command(), "git_commit": get_git_commit(),
-        "formula": "cookbooks/LLM_EDITED_SAE_PROMPT.md, Section 6 (adoption rows toward d, retention rows toward -d)",
+        "formula": "cookbooks/LLM_EDITED_SAE.md, Section 6 (adoption rows toward d, retention rows toward -d)",
         "target_cosine": TARGET_COSINE, "cosine_cap": COSINE_CAP, "cap_margin": CAP_MARGIN,
         "d_sha256": hashlib.sha256(np.ascontiguousarray(d, dtype=np.float64).tobytes()).hexdigest(),
         "inputs_sha256": {str(p): sha256_file(p) for p in inputs},

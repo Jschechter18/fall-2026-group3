@@ -1,4 +1,4 @@
-"""Phase 2 of the LLM-edited SAE experiment (LLM_EDITED_SAE_PROMPT.md): the sandbox's read-only inputs.
+"""Phase 2 of the LLM-edited SAE experiment (cookbooks/LLM_EDITED_SAE.md): the sandbox's read-only inputs.
 
 Writes one folder that the Docker sandbox mounts at /inputs (the SAE itself is mounted separately,
 read-only, from its own folder). Everything here is TRAIN data, or derived from the weights alone:

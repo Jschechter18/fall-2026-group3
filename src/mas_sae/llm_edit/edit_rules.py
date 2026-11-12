@@ -23,7 +23,7 @@ from pathlib import Path
 
 import numpy as np
 
-COSINE_CAP = 0.95          # decided in Phase 0 (LLM_EDITED_SAE_PROMPT.md, decision 5)
+COSINE_CAP = 0.95          # decided in Phase 0 (cookbooks/LLM_EDITED_SAE.md, decision 5)
 LENGTH_TOLERANCE = 1e-4    # relative: |new| / |original| must be within 1 ± this
 
 

@@ -1,4 +1,4 @@
-"""Phase 5 of the LLM-edited SAE experiment (cookbooks/LLM_EDITED_SAE_PROMPT.md): the audit.
+"""Phase 5 of the LLM-edited SAE experiment (cookbooks/LLM_EDITED_SAE.md): the audit.
 
 For each edited SAE (LLM, mechanical, random):
   1. Replay edits.py onto the original Pretrained SAE, save it the same way the run did, and check
