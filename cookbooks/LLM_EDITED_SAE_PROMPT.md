@@ -461,6 +461,16 @@ random controls, so it can't aim at or away from one formula, and it sees no sta
   Run `feature_selection.py`, then `build_feature_set_pool.py`.
 - **Check:** each new group's selected 10 + 10 features equal the Pretrained SAE's, and its
   random pool equals the Pretrained SAE's (decision 4). If either differs, stop and tell me.
+- **Done (2026-11-12):** config `configs/feature_selection/feature_selection_llm_edited_layer25.yaml`,
+  run `results/feature_selection_llm_edited_layer25/20261112T002233925900Z`. The selected features
+  match exactly, in order. The random pools do **not**: only 76 of 100 draws are identical, and the
+  coefficients differ in the fifth digit. The unedited Pretrained SAE gives the same new pool on this
+  machine, so the cause is the machine (tiny numerical differences in the encodings, which move
+  firing frequencies), not the edits. A stable sort does not restore the old pool.
+  - `build_feature_set_pool.py` isn't needed: current stage 5 already writes all 100 draws.
+  - **Decided:** use the study's pool. `scripts/sae/llm_edit_feature_sets.py` writes
+    `..._study_pool/feature_sets.json`: each group gets the study's Pretrained SAE entry (features,
+    coefficients, 100 draws) with its own path and sha256s. That keeps decision 10's exact check.
 
 ### Phase 7: Stage 6 for the new groups
 

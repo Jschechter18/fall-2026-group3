@@ -1,0 +1,54 @@
+# LLM-edited SAE experiment (cookbooks/LLM_EDITED_SAE_PROMPT.md, Phase 6): stage 5 for the three edited
+# copies of the Pretrained SAE. Copy of feature_selection_intervention_layer25.yaml with only the new
+# groups and a new output_dir; every other setting is unchanged.
+#
+# Each edited SAE has the Pretrained SAE's encoder and only 20 decoder rows changed, so its selected
+# 10 + 10 features and its random pool must equal the Pretrained SAE's in
+# results/feature_selection_intervention_layer25/20261105T025730344698Z_pool (decision 4); checked
+# after the run. Exploratory: not part of the pre-registered study.
+capstone_data_root: .
+
+activations_dir: artifacts/collection/mixed_final_001/prepared/activations/mixed_final_001
+results_dir: artifacts/collection/mixed_final_001/prepared/results/mixed_final_001
+labels_csv: results/behavior/mixed_final_001_claude_probe/labels.csv
+manifest_csv: results/behavior/mixed_final_001_claude_probe/split_manifest.csv
+excluded_episodes_file: results/behavior/mixed_final_001_claude_probe/excluded_episodes.json
+
+index_column: full_index
+target_labels: [adoption, retention]
+label_column: behavior_label
+group_column: split_group_id
+
+layer: 25
+activation_file: "{split}_attempt2.pt"
+fit_partition: train
+eval_partition: validation
+
+saes:
+  # Claude Opus 5 (xhigh) hand edit, 20 rows rotated 17.3 degrees (scripts/sae/llm_edit_sae.py).
+  LLM-edited SAE:
+    kind: gemma_scope
+    path: results/sae/llm_edited/20261111T213251406629Z-c53c08f04ab9/sae
+
+  # Formula: the same 20 rows rotated to cosine 0.95 toward +/-d (scripts/sae/mechanical_edit_sae.py).
+  Mechanical edit:
+    kind: gemma_scope
+    path: results/sae/mechanical_edit/20261111T211535990035Z-6a61cf6c6b31/sae
+
+  # The LLM edit's per-row angles, random directions, seed 42 (scripts/sae/random_edit_sae.py).
+  Random edit:
+    kind: gemma_scope
+    path: results/sae/random_edit/20261111T234022791132Z-c53c08f04ab9/sae
+
+output_dir: results/feature_selection_llm_edited_layer25
+
+seed: 42
+c_grid: [0.001, 0.01, 0.1, 1.0, 10.0]
+inner_folds: 3
+n_bootstrap: 1000
+
+# Feature selection and ablation comparisons
+n_targeted: 10
+n_top_report: 25
+n_random_draws: 100
+n_permutations: 10000
