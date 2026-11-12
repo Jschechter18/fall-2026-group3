@@ -1,0 +1,292 @@
+{
+  "run_id": "20261111T235919947163Z-ea73ace51fec",
+  "command": "/home/ubuntu/miniconda3/envs/capstone/bin/python scripts/sae/audit_llm_edit.py",
+  "git_commit": "ea73ace51feca8c0bd98e69488e903d7755dddfc",
+  "cosine_cap": 0.95,
+  "runs": {
+    "llm": "results/sae/llm_edited/20261111T213251406629Z-c53c08f04ab9",
+    "mechanical": "results/sae/mechanical_edit/20261111T211535990035Z-6a61cf6c6b31",
+    "random": "results/sae/random_edit/20261111T234022791132Z-c53c08f04ab9"
+  },
+  "groups": {
+    "llm": {
+      "edits": 60,
+      "params_sha256": {
+        "saved": "7647f4f21a5ba0377c8272fd609a187da37e15a2ec474d3b5d803186f85bb991",
+        "replayed": "7647f4f21a5ba0377c8272fd609a187da37e15a2ec474d3b5d803186f85bb991",
+        "match": true
+      },
+      "replay_bit_identical": true,
+      "other_tensors_unchanged": {
+        "w_enc": true,
+        "b_enc": true,
+        "threshold": true,
+        "b_dec": true
+      },
+      "changed_rows": [
+        125,
+        263,
+        657,
+        1750,
+        4409,
+        7649,
+        8278,
+        10383,
+        10499,
+        11218,
+        11977,
+        12139,
+        12624,
+        13626,
+        13643,
+        13887,
+        14120,
+        15005,
+        16138,
+        16144
+      ],
+      "only_selected_rows_changed": true,
+      "all_selected_rows_changed": true,
+      "rule_problems": [],
+      "final_cosine_with_original": {
+        "min": 0.9549999948825713,
+        "max": 0.9550000153813533
+      },
+      "final_length_ratio": {
+        "min": 0.9999999330891227,
+        "max": 1.000000066954925
+      },
+      "set_directions": {
+        "adoption": {
+          "cosine_with_original": 0.47778463325982473,
+          "cosine_with_d": 0.581785463868487,
+          "original_cosine_with_d": -0.04472497818751838
+        },
+        "retention": {
+          "cosine_with_original": 0.47101518568446343,
+          "cosine_with_d": 0.8549230499803436,
+          "original_cosine_with_d": 0.43186509845144616
+        },
+        "both": {
+          "cosine_with_original": 0.37568622763166026,
+          "cosine_with_d": 0.761071070901498,
+          "original_cosine_with_d": 0.29312050816390084
+        }
+      }
+    },
+    "mechanical": {
+      "edits": 20,
+      "params_sha256": {
+        "saved": "679becfd1e511556c06b4715fc5f8912dffb77df5d46570366ecf972de28158a",
+        "replayed": "679becfd1e511556c06b4715fc5f8912dffb77df5d46570366ecf972de28158a",
+        "match": true
+      },
+      "replay_bit_identical": true,
+      "other_tensors_unchanged": {
+        "w_enc": true,
+        "b_enc": true,
+        "threshold": true,
+        "b_dec": true
+      },
+      "changed_rows": [
+        125,
+        263,
+        657,
+        1750,
+        4409,
+        7649,
+        8278,
+        10383,
+        10499,
+        11218,
+        11977,
+        12139,
+        12624,
+        13626,
+        13643,
+        13887,
+        14120,
+        15005,
+        16138,
+        16144
+      ],
+      "only_selected_rows_changed": true,
+      "all_selected_rows_changed": true,
+      "rule_problems": [],
+      "final_cosine_with_original": {
+        "min": 0.9500099965717487,
+        "max": 0.9500100021417607
+      },
+      "final_length_ratio": {
+        "min": 0.9999999887428732,
+        "max": 1.0000000194592562
+      },
+      "set_directions": {
+        "adoption": {
+          "cosine_with_original": 0.692752199756508,
+          "cosine_with_d": 0.6873530158839158,
+          "original_cosine_with_d": -0.04472497818751838
+        },
+        "retention": {
+          "cosine_with_original": 0.7890575463203364,
+          "cosine_with_d": 0.8750839588440094,
+          "original_cosine_with_d": 0.43186509845144616
+        },
+        "both": {
+          "cosine_with_original": 0.6919525538512676,
+          "cosine_with_d": 0.8773520453266017,
+          "original_cosine_with_d": 0.29312050816390084
+        }
+      }
+    },
+    "random": {
+      "edits": 20,
+      "params_sha256": {
+        "saved": "261a835aea3bd030df9eb655e4735a43997f5fd23f9749dbc74162347f8cef56",
+        "replayed": "261a835aea3bd030df9eb655e4735a43997f5fd23f9749dbc74162347f8cef56",
+        "match": true
+      },
+      "replay_bit_identical": true,
+      "other_tensors_unchanged": {
+        "w_enc": true,
+        "b_enc": true,
+        "threshold": true,
+        "b_dec": true
+      },
+      "changed_rows": [
+        125,
+        263,
+        657,
+        1750,
+        4409,
+        7649,
+        8278,
+        10383,
+        10499,
+        11218,
+        11977,
+        12139,
+        12624,
+        13626,
+        13643,
+        13887,
+        14120,
+        15005,
+        16138,
+        16144
+      ],
+      "only_selected_rows_changed": true,
+      "all_selected_rows_changed": true,
+      "rule_problems": [],
+      "final_cosine_with_original": {
+        "min": 0.9549999939880909,
+        "max": 0.9550000155241157
+      },
+      "final_length_ratio": {
+        "min": 0.9999999806483567,
+        "max": 1.0000000054067428
+      },
+      "set_directions": {
+        "adoption": {
+          "cosine_with_original": 0.9557687776333486,
+          "cosine_with_d": -0.04862409802462755,
+          "original_cosine_with_d": -0.04472497818751838
+        },
+        "retention": {
+          "cosine_with_original": 0.9473313671506616,
+          "cosine_with_d": 0.40756203241445593,
+          "original_cosine_with_d": 0.43186509845144616
+        },
+        "both": {
+          "cosine_with_original": 0.9455981781381604,
+          "cosine_with_d": 0.2685225798280745,
+          "original_cosine_with_d": 0.29312050816390084
+        }
+      }
+    }
+  },
+  "llm_run": {
+    "outcome": {
+      "ended_by": "DONE"
+    },
+    "tokens_and_cost": {
+      "input_tokens": 990720,
+      "output_tokens": 60030,
+      "cost_usd_at_list_price": 6.4543,
+      "matches_run_json": true
+    },
+    "counts": {
+      "turns": 28,
+      "snippets": 24,
+      "steer_test_calls": 3,
+      "protocol_errors": 0,
+      "snippet_errors": [
+        8
+      ],
+      "snippet_timeouts": [],
+      "kernel_restarts": [],
+      "rejected_edits": 0,
+      "longest_snippet_seconds": 4.308
+    },
+    "steer_tested_states": [
+      {
+        "call": 1,
+        "edits_so_far": 20,
+        "flips": 24,
+        "unclear": 47,
+        "is_final_decoder": true
+      },
+      {
+        "call": 2,
+        "edits_so_far": 40,
+        "flips": 14,
+        "unclear": 24,
+        "is_final_decoder": false
+      },
+      {
+        "call": 3,
+        "edits_so_far": 60,
+        "flips": 24,
+        "unclear": 47,
+        "is_final_decoder": true
+      }
+    ],
+    "scan": {
+      "blocked import (attempted)": [
+        {
+          "snippet": 8,
+          "match": "df = __import__('pandas').DataFrame({'q':qid,'y':y_train,'s':src})"
+        }
+      ],
+      "gradient use": [],
+      "optimizer or fitting": [],
+      "while loop": [],
+      "apply_edit called in a loop": [
+        {
+          "snippet": 16,
+          "match": "for i in A: r=apply_edit(i, targets[i], why_A)"
+        },
+        {
+          "snippet": 16,
+          "match": "for i in R: r=apply_edit(i, targets[i], why_R)"
+        },
+        {
+          "snippet": 21,
+          "match": "for k,i in enumerate(A): apply_edit(i, o['A'][k].astype(np.float32), why)"
+        },
+        {
+          "snippet": 21,
+          "match": "for k,i in enumerate(R): r=apply_edit(i, o['R'][k].astype(np.float32), why)"
+        },
+        {
+          "snippet": 24,
+          "match": "for i in A+R: r=apply_edit(i, targets[i], why_final)"
+        }
+      ],
+      "process, network or file access": [],
+      "blocked import (raised)": [],
+      "gradient guard (raised)": []
+    },
+    "host_only_text_sent_to_llm": []
+  }
+}

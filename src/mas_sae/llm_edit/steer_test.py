@@ -47,14 +47,17 @@ def both_arm(representation: str, edit_size: float) -> Condition:
 
 
 class Steerer:
-    """`Steerer(study_config, n, out_dir).test(w_dec, call)` -> (summary dict, message text)."""
+    """`Steerer(study_config, n, out_dir).test(w_dec, call)` -> (summary dict, message text).
 
-    def __init__(self, study, n_episodes: int, out_dir: Path, sae_dir: Path = SAE_DIR):
+    `first_episode` skips that many episodes of the seeded order first: the LLM run tests on episodes
+    0..199, and the held-out check (scripts/sae/heldout_steer_test.py) on later ones it never saw."""
+
+    def __init__(self, study, n_episodes: int, out_dir: Path, sae_dir: Path = SAE_DIR, first_episode: int = 0):
         self.study, self.out_dir, self.sae_dir = study, Path(out_dir), Path(sae_dir)
         self.edit_size = study.experiment.edit_size
         order = seeded_order(eligible_episodes(TRAIN_INTERACTIONS, TRAIN_CONTEXTS, TRAIN_LABELS, "train"),
                              study.experiment.seed)
-        self.episodes = order[:n_episodes]
+        self.episodes = order[first_episode:first_episode + n_episodes]
         del order
         gc.collect()                      # the full contexts file is large; keep only these episodes
         self.candidates = candidate_first_tokens(TRAIN_INTERACTIONS, {e.episode_id for e in self.episodes})
