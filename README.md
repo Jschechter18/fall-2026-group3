@@ -329,7 +329,12 @@ pytest
 ├── data/                         # Downloaded project datasets (gitignored)
 ├── demo/                         # Demonstrations
 │   └── fig/                      # Demo figures
-├── docs/                         # Project documents; diagrams/ holds editable (.drawio) + SVG figures
+├── docs/                         # Project documents
+│   ├── diagrams/                 # Editable (.drawio) + SVG figures
+│   └── research_paper/           # Research paper source and materials
+│       ├── Latex/                # LaTeX paper source (figures come from reports/figures/)
+│       ├── Word/                 # Word version of the paper
+│       └── references/           # Reference PDFs for the literature review
 ├── documents/                    # Literature PDFs
 ├── examples/                     # Small Claude/Bedrock examples
 ├── notebooks/                    # All Jupyter notebooks, by stage: data/, collection/, labels/, sae/, causal_replay/, intervention/ (final results)
@@ -341,10 +346,6 @@ pytest
 │   ├── Markdown_Report/          # Markdown-format report notes
 │   ├── Progress_Report/          # Weekly progress reports
 │   └── Word_Report/              # Word-format reports (e.g. literature review)
-├── research_paper/               # Research paper source and materials
-│   ├── Latex/                    # LaTeX paper source (figures come from reports/figures/)
-│   ├── Word/                     # Word version of the paper
-│   └── references/               # Reference PDFs for the literature review
 ├── results/                      # Experimental outputs and results
 ├── scripts/                      # Entry-point scripts, by pipeline stage: data/, collection/, labels/,
 │                                 #   layer_selection/, feature_selection/, sae/, intervention/;
