@@ -1,0 +1,73 @@
+\documentclass[11pt]{report}
+
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{amsmath}
+\usepackage{enumitem}
+\usepackage[hidelinks,hypertexnames=false]{hyperref}
+
+\graphicspath{{figures/}}
+
+\newcommand{\reporttitle}{Final Report Title}
+\newcommand{\reportauthors}{Team Members}
+\newcommand{\reportcourse}{Course}
+\newcommand{\reportadvisor}{Advisor}
+\newcommand{\reportdate}{Date}
+
+\begin{document}
+
+\begin{titlepage}
+    \centering
+    \vspace*{1.5in}
+    {\Huge\bfseries \reporttitle\par}
+    \vspace{1.5in}
+    {\Large \reportauthors\par}
+    \vfill
+    {\large \reportcourse\par}
+    {\large Advisor: \reportadvisor\par}
+    \vspace{0.5in}
+    {\large \reportdate\par}
+\end{titlepage}
+
+\pagenumbering{roman}
+\tableofcontents
+\listoffigures
+\listoftables
+\input{sections/glossary}
+
+\clearpage
+\chapter*{Abstract}
+\addcontentsline{toc}{chapter}{Abstract}
+\input{sections/abstract}
+
+\clearpage
+\pagenumbering{arabic}
+\input{sections/introduction}
+\input{sections/background}
+\input{sections/related_work}
+\input{sections/models}
+\input{sections/data_eda}
+\input{sections/methodology}
+\input{sections/results}
+\input{sections/discussion}
+\input{sections/conclusion}
+\input{sections/author_contributions}
+
+\clearpage
+\bibliographystyle{plain}
+\bibliography{references}
+
+\appendix
+\input{appendices/prompts}
+\input{appendices/hyperparameters}
+\input{appendices/examples}
+\input{appendices/additional_results}
+\input{appendices/reproducibility}
+\input{appendices/ai_disclosure}
+
+\end{document}
