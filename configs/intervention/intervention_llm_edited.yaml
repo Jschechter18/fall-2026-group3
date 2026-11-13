@@ -1,0 +1,91 @@
+# LLM-edited SAE experiment (cookbooks/LLM_EDITED_SAE.md, Phase 7): stage 6 for the three edited
+# copies of the Pretrained SAE. EXPLORATORY: not part of the pre-registered study.
+#
+# Copy of intervention.yaml (same inputs, solver, seed, episodes, labeler) with only the new groups.
+# They are `role: primary` here only as plumbing: with no primary group, merge has no Table P and
+# crashes, and choose-r/prepare need choose-r's outputs, which only primary groups produce. Everything
+# this run writes is reported as exploratory; ignore summary.json's hard-coded "pre-specified" wording.
+#
+#   choose-r -> (set run_id below) -> prepare -> run --shard 0..3 -> merge
+#
+# The random-control rows duplicate the study run's Pretrained SAE random rows on purpose (decision
+# 10): the encoder, selected features and random pools are the Pretrained SAE's, so those generations
+# must be identical, text for text. That is checked in the notebook (Phase 8).
+layer: 25
+partition: intervention
+
+inputs:
+  interactions: artifacts/collection/mixed_final_001/prepared/results/mixed_final_001_intervention/intervention/interactions.jsonl
+  contexts: artifacts/collection/mixed_final_001/prepared/results/mixed_final_001_intervention/contexts.jsonl
+  stored_labels: results/claude_validation/mixed_final_001/intervention
+  feature_sets: results/feature_selection_llm_edited_layer25/20261112T002233925900Z_study_pool/feature_sets.json
+
+# The collection's Solver: same model, revision, dtype and greedy settings.
+solver:
+  id: google/gemma-3-4b-it
+  revision: 093f9f388b31de276ce2de164bdc2081324b9767
+  loader: gemma3
+  dtype: bfloat16
+  device: cuda:0
+  generation: { max_new_tokens: 64, do_sample: false }
+
+# Reporting order. Paths must be the ones feature_sets.json records (checked, with their sha256).
+representations:
+  # Claude Opus 5 (xhigh) hand edit (scripts/sae/llm_edit_sae.py).
+  LLM-edited SAE:
+    kind: gemma_scope
+    path: results/sae/llm_edited/20261111T213251406629Z-c53c08f04ab9/sae
+    role: primary
+  # Formula: rows rotated to cosine 0.95 toward +/-d (scripts/sae/mechanical_edit_sae.py).
+  Mechanical edit:
+    kind: gemma_scope
+    path: results/sae/mechanical_edit/20261111T211535990035Z-6a61cf6c6b31/sae
+    role: primary
+  # The LLM edit's per-row angles, random directions (scripts/sae/random_edit_sae.py).
+  Random edit:
+    kind: gemma_scope
+    path: results/sae/random_edit/20261111T234022791132Z-c53c08f04ab9/sae
+    role: primary
+
+experiment:
+  number_of_episodes: 1000 # the study's episodes: positions 1..1000 of the seeded order
+  number_of_choose_r_episodes: 50 # positions 1001..1050
+  number_of_shards: 4
+  edit_size: 0.2 # fixed: the study's r (no choice is made from this run's choose-r)
+  candidate_edit_sizes: [0.2] # choose-r runs only to create the files prepare needs
+  number_of_targeted_features: 10
+  number_of_random_draws: 3
+  random_draw_pool_size: 100
+  min_baseline_label_match: 0.98
+  seed: 42
+
+analysis:
+  primary_representations: [LLM-edited SAE, Mechanical edit, Random edit] # plumbing; all exploratory
+  primary_alternative: greater
+  secondary_alternative: two-sided
+  between_sae_contrasts:
+    - [LLM-edited SAE, Mechanical edit]
+    - [LLM-edited SAE, Random edit]
+    - [Mechanical edit, Random edit]
+  exploratory_contrasts: []
+  direction_contrasts:
+    - [both, decrease]
+    - [both, increase]
+    - [increase, decrease]
+  n_bootstrap: 10000
+  n_permutations: 10000
+
+# The labeler itself (model, prompt, temperature, ...) is read from inputs.stored_labels/run_settings.json.
+labeling:
+  aws_profile: school
+  region: us-east-1
+  concurrency: 64
+
+machine:
+  min_gpu_memory_gb: 20
+  min_free_disk_gb: 10
+
+output_root: results/intervention_llm_edited_layer25
+# choose-r (2026-11-12) created this run; its 1,350 random-control rows and 50 baselines reproduce the
+# study run's (20261106T000808809026Z-02871d677287) Pretrained SAE choose-r rows token for token.
+run_id: 20261112T005617641082Z-f48aae4eb4fa

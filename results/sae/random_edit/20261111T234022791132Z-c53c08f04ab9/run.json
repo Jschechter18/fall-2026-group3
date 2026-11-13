@@ -1,0 +1,126 @@
+{
+  "run_id": "20261111T234022791132Z-c53c08f04ab9",
+  "command": "/home/ubuntu/miniconda3/envs/capstone/bin/python scripts/sae/random_edit_sae.py --steer-test",
+  "git_commit": "c53c08f04ab9328f9210213f2cb7d29469e88880",
+  "formula": "cookbooks/LLM_EDITED_SAE_PROMPT.md, Section 6 (same angles as the LLM's final edit, random directions)",
+  "llm_run": "results/sae/llm_edited/20261111T213251406629Z-c53c08f04ab9",
+  "seed": 42,
+  "cosine_cap": 0.95,
+  "d_sha256": "daaf8d4a5d92cad6feac86e4b4190ac7ff8ac33cd1a1b2747a54175c9f533d0c",
+  "inputs_sha256": {
+    "results/sae/pretrained/gemma-scope-2-4b-it/resid_post_all/layer_25_width_16k_l0_big/params.safetensors": "0fbb3bb9661b4523c655581e11d3f83c91dcc88d2fa62ce8dfb97a0d4b7b009d",
+    "results/sae/pretrained/gemma-scope-2-4b-it/resid_post_all/layer_25_width_16k_l0_big/config.json": "12a0441423adacb0d0f790f1d35c3fdf13fbeb6b3e55720be99606abf6a0669c",
+    "configs/intervention/intervention.yaml": "7e88b817338cf454b885eb5031a007cf76af99e65eacb3cdef91c6d9140e8f79",
+    "results/sae/llm_edited/20261111T213251406629Z-c53c08f04ab9/edits.py": "219a6fa175236408fa926235bcf97b9d9718ded39bb6ee324749da7524a76e11",
+    "artifacts/llm_edit/sandbox_inputs/inputs.json": "0b8c28c5dae2e5bf4ebecb220d287c3acf91c0f800d115e8e09478877d82dd8c"
+  },
+  "llm_row_cosines_with_original": {
+    "4409": 0.95499999893537,
+    "12624": 0.9550000051619176,
+    "14120": 0.9549999988409603,
+    "10383": 0.9549999955711899,
+    "12139": 0.9550000047358382,
+    "1750": 0.9550000054476239,
+    "16138": 0.9550000024494001,
+    "16144": 0.9549999968014635,
+    "7649": 0.9550000013417385,
+    "15005": 0.9550000063069372,
+    "11977": 0.9550000028569925,
+    "13643": 0.9550000011874443,
+    "8278": 0.9549999948825713,
+    "11218": 0.9550000153813533,
+    "125": 0.954999995313643,
+    "10499": 0.954999999332004,
+    "657": 0.955000003159433,
+    "13887": 0.9549999999389986,
+    "263": 0.9550000107759415,
+    "13626": 0.9550000019869334
+  },
+  "row_cosines_with_original": {
+    "4409": 0.9549999988386368,
+    "12624": 0.9550000048799984,
+    "14120": 0.9549999988624008,
+    "10383": 0.9549999955723445,
+    "12139": 0.955000004516234,
+    "1750": 0.9550000055819785,
+    "16138": 0.9550000023827642,
+    "16144": 0.9549999968408233,
+    "7649": 0.9550000011912249,
+    "15005": 0.9550000065983345,
+    "11977": 0.9550000027148583,
+    "13643": 0.9550000015387126,
+    "8278": 0.9549999951765864,
+    "11218": 0.9550000155241157,
+    "125": 0.9549999939880909,
+    "10499": 0.9549999992426386,
+    "657": 0.9550000029929671,
+    "13887": 0.9549999980760145,
+    "263": 0.9550000109473451,
+    "13626": 0.9550000021734709
+  },
+  "row_cosines_with_llm_row": {
+    "4409": 0.9109937119533601,
+    "12624": 0.9099614419819719,
+    "14120": 0.910437505740531,
+    "10383": 0.9131305029596768,
+    "12139": 0.9121962292304088,
+    "1750": 0.911790601935204,
+    "16138": 0.9113734071006423,
+    "16144": 0.9141605390716063,
+    "7649": 0.9110188692858445,
+    "15005": 0.9154129927595424,
+    "11977": 0.9142734588977786,
+    "13643": 0.9107401827361313,
+    "8278": 0.9098453298512194,
+    "11218": 0.9101988310591206,
+    "125": 0.9126689572740904,
+    "10499": 0.9117080616602609,
+    "657": 0.9116757762945032,
+    "13887": 0.9084366111140978,
+    "263": 0.9128963836295023,
+    "13626": 0.9134505746598007
+  },
+  "set_directions": {
+    "adoption": {
+      "cosine_with_original": 0.9557687776333486,
+      "cosine_with_d": -0.04862409802462755,
+      "original_cosine_with_d": -0.04472497818751838
+    },
+    "retention": {
+      "cosine_with_original": 0.9473313671506616,
+      "cosine_with_d": 0.40756203241445593,
+      "original_cosine_with_d": 0.43186509845144616
+    },
+    "both": {
+      "cosine_with_original": 0.9455981781381604,
+      "cosine_with_d": 0.2685225798280745,
+      "original_cosine_with_d": 0.29312050816390084
+    }
+  },
+  "edited_sae_sha256": {
+    "config.json": "6f95b1d880b65ed5d0f8dcf12e7653e8942f2245ced026f58e3ead6c4a5bf8d0",
+    "params.safetensors": "261a835aea3bd030df9eb655e4735a43997f5fd23f9749dbc74162347f8cef56"
+  },
+  "steer_test": {
+    "episodes": 200,
+    "adopted": 108,
+    "margin_episodes": 146,
+    "baseline_reproduces_stored_a2": 200,
+    "unedited": {
+      "flips": 13,
+      "adoption_to_retention": 10,
+      "retention_to_adoption": 3,
+      "unclear": 14,
+      "mean_margin_change": -1.123287682642415,
+      "mean_logprob_shift": -3.4879706001805233
+    },
+    "edited": {
+      "flips": 14,
+      "adoption_to_retention": 9,
+      "retention_to_adoption": 5,
+      "unclear": 14,
+      "mean_margin_change": -1.349743255637984,
+      "mean_logprob_shift": -5.314155647675721
+    }
+  }
+}
