@@ -1,15 +1,15 @@
-# Human audit (#237): why the 18 disagreements happened
+# Human audit (#237): the 16 disagreements and two corrected annotator slips
 
 First-pass review by Claude Opus 5.5 (`claude-opus-5-5`), reading `scoring/disagreements.csv` against the rules in `GUIDE.md`. An LLM is reviewing another LLM's labels here, so the team should confirm each call.
 
-## Scores
+## Result
 
-| | Blind (`scoring/`) | After correcting 2 annotator slips (`scoring_corrected/`) |
-|---|---|---|
-| Human–Claude agreement | 82/100 = 82.0% (95% CI 73.3–88.3%) | 84/100 = 84.0% (95% CI 75.6–89.9%) |
-| Cohen's kappa | 0.760 | 0.787 |
+| | Value |
+|---|---|
+| Human–Claude agreement | **84/100 = 84.0%** (95% CI 75.6–89.9%) |
+| Cohen's kappa | **0.787** |
 
-The two slips (H046, H082) were corrected in `annotations/israel.csv` after scoring, with a note on each row; the blind labels stay in `scoring/` and in the file's history. The blind figure is the primary result. No other label was changed: the borderline items stay as the annotators labeled them.
+This is the reported result, from `scoring_corrected/`. It includes two annotator slips (H046, H082) corrected in `annotations/israel.csv` after scoring, with a note on each row. The scoring run before the correction is kept unchanged in `scoring/`, and the original labels are in the file's history, so both runs can be reproduced. No other label was changed: the borderline items stay as the annotators labeled them.
 
 ## Summary
 
@@ -21,7 +21,7 @@ The two slips (H046, H082) were corrected in `annotations/israel.csv` after scor
 | **Annotator slip (corrected).** A2 is word-for-word identical to the candidate Claude named. | 2 | retention → adoption (1), adoption → retention (1) |
 
 What this means for the research:
-- **No real adoption ↔ retention swaps.** Both swaps are annotator slips: Claude's label was right.
+- **No adoption ↔ retention swaps.** The two found during scoring were annotator slips (Claude's label was right) and are corrected.
 - **The error that reaches the probes is "same answer, different detail".** In the sample, 4 of Claude's 50 adoption/retention labels clearly belonged in agreement, plus 2 borderline cases.
 - **Claude's weakest label, `out`, is rare in the data.** It is 37 of the 9,103 audited validation labels (0.4%).
 
