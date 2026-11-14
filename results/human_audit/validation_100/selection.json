@@ -1,0 +1,853 @@
+{
+  "issue": 237,
+  "partition": "validation",
+  "seed": 20261112,
+  "quotas": {
+    "adoption": {
+      "musique": 13,
+      "synthetic": 12
+    },
+    "retention": {
+      "musique": 12,
+      "synthetic": 13
+    },
+    "agreement": {
+      "musique": 13,
+      "synthetic": 12
+    },
+    "out": {
+      "musique": 12,
+      "synthetic": 13
+    }
+  },
+  "annotators": {
+    "israel": 34,
+    "josh": 33,
+    "raye": 33
+  },
+  "git_commit": "f4a754e9a281a2679f2ddfeff61f478e660aa301",
+  "git_dirty": false,
+  "command": "/private/tmp/claude-502/-Users-mac-fall-2026-group3/3fd8fb1e-0e12-4ef6-8e51-c1bb48a9850d/scratchpad/testenv/bin/python scripts/labels/build_human_audit_packet.py --config configs/labels/human_audit_validation_100.yaml",
+  "labeling_run": {
+    "model_id": "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+    "prompt_version": "claude_binary_v3_candidates",
+    "prompt_sha256": "b589c55745efb3fbe52667aa6de693537999ede28baa513e558862bba27b9162"
+  },
+  "input_sha256": {
+    "results/claude_validation/mixed_final_001/validation/raw_results.jsonl": "9f6dc8b419d1d4d858d34ae87050b967f3a9e435487cff2cae52eeb2fc3fd96e",
+    "results/claude_validation/mixed_final_001/validation/run_settings.json": "031ddc484842ef8aa93fd7f3a49ffdefbad6bfdb4743f4ee5eeeee4dc2b642b7",
+    "artifacts/collection/mixed_final_001/prepared/results/mixed_final_001/validation/interactions.jsonl": "b01c4f6487d7b1f357ee8b3646ab27d702b057bdba7070d8f5205e3ece4b02b0"
+  },
+  "pool": 9103,
+  "left_out_of_pool": {
+    "None:incomplete_response:refusal": 2
+  },
+  "items": [
+    {
+      "item_id": "H001",
+      "episode_id": "musique:2hop__558610_47348__natural__candidates",
+      "question_id": "musique:2hop__558610_47348",
+      "dataset_source": "musique",
+      "partition": "validation",
+      "annotator": "josh"
+    },
+    {
+      "item_id": "H002",
+      "episode_id": "musique:2hop__819531_694982__natural__candidates",
+      "question_id": "musique:2hop__819531_694982",
+      "dataset_source": "musique",
+      "partition": "validation",
+      "annotator": "raye"
+    },
+    {
+      "item_id": "H003",
+      "episode_id": "synthetic:4hop1__synthetic_6038ece3108b41648ba409e91dff7194__natural__candidates",
+      "question_id": "synthetic:4hop1__synthetic_6038ece3108b41648ba409e91dff7194",
+      "dataset_source": "synthetic",
+      "partition": "validation",
+      "annotator": "israel"
+    },
+    {
+      "item_id": "H004",
+      "episode_id": "musique:2hop__676679_23142__natural__candidates",
+      "question_id": "musique:2hop__676679_23142",
+      "dataset_source": "musique",
+      "partition": "validation",
+      "annotator": "israel"
+    },
+    {
+      "item_id": "H005",
+      "episode_id": "synthetic:3hop2__synthetic_458545563f0e4628b24c2df21f0e8223__natural__candidates",
+      "question_id": "synthetic:3hop2__synthetic_458545563f0e4628b24c2df21f0e8223",
+      "dataset_source": "synthetic",
+      "partition": "validation",
+      "annotator": "josh"
+    },
+    {
+      "item_id": "H006",
+      "episode_id": "synthetic:4hop1__synthetic_e19832c9aee24e1f8b04862cdeccf284__natural__candidates",
+      "question_id": "synthetic:4hop1__synthetic_e19832c9aee24e1f8b04862cdeccf284",
+      "dataset_source": "synthetic",
+      "partition": "validation",
+      "annotator": "josh"
+    },
+    {
+      "item_id": "H007",
+      "episode_id": "musique:2hop__26407_74218__natural__candidates",
+      "question_id": "musique:2hop__26407_74218",
+      "dataset_source": "musique",
+      "partition": "validation",
+      "annotator": "israel"
+    },
+    {
+      "item_id": "H008",
+      "episode_id": "synthetic:3hop2__synthetic_9eba0cc7accf4064bbcbd948b35115a2__natural__candidates",
+      "question_id": "synthetic:3hop2__synthetic_9eba0cc7accf4064bbcbd948b35115a2",
+      "dataset_source": "synthetic",
+      "partition": "validation",
+      "annotator": "israel"
+    },
+    {
+      "item_id": "H009",
+      "episode_id": "synthetic:2hop__synthetic_c3ad89a68b8c440d9f768cc89bc103fe__natural__candidates",
+      "question_id": "synthetic:2hop__synthetic_c3ad89a68b8c440d9f768cc89bc103fe",
+      "dataset_source": "synthetic",
+      "partition": "validation",
+      "annotator": "israel"
+    },
+    {
+      "item_id": "H010",
+      "episode_id": "musique:4hop1__291586_715233_91861_124556__natural__candidates",
+      "question_id": "musique:4hop1__291586_715233_91861_124556",
+      "dataset_source": "musique",
+      "partition": "validation",
+      "annotator": "israel"
+    },
+    {
+      "item_id": "H011",
+      "episode_id": "synthetic:4hop3__synthetic_c9365d7826ff4c5984e962c7837fd165__natural__candidates",
+      "question_id": "synthetic:4hop3__synthetic_c9365d7826ff4c5984e962c7837fd165",
+      "dataset_source": "synthetic",
+      "partition": "validation",
+      "annotator": "josh"
+    },
+    {
+      "item_id": "H012",
+      "episode_id": "synthetic:3hop2__synthetic_d1e39a73940248f4aab57fcb532aa7e2__natural__candidates",
+      "question_id": "synthetic:3hop2__synthetic_d1e39a73940248f4aab57fcb532aa7e2",
+      "dataset_source": "synthetic",
+      "partition": "validation",
+      "annotator": "raye"
+    },
+    {
+      "item_id": "H013",
+      "episode_id": "musique:2hop__527889_5365__natural__candidates",
+      "question_id": "musique:2hop__527889_5365",
+      "dataset_source": "musique",
+      "partition": "validation",
+      "annotator": "josh"
+    },
+    {
+      "item_id": "H014",
+      "episode_id": "musique:2hop__96782_94210__natural__candidates",
+      "question_id": "musique:2hop__96782_94210",
+      "dataset_source": "musique",
+      "partition": "validation",
+      "annotator": "raye"
+    },
+    {
+      "item_id": "H015",
+      "episode_id": "synthetic:4hop2__synthetic_1a3f05f8478842e889ee51a224499d4a__natural__candidates",
+      "question_id": "synthetic:4hop2__synthetic_1a3f05f8478842e889ee51a224499d4a",
+      "dataset_source": "synthetic",
+      "partition": "validation",
+      "annotator": "raye"
+    },
+    {
+      "item_id": "H016",
+      "episode_id": "synthetic:2hop__synthetic_ad0fcde66a634b48ad64dc054c256033__natural__candidates",
+      "question_id": "synthetic:2hop__synthetic_ad0fcde66a634b48ad64dc054c256033",
+      "dataset_source": "synthetic",
+      "partition": "validation",
+      "annotator": "raye"
+    },
+    {
+      "item_id": "H017",
+      "episode_id": "synthetic:4hop2__synthetic_2377ee5ebb6548949f2743b2c708929d__natural__candidates",
+      "question_id": "synthetic:4hop2__synthetic_2377ee5ebb6548949f2743b2c708929d",
+      "dataset_source": "synthetic",
+      "partition": "validation",
+      "annotator": "josh"
+    },
+    {
+      "item_id": "H018",
+      "episode_id": "musique:3hop2__69814_76873_64554__natural__candidates",
+      "question_id": "musique:3hop2__69814_76873_64554",
+      "dataset_source": "musique",
+      "partition": "validation",
+      "annotator": "israel"
+    },
+    {
+      "item_id": "H019",
+      "episode_id": "musique:2hop__153336_49441__natural__candidates",
+      "question_id": "musique:2hop__153336_49441",
+      "dataset_source": "musique",
+      "partition": "validation",
+      "annotator": "josh"
+    },
+    {
+      "item_id": "H020",
+      "episode_id": "musique:2hop__50631_26789__natural__candidates",
+      "question_id": "musique:2hop__50631_26789",
+      "dataset_source": "musique",
+      "partition": "validation",
+      "annotator": "raye"
+    },
+    {
+      "item_id": "H021",
+      "episode_id": "musique:2hop__447423_161358__natural__candidates",
+      "question_id": "musique:2hop__447423_161358",
+      "dataset_source": "musique",
+      "partition": "validation",
+      "annotator": "josh"
+    },
+    {
+      "item_id": "H022",
+      "episode_id": "synthetic:4hop1__synthetic_04f1a9ac808442beac4b9912ab484b1d__natural__candidates",
+      "question_id": "synthetic:4hop1__synthetic_04f1a9ac808442beac4b9912ab484b1d",
+      "dataset_source": "synthetic",
+      "partition": "validation",
+      "annotator": "josh"
+    },
+    {
+      "item_id": "H023",
+      "episode_id": "musique:3hop2__345602_8509_19700__natural__candidates",
+      "question_id": "musique:3hop2__345602_8509_19700",
+      "dataset_source": "musique",
+      "partition": "validation",
+      "annotator": "raye"
+    },
+    {
+      "item_id": "H024",
+      "episode_id": "synthetic:3hop1__synthetic_983733cdd8b74399afa171abe61d8fbc__natural__candidates",
+      "question_id": "synthetic:3hop1__synthetic_983733cdd8b74399afa171abe61d8fbc",
+      "dataset_source": "synthetic",
+      "partition": "validation",
+      "annotator": "israel"
+    },
+    {
+      "item_id": "H025",
+      "episode_id": "musique:2hop__221448_673383__natural__candidates",
+      "question_id": "musique:2hop__221448_673383",
+      "dataset_source": "musique",
+      "partition": "validation",
+      "annotator": "israel"
+    },
+    {
+      "item_id": "H026",
+      "episode_id": "musique:2hop__143302_285802__natural__candidates",
+      "question_id": "musique:2hop__143302_285802",
+      "dataset_source": "musique",
+      "partition": "validation",
+      "annotator": "raye"
+    },
+    {
+      "item_id": "H027",
+      "episode_id": "musique:2hop__453207_62766__natural__candidates",
+      "question_id": "musique:2hop__453207_62766",
+      "dataset_source": "musique",
+      "partition": "validation",
+      "annotator": "raye"
+    },
+    {
+      "item_id": "H028",
+      "episode_id": "musique:2hop__152926_79233__natural__candidates",
+      "question_id": "musique:2hop__152926_79233",
+      "dataset_source": "musique",
+      "partition": "validation",
+      "annotator": "israel"
+    },
+    {
+      "item_id": "H029",
+      "episode_id": "synthetic:4hop2__synthetic_f17880128e944f18b3eccf43b8d84d35__natural__candidates",
+      "question_id": "synthetic:4hop2__synthetic_f17880128e944f18b3eccf43b8d84d35",
+      "dataset_source": "synthetic",
+      "partition": "validation",
+      "annotator": "raye"
+    },
+    {
+      "item_id": "H030",
+      "episode_id": "musique:2hop__415327_58450__natural__candidates",
+      "question_id": "musique:2hop__415327_58450",
+      "dataset_source": "musique",
+      "partition": "validation",
+      "annotator": "israel"
+    },
+    {
+      "item_id": "H031",
+      "episode_id": "musique:2hop__146675_54580__natural__candidates",
+      "question_id": "musique:2hop__146675_54580",
+      "dataset_source": "musique",
+      "partition": "validation",
+      "annotator": "josh"
+    },
+    {
+      "item_id": "H032",
+      "episode_id": "musique:2hop__791225_368521__natural__candidates",
+      "question_id": "musique:2hop__791225_368521",
+      "dataset_source": "musique",
+      "partition": "validation",
+      "annotator": "raye"
+    },
+    {
+      "item_id": "H033",
+      "episode_id": "synthetic:3hop2__synthetic_df8e2f24d9584c5dbe9725a8504d33c7__natural__candidates",
+      "question_id": "synthetic:3hop2__synthetic_df8e2f24d9584c5dbe9725a8504d33c7",
+      "dataset_source": "synthetic",
+      "partition": "validation",
+      "annotator": "israel"
+    },
+    {
+      "item_id": "H034",
+      "episode_id": "musique:2hop__137053_25111__natural__candidates",
+      "question_id": "musique:2hop__137053_25111",
+      "dataset_source": "musique",
+      "partition": "validation",
+      "annotator": "raye"
+    },
+    {
+      "item_id": "H035",
+      "episode_id": "synthetic:4hop3__synthetic_3a7548e593ab41f18f8c71fdf3f4f8b4__natural__candidates",
+      "question_id": "synthetic:4hop3__synthetic_3a7548e593ab41f18f8c71fdf3f4f8b4",
+      "dataset_source": "synthetic",
+      "partition": "validation",
+      "annotator": "israel"
+    },
+    {
+      "item_id": "H036",
+      "episode_id": "synthetic:3hop1__synthetic_3a1b4319cfa94cb296ad26e4f742dada__natural__candidates",
+      "question_id": "synthetic:3hop1__synthetic_3a1b4319cfa94cb296ad26e4f742dada",
+      "dataset_source": "synthetic",
+      "partition": "validation",
+      "annotator": "josh"
+    },
+    {
+      "item_id": "H037",
+      "episode_id": "musique:3hop2__51964_27372_32334__natural__candidates",
+      "question_id": "musique:3hop2__51964_27372_32334",
+      "dataset_source": "musique",
+      "partition": "validation",
+      "annotator": "raye"
+    },
+    {
+      "item_id": "H038",
+      "episode_id": "synthetic:3hop2__synthetic_725ffb4c64854b95a2b6fe6bd1e6dbe9__natural__candidates",
+      "question_id": "synthetic:3hop2__synthetic_725ffb4c64854b95a2b6fe6bd1e6dbe9",
+      "dataset_source": "synthetic",
+      "partition": "validation",
+      "annotator": "israel"
+    },
+    {
+      "item_id": "H039",
+      "episode_id": "synthetic:4hop2__synthetic_12c8c96d3d3b4e2490c72b30a0a4120c__natural__candidates",
+      "question_id": "synthetic:4hop2__synthetic_12c8c96d3d3b4e2490c72b30a0a4120c",
+      "dataset_source": "synthetic",
+      "partition": "validation",
+      "annotator": "raye"
+    },
+    {
+      "item_id": "H040",
+      "episode_id": "musique:2hop__105720_62309__natural__candidates",
+      "question_id": "musique:2hop__105720_62309",
+      "dataset_source": "musique",
+      "partition": "validation",
+      "annotator": "israel"
+    },
+    {
+      "item_id": "H041",
+      "episode_id": "musique:2hop__460403_56101__natural__candidates",
+      "question_id": "musique:2hop__460403_56101",
+      "dataset_source": "musique",
+      "partition": "validation",
+      "annotator": "josh"
+    },
+    {
+      "item_id": "H042",
+      "episode_id": "synthetic:3hop1__synthetic_c54d23f3fd9747b08f24dfcd813476ef__natural__candidates",
+      "question_id": "synthetic:3hop1__synthetic_c54d23f3fd9747b08f24dfcd813476ef",
+      "dataset_source": "synthetic",
+      "partition": "validation",
+      "annotator": "raye"
+    },
+    {
+      "item_id": "H043",
+      "episode_id": "synthetic:4hop2__synthetic_5023dfe9b3e046a18f8004535a58cd8a__natural__candidates",
+      "question_id": "synthetic:4hop2__synthetic_5023dfe9b3e046a18f8004535a58cd8a",
+      "dataset_source": "synthetic",
+      "partition": "validation",
+      "annotator": "josh"
+    },
+    {
+      "item_id": "H044",
+      "episode_id": "musique:2hop__291869_87112__natural__candidates",
+      "question_id": "musique:2hop__291869_87112",
+      "dataset_source": "musique",
+      "partition": "validation",
+      "annotator": "josh"
+    },
+    {
+      "item_id": "H045",
+      "episode_id": "musique:2hop__382093_51122__natural__candidates",
+      "question_id": "musique:2hop__382093_51122",
+      "dataset_source": "musique",
+      "partition": "validation",
+      "annotator": "israel"
+    },
+    {
+      "item_id": "H046",
+      "episode_id": "musique:3hop1__562110_481978_18264__natural__candidates",
+      "question_id": "musique:3hop1__562110_481978_18264",
+      "dataset_source": "musique",
+      "partition": "validation",
+      "annotator": "israel"
+    },
+    {
+      "item_id": "H047",
+      "episode_id": "synthetic:3hop2__synthetic_e124d83cb3514a19a6d682480cde4395__natural__candidates",
+      "question_id": "synthetic:3hop2__synthetic_e124d83cb3514a19a6d682480cde4395",
+      "dataset_source": "synthetic",
+      "partition": "validation",
+      "annotator": "israel"
+    },
+    {
+      "item_id": "H048",
+      "episode_id": "synthetic:2hop__synthetic_1a58d3dd30a44dd6bf48057321ec138d__natural__candidates",
+      "question_id": "synthetic:2hop__synthetic_1a58d3dd30a44dd6bf48057321ec138d",
+      "dataset_source": "synthetic",
+      "partition": "validation",
+      "annotator": "israel"
+    },
+    {
+      "item_id": "H049",
+      "episode_id": "synthetic:4hop1__synthetic_323f438b05124ae689a97219df4e1b9e__natural__candidates",
+      "question_id": "synthetic:4hop1__synthetic_323f438b05124ae689a97219df4e1b9e",
+      "dataset_source": "synthetic",
+      "partition": "validation",
+      "annotator": "josh"
+    },
+    {
+      "item_id": "H050",
+      "episode_id": "musique:3hop1__402348_833580_61459__natural__candidates",
+      "question_id": "musique:3hop1__402348_833580_61459",
+      "dataset_source": "musique",
+      "partition": "validation",
+      "annotator": "raye"
+    },
+    {
+      "item_id": "H051",
+      "episode_id": "musique:2hop__282620_47102__natural__candidates",
+      "question_id": "musique:2hop__282620_47102",
+      "dataset_source": "musique",
+      "partition": "validation",
+      "annotator": "josh"
+    },
+    {
+      "item_id": "H052",
+      "episode_id": "synthetic:3hop1__synthetic_3cde6986fbc7490c9ff4ee76f865e9b0__natural__candidates",
+      "question_id": "synthetic:3hop1__synthetic_3cde6986fbc7490c9ff4ee76f865e9b0",
+      "dataset_source": "synthetic",
+      "partition": "validation",
+      "annotator": "israel"
+    },
+    {
+      "item_id": "H053",
+      "episode_id": "musique:4hop2__161602_474028_88460_21034__natural__candidates",
+      "question_id": "musique:4hop2__161602_474028_88460_21034",
+      "dataset_source": "musique",
+      "partition": "validation",
+      "annotator": "raye"
+    },
+    {
+      "item_id": "H054",
+      "episode_id": "synthetic:2hop__synthetic_ca2442d9537241189fd4a263d9632018__natural__candidates",
+      "question_id": "synthetic:2hop__synthetic_ca2442d9537241189fd4a263d9632018",
+      "dataset_source": "synthetic",
+      "partition": "validation",
+      "annotator": "raye"
+    },
+    {
+      "item_id": "H055",
+      "episode_id": "musique:2hop__260142_58935__natural__candidates",
+      "question_id": "musique:2hop__260142_58935",
+      "dataset_source": "musique",
+      "partition": "validation",
+      "annotator": "josh"
+    },
+    {
+      "item_id": "H056",
+      "episode_id": "musique:2hop__635187_861533__natural__candidates",
+      "question_id": "musique:2hop__635187_861533",
+      "dataset_source": "musique",
+      "partition": "validation",
+      "annotator": "josh"
+    },
+    {
+      "item_id": "H057",
+      "episode_id": "synthetic:2hop__synthetic_b44d53533a664e3699cc21f6fc3cd7b7__natural__candidates",
+      "question_id": "synthetic:2hop__synthetic_b44d53533a664e3699cc21f6fc3cd7b7",
+      "dataset_source": "synthetic",
+      "partition": "validation",
+      "annotator": "israel"
+    },
+    {
+      "item_id": "H058",
+      "episode_id": "synthetic:2hop__synthetic_25c254030ace4d6eae59851191a12bd3__natural__candidates",
+      "question_id": "synthetic:2hop__synthetic_25c254030ace4d6eae59851191a12bd3",
+      "dataset_source": "synthetic",
+      "partition": "validation",
+      "annotator": "raye"
+    },
+    {
+      "item_id": "H059",
+      "episode_id": "synthetic:3hop1__synthetic_16b66ab665864e569c10c194a22b645c__natural__candidates",
+      "question_id": "synthetic:3hop1__synthetic_16b66ab665864e569c10c194a22b645c",
+      "dataset_source": "synthetic",
+      "partition": "validation",
+      "annotator": "raye"
+    },
+    {
+      "item_id": "H060",
+      "episode_id": "synthetic:3hop1__synthetic_ba6599b931e34d8c960417d26ca91387__natural__candidates",
+      "question_id": "synthetic:3hop1__synthetic_ba6599b931e34d8c960417d26ca91387",
+      "dataset_source": "synthetic",
+      "partition": "validation",
+      "annotator": "raye"
+    },
+    {
+      "item_id": "H061",
+      "episode_id": "musique:2hop__442687_7643__natural__candidates",
+      "question_id": "musique:2hop__442687_7643",
+      "dataset_source": "musique",
+      "partition": "validation",
+      "annotator": "josh"
+    },
+    {
+      "item_id": "H062",
+      "episode_id": "musique:2hop__325_89145__natural__candidates",
+      "question_id": "musique:2hop__325_89145",
+      "dataset_source": "musique",
+      "partition": "validation",
+      "annotator": "josh"
+    },
+    {
+      "item_id": "H063",
+      "episode_id": "synthetic:4hop2__synthetic_352dbad1b7a54e28b207ca7b28186d3f__natural__candidates",
+      "question_id": "synthetic:4hop2__synthetic_352dbad1b7a54e28b207ca7b28186d3f",
+      "dataset_source": "synthetic",
+      "partition": "validation",
+      "annotator": "raye"
+    },
+    {
+      "item_id": "H064",
+      "episode_id": "synthetic:4hop3__synthetic_02e6b67d28b24781aae64e7eba0a5ab3__natural__candidates",
+      "question_id": "synthetic:4hop3__synthetic_02e6b67d28b24781aae64e7eba0a5ab3",
+      "dataset_source": "synthetic",
+      "partition": "validation",
+      "annotator": "raye"
+    },
+    {
+      "item_id": "H065",
+      "episode_id": "musique:3hop1__518624_66618_440465__natural__candidates",
+      "question_id": "musique:3hop1__518624_66618_440465",
+      "dataset_source": "musique",
+      "partition": "validation",
+      "annotator": "josh"
+    },
+    {
+      "item_id": "H066",
+      "episode_id": "synthetic:3hop2__synthetic_1f77577f9f7a4395ac103e50828c4ef6__natural__candidates",
+      "question_id": "synthetic:3hop2__synthetic_1f77577f9f7a4395ac103e50828c4ef6",
+      "dataset_source": "synthetic",
+      "partition": "validation",
+      "annotator": "israel"
+    },
+    {
+      "item_id": "H067",
+      "episode_id": "musique:2hop__671758_51671__natural__candidates",
+      "question_id": "musique:2hop__671758_51671",
+      "dataset_source": "musique",
+      "partition": "validation",
+      "annotator": "israel"
+    },
+    {
+      "item_id": "H068",
+      "episode_id": "synthetic:2hop__synthetic_857d247e3e014a0a9b55b7e6223013cd__natural__candidates",
+      "question_id": "synthetic:2hop__synthetic_857d247e3e014a0a9b55b7e6223013cd",
+      "dataset_source": "synthetic",
+      "partition": "validation",
+      "annotator": "israel"
+    },
+    {
+      "item_id": "H069",
+      "episode_id": "synthetic:3hop2__synthetic_8a9fec8ca9db4a9aaee385d9581d2314__natural__candidates",
+      "question_id": "synthetic:3hop2__synthetic_8a9fec8ca9db4a9aaee385d9581d2314",
+      "dataset_source": "synthetic",
+      "partition": "validation",
+      "annotator": "raye"
+    },
+    {
+      "item_id": "H070",
+      "episode_id": "musique:2hop__71403_47102__natural__candidates",
+      "question_id": "musique:2hop__71403_47102",
+      "dataset_source": "musique",
+      "partition": "validation",
+      "annotator": "israel"
+    },
+    {
+      "item_id": "H071",
+      "episode_id": "synthetic:3hop1__synthetic_cf4e988e904940519fa9a9bded36cc3f__natural__candidates",
+      "question_id": "synthetic:3hop1__synthetic_cf4e988e904940519fa9a9bded36cc3f",
+      "dataset_source": "synthetic",
+      "partition": "validation",
+      "annotator": "israel"
+    },
+    {
+      "item_id": "H072",
+      "episode_id": "synthetic:3hop1__synthetic_4e65a38e6e1c46c4a73a39f35a5960ef__natural__candidates",
+      "question_id": "synthetic:3hop1__synthetic_4e65a38e6e1c46c4a73a39f35a5960ef",
+      "dataset_source": "synthetic",
+      "partition": "validation",
+      "annotator": "israel"
+    },
+    {
+      "item_id": "H073",
+      "episode_id": "synthetic:4hop2__synthetic_e9cd10e60f92435193fbfab0e2db2e39__natural__candidates",
+      "question_id": "synthetic:4hop2__synthetic_e9cd10e60f92435193fbfab0e2db2e39",
+      "dataset_source": "synthetic",
+      "partition": "validation",
+      "annotator": "raye"
+    },
+    {
+      "item_id": "H074",
+      "episode_id": "musique:2hop__107991_80674__natural__candidates",
+      "question_id": "musique:2hop__107991_80674",
+      "dataset_source": "musique",
+      "partition": "validation",
+      "annotator": "raye"
+    },
+    {
+      "item_id": "H075",
+      "episode_id": "musique:2hop__606554_44537__natural__candidates",
+      "question_id": "musique:2hop__606554_44537",
+      "dataset_source": "musique",
+      "partition": "validation",
+      "annotator": "israel"
+    },
+    {
+      "item_id": "H076",
+      "episode_id": "musique:2hop__87355_483285__natural__candidates",
+      "question_id": "musique:2hop__87355_483285",
+      "dataset_source": "musique",
+      "partition": "validation",
+      "annotator": "josh"
+    },
+    {
+      "item_id": "H077",
+      "episode_id": "synthetic:4hop3__synthetic_92c4ac51b6f54fcfb55f768bbc51d5ae__natural__candidates",
+      "question_id": "synthetic:4hop3__synthetic_92c4ac51b6f54fcfb55f768bbc51d5ae",
+      "dataset_source": "synthetic",
+      "partition": "validation",
+      "annotator": "josh"
+    },
+    {
+      "item_id": "H078",
+      "episode_id": "musique:3hop2__38326_92991_76291__natural__candidates",
+      "question_id": "musique:3hop2__38326_92991_76291",
+      "dataset_source": "musique",
+      "partition": "validation",
+      "annotator": "raye"
+    },
+    {
+      "item_id": "H079",
+      "episode_id": "synthetic:3hop2__synthetic_09500781fad44b8aa190804c933a2d26__natural__candidates",
+      "question_id": "synthetic:3hop2__synthetic_09500781fad44b8aa190804c933a2d26",
+      "dataset_source": "synthetic",
+      "partition": "validation",
+      "annotator": "josh"
+    },
+    {
+      "item_id": "H080",
+      "episode_id": "synthetic:4hop2__synthetic_e95ba76dd90946caa0b6a29ee78fff10__natural__candidates",
+      "question_id": "synthetic:4hop2__synthetic_e95ba76dd90946caa0b6a29ee78fff10",
+      "dataset_source": "synthetic",
+      "partition": "validation",
+      "annotator": "israel"
+    },
+    {
+      "item_id": "H081",
+      "episode_id": "synthetic:2hop__synthetic_829f97264ab3476ea1ed21dea30114cc__natural__candidates",
+      "question_id": "synthetic:2hop__synthetic_829f97264ab3476ea1ed21dea30114cc",
+      "dataset_source": "synthetic",
+      "partition": "validation",
+      "annotator": "raye"
+    },
+    {
+      "item_id": "H082",
+      "episode_id": "musique:2hop__723020_80178__natural__candidates",
+      "question_id": "musique:2hop__723020_80178",
+      "dataset_source": "musique",
+      "partition": "validation",
+      "annotator": "israel"
+    },
+    {
+      "item_id": "H083",
+      "episode_id": "synthetic:2hop__synthetic_8e59270a09764123a90c4819f66bc99c__natural__candidates",
+      "question_id": "synthetic:2hop__synthetic_8e59270a09764123a90c4819f66bc99c",
+      "dataset_source": "synthetic",
+      "partition": "validation",
+      "annotator": "israel"
+    },
+    {
+      "item_id": "H084",
+      "episode_id": "musique:3hop1__459458_414808_784866__natural__candidates",
+      "question_id": "musique:3hop1__459458_414808_784866",
+      "dataset_source": "musique",
+      "partition": "validation",
+      "annotator": "josh"
+    },
+    {
+      "item_id": "H085",
+      "episode_id": "synthetic:3hop1__synthetic_633c5078785c48f785aa238e4b1aad66__natural__candidates",
+      "question_id": "synthetic:3hop1__synthetic_633c5078785c48f785aa238e4b1aad66",
+      "dataset_source": "synthetic",
+      "partition": "validation",
+      "annotator": "raye"
+    },
+    {
+      "item_id": "H086",
+      "episode_id": "synthetic:3hop2__synthetic_34d3fa90867b4d51bdeb0b385cea7816__natural__candidates",
+      "question_id": "synthetic:3hop2__synthetic_34d3fa90867b4d51bdeb0b385cea7816",
+      "dataset_source": "synthetic",
+      "partition": "validation",
+      "annotator": "josh"
+    },
+    {
+      "item_id": "H087",
+      "episode_id": "synthetic:3hop1__synthetic_b6936560831244299556f92b60cf6835__natural__candidates",
+      "question_id": "synthetic:3hop1__synthetic_b6936560831244299556f92b60cf6835",
+      "dataset_source": "synthetic",
+      "partition": "validation",
+      "annotator": "josh"
+    },
+    {
+      "item_id": "H088",
+      "episode_id": "musique:3hop1__29335_30907_45305__natural__candidates",
+      "question_id": "musique:3hop1__29335_30907_45305",
+      "dataset_source": "musique",
+      "partition": "validation",
+      "annotator": "raye"
+    },
+    {
+      "item_id": "H089",
+      "episode_id": "musique:2hop__18305_20957__natural__candidates",
+      "question_id": "musique:2hop__18305_20957",
+      "dataset_source": "musique",
+      "partition": "validation",
+      "annotator": "israel"
+    },
+    {
+      "item_id": "H090",
+      "episode_id": "musique:3hop1__481477_23998_24103__natural__candidates",
+      "question_id": "musique:3hop1__481477_23998_24103",
+      "dataset_source": "musique",
+      "partition": "validation",
+      "annotator": "israel"
+    },
+    {
+      "item_id": "H091",
+      "episode_id": "synthetic:3hop1__synthetic_2fa9f3a8a1f343f4bd0edae8ea5c3098__natural__candidates",
+      "question_id": "synthetic:3hop1__synthetic_2fa9f3a8a1f343f4bd0edae8ea5c3098",
+      "dataset_source": "synthetic",
+      "partition": "validation",
+      "annotator": "josh"
+    },
+    {
+      "item_id": "H092",
+      "episode_id": "synthetic:2hop__synthetic_4dc07baf0616479cb391684a3fc2b8d9__natural__candidates",
+      "question_id": "synthetic:2hop__synthetic_4dc07baf0616479cb391684a3fc2b8d9",
+      "dataset_source": "synthetic",
+      "partition": "validation",
+      "annotator": "raye"
+    },
+    {
+      "item_id": "H093",
+      "episode_id": "musique:2hop__829722_55566__natural__candidates",
+      "question_id": "musique:2hop__829722_55566",
+      "dataset_source": "musique",
+      "partition": "validation",
+      "annotator": "raye"
+    },
+    {
+      "item_id": "H094",
+      "episode_id": "musique:2hop__106960_93486__natural__candidates",
+      "question_id": "musique:2hop__106960_93486",
+      "dataset_source": "musique",
+      "partition": "validation",
+      "annotator": "josh"
+    },
+    {
+      "item_id": "H095",
+      "episode_id": "musique:3hop1__205357_807521_699146__natural__candidates",
+      "question_id": "musique:3hop1__205357_807521_699146",
+      "dataset_source": "musique",
+      "partition": "validation",
+      "annotator": "josh"
+    },
+    {
+      "item_id": "H096",
+      "episode_id": "musique:2hop__25478_69793__natural__candidates",
+      "question_id": "musique:2hop__25478_69793",
+      "dataset_source": "musique",
+      "partition": "validation",
+      "annotator": "israel"
+    },
+    {
+      "item_id": "H097",
+      "episode_id": "synthetic:4hop3__synthetic_749dd2e1e99f4c1eb7572bbb4766d8ab__natural__candidates",
+      "question_id": "synthetic:4hop3__synthetic_749dd2e1e99f4c1eb7572bbb4766d8ab",
+      "dataset_source": "synthetic",
+      "partition": "validation",
+      "annotator": "josh"
+    },
+    {
+      "item_id": "H098",
+      "episode_id": "synthetic:3hop2__synthetic_7f1e476cc05349379627630c48991181__natural__candidates",
+      "question_id": "synthetic:3hop2__synthetic_7f1e476cc05349379627630c48991181",
+      "dataset_source": "synthetic",
+      "partition": "validation",
+      "annotator": "josh"
+    },
+    {
+      "item_id": "H099",
+      "episode_id": "musique:2hop__371454_34197__natural__candidates",
+      "question_id": "musique:2hop__371454_34197",
+      "dataset_source": "musique",
+      "partition": "validation",
+      "annotator": "raye"
+    },
+    {
+      "item_id": "H100",
+      "episode_id": "synthetic:4hop1__synthetic_1227f54b005e40a0acfa902a6cec20b9__natural__candidates",
+      "question_id": "synthetic:4hop1__synthetic_1227f54b005e40a0acfa902a6cec20b9",
+      "dataset_source": "synthetic",
+      "partition": "validation",
+      "annotator": "josh"
+    }
+  ],
+  "output_sha256": {
+    "annotations/israel.csv": "7adf5c23bf4d997a5d52c1eebbda7c43309ae14e4e9dbdb59c0af84aaa4b7d1f",
+    "annotations/josh.csv": "e6e0448fbca21e0ac45c17ebe796d75832ab7cc155f62d7094048d0c81671fcd",
+    "annotations/raye.csv": "40cb914db7dabe741d0849aa28100474c10e9d346ce34c2ccaee2c5354b64f0f",
+    "GUIDE.md": "51885d2ab37eff1da3132a39372e54d3eec3b6ed555eba6a411689813791bcd5"
+  }
+}
