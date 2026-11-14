@@ -3,7 +3,105 @@
 \section{Label Distribution and Agreement}
 \section{Objective 1: Pipeline and Activation Dataset}
 \section{Objective 2: SAE Representation}
-% SAE comparison and layer-selection results.
+
+We compared two SAEs trained directly on the study distribution with a frozen
+Gemma Scope SAE and a decoder-adapted version of that pretrained model.  The
+custom models used the same 2,560-dimensional Layer~25 input and
+12,888-feature dictionary, so their reconstruction and sparsity statistics are
+directly comparable.  The pretrained dictionary contained 16,384 features and
+was evaluated in the activation units expected by its released checkpoint;
+its raw MSE is therefore reported separately rather than compared numerically
+with the RMS-normalized custom-model loss.
+
+\subsection{Custom SAE Training}
+
+Both models learned most rapidly in their first few epochs.  The TopK SAE
+stopped at epoch~54 under the minimum-improvement and patience rule, with its
+lowest validation loss occurring at epoch~51.  The L1 SAE continued improving
+through the 200-epoch limit, so its final checkpoint was retained.  Its
+training and validation variance explained were 92.3\% and
+89.2\%, respectively, indicating a modest generalization gap.  The
+corresponding TopK values were 92.3\% and 91.9\%, giving nearly identical
+training reconstruction but better validation transfer.
+
+The two sparsity mechanisms produced different operating points
+(Table~\ref{tab:sae-custom-results}).  On the sealed test split, TopK explained
+91.9\% of activation variance with exactly 128 active features per example.
+L1 explained 89.1\% while using only 50.8 active features on average.  Thus,
+L1 reduced per-example activity by 60.3\% relative to TopK, at a cost of 2.7
+percentage points of test variance explained.  This is the central tradeoff
+between the custom models: TopK favored reconstruction fidelity, whereas L1
+produced the smaller active set.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Frozen-checkpoint results for the custom SAEs. Reconstruction MSE
+    is in RMS-normalized activation units. ``Inactive'' is the fraction of
+    dictionary features that never fired on the indicated split; it is not the
+    complement of per-example activity.}
+    \label{tab:sae-custom-results}
+    \begin{tabular}{llrrrr}
+        \toprule
+        Model & Split & MSE & Variance explained & Mean $L_0$ & Inactive \\
+        \midrule
+        L1 & Validation & 0.002830 & 89.17\% & 50.64 & 45.82\% \\
+        L1 & Test       & 0.002835 & 89.15\% & 50.76 & 45.40\% \\
+        TopK & Validation & 0.002119 & 91.89\% & 128.00 & 91.45\% \\
+        TopK & Test       & 0.002124 & 91.87\% & 128.00 & 91.35\% \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+The dictionary-level activity result qualifies the apparent sparsity
+advantage.  Although TopK activates only 128 features for each example, 91.3\%
+of its dictionary never fired on the test split.  L1 used fewer features per
+example but distributed those activations across a much larger portion of the
+dictionary, leaving 45.4\% inactive.  Per-example $L_0$ and dictionary
+coverage therefore measure different properties and neither alone establishes
+that one representation is more interpretable.
+
+\subsection{Pretrained and Decoder-Adapted SAE}
+
+The frozen pretrained SAE transferred poorly to the project distribution,
+explaining 22.5\% of validation variance with an MSE of 6,343.5 in its native
+activation units.  Refitting only the reconstruction bias raised variance
+explained to 51.2\%, showing that a substantial component of the mismatch was
+a distribution-level offset.  Five epochs of decoder-and-bias adaptation
+further reduced validation MSE to 2,071.4 and raised variance explained to
+74.7\% (Table~\ref{tab:sae-pretrained-results}).  This was a 67.3\% MSE
+reduction relative to the frozen checkpoint.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Validation reconstruction for the pretrained SAE variants. MSE is
+    in the pretrained model's native activation units. The encoder and its
+    feature activations are identical across all three rows.}
+    \label{tab:sae-pretrained-results}
+    \begin{tabular}{lrrl}
+        \toprule
+        Variant & MSE & Variance explained & Trainable parameters \\
+        \midrule
+        Frozen pretrained & 6,343.5 & 22.46\% & None \\
+        Bias-only baseline & 3,992.4 & 51.20\% & Reconstruction bias \\
+        Decoder adapted & 2,071.4 & 74.68\% & Decoder and bias \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+Because adaptation froze the encoder weights, encoder bias, and JumpReLU
+thresholds, it did not change which pretrained features fired or the values
+provided to the feature-selection probe.  The gain therefore isolates improved
+reconstruction of this study's residual stream from improved discovery of
+feature identities.  Decoder adaptation made the pretrained representation a
+stronger reconstruction and steering baseline while preserving the semantic
+reference point supplied by Gemma Scope.
+
+Overall, no SAE dominated every criterion.  TopK gave the best custom-model
+reconstruction, L1 gave the lowest per-example activity and broader dictionary
+coverage, and decoder adaptation preserved pretrained feature identities while
+substantially correcting reconstruction mismatch.  For that reason, all three
+families were retained for the downstream predictive and causal comparisons
+rather than selecting a single SAE from reconstruction error alone.
 \section{Objective 3: Predictive Features}
 % Probe performance, controls, random draws, and feature interpretation.
 \section{Objective 4: Causal Tests}
