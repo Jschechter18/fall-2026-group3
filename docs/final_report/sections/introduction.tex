@@ -37,15 +37,15 @@ make correct predictions about what will happen when the feature is modified.
 
 This project studies feature interpretability through the concrete behavioral
 case of feedback uptake. A Gemma Solver first answers a multi-hop question, a
-Qwen Critic independently evaluates the problem, and the Solver then chooses
-between its original answer and the Critic-supported answer. This controlled
-candidate-presentation design makes Adoption and Retention directly observable
-while preserving Agreement and unresolved outputs as separate outcomes. We
-then examine the Solver's residual-stream activations with SAEs, predictive
-probes, feature-level analyses, and causal interventions. Feedback uptake is
-therefore not only the behavior being modeled; it is a testbed for asking
-whether sparse features provide explanations that are semantically meaningful,
-behaviorally relevant, and causally faithful.
+Qwen Critic first answers without seeing the Solver's answer, and the Solver
+then receives both answers as labeled candidates before generating a revised
+response. Claude-based outcome labeling distinguishes Adoption, Retention,
+Agreement, and Out cases; the primary binary analysis uses only Adoption and
+Retention. We then examine the Solver's Layer 25 residual-stream activations
+with SAEs, predictive probes, feature-level analyses, and held-out
+interventions. Feedback uptake is therefore not only the behavior being
+modeled; it is a testbed for asking whether sparse features provide evidence
+that is semantically meaningful, behaviorally relevant, and causally useful.
 
 \section{Research Question and Objectives}
 
@@ -68,15 +68,15 @@ We address this question through four objectives:
     preserve the underlying residual-stream information with useful sparsity.
 
     \item Identify and interpret sparse features that predict Adoption versus
-    Retention on held-out data, using activating examples, counterexamples,
-    control probes, and random-feature baselines to evaluate their meaning and
-    specificity.
+    Retention on validation data, using activating examples, regularized probe
+    performance, permutation tests, nuisance-property profiles, and matched
+    random-feature draws to evaluate their meaning and specificity.
 
     \item Test whether selected sparse features are causally involved in
-    feedback uptake by suppressing or amplifying them during held-out forward
-    passes and comparing the resulting
-    behavioral changes with reconstruction, random-feature, and equal-size
-    activation controls.
+    feedback uptake by decreasing or increasing their contribution during
+    intervention-partition forward passes and comparing the resulting behavior
+    with reconstruction-only passes, matched random-feature edits, and a
+    raw-activation control at the same relative edit norm.
 \end{enumerate}
 
 These objectives separate several claims that are often conflated. SAE
@@ -100,18 +100,18 @@ This project makes the following contributions:
     Retention, Agreement, and outputs that cannot support a reliable binary
     interpretation, with question-family grouping to reduce data leakage.
 
-    \item A comparison of sparse representations derived from pretrained,
-    custom-trained, and adapted SAEs at selected Solver layers.
+    \item A comparison of a custom-trained $L_1$ SAE, a pretrained Gemma Scope
+    SAE, and adapted variants at the selected Solver layer, Layer~25.
 
     \item A feature-discovery workflow combining regularized probes,
-    selectivity checks, random-feature controls, and examination of dominant
-    features rather than treating probe coefficients as explanations by
-    themselves.
+    held-out validation metrics, permutation tests, matched random-feature
+    controls, and semantic inspection rather than treating probe coefficients
+    as explanations by themselves.
 
     \item Held-out causal evaluations that compare targeted suppression and
-    amplification with norm-matched random edits, SAE reconstruction controls,
-    and raw-activation baselines while separating intended behavioral switches
-    from broken or unclassifiable generations.
+    amplification with equal-relative-norm random-feature edits, SAE
+    reconstruction-only conditions, and a raw-activation baseline while also
+    reporting Agreement and Out outcomes alongside intended label flips.
 
     \item An explicit account of the limits of feature interpretation: causal
     effectiveness supports behavioral relevance, but human interpretability
