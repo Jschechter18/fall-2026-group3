@@ -1,14 +1,398 @@
 \chapter{Methodology}
 
 \section{Problem Definition and Label Taxonomy}
+\label{sec:problem-definition}
+
+The unit of analysis is an \emph{episode}: a question with its paragraphs, the
+Solver's first answer (A1), the answer the Critic recommends (C1), and the
+Solver's second answer (A2). \emph{Feedback uptake} is defined only when there
+is something to take up, that is, when A1 and C1 disagree. The question is
+then whether A2 takes the Critic's position or keeps the Solver's own.
+
+We compare \emph{positions}, not wording. A position is what an output
+commits to: an answer, a refusal, or a statement that the question cannot be
+answered. Two outputs share a position when they name the same entity or
+value, so a paraphrase counts as the same position. Writing $p(\cdot)$ for the
+position of an output, each episode $e$ receives one of four labels:
+\begin{equation}
+    \mathrm{label}(e) =
+    \begin{cases}
+        \text{Adoption}  & \text{if } p(\mathrm{A1}) \neq p(\mathrm{C1}) \text{ and } p(\mathrm{A2}) = p(\mathrm{C1}), \\
+        \text{Retention} & \text{if } p(\mathrm{A1}) \neq p(\mathrm{C1}) \text{ and } p(\mathrm{A2}) = p(\mathrm{A1}), \\
+        \text{Agreement} & \text{if } p(\mathrm{A1}) = p(\mathrm{C1}) = p(\mathrm{A2}), \\
+        \text{Out}       & \text{otherwise.}
+    \end{cases}
+    \label{eq:labels}
+\end{equation}
+Out covers a third answer that matches neither A1 nor C1, and episodes whose
+positions cannot be compared reliably.
+
+The study's target is binary: $y = 1$ for Adoption and $y = 0$ for Retention.
+Agreement episodes are excluded because there is no disagreement to resolve,
+and Out episodes because their outcome cannot be read as taking up or
+rejecting the feedback. A probe predicts $y$ from the Solver's activation
+$\mathbf{x}_\ell(e)$ at layer $\ell$, taken just before the Solver writes A2
+(Section~\ref{sec:activation-caching}). The causal experiments ask whether
+editing selected features of $\mathbf{x}_\ell(e)$ changes the label of the
+regenerated A2.
+
+The labels describe behavior, not correctness. Adopting a wrong
+recommendation is still Adoption. Correctness against the gold answer is
+recorded separately and is not part of the target.
+
 \section{Pipeline Overview}
 % Include the end-to-end pipeline figure.
 \section{Synthetic Data Generation}
+\label{sec:synthetic-generation}
 \section{Solver--Critic Forward Pass}
+\label{sec:forward-pass}
+
+Each episode runs four generations and one correctness check, in a fixed
+order (Table~\ref{tab:turns}). The models never see each other's internal
+states; they communicate only through text inserted into the next prompt.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Turn structure of one episode. Token limits are the maximum
+    number of new tokens; all generations use greedy decoding.}
+    \label{tab:turns}
+    \small
+    \begin{tabular}{lp{1.7cm}p{4.4cm}p{4.0cm}r}
+        \toprule
+        Step & Model & Input & Output & Limit \tabularnewline
+        \midrule
+        1 & Solver
+            & \raggedright Paragraphs, question
+            & \raggedright A1; activations saved & 64 \tabularnewline
+        2 & Critic
+            & \raggedright Paragraphs, question
+            & \raggedright Its own blind answer & 1,024 \tabularnewline
+        3 & Critic
+            & \raggedright Paragraphs, question, its blind answer, A1
+            & \raggedright Verdict, recommended answer (C1), explanation
+            & 1,024 \tabularnewline
+        4 & Solver
+            & \raggedright Paragraphs, question, A1 and C1 as two labeled
+              candidates
+            & \raggedright A2; activations saved & 64 \tabularnewline
+        5 & Validator
+            & \raggedright A2, gold answer and aliases
+            & \raggedright YES or NO & 4 \tabularnewline
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+Every prompt tells the model to use only the paragraphs provided, and both
+models see the same paragraphs, formatted as \texttt{[index] title: text}.
+The Solver's first prompt asks for the answer only, with no explanation. The
+Critic returns JSON, which is parsed into the verdict, C1 and the explanation;
+the blind first step makes C1 the Critic's own answer rather than a reaction
+to A1 (Section~\ref{sec:two-models}).
+
+Step~4 is the decision we study. The Solver sees its previous answer and the
+Critic's recommendation as two candidates, each with a short label:
+\begin{quote}\small\ttfamily\raggedright
+Consider the two candidate answers below. You may use either candidate,
+provide another answer, or state that the evidence is insufficient.\\
+Candidate A (your previous answer): \ldots\\
+Candidate B (the reviewer's recommendation): \ldots
+\end{quote}
+The Critic's verdict and explanation are not shown at this step, only its
+recommended answer. This is the presentation that produced a usable share of
+Retention (Section~\ref{sec:problems}). Each question is assigned one of two
+orders, A1 first or Critic first, at random and balanced within each hop
+type, and the order is stored with the episode.
+
+All three roles decode greedily in bfloat16 through each model's chat
+template, so reruns are reproducible: collecting a pilot a second time in the
+same environment reproduced every A1, C1 and A2 exactly. The token limits
+rarely bind. In the validation partition, 0.6\% of first answers and 0.7\% of
+second answers reached the Solver's 64-token limit, and 2 of 9,105 Critic
+reviews reached 1,024 tokens. Each episode stores its seed, a hash of the
+exact Solver input for A2, and per-step generation statistics; the run
+records the pinned model revisions.
+
 \section{Interaction Labeling}
-% Labeling iterations, Claude judge, prompt hash/settings, human audit, Cohen's
-% kappa, and negative-class feedback audit.
+\label{sec:labeling}
+
+Each episode is labeled Adoption, Retention, Agreement or Out according to
+Equation~\ref{eq:labels}. This section describes how the labels were produced
+and how we checked them.
+
+\subsection{How the Labels Changed}
+
+The labels went through four versions (Table~\ref{tab:label-versions}). Each
+earlier version was replaced after a check showed it could not reliably
+separate adopting the Critic's answer from keeping one's own.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Versions of the behavior labels.}
+    \label{tab:label-versions}
+    \small
+    \begin{tabular}{p{2.3cm}p{3.5cm}p{3.3cm}p{5.6cm}}
+        \toprule
+        Version & Method & Data & What the check showed \tabularnewline
+        \midrule
+        \raggedright Rules v0.1--v0.1.2
+            & \raggedright Exact text matching
+            & \raggedright Free-form feedback, MuSiQue
+            & \raggedright Negative-class audit
+              (Section~\ref{sec:negative-audit}): most negatives were not
+              genuine rejections. Replaced. \tabularnewline
+        \raggedright Candidate rules
+            & \raggedright Rules with answer aliases and handling of
+              refusals, letter-only and hybrid replies
+            & \raggedright Candidate presentation, MuSiQue (22,355 episodes)
+            & \raggedright 10,644 Adoption or Retention episodes, but 3,260
+              (14.6\%) left as Out, many of them readable long-sentence or
+              letter-only replies. Kept as the reference baseline.
+              \tabularnewline
+        \raggedright Claude pilot
+            & \raggedright Claude Opus~5 with a fixed prompt
+            & \raggedright 250 training episodes
+            & \raggedright Agreed with the rules on all 100 stratified
+              Adoption and Retention episodes, and matched the team on 38 of
+              46 reviewed episodes (rules: 26). Adopted for the training
+              labels. \tabularnewline
+        \raggedright Final labels
+            & \raggedright Claude Sonnet~4.5, same rules
+            & \raggedright Final MuSiQue and synthetic collection (101,168
+              episodes)
+            & \raggedright Blind human audit
+              (Section~\ref{sec:human-audit}). \tabularnewline
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+The rule-based candidate labels remain the reference baseline. The Claude
+labels are model-generated: they are the training targets, not ground truth,
+which is why we audited them by hand.
+
+\subsection{Negative-Class Feedback Audit}
+\label{sec:negative-audit}
+
+Before moving away from text rules, we audited the negative class of the
+free-form labels (v0.1.2). The question was whether those episodes were real
+cases of the Solver weighing coherent Critic feedback and declining it. Fixed
+rules sorted each Critic response as consistent, inconsistent, uncertain or
+unusable, using only A1 and the Critic's output. The rules were developed on
+the training partition and frozen before the validation partition was read.
+They agreed with the team's review notes: of 125 reviewed episodes with a
+noted contradiction they flagged 100 as inconsistent, and of 434 without one
+they flagged 4.
+
+The audit showed that answer matching alone did not capture the behavior.
+Humans judged only 2 of 111 reviewed ``kept A1'' negatives to be genuine
+disagreements that A2 resolved. In a blind sample of 30 ``third answer''
+negatives, 13 were adoptions. The positive class was diluted as well: only 12
+of 30 sampled adoptions were genuine. Retention was also rare, with 347 such
+episodes against 3,830 adoptions in training. These findings led to semantic
+answer matching and, together with the class imbalance, to the candidate
+presentation.
+
+\subsection{Claude Labeling Setup}
+\label{sec:claude-labeler}
+
+The final labels come from Claude Sonnet~4.5 on Amazon Bedrock
+(Table~\ref{tab:labeler-settings}). For each episode the labeler sees the
+question, A1, C1 and A2, with A1 and C1 in the candidate order the Solver saw.
+It never sees the gold answer. Its instructions state the four definitions of
+Equation~\ref{eq:labels} in words, with the same notion of position. They also
+tell it not to judge correctness or whether an answer fits the question, and
+to treat a reply that names a candidate by its letter as that candidate. It
+returns one label and a one-sentence reason.
+
+Two Claude models were used for different tasks. Claude Opus~5 labeled the
+pilot comparison and the synthetic-question pilots. Claude Sonnet~4.5
+produced every label used by the probes and the interventions
+(Table~\ref{tab:labeler-settings}); the answers regenerated in the causal
+experiments were labeled with the same model and prompt. The pilot therefore
+supports
+the approach, and the human audit checks the labels actually used.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Settings of the final labeling run, recorded in every partition's
+    run file.}
+    \label{tab:labeler-settings}
+    \begin{tabular}{ll}
+        \toprule
+        Setting & Value \\
+        \midrule
+        Model requested & \texttt{us.anthropic.claude-sonnet-4-5-20250929-v1:0} \\
+        Model returned  & \texttt{claude-sonnet-4-5-20250929} \\
+        Prompt          & \texttt{claude\_binary\_v3\_candidates} (SHA-256 \texttt{b589c557\ldots}) \\
+        Temperature     & 0 \\
+        Output limit    & 512 tokens \\
+        Attempts        & Up to 3 per episode \\
+        Episodes        & 101,168 (train, validation, test and intervention) \\
+        Technical exclusions & 42 (40 refusals, 1 token limit, 1 unparseable) \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+% Source: results/claude_validation/mixed_final_001/<partition>/{run_settings,summary}.json
+
+\subsection{Settings Checks and Exclusions}
+
+Every labeling run records the requested and returned model IDs, the prompt
+version and its SHA-256, the temperature, the output limit, the SHA-256 of the
+input episodes, the code commit, and a hash of any uncommitted changes. A
+retry or a resumed run must match the recorded settings and episodes, or it
+stops, so a partition cannot mix labels from two setups. Technical failures
+are kept as exclusions with their reason and are never counted as a label:
+42 of 101,168 episodes (0.04\%).
+
+\subsection{Human Audit}
+\label{sec:human-audit}
+
+To check the labels actually used, three team members relabeled a seeded,
+stratified random sample of 100 validation episodes: 25 per Claude label, and
+50 each from MuSiQue and the synthetic questions. Each episode was labeled by
+one person, blind to Claude's label, from the same fields and the same rules
+Claude was given. Test and intervention episodes were never sampled, and the
+two technical exclusions in the validation partition were removed before
+sampling.
+
+Human and Claude labels agree on 84 of 100 episodes (95\% Wilson
+CI~\cite{wilson1927probable} 75.6--89.9\%; Cohen's
+$\kappa$~\cite{cohen1960kappa} $= 0.787$; Tables~\ref{tab:audit-confusion}
+and~\ref{tab:audit-classes}). Two annotator labels were corrected after
+scoring, where A2 copied one candidate word for word but had been labeled as
+the other; both corrections are recorded with the annotations.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Human against Claude labels on the 100-episode audit sample
+    (validation partition; rows: human label, columns: Claude label).}
+    \label{tab:audit-confusion}
+    \begin{tabular}{lrrrrr}
+        \toprule
+        Human $\backslash$ Claude & Adoption & Retention & Agreement & Out & Total \\
+        \midrule
+        Adoption  & \textbf{23} & 0  & 0  & 5  & 28 \\
+        Retention & 0  & \textbf{21} & 0  & 3  & 24 \\
+        Agreement & 2  & 4  & \textbf{25} & 2  & 33 \\
+        Out       & 0  & 0  & 0  & \textbf{15} & 15 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+    \centering
+    \caption{Precision, recall and F1 of Claude's labels, with the human label
+    as the reference (same sample).}
+    \label{tab:audit-classes}
+    \begin{tabular}{lrrrrr}
+        \toprule
+        Label & Claude used & Human used & Precision & Recall & F1 \\
+        \midrule
+        Adoption  & 25 & 28 & 92.0\%  & 82.1\%  & 0.87 \\
+        Retention & 25 & 24 & 84.0\%  & 87.5\%  & 0.86 \\
+        Agreement & 25 & 33 & 100.0\% & 75.8\%  & 0.86 \\
+        Out       & 25 & 15 & 60.0\%  & 100.0\% & 0.75 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+% Source: results/human_audit/validation_100/scoring_corrected/scores.json
+% (blind scores: scoring/scores.json).
+
+No episode was labeled Adoption by one side and Retention by the other, so the
+binary target was never inverted. The errors that reach the probes go the
+other way: 6 of Claude's 50 Adoption and Retention labels were Agreement for
+the annotator. In four of them Claude treated the same answer, given with more
+or less detail, as a change of position; the other two are borderline under
+the rules. Claude's weakest label is Out (precision 60\%). In seven of its ten
+wrong Out labels it judged that A1 and C1 were different kinds of answer,
+which the rules tell it not to do. Out is only 0.4\% of the final labels (404
+of 101,126), so this error rarely reaches the data.
+% Source: the cause counts (four, two, seven) come from
+% results/human_audit/validation_100/disagreement_review.md; the annotators
+% reviewed the disagreements on their rows and kept their labels.
+
+The audit has two limits. The sample is balanced by label and source, so it
+describes the audit sample, not Claude's accuracy across the whole dataset.
+Each episode was labeled by one person, so it measures agreement between
+humans and Claude, not between annotators.
 \section{Activation Caching}
+\label{sec:activation-caching}
+
+The probes, the SAEs and the interventions all work on the Solver's internal
+activations, so the collection stores them alongside each episode. This
+section describes what is stored and why we kept a single position.
+
+\subsection{What Is Stored}
+
+During each Solver generation, forward hooks on nine decoder blocks (layers 4,
+8, 17, 25 and 29--33) record the block's output, the residual stream, while
+the model reads the prompt. Only one position is kept: the last prompt token.
+Because the chat template ends with the header of the model's turn, this is
+the model's state just before it produces its first output token. Nothing
+from the generated tokens is stored. Each episode therefore yields two rows
+per layer: one for the A1 prompt (attempt~1) and one for the A2 prompt
+(attempt~2). The probes and feature selection use attempt~2, the state after
+the Solver has read both candidates and just before it chooses. Rows are
+stored in float32, and each episode records its row index. When labels are
+joined to activations, the export refuses an episode labeled twice, a missing
+label in a labeled partition, and any index that disagrees with the
+collection, so every row is tied to exactly one labeled episode.
+
+\subsection{Why Only the Last Token}
+
+The last prompt token is where the decision is made. The Solver has read the
+paragraphs, the question and both candidates, and the model computes its first
+answer token at this position. By the final layer, the information that
+decides the choice must therefore be gathered here, although at intermediate
+layers part of it may still sit at earlier positions. Three further reasons
+favored a single position:
+\begin{itemize}
+    \item \textbf{One fixed-size vector per episode.} Prompts vary in length:
+    the A2 prompt has a median of 2,197 tokens (interquartile range
+    2,018--2,408) in the validation partition. A single position gives every
+    episode the same representation, which the probes and SAEs require, and
+    keeping every position would multiply storage by roughly two thousand.
+    \item \textbf{Comparable across episodes.} The last token is the same
+    template token in every episode, so differences between episodes reflect
+    what the model has read, not where a token happens to sit.
+    \item \textbf{The same position as the interventions.} The causal
+    experiments edit the activation at exactly this position, so the features
+    found by the probes and the features edited are measured in the same
+    place.
+\end{itemize}
+
+The choice has costs (Table~\ref{tab:last-token}). The most important for the
+causal results is that an edit at one position leaves the earlier positions
+untouched, so information the model reads from them is unchanged.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Advantages and costs of caching only the last prompt token.}
+    \label{tab:last-token}
+    \small
+    \begin{tabular}{p{7.2cm}p{7.2cm}}
+        \toprule
+        Advantages & Costs \tabularnewline
+        \midrule
+        \raggedright The state at the moment of decision, after all inputs
+            have been read.
+            & \raggedright Ignores information spread across other positions,
+              such as the tokens of the two candidates. \tabularnewline
+        \raggedright One vector per episode, regardless of prompt length.
+            & \raggedright Captures only the prompt; how the decision evolves
+              while A2 is generated is not observed. \tabularnewline
+        \raggedright Small enough to store nine layers for 101,168 episodes.
+            & \raggedright An edit at this position cannot change what later
+              tokens read from earlier positions. \tabularnewline
+        \raggedright Matches the position edited by the interventions.
+            & \raggedright A fixed template token carries the decision only as
+              far as the model has moved that information there.
+              \tabularnewline
+        \bottomrule
+    \end{tabular}
+\end{table}
+% Sources: docs/collection/activations.md; src/mas_sae/causal/replay.py (edits at the
+% final prompt token); prompt lengths from the validation interactions.jsonl telemetry.
+
 \section{Layer Selection Probe}
 \section{SAE Training}
 % Reconstruction objective; pretrained, custom, and decoder-only fine-tuning;

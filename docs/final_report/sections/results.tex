@@ -1,7 +1,144 @@
 \chapter{Results}
 
 \section{Label Distribution and Agreement}
+\label{sec:results-labels}
+
+This section reports the final labels, produced by Claude Sonnet~4.5
+(LLM-derived labels), and what they mean for the probe target. Their agreement
+with human labels is reported with the labeling method
+(Section~\ref{sec:human-audit}): 84 of 100 audited episodes, Cohen's
+$\kappa = 0.787$, with no episode labeled Adoption on one side and Retention on
+the other.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Final labels by source (all partitions; LLM-derived labels).
+    \emph{Binary}: Adoption and Retention episodes as a share of all episodes.
+    \emph{Adoption share}: Adoption as a share of the binary episodes.}
+    \label{tab:final-labels}
+    \small
+    \setlength{\tabcolsep}{4pt}
+    \begin{tabular}{lrrrrrrrr}
+        \toprule
+        Source & Episodes & Adoption & Retention & Agreement & Out & Excluded & Binary & Adoption share \\
+        \midrule
+        MuSiQue   & 22,132  & 7,481  & 6,403  & 8,068  & 179 & 1  & 62.7\% & 53.9\% \\
+        Synthetic & 79,036  & 10,635 & 11,005 & 57,130 & 225 & 41 & 27.4\% & 49.1\% \\
+        \midrule
+        Total     & 101,168 & 18,116 & 17,408 & 65,198 & 404 & 42 & 35.1\% & 51.0\% \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+% Source: results/claude_validation/mixed_final_001/<partition>/raw_results.jsonl
+
+\paragraph{The binary target is balanced.} Of the 35,524 Adoption and
+Retention episodes, 51.0\% are Adoption, and the share lies between 50.9\% and
+51.6\% in each of the four partitions. Under free-form feedback the same share
+was 91.7\% (Section~\ref{sec:problems}), so the changes to the protocol
+achieved what they were meant to.
+
+\paragraph{The two sources contribute differently.} Most synthetic episodes
+are Agreement (72.3\%), because the Solver and the Critic usually agree on
+these questions, as they did in the pilot. The synthetic set is 3.6 times
+larger than MuSiQue, so it still supplies 61\% of the binary episodes. MuSiQue
+episodes are binary far more often (62.7\%), in line with the Solver's much
+lower first-answer accuracy on MuSiQue in the pilot (21\% against 78\%). The
+probes therefore learn mostly from synthetic examples, which is why results
+are also reported by source.
+
+\paragraph{Out is rare.} Only 404 episodes (0.4\%) are Out, so Claude's weakest
+label (precision 60\% in the audit) affects very little data.
+
+\paragraph{Candidate order still matters, in opposite directions by source.}
+Each question's order was assigned at random before generation, so within a
+source the difference between the two orders measures the effect of order
+itself (Table~\ref{tab:order-final}). In MuSiQue episodes, listing the
+Critic's answer first raises Adoption by 6.4 points (95\% CI 4.8 to 8.1),
+the same direction as in the earlier MuSiQue collection labeled by the
+rule-based labels (Section~\ref{sec:problems}). In synthetic episodes it
+lowers Adoption by 8.1 points (95\% CI 6.8 to 9.4): the Solver picks the
+second-listed candidate more often in both orders (53.2\% when A1 is listed
+first, 54.9\% when the Critic is). The two effects differ by 14.5 points
+($z = 13.4$), far more than sampling variation would produce. Why they differ
+is not established: source was not randomized, and the two sources differ in
+hop mix and difficulty. Pooled over both sources, the effects largely cancel
+(52.2\% against 49.8\%), which hides them. Order, together with source, is a
+signal a probe could use instead of the feedback itself, so every probe and
+intervention analysis has to control for both.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Adoption share of the binary episodes by candidate order, with
+    95\% Wilson intervals (final Claude Sonnet~4.5 labels). The order effects
+    in the text use normal-approximation intervals for a difference of two
+    proportions; the source $\times$ order interaction is the difference
+    between the two sources' order effects, with a $z$-test.}
+    \label{tab:order-final}
+    \begin{tabular}{lll}
+        \toprule
+        Source & A1 listed first & Critic listed first \\
+        \midrule
+        MuSiQue   & 50.6\% (49.4--51.8), $n = 6{,}840$  & 57.1\% (55.9--58.2), $n = 7{,}044$ \\
+        Synthetic & 53.2\% (52.3--54.1), $n = 10{,}762$ & 45.1\% (44.2--46.1), $n = 10{,}878$ \\
+        Both      & 52.2\% (51.5--52.9), $n = 17{,}602$ & 49.8\% (49.1--50.5), $n = 17{,}922$ \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+% Source: results/claude_validation/mixed_final_001/<partition>/binary_labels.csv
+
 \section{Objective 1: Pipeline and Activation Dataset}
+\label{sec:results-objective1}
+
+The first objective was to build a controlled Solver--Critic interaction
+pipeline and an activation dataset for studying it. Both were completed, and
+every later experiment uses them.
+
+\paragraph{The pipeline.} One configuration file defines the three roles with
+pinned model revisions, the datasets, the layers to record and the decoding
+settings. The work is split into chunks that run on separate EC2 machines and
+are merged afterwards, with activation row indices rebuilt and checked.
+Partitions are fixed by question before any analysis, and related variants of
+a question share a group so they always fall in the same partition. Each
+stage refuses inconsistent inputs instead of continuing: a label for an
+episode that does not exist, an activation index that does not match, or a
+retry with different settings.
+
+\paragraph{The dataset.} Table~\ref{tab:dataset} summarizes the final
+collection. It holds 101,168 episodes, each with its full text (paragraphs,
+A1, the Critic's blind answer and review, A2), correctness against the gold
+answer, the candidate order and generation statistics. For each episode the
+Solver's activations are stored at nine layers for both prompts, giving
+202,336 rows per layer. One in ten episodes is held out for the
+interventions, and the rest are split 80/10/10 into training, validation and
+test.
+
+\begin{table}[htbp]
+    \centering
+    \caption{The final collection by partition and source. Binary episodes are
+    those labeled Adoption or Retention.}
+    \label{tab:dataset}
+    \begin{tabular}{lrrrr}
+        \toprule
+        Partition & Episodes & MuSiQue & Synthetic & Binary episodes \\
+        \midrule
+        Train        & 72,846  & 15,931 & 56,915 & 25,556 \\
+        Validation   & 9,105   & 1,993  & 7,112  & 3,227 \\
+        Test         & 9,112   & 1,997  & 7,115  & 3,223 \\
+        Intervention & 10,105  & 2,211  & 7,894  & 3,518 \\
+        \midrule
+        Total        & 101,168 & 22,132 & 79,036 & 35,524 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+% Sources: configs/collection/distributed_final.yaml (partition fractions and seeds);
+% results/claude_validation/mixed_final_001/<partition>/raw_results.jsonl (counts).
+
+\paragraph{What the dataset does not contain.} It covers only the natural
+feedback condition (Section~\ref{sec:problems}). It stores only the Solver's
+activations, and only at the last prompt token
+(Section~\ref{sec:activation-caching}); the Critic's internal states are not
+recorded. Analyses that need other positions, or the Critic's side of the
+exchange, would require a new collection.
 \section{Objective 2: SAE Representation}
 % SAE comparison and layer-selection results.
 \section{Objective 3: Predictive Features}
