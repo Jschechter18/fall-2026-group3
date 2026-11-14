@@ -17,6 +17,23 @@ the independently collected intervention manifest contains another 2,211.
 These manifest counts, rather than the size of the earlier MuSiQue-only run,
 define the data used in the final analyses.
 
+Before augmentation, we profiled the source train and validation splits to
+characterize their reasoning coverage. Figure~\ref{fig:musique-coverage} shows
+that the splits have similar hop distributions, while also revealing that some
+reasoning graph shapes are substantially rarer than the dominant composition.
+This imbalance motivated explicit targeting of two-, three-, and four-hop
+structures during synthetic-data generation.
+
+\begin{figure}[p]
+    \centering
+    \includegraphics[width=\textwidth]{build_figures/split_hop_graph_distribution.pdf}
+    \caption{Reasoning-depth, graph-shape, and reuse coverage in the original
+    MuSiQue train and validation splits. Counts and percentages describe the
+    source benchmark before synthetic augmentation; they are not the final
+    mixed-corpus distribution.}
+    \label{fig:musique-coverage}
+\end{figure}
+
 \section{Exploratory Data Analysis}
 
 The natural collection produced many Agreement cases in which the Solver and
@@ -26,6 +43,57 @@ episodes contain 16,302 Adoption, 15,704 Retention, 58,661 Agreement, 357 Out,
 and 39 technical labeling failures. The primary behavioral probe uses Adoption
 and Retention only; Agreement and Out cases remain useful for diagnostics but
 do not define the binary target.
+
+The source-data analysis also quantified the amount and composition of text
+presented to the Solver. As Figure~\ref{fig:musique-input-size} illustrates,
+input size varies with reasoning depth and is driven primarily by paragraph
+content rather than the question itself. These measurements informed prompt
+construction and the computational budget for activation collection. They are
+reported as raw words because exact token counts depend on the model-specific
+tokenizer and serialized prompt.
+
+\begin{figure}[p]
+    \centering
+    \includegraphics[width=\textwidth]{build_figures/solver_input_word_length_profile.pdf}
+    \caption{Raw Solver-input length in the original MuSiQue train and
+    validation splits, including the question and all paragraph titles and
+    text. Prompt instructions and generated Solver or Critic responses are
+    excluded.}
+    \label{fig:musique-input-size}
+\end{figure}
+
+Figure~\ref{fig:musique-context-profile} separates supporting evidence from
+distractor context. Supporting passages occupy only part of the 20-paragraph
+context and appear across paragraph positions, requiring the Solver to select
+evidence rather than rely on a fixed location. The answer-occurrence audit also
+highlights why normalized aliases and semantic outcome labeling are preferable
+to unnormalized exact string matching alone.
+
+\begin{figure}[p]
+    \centering
+    \includegraphics[width=\textwidth]{build_figures/support_distractor_context_profile.pdf}
+    \caption{Supporting- and distractor-context characteristics in the
+    original MuSiQue train and validation splits. Answer occurrence uses
+    normalized phrase matching and should not be interpreted as semantic
+    entailment.}
+    \label{fig:musique-context-profile}
+\end{figure}
+
+Finally, Figure~\ref{fig:musique-answer-profile} summarizes canonical answer
+lengths, aliases, surface forms, and normalization sensitivity. The prevalence
+of aliases and normalization-sensitive answers supports the use of reference
+aliases and a structured judge when assigning behavioral outcomes.
+
+\begin{figure}[p]
+    \centering
+    \includegraphics[width=\textwidth]{build_figures/answer_type_and_scoring_profile.pdf}
+    \caption{Answer forms and scoring-sensitivity indicators in the original
+    MuSiQue train and validation splits. The analysis precedes synthetic
+    augmentation and characterizes the natural source data only.}
+    \label{fig:musique-answer-profile}
+\end{figure}
+
+\clearpage
 
 \section{Problems Identified}
 
