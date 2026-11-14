@@ -7,9 +7,22 @@
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{longtable}
+\usepackage[table]{xcolor}
+\usepackage{etoolbox}
 \usepackage{amsmath}
 \usepackage{enumitem}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
 \usepackage[hidelinks,hypertexnames=false]{hyperref}
+
+\algrenewcommand\algorithmicrequire{\textbf{Require:}}
+\algrenewcommand\algorithmicensure{\textbf{Ensure:}}
+
+\definecolor{tablegray}{HTML}{EEEEEE}
+% With a one-row header, leave the first data row white and shade every
+% second data row. Tables with multirow headers can override the start row.
+\AtBeginEnvironment{tabular}{\rowcolors{3}{tablegray}{white}}
+\AtBeginEnvironment{longtable}{\rowcolors{3}{tablegray}{white}}
 
 \graphicspath{{figures/}}
 

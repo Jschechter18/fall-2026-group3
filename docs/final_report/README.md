@@ -25,6 +25,7 @@ latexmk -cd -C final_report/main.tex
 - `sections/`: front matter and report chapters
 - `appendices/`: supporting material
 - `equations/`: reusable LaTeX equations included by report sections
+- `algorithms/`: reusable LaTeX pseudocode included by methodology sections
 - `figures/`: report-ready figures
 - `build_figures/`: LaTeX-compatible derivatives generated from the SVG sources
 - `tables/`: generated or hand-authored LaTeX tables

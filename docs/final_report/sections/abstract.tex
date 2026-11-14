@@ -3,12 +3,13 @@ to critique another, yet behavioral outcomes alone do not reveal how the
 receiving model represents and uses that feedback. This project investigates
 whether sparse autoencoders (SAEs) expose interpretable internal features
 associated with feedback uptake. We construct a controlled Solver--Critic
-pipeline in which a Gemma 3 4B instruction-tuned Solver answers MuSiQue
-multi-hop questions, receives an independently generated recommendation from a
-Qwen3 4B instruction-tuned Critic, and then chooses whether to adopt the
-Critic's answer or retain its own. The resulting candidate-presentation dataset
-contains 22,355 episodes: 5,834 labeled as Adoption, 4,810 as Retention, 8,451
-as Agreement, and 3,260 excluded from the primary behavioral comparison. We
+pipeline in which a Gemma 3 4B instruction-tuned Solver answers a mixture of
+MuSiQue and synthetic multi-hop questions, receives an independently generated
+recommendation from a Qwen3 4B instruction-tuned Critic, and then chooses
+whether to adopt the Critic's answer or retain its own. The final core corpus
+contains 91,063 episodes across the training, validation, and test partitions;
+a separately collected intervention partition contains another 10,105
+episodes. We
 cache Solver residual-stream activations, represent them with pretrained and
 customized SAEs, and use regularized probes to identify sparse features that
 distinguish Adoption from Retention. We evaluate those features through their

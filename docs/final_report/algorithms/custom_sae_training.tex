@@ -1,0 +1,45 @@
+\begin{algorithm}[H]
+\caption{Custom L1 or TopK--AuxK SAE training}
+\label{alg:custom-sae-training}
+\begin{algorithmic}[1]
+\Require Training activations $X_{\mathrm{train}}$; validation activations $X_{\mathrm{val}}$;
+sparsity mode $q\in\{L_1,\mathrm{TopK}\}$; dictionary width $m$; maximum epochs $E$;
+batch size $B$; learning rate $\eta$
+\Ensure Frozen SAE checkpoint with the lowest main-path validation loss
+\State $s_{\mathrm{RMS}}\gets\sqrt{\operatorname{mean}(X_{\mathrm{train}}^2)}$
+\State Initialize tied encoder--decoder weights and normalize every decoder column
+\State Initialize Adam, the plateau scheduler, inactivity counters, and early stopping
+\For{$e=1$ to $E$}
+    \For{each shuffled minibatch $X\subset X_{\mathrm{train}}$ of size $B$}
+        \State $\widetilde{X}\gets X/s_{\mathrm{RMS}}$
+        \State $A\gets W_{\mathrm{enc}}(\widetilde{X}-b_{\mathrm{dec}})+b_{\mathrm{enc}}$
+        \If{$q=L_1$}
+            \State $Z\gets\operatorname{ReLU}(A)$
+            \State $\mathcal{L}\gets\mathcal{L}_{\mathrm{rec}}+lambda\operatorname{mean}(|Z|)$
+        \Else
+            \State $P\gets\operatorname{ReLU}(A)$; $Z\gets\operatorname{TopK}(P,k)$
+            \State Update each feature's last main-path firing position from $Z$
+            \State $J\gets$ features inactive for at least $w$ training examples
+            \If{$J\ne\emptyset$ and the inactivity warm-up is complete}
+                \State $Z_{\mathrm{aux}}\gets
+                \operatorname{TopK}(P|_J,\min(k_{\mathrm{aux}},|J|))$
+                \State $R\gets(\widetilde{X}-\widehat{\widetilde{X}})\text{.detach}()$
+                \State $\mathcal{L}\gets\mathcal{L}_{\mathrm{rec}}+
+                \alpha\operatorname{MSE}(W_{\mathrm{dec}}Z_{\mathrm{aux}},R)$
+            \Else
+                \State $\mathcal{L}\gets\mathcal{L}_{\mathrm{rec}}$
+            \EndIf
+        \EndIf
+        \State Update SAE parameters with Adam using $\nabla\mathcal{L}$
+        \State Renormalize every decoder column to unit $L_2$ norm
+    \EndFor
+    \State Evaluate the main-path objective on $X_{\mathrm{val}}$ without AuxK
+    \State Update the scheduler and save any new lowest-loss checkpoint
+    \If{validation loss has no significant improvement for the patience window}
+        \State \textbf{break}
+    \EndIf
+\EndFor
+\State Reload and freeze the lowest-loss checkpoint
+\State \Return frozen SAE and split-level reconstruction and activity metrics
+\end{algorithmic}
+\end{algorithm}

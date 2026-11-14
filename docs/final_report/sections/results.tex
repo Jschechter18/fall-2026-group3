@@ -99,9 +99,11 @@ reference point supplied by Gemma Scope.
 Overall, no SAE dominated every criterion.  TopK gave the best custom-model
 reconstruction, L1 gave the lowest per-example activity and broader dictionary
 coverage, and decoder adaptation preserved pretrained feature identities while
-substantially correcting reconstruction mismatch.  For that reason, all three
-families were retained for the downstream predictive and causal comparisons
-rather than selecting a single SAE from reconstruction error alone.
+substantially correcting reconstruction mismatch.  These representation-level
+results did not define the downstream model set by reconstruction error alone.
+TopK was excluded from final downstream tasking; the predictive and causal
+experiments used the L1 custom SAE and the pretrained family, including its
+adapted variants.
 \section{Objective 3: Predictive Features}
 % Probe performance, controls, random draws, and feature interpretation.
 \section{Objective 4: Causal Tests}

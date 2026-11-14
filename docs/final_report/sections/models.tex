@@ -66,7 +66,8 @@ tied encoder--decoder initialization, seed 42, shuffled batches of 256, a
 maximum of 200 epochs, and early stopping after 20 epochs without a sufficiently
 large validation improvement.
 
-We retained two sparsity strategies because they impose different tradeoffs:
+We trained two custom sparsity strategies because they impose different
+representation tradeoffs:
 
 \begin{itemize}
     \item \textbf{$L_1$ SAE.} Nonnegative latent activations are penalized by
@@ -91,9 +92,11 @@ Figure~\ref{fig:sae-selection-rationale} summarizes, TopK+AuxK provided stronger
 reconstruction at exactly 128 active features per example but used a relatively
 small portion of the full dictionary. The $L_1$ model accepted higher
 reconstruction error in exchange for fewer active features per example and
-broader dictionary coverage. Retaining both models lets the downstream probe
-and intervention experiments test whether either tradeoff produces more useful
-feedback-related features.
+broader dictionary coverage. This comparison was used to characterize the
+custom SAE design space; it did not mean that both custom models entered the
+final downstream experiments. The TopK+AuxK model was excluded from final
+downstream tasking. Those analyses used the $L_1$ custom SAE and the pretrained
+SAE family, including its adapted variants.
 
 \begin{figure}[htbp]
     \centering

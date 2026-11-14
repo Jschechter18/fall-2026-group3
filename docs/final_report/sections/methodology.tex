@@ -79,6 +79,16 @@ firing frequencies were also recorded as the fraction of examples for which a
 latent was positive. After selection, the exact best checkpoint was reloaded
 and evaluated without updating weights or inactivity counters.
 
+TopK was retained as a training and representation-quality comparison but was
+not carried into the final downstream feature-selection and causal tasking.
+The final downstream configuration used the $L_1$ custom SAE and members of
+the pretrained SAE family.
+
+Algorithm~\ref{alg:custom-sae-training} summarizes the shared training loop and
+the branch between the two sparsity mechanisms.
+
+\input{algorithms/custom_sae_training}
+
 \subsection{Pretrained SAE and Decoder-Only Adaptation}
 
 The external baseline is the frozen Layer 25 Gemma Scope 2 JumpReLU SAE
@@ -99,6 +109,11 @@ was implemented as an exploratory comparison, but updating the encoder changes
 the feature basis and therefore weakens one-to-one comparison with the
 pretrained feature identities. The decoder-only model is the cleaner adaptation
 for analyses that require the same selected latents before and after fitting.
+
+Algorithm~\ref{alg:decoder-only-adaptation} gives the adaptation and integrity
+checks used for the pretrained SAE.
+
+\input{algorithms/decoder_only_adaptation}
 
 \subsection{Exploratory LLM-Guided SAE Editing}
 
@@ -126,6 +141,12 @@ tests whether an LLM-designed direction offers value beyond a deterministic
 behavioral direction or an equal-size random modification; it does not imply
 that the resulting decoder features acquired a complete semantic
 interpretation.
+
+The constrained interaction, authoritative host checks, and construction of
+the two matched controls are summarized in
+Algorithm~\ref{alg:llm-guided-sae-editing}.
+
+\input{algorithms/llm_guided_sae_editing}
 \section{Feature Selection Probe}
 % Probe, ablation check, selectivity controls, random draws, and dominant feature.
 \section{Causality Experiments}
