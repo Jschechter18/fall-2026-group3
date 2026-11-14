@@ -1,0 +1,31 @@
+\begin{align}
+    s_{\mathrm{RMS}}
+    &= \sqrt{\frac{1}{Nd}\sum_{i=1}^{N}\sum_{j=1}^{d}x_{ij}^{2}},
+    & \tilde{x}_i &= \frac{x_i}{s_{\mathrm{RMS}}}, \\
+    a_i
+    &= W_{\mathrm{enc}}(\tilde{x}_i-b_{\mathrm{dec}})
+       + b_{\mathrm{enc}},
+    & z_i &= g(a_i), \\
+    \hat{\tilde{x}}_i
+    &= W_{\mathrm{dec}}z_i+b_{\mathrm{dec}},
+    & \hat{x}_i &= s_{\mathrm{RMS}}\hat{\tilde{x}}_i .
+\end{align}
+
+For the $L_1$ model, $g(a)=\operatorname{ReLU}(a)$ and the training objective is
+
+\begin{equation}
+    \mathcal{L}_{L_1}
+    = \frac{1}{Nd}\sum_{i=1}^{N}
+      \left\lVert\tilde{x}_i-\hat{\tilde{x}}_i\right\rVert_2^2
+      + \lambda\frac{1}{Nm}\sum_{i=1}^{N}\lVert z_i\rVert_1 .
+\end{equation}
+
+For the TopK model, $g(a)=\operatorname{TopK}(\operatorname{ReLU}(a),k)$ and
+
+\begin{equation}
+    \mathcal{L}_{\mathrm{TopK}}
+    = \mathcal{L}_{\mathrm{rec}} + \alpha\mathcal{L}_{\mathrm{AuxK}},
+\end{equation}
+
+where $\mathcal{L}_{\mathrm{AuxK}}$ reconstructs the detached main-path residual
+using eligible inactive features and is applied during training only.

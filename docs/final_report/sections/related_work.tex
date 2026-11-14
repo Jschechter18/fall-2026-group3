@@ -1,7 +1,40 @@
 \chapter{Related Work}
+\label{chap:related-work}
 
 \section{SAE Feature Discovery and Evaluation}
+
+Early work on SAEs for language-model interpretability showed that overcomplete sparse dictionaries can yield features whose activating examples are more coherent than individual neurons \cite{cunningham2023sparse}. Scaling studies then evaluated tradeoffs among reconstruction quality, sparsity, dead features, and automated interpretability \cite{gao2025scaling}. Together, these studies established SAEs as a practical way to turn dense residual activations into inspectable latent variables.
+
+Subsequent work emphasizes that an SAE cannot be judged by one proxy metric. SAEBench compares architectures across interpretability, disentanglement, and downstream applications and finds that gains on unsupervised proxies do not reliably imply gains on practical tasks \cite{karvonen2025saebench}. Feature absorption studies further show that a latent can appear monosemantic in top examples while failing to activate consistently for the proposed concept \cite{chanin2024absorption}.
+
+Strong baselines are especially important. A sparse-probing case study finds that SAE features do not consistently improve over supervised or representation-level alternatives, despite their appealing sparsity \cite{kantamneni2025useful}. AxBench likewise reports that simple steering baselines can outperform SAE-based methods across a broad evaluation suite \cite{wu2025axbench}. Korznikov et al. compare trained SAEs with constrained random baselines that approach trained SAEs on automated interpretability and sparse probing and match them on their causal-editing measure \cite{korznikov2026sanity}. Their synthetic experiments also show that high explained variance can coexist with poor recovery of known features. Thus, reconstruction, probe accuracy, or editability alone does not establish mechanism recovery.
+
+Our evaluation adopts this stricter view. We compare SAE variants, inspect activating examples and counterexamples, test held-out prediction, use random-feature draws, and compare targeted interventions with equal-size random edits. Evidence is strongest when a feature supports a coherent description, predicts unseen behavior, and changes behavior more selectively than appropriate baselines.
+
 \section{Activation Steering and Representation Engineering}
+
+Representation engineering studies population-level activation directions associated with high-level behaviors \cite{zou2023representation}. Activation engineering directly adds learned directions during inference \cite{turner2023activation}, while Contrastive Activation Addition averages residual-stream differences between paired positive and negative examples \cite{panickssery2023caa}. These methods show that comparatively simple linear directions can exert reproducible control over model behavior.
+
+SAE features provide another steering basis. Rather than editing along a raw contrastive direction, an SAE intervention modifies selected latents and decodes the change into the residual stream. Sparse feature circuits connect interpretable features through causal graphs and edit them to test predicted effects \cite{marks2025circuits}. Arad et al. further show that SAE steering depends strongly on how features are selected, reinforcing the need to evaluate the selection procedure rather than treating every sparse latent as a useful control direction \cite{arad2025steering}. This offers the possibility of component-level meanings, but the SAE basis may omit, split, or distort the relevant representation.
+
+Steering success is therefore not identical to interpretability. A direction can control behavior without a simple semantic meaning, while an excessive edit can flip an output by degrading generation. Our experiments use steering as a causal test of feature hypotheses and compare SAE edits with random features, raw-activation directions, reconstruction-only passes, and output-quality diagnostics.
+
 \section{Mechanistic Studies of Sycophancy and Feedback Behavior}
+
+Multi-agent debate and critique show that interaction among model instances can improve some factual and reasoning tasks \cite{du2024debate}. A Solver--Critic exchange is a compact version of this setting: the Critic supplies an evaluation or alternative, and the Solver must decide whether to revise. System quality depends jointly on the Critic's recommendation and on the Solver's policy for using it.
+
+Related work shows why uptake is not inherently beneficial. LLMs often fail to improve reasoning through intrinsic self-correction when no reliable external signal is added \cite{huang2024selfcorrect,kamoi2024selfcorrection}. Models can also change answers to align with an expressed view even when doing so reduces accuracy \cite{sharma2024sycophancy}. Under knowledge conflicts, models may behave as either an ``adaptive chameleon'' or a ``stubborn sloth'', depending on how contextual and parametric evidence compete \cite{xie2024chameleon}. These results distinguish responsiveness from epistemically appropriate revision.
+
+Prior studies primarily measure behavior. Our work uses Adoption versus Retention to examine the Solver's internal state when responding to feedback. Correctness remains a secondary variable, but the mechanistic target is uptake: which sparse features distinguish adoption from retention, what they appear to encode, and whether targeted changes alter the decision.
+
 \section{Multi-Hop Question Answering as a Testbed}
+
+Multi-hop question answering requires combining facts that are individually insufficient. MuSiQue constructs questions by composing connected single-hop questions and filtering shortcuts around the intended reasoning chain \cite{trivedi2022musique}. It provides question identifiers, supporting passages, reference answers, and aliases, making it suitable for large-scale Solver--Critic interactions with externally checkable outcomes.
+
+MuSiQue also permits genuine disagreement: Solver and Critic may retrieve different facts, compose steps differently, or make different errors. This variation is useful but complicates labeling. Exact string equality misses some equivalent answers, whereas unconstrained model judgment can introduce errors. We therefore combine structured candidate presentation, an LLM judge with fixed settings, question-family partitioning, and human audit. The benchmark is a controlled testbed, not evidence that the discovered features generalize to every form of reasoning or feedback.
+
 \section{Gap Addressed by This Work}
+
+Existing work establishes that feedback can alter and sometimes improve answers, that revision can reflect sycophancy or unreliable self-correction, that SAEs can expose sparse and apparently coherent features, and that activation directions can steer generation. What remains unclear is whether SAE features found in a feedback setting provide explanations that are simultaneously semantically coherent, predictively reliable, and causally faithful.
+
+This project addresses that gap with an end-to-end study of one defined behavior. It collects Solver activations under a controlled feedback protocol, prevents question-family leakage across discovery and intervention splits, compares general and interaction-adapted sparse representations, and uses probe-selected features only as hypotheses for interpretation and causal testing. Random-feature draws, equal-norm edits, reconstruction controls, and separation of valid switches from broken outputs test alternative explanations. The analysis therefore does not assume that sparse features are interpretable; it evaluates how much explanatory evidence they provide and where that evidence remains incomplete.

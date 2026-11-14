@@ -10,16 +10,214 @@
 % kappa, and negative-class feedback audit.
 \section{Activation Caching}
 \section{Layer Selection Probe}
+% Explain the probe mechanism, candidate layers, leakage-safe setup, metric
+% choice, and why those metrics are appropriate. Report how the results led to
+% the final layer rather than presenting layer choice as an assumption.
 \section{SAE Training}
-% Reconstruction objective; pretrained, custom, and decoder-only fine-tuning;
-% define the MIT side experiment before drafting.
+
+\subsection{Training Data and Preprocessing}
+
+The custom SAEs were trained on the Solver's Layer 25 residual-post activations
+from the second Solver turn. Each example is the 2,560-dimensional activation
+at the final prompt token, immediately before the Solver generates its response
+to the candidate answers. The training, validation, test, and intervention
+partitions follow the question-family split defined before feature selection.
+Only the training partition updates SAE parameters. Validation activations are
+used for checkpoint and hyperparameter selection; the test and intervention
+partitions do not participate in training or selection.
+
+All inputs are normalized by one scalar root-mean-square value computed over
+every element of the training activation matrix. The same frozen value is used
+for all partitions, avoiding split-specific normalization. Decoder outputs are
+rescaled to the original activation units before they are inserted into the
+Solver. The full encoding, reconstruction, and training objectives are given
+below.
+
+\input{equations/sae_training_objectives}
+
+Here, $N$ is the number of examples, $d=2{,}560$ is the residual-stream width,
+$m=12{,}888$ is the custom dictionary width, and $z_i$ is the sparse latent
+vector. Decoder columns are constrained to unit $L_2$ norm after each optimizer
+step so that feature magnitude cannot be changed simply by increasing decoder
+length.
+
+\subsection{Custom SAE Training}
+
+We trained two custom architectures with the same encoder--decoder dimensions
+and data but different sparsity mechanisms. Both used tied encoder--decoder
+initialization, Adam optimization, shuffled batches of 256, seed 42, and a
+maximum of 200 epochs. A ReduceLROnPlateau scheduler reduced the learning rate
+by a factor of ten after five validation epochs without improvement. Training
+stopped after 20 epochs without an absolute validation-loss improvement greater
+than $10^{-4}$, while the checkpoint with the lowest observed validation loss
+was retained.
+
+For the $L_1$ SAE, the encoder applies a nonnegative activation and the loss
+adds the mean absolute latent activation with coefficient $\lambda$. The sweep
+tested $\lambda\in\{1,2,3\}$ at learning rate $10^{-4}$; the selected model
+uses $\lambda=2$. For the TopK SAE, the main path retains exactly the $k$
+largest nonnegative activations per example. The sweep compared $k=64$ and
+$k=128$ at learning rate $3\times10^{-4}$. The selected model uses $k=128$
+and an AuxK coefficient of $1/128$. Up to 512 features that had not activated
+on the main path within the preceding 10,000 training examples were eligible
+to reconstruct the detached residual. This auxiliary signal reduces the chance
+that inactive features receive no useful gradient, but it does not contribute
+to validation loss or activate features in the main TopK representation
+\cite{gao2025scaling}.
+
+We did not automatically select the lowest scalar loss across both sparsity
+families because their losses are not directly comparable. Instead, one
+checkpoint per family was chosen from its validation tradeoff among
+reconstruction error, variance explained, mean active features, and dictionary
+coverage. For a frozen checkpoint, variance explained and average activity are
+defined as
+
+\input{equations/sae_evaluation_metrics}
+
+where $\bar{x}_{\mathrm{train}}$ is the training-set mean activation. Feature
+firing frequencies were also recorded as the fraction of examples for which a
+latent was positive. After selection, the exact best checkpoint was reloaded
+and evaluated without updating weights or inactivity counters.
+
+\subsection{Pretrained SAE and Decoder-Only Adaptation}
+
+The external baseline is the frozen Layer 25 Gemma Scope 2 JumpReLU SAE
+described in Chapter~4. Because it was trained on a broader distribution, we
+also ran a decoder-only adaptation experiment. The pretrained encoder weights,
+encoder bias, and JumpReLU thresholds were frozen; their latent activations were
+cached once for the training and validation partitions. Only the decoder and
+reconstruction bias were optimized against the interaction activations. This
+preserves feature firing patterns and probe inputs while testing whether a
+decoder fitted to the study distribution reconstructs and steers more
+effectively.
+
+Decoder adaptation used seed 42, batches of 256, learning rate $10^{-5}$, a
+maximum of five epochs, and early-stopping patience of two. The run manifest
+records SHA-256 hashes of the source SAE parameters, activation tensors, probe
+configuration, and cached encoder features. A separate full-fine-tuning mode
+was implemented as an exploratory comparison, but updating the encoder changes
+the feature basis and therefore weakens one-to-one comparison with the
+pretrained feature identities. The decoder-only model is the cleaner adaptation
+for analyses that require the same selected latents before and after fitting.
+
+\subsection{Exploratory LLM-Guided SAE Editing}
+
+Inspired by the MIT CSAIL ``Sparks of Weight-Space Programming'' demonstration
+\cite{takehi2026sparks}, we conducted a post-hoc side experiment asking whether
+an LLM could improve causal steering by directly editing selected SAE decoder
+directions without gradient training. This experiment is exploratory and is
+not included in the prespecified primary comparison.
+
+Claude received train-partition measurements and a locked-down Python sandbox,
+but no validation, test, intervention, or final causal results. It could inspect
+the pretrained SAE and the 10 Adoption and 10 Retention features selected by
+the probe, then propose edits to only those 20 decoder rows. Encoder parameters,
+thresholds, decoder-row lengths, and every unselected row remained fixed. Each
+edited row was constrained to cosine similarity of at least 0.95 with its
+original direction. No optimizer, backpropagation, or automated parameter
+search was permitted.
+
+Two controls separated LLM reasoning from generic weight perturbation. A
+mechanical edit rotated the same rows toward class-mean activation directions
+using a fixed formula, and a random edit applied the same row-wise rotation
+angles toward random orthogonal directions. All three edited SAEs then entered
+the same held-out feature-selection and intervention pipeline. This design
+tests whether an LLM-designed direction offers value beyond a deterministic
+behavioral direction or an equal-size random modification; it does not imply
+that the resulting decoder features acquired a complete semantic
+interpretation.
 \section{Feature Selection Probe}
 % Probe, ablation check, selectivity controls, random draws, and dominant feature.
 \section{Causality Experiments}
-% Ablation, suppression, amplification, edit-norm controls, mechanical versus
-% LLM-guided edits, raw-activation controls, and reconstruction control.
+% Initial zeroing/ablation; suppression and amplification; edit-norm controls;
+% mechanical versus LLM-guided edits; raw-activation controls; and
+% reconstruction control.
 \section{Metrics and Statistical Analysis}
 % Flip definition, switch/broken split, confidence intervals, random baselines,
 % and multiple-comparison handling.
 \section{Experimental Setup and Reproducibility}
-% Hardware, runtime, seeds, configs, versions, run checks, and commit recording.
+
+\subsection{Hardware and Software Environment}
+
+GPU-dependent collection, activation extraction, SAE training, and causal
+replay were run on a single NVIDIA A10G GPU with 23~GiB of device memory. The
+recorded machine used four CPU cores and approximately 15.4~GiB of system
+memory for the exploratory SAE-editing workflow. The project environment is
+defined for Python~3.11 and PyTorch~2.13, with Transformers~5.x, Datasets,
+scikit-learn, SciPy, pandas, NumPy, and SAE Lens. Rather than relying only on
+the environment specification, individual run manifests record the resolved
+package versions; for example, the final collection provenance records
+PyTorch~2.13.0, Transformers~5.17.0, and Datasets~5.0.1.
+
+Model inference used bfloat16 on the GPU. The model and dataset sources were
+pinned to immutable Hugging Face revisions:
+
+\begin{itemize}
+    \item Gemma Solver: \texttt{093f9f388b31de276ce2de164bdc2081324b9767};
+    \item Qwen Critic: \texttt{cdbee75f17c01a7cc42f958dc650907174af0554};
+    \item MuSiQue: \texttt{c8f4f8c9465fb69d31a8eae894c3fd509c4ca321}.
+\end{itemize}
+
+Causal replay used greedy decoding with at most 64 new tokens, ensuring that a
+fixed prompt and model state could be checked against the originally stored
+response.
+
+\subsection{Randomness and Partition Integrity}
+
+Seed 42 was fixed for dataset ordering, SAE initialization and shuffling,
+probe resampling, random-feature controls, and intervention ordering unless a
+run explicitly records a different seed. Question families, rather than
+individual episodes, define the train, validation, test, and intervention
+partitions. The code treats test and intervention partitions as sealed during
+layer and feature selection. The intervention cohort is therefore not read to
+choose a layer, SAE checkpoint, feature set, edit direction, or edit size.
+
+Random controls are stored or deterministically regenerated from the frozen
+seed and episode identifiers. Completed outputs are resumed rather than
+regenerated, which prevents partial distributed runs from silently changing
+previous model responses. Evaluation scripts also record excluded episodes and
+technical labeling failures instead of replacing them with newly sampled
+examples.
+
+\subsection{Configuration and Provenance Records}
+
+Every major stage is driven by a versioned YAML configuration. Output
+directories are run-specific and normally refuse to overwrite an existing
+run. Run records store the complete command, Git commit, hashes of uncommitted
+tracked code, configuration hash, model and SAE specifications, label-policy
+version, and SHA-256 hashes of the input artifacts. Feature-selection outputs
+also hash every SAE file they read. Consequently, a later causal run can verify
+that the selected features refer to the same checkpoint rather than another
+file with the same human-readable name.
+
+Collection provenance records the ordered question manifest, dataset revision,
+resolved model revisions, package versions, and available GPUs. SAE runs store
+their full hyperparameters, learning-rate history, best epoch, checkpoint,
+split-level reconstruction metrics, and feature firing frequencies. Causal
+runs additionally freeze the episode IDs, conditions, feature sets, random
+draws, edit size, and analysis settings before distributed workers begin.
+
+\subsection{Run-Consistency Checks}
+
+The causal pipeline performs a plain replay before applying any activation
+edit. It compares the regenerated prompt hash, response, first token, and
+behavior label with the stored collection artifacts. If baseline agreement
+falls below the configured threshold, the run stops before generating edited
+conditions. Distributed workers must reproduce the successful preflight; shard
+sets with missing, duplicated, or incompatible conditions are rejected during
+merge.
+
+The pipeline also rejects mismatched SAE hashes, changed label protocols,
+incompatible feature-reference files, and arms generated under different
+frozen settings. Generated rows record the actual edit norm, reconstruction
+error, number of active and edited features, token budget status, and elapsed
+generation time. These checks do not remove all sources of nondeterminism, but
+they make discrepancies visible and prevent results from different model,
+code, label, or intervention states from being combined silently.
+
+The repository contains the configurations, scripts, lightweight summaries,
+and exact run identifiers needed to trace every reported result. Large model
+weights, activation tensors, and SAE checkpoints are stored separately because
+of their size; reproduction requires retrieving the artifacts whose hashes are
+recorded in the manifests. Appendix~E provides the command sequence and
+artifact locations used to reconstruct the analysis.
