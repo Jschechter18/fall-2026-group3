@@ -20,7 +20,7 @@ stopped at epoch~54 under the minimum-improvement and patience rule, with its
 lowest validation loss occurring at epoch~51.  The L1 SAE continued improving
 through the 200-epoch limit, so its final checkpoint was retained.  Its
 training and validation variance explained were 92.3\% and
-89.2\%, respectively, indicating a modest generalization gap.  The
+89.2\%, respectively, a 3.1-percentage-point difference.  The
 corresponding TopK values were 92.3\% and 91.9\%, giving nearly identical
 training reconstruction but better validation transfer.
 
@@ -66,9 +66,9 @@ The frozen pretrained SAE transferred poorly to the project distribution,
 explaining 22.5\% of validation variance with an MSE of 6,343.5 in its native
 activation units.  Refitting only the reconstruction bias raised variance
 explained to 51.2\%, showing that a substantial component of the mismatch was
-a distribution-level offset.  Five epochs of decoder-and-bias adaptation
-further reduced validation MSE to 2,071.4 and raised variance explained to
-74.7\% (Table~\ref{tab:sae-pretrained-results}).  This was a 67.3\% MSE
+a distribution-level offset.  The selected epoch-10 decoder-and-bias
+checkpoint further reduced validation MSE to 1,689.1 and raised variance
+explained to 79.4\% (Table~\ref{tab:sae-pretrained-results}).  This was a 73.4\% MSE
 reduction relative to the frozen checkpoint.
 
 \begin{table}[htbp]
@@ -83,7 +83,7 @@ reduction relative to the frozen checkpoint.
         \midrule
         Frozen pretrained & 6,343.5 & 22.46\% & None \\
         Bias-only baseline & 3,992.4 & 51.20\% & Reconstruction bias \\
-        Decoder adapted & 2,071.4 & 74.68\% & Decoder and bias \\
+        Decoder adapted & 1,689.1 & 79.35\% & Decoder and bias \\
         \bottomrule
     \end{tabular}
 \end{table}
@@ -93,8 +93,7 @@ thresholds, it did not change which pretrained features fired or the values
 provided to the feature-selection probe.  The gain therefore isolates improved
 reconstruction of this study's residual stream from improved discovery of
 feature identities.  Decoder adaptation made the pretrained representation a
-stronger reconstruction and steering baseline while preserving the semantic
-reference point supplied by Gemma Scope.
+stronger reconstruction baseline and a preserved-basis steering comparator.
 
 Overall, no SAE dominated every criterion.  TopK gave the best custom-model
 reconstruction, L1 gave the lowest per-example activity and broader dictionary
