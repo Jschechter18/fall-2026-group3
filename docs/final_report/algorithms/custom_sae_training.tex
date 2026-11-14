@@ -12,10 +12,10 @@ batch size $B$; learning rate $\eta$
 \For{$e=1$ to $E$}
     \For{each shuffled minibatch $X\subset X_{\mathrm{train}}$ of size $B$}
         \State $\widetilde{X}\gets X/s_{\mathrm{RMS}}$
-        \State $A\gets W_{\mathrm{enc}}(\widetilde{X}-b_{\mathrm{dec}})+b_{\mathrm{enc}}$
+        \State $A\gets W_{\mathrm{enc}}\widetilde{X}+b_{\mathrm{enc}}$
         \If{$q=L_1$}
             \State $Z\gets\operatorname{ReLU}(A)$
-            \State $\mathcal{L}\gets\mathcal{L}_{\mathrm{rec}}+lambda\operatorname{mean}(|Z|)$
+            \State $\mathcal{L}\gets\mathcal{L}_{\mathrm{rec}}+\lambda\operatorname{mean}(|Z|)$
         \Else
             \State $P\gets\operatorname{ReLU}(A)$; $Z\gets\operatorname{TopK}(P,k)$
             \State Update each feature's last main-path firing position from $Z$

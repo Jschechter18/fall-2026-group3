@@ -23,8 +23,9 @@ at the final prompt token, immediately before the Solver generates its response
 to the candidate answers. The training, validation, test, and intervention
 partitions follow the question-family split defined before feature selection.
 Only the training partition updates SAE parameters. Validation activations are
-used for checkpoint and hyperparameter selection; the test and intervention
-partitions do not participate in training or selection.
+used for checkpoint and hyperparameter selection. The test partition is
+evaluated only after model selection, and the intervention partition remains
+outside SAE fitting and selection.
 
 All inputs are normalized by one scalar root-mean-square value computed over
 every element of the training activation matrix. The same frozen value is used
@@ -56,9 +57,10 @@ For the $L_1$ SAE, the encoder applies a nonnegative activation and the loss
 adds the mean absolute latent activation with coefficient $\lambda$. The sweep
 tested $\lambda\in\{1,2,3\}$ at learning rate $10^{-4}$; the selected model
 uses $\lambda=2$. For the TopK SAE, the main path retains exactly the $k$
-largest nonnegative activations per example. The sweep compared $k=64$ and
-$k=128$ at learning rate $3\times10^{-4}$. The selected model uses $k=128$
-and an AuxK coefficient of $1/128$. Up to 512 features that had not activated
+largest nonnegative activations per example. At learning rate
+$3\times10^{-4}$, the sweep compared AuxK models with $k=64$ and $k=128$ and
+a $k=128$ ablation without AuxK. The selected model uses $k=128$ and an AuxK
+coefficient of $1/128$. Up to 512 features that had not activated
 on the main path within the preceding 10,000 training examples were eligible
 to reconstruct the detached residual. This auxiliary signal reduces the chance
 that inactive features receive no useful gradient, but it does not contribute
@@ -102,7 +104,7 @@ decoder fitted to the study distribution reconstructs and steers more
 effectively.
 
 Decoder adaptation used seed 42, batches of 256, learning rate $10^{-5}$, a
-maximum of five epochs, and early-stopping patience of two. The run manifest
+maximum of 10 epochs, and early-stopping patience of five. The run manifest
 records SHA-256 hashes of the source SAE parameters, activation tensors, probe
 configuration, and cached encoder features. A separate full-fine-tuning mode
 was implemented as an exploratory comparison, but updating the encoder changes
@@ -154,14 +156,16 @@ Algorithm~\ref{alg:llm-guided-sae-editing}.
 % mechanical versus LLM-guided edits; raw-activation controls; and
 % reconstruction control.
 \section{Metrics and Statistical Analysis}
-% Flip definition, switch/broken split, confidence intervals, random baselines,
+% Flip definition, confidence intervals, random baselines,
 % and multiple-comparison handling.
 \section{Experimental Setup and Reproducibility}
 
 \subsection{Hardware and Software Environment}
 
-GPU-dependent collection, activation extraction, SAE training, and causal
-replay were run on a single NVIDIA A10G GPU with 23~GiB of device memory. The
+Individual GPU jobs for collection, activation extraction, SAE training, and
+causal replay used NVIDIA A10G devices with 23~GiB of device memory. Collection
+and causal intervention were distributed across multiple workers; each worker
+used one GPU. The
 recorded machine used four CPU cores and approximately 15.4~GiB of system
 memory for the exploratory SAE-editing workflow. The project environment is
 defined for Python~3.11 and PyTorch~2.13, with Transformers~5.x, Datasets,
@@ -185,13 +189,17 @@ response.
 
 \subsection{Randomness and Partition Integrity}
 
-Seed 42 was fixed for dataset ordering, SAE initialization and shuffling,
+Seed 42 was fixed for collection sampling, SAE initialization and shuffling,
 probe resampling, random-feature controls, and intervention ordering unless a
-run explicitly records a different seed. Question families, rather than
+run explicitly records a different seed. The final dataset split used seed 43.
+Question families, rather than
 individual episodes, define the train, validation, test, and intervention
 partitions. The code treats test and intervention partitions as sealed during
-layer and feature selection. The intervention cohort is therefore not read to
-choose a layer, SAE checkpoint, feature set, edit direction, or edit size.
+layer and feature selection. Edit-size selection used a designated 50-episode
+pilot at intervention positions 1,001--1,050; those episodes were disjoint from
+the 1,000-episode intervention study cohort. The study cohort was therefore not
+used to choose a layer, SAE checkpoint, feature set, edit direction, or edit
+size.
 
 Random controls are stored or deterministically regenerated from the frozen
 seed and episode identifiers. Completed outputs are resumed rather than

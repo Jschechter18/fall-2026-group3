@@ -3,8 +3,7 @@
     &= \sqrt{\frac{1}{Nd}\sum_{i=1}^{N}\sum_{j=1}^{d}x_{ij}^{2}},
     & \tilde{x}_i &= \frac{x_i}{s_{\mathrm{RMS}}}, \\
     a_i
-    &= W_{\mathrm{enc}}(\tilde{x}_i-b_{\mathrm{dec}})
-       + b_{\mathrm{enc}},
+    &= W_{\mathrm{enc}}\tilde{x}_i+b_{\mathrm{enc}},
     & z_i &= g(a_i), \\
     \hat{\tilde{x}}_i
     &= W_{\mathrm{dec}}z_i+b_{\mathrm{dec}},
