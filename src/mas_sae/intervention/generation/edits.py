@@ -29,6 +29,7 @@ ARMS = ("decrease", "increase", "both")
 
 
 def normalize(v: Tensor) -> Tensor:
+    """``v`` divided by its norm along the last axis. Raises ValueError if any vector is zero."""
     norm = v.norm(dim=-1, keepdim=True)
     if (norm == 0).any():
         raise ValueError("Cannot normalize a zero vector.")
@@ -36,7 +37,7 @@ def normalize(v: Tensor) -> Tensor:
 
 
 @torch.no_grad()
-def sae_feature_directions(sae, features: list[int]) -> Tensor:
+def sae_feature_directions(sae: torch.nn.Module, features: list[int]) -> Tensor:
     """Unit decoder rows of ``features``, one per row, in activation units.
 
     Both SAE kinds decode affinely, so decode(e_i) − decode(0) is feature i's decoder row with any
@@ -79,7 +80,7 @@ def edit_delta(arm: str, x: Tensor, toward: Tensor, away: Tensor, size: float) -
 
 
 @torch.no_grad()
-def reconstruction_splice(sae, x: Tensor) -> Tensor:
+def reconstruction_splice(sae: torch.nn.Module, x: Tensor) -> Tensor:
     """x' = decode(encode(x)): swaps x for the SAE's reconstruction, with no edit."""
     return sae.decoder(sae.encoder(x))
 

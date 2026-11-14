@@ -19,7 +19,9 @@ NONANSWER = re.compile(
 UNCERTAIN = re.compile(r"\b(?:maybe|perhaps|possibly|might be|either)\b", re.I)
 
 
-def answer_kind(value):
+def answer_kind(value: object) -> str:
+    """'missing' (not a string, or empty once normalized), 'nonanswer' ("n/a", "none", "null" or
+    a refusal such as "cannot determine"), 'uncertain' ("maybe", "either", ...) or 'answer'."""
     if not isinstance(value, str) or not normalize_answer(value):
         return "missing"
     value = value.replace("’", "\'").replace("‘", "\'")
@@ -30,7 +32,9 @@ def answer_kind(value):
     return "answer"
 
 
-def textual_relation(left, right):
+def textual_relation(left: object, right: object) -> str:
+    """'exact', 'containment' (one normalized text inside the other), 'different', or 'unresolved'
+    when either side is not a string or normalizes to empty. Symmetric."""
     if not isinstance(left, str) or not isinstance(right, str):
         return "unresolved"
     a, b = normalize_answer(left), normalize_answer(right)
@@ -43,7 +47,15 @@ def textual_relation(left, right):
     return "different"
 
 
-def classify_behavior(a1, a2, advocacy, *, usable=True):
+def classify_behavior(a1: object, a2: object, advocacy: object, *, usable: bool = True) -> dict:
+    """The lexical_v2 labels of one episode from A1, A2 and the Critic's advocated answer.
+
+    With ``usable`` True (the collection passes ``not feedback.noncommittal``) and both A1 and the
+    advocated answer of kind 'answer', ``solver_behavior`` is 'no_conflict' when the two match
+    exactly; when they differ as text and A2 is an answer, it is 'retained_solver_a1',
+    'adopted_critic' or 'third_answer_revision' (A2 differs from both). Everything else is
+    'ambiguous', and ``direct_critic_adoption`` is None outside those three outcomes.
+    """
     raw = textual_relation(advocacy, a1)
     relation = "ambiguous_or_unresolved"
     outcome = "ambiguous"

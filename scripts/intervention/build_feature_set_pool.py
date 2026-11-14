@@ -25,6 +25,8 @@ LABELS = (("adoption", "targeted_features", "random_control_draws"),
 
 
 def run(run_dir: Path, out_dir: Path) -> Path:
+    """Write ``out_dir/feature_sets.json`` with the full random-draw pools of ``run_dir``'s selection,
+    after ``check_same_selection``. Returns the new file's path."""
     feature_sets = read_json(run_dir / "feature_sets.json")
     summaries = read_json(run_dir / "feature_selection_summary.json")["saes"]
     check_same_selection(feature_sets, summaries)
@@ -52,11 +54,14 @@ def check_same_selection(feature_sets: dict, summaries: dict) -> None:
 
 
 def with_full_pools(feature_sets: dict, summaries: dict) -> dict:
+    """``feature_sets`` with each entry's random_draws_adoption and random_draws_retention replaced by
+    every draw in the summary."""
     return {name: {**entry, **{f"random_draws_{label}": summaries[name][draws_key] for label, _, draws_key in LABELS}}
             for name, entry in feature_sets.items()}
 
 
 def write_new(path: Path, value: dict) -> Path:
+    """Write ``value`` as JSON to ``path`` and return it. Exits (SystemExit) rather than overwrite."""
     if path.exists():
         raise SystemExit(f"{path} already exists; not overwriting it.")
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -64,11 +69,13 @@ def write_new(path: Path, value: dict) -> Path:
     return path
 
 
-def read_json(path: Path):
+def read_json(path: Path) -> dict:
+    """Parse the JSON file at ``path``."""
     return json.loads(Path(path).read_text())
 
 
 def main() -> None:
+    """Command line: build the full-pool file and print each representation's pool sizes."""
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("run_dir", type=Path, help="the feature-selection run folder (read only)")
     parser.add_argument("out_dir", type=Path, help="a new folder for the full-pool feature_sets.json")

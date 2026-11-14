@@ -2,8 +2,7 @@
 
 Master's Data Science Capstone project.
 
-Setup: [Getting started](#getting-started) and [cookbooks/setup.md](cookbooks/setup.md). Notes for the
-instructor and AI reviewer: [Messages for Professor/AI Reviewer](#messages-for-professorai-reviewer).
+Setup: [Getting started](#getting-started) and [cookbooks/setup.md](cookbooks/setup.md).
 
 ## Getting started
 
@@ -63,8 +62,10 @@ python scripts/collection/distributed_collection.py merge --manifest <run_dir>/m
 python scripts/collection/distributed_collection.py split --manifest <run_dir>/manifest.json --config <run_dir>/collection.yaml
 ```
 
-- **Inputs:** `data/MuSiQue/clean/{train,validation}.jsonl` (from `scripts/data/get_musique_dataset.py`)
-  and `data/synthetic/final/accepted.jsonl` (version `synthetic-final-001`).
+- **Inputs:** `data/MuSiQue/clean/{train,validation}.jsonl` and `data/synthetic/final/accepted.jsonl`
+  (version `synthetic-final-001`). `scripts/data/get_musique_dataset.py` writes the MuSiQue files as
+  `train.json` and `validation.json`; they already hold JSON Lines, so copy them to the `.jsonl` names
+  the config reads.
 - **Full walkthrough:** [cookbooks/runbooks/mixed_collection_pipeline.md](cookbooks/runbooks/mixed_collection_pipeline.md).
   It is written for the earlier `mixed_opus5_full_001` run name; the steps are the same. See also
   [cookbooks/distributed_collection.md](cookbooks/distributed_collection.md).
@@ -280,7 +281,7 @@ The repository also holds earlier pipelines and runs. Don't cite them as final r
 - **Archived code:** pipelines the study replaced, in `scripts/archive/` (`lexical_labels_v01/`,
   `early_smoke_tests/`, `single_machine_collection/`) and `configs/archive/`.
 - **The earlier causal pipeline:** `causal_replay`, `src/mas_sae/causal/`, `configs/causal_*.yaml`,
-  `results/causal_*`. See [docs/causal_replay/distributed_causal_replay.md](docs/causal_replay/distributed_causal_replay.md).
+  `results/causal_*`. See [cookbooks/causal_replay/distributed_causal_replay.md](cookbooks/causal_replay/distributed_causal_replay.md).
   The stage-6 intervention replaced it. Exception: `mas_sae.causal.offline` is still used by
   feature selection (stage 5).
 - **Earlier label versions:** `results/behavior/` contains older label packages besides `mixed_final_001_claude_probe`.
@@ -299,9 +300,10 @@ pytest
 | Topic                                                             | Where                                                                                                                                                                                                                          |
 | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Environment, Bedrock, Hugging Face, S3, Jupyter                   | [cookbooks/setup.md](cookbooks/setup.md)                                                                                                                                                                                       |
-| Collection tooling, condition policy, earlier single-machine runs | [docs/collection/collection.md](docs/collection/collection.md)                                                                                                                                                                 |
+| Collection tooling, condition policy, earlier single-machine runs | [cookbooks/collection/collection.md](cookbooks/collection/collection.md)                                                                                                                                                                 |
 | Distributed collection, end to end (collection → Claude labels)   | [cookbooks/runbooks/mixed_collection_pipeline.md](cookbooks/runbooks/mixed_collection_pipeline.md), [cookbooks/distributed_collection.md](cookbooks/distributed_collection.md)                                                 |
-| Episode records, provenance, activation layout                    | [docs/collection/episode_record.md](docs/collection/episode_record.md), [docs/collection/collection_provenance.md](docs/collection/collection_provenance.md), [docs/collection/activations.md](docs/collection/activations.md) |
+| Episode records, provenance, activation layout                    | [cookbooks/collection/episode_record.md](cookbooks/collection/episode_record.md), [cookbooks/collection/collection_provenance.md](cookbooks/collection/collection_provenance.md), [cookbooks/collection/activations.md](cookbooks/collection/activations.md) |
+| Earlier rule-based labels (v0.1) and the human QC guide           | [cookbooks/labels/behavior_v01.md](cookbooks/labels/behavior_v01.md), [cookbooks/labels/qc_guide.md](cookbooks/labels/qc_guide.md)                                                                                             |
 | SAE training, tuning and `sae_versions.csv`                       | [results/sae/README.md](results/sae/README.md)                                                                                                                                                                                 |
 | Pretrained SAE fine-tuning                                        | [scripts/sae/PRETRAINED_FINETUNING.md](scripts/sae/PRETRAINED_FINETUNING.md)                                                                                                                                                   |
 | Intervention design and analysis plan                             | docstring of [scripts/intervention/run_intervention.py](scripts/intervention/run_intervention.py)                                                                                                                              |
@@ -320,26 +322,30 @@ pytest
 │   ├── sae/                      # SAE training (final L1 SAE study)
 │   ├── intervention/             # Intervention experiment
 │   ├── experiments/              # Mini experiments (synthetic_pilot/, sae_improvement/)
+│   ├── validation/               # Larger-model Natural Critic check
 │   └── archive/                  # Configs of replaced pipelines and earlier runs
-├── cookbooks/                    # Setup and how-to guides; runbooks/ holds the collection runbook
+├── cookbooks/                    # Setup, how-to guides and reference notes, by stage: collection/, labels/,
+│                                 #   sae/, causal_replay/; runbooks/ holds the collection runbook
 ├── data/                         # Downloaded project datasets (gitignored)
 ├── demo/                         # Demonstrations
 │   └── fig/                      # Demo figures
-├── docs/                         # Reference documentation and history, by stage: collection/, labels/, sae/, causal_replay/; diagrams/ holds editable + SVG figures
+├── docs/                         # Project documents
+│   ├── diagrams/                 # Editable (.drawio) + SVG figures
+│   └── research_paper/           # Research paper source and materials
+│       ├── Latex/                # LaTeX paper source (figures come from reports/figures/)
+│       ├── Word/                 # Word version of the paper
+│       └── references/           # Reference PDFs for the literature review
+├── documents/                    # Literature PDFs
 ├── examples/                     # Small Claude/Bedrock examples
 ├── notebooks/                    # All Jupyter notebooks, by stage: data/, collection/, labels/, sae/, causal_replay/, intervention/ (final results)
 ├── presentation/                 # Presentation materials
 ├── proposal/                     # Project proposal and its diagram
 ├── reports/                      # Project and progress reports
-│   ├── Latex_report/             # LaTeX-format reports
+│   ├── figures/                  # Figures written by the scripts (the paper includes some)
+│   ├── tables/                   # Tables written by the scripts
 │   ├── Markdown_Report/          # Markdown-format report notes
 │   ├── Progress_Report/          # Weekly progress reports
 │   └── Word_Report/              # Word-format reports (e.g. literature review)
-├── research_paper/               # Research paper source and materials
-│   ├── Latex/                    # LaTeX paper source
-│   │   └── Fig/                  # Figures referenced by the LaTeX paper
-│   ├── Word/                     # Word version of the paper
-│   └── references/               # Reference PDFs for the literature review
 ├── results/                      # Experimental outputs and results
 ├── scripts/                      # Entry-point scripts, by pipeline stage: data/, collection/, labels/,
 │                                 #   layer_selection/, feature_selection/, sae/, intervention/;
@@ -358,7 +364,8 @@ pytest
 │   │   ├── llm_edit/             # Exploratory LLM-edited SAE: sandbox, edit rules, steer_test
 │   │   ├── models/               # Language-model loading and interaction
 │   │   ├── probe/                # Layer selection, feature selection and probes
-│   │   └── sae/                  # Sparse-autoencoder functionality
+│   │   ├── sae/                  # Sparse-autoencoder functionality
+│   │   └── utils/                # Timestamped run-folder helper
 │   ├── shellscripts/             # Shell utility scripts
 │   └── tests/                    # Unit and integration tests
 ├── environment.yml               # Conda environment and dependencies

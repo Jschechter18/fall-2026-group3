@@ -1,3 +1,10 @@
+"""Answer normalization and exact-match scoring, used by collection (stage 1), the Critic and the
+mini experiments.
+
+Matching is on normalized text (case-folded, punctuation and articles removed): it does not judge
+meaning. ``normalize_answer`` is also the normalization the lexical label rules build on.
+"""
+
 from __future__ import annotations
 
 import re
@@ -12,6 +19,8 @@ _ARTICLES = re.compile(
 
 
 def normalize_answer(value: object) -> str:
+    """``str(value)`` case-folded, with Unicode punctuation and the articles a/an/the removed and
+    whitespace collapsed. ``None`` normalizes to "none", not to an empty string."""
     text = str(value).casefold()
 
     text = "".join(
@@ -30,6 +39,8 @@ def answer_matches(
     gold: str,
     aliases: Iterable[str] = (),
 ) -> bool:
+    """True when the normalized ``candidate`` equals the normalized ``gold`` or one of ``aliases``
+    (a single string counts as one alias). None and empty answers never match."""
     if candidate is None:
         return False
 

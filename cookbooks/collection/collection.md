@@ -16,10 +16,10 @@ python scripts/data/get_musique_dataset.py
 ## Activation Collection
 
 For new mixed-dataset runs across EC2 workers, follow the
-[distributed collection workflow](../../cookbooks/distributed_collection.md): prepare one
+[distributed collection workflow](../distributed_collection.md): prepare one
 manifest, collect assigned chunks, merge, then split/export. Intervention
 membership is reserved upfront, and its baselines are included in collection.
-See also the [two-EC2 smoke-test commands](../../cookbooks/distributed_collection_smoke_test.md).
+See also the [two-EC2 smoke-test commands](../distributed_collection_smoke_test.md).
 
 ### Existing single-machine MuSiQue runs
 
@@ -75,9 +75,9 @@ Run metadata and reproducibility information are saved under:
 
 This directory contains interactions.jsonl, resolved_config.yaml, summary.json,
 collected_question_ids.json and exclusions.jsonl. The record fields are defined
-in `docs/collection/episode_record.md`, the provenance files and the identity used by
-`--resume` in `docs/collection/collection_provenance.md`, and the capture position, tensor
-layout and row indices in `docs/collection/activations.md` (including a historical MuSiQue
+in `cookbooks/collection/episode_record.md`, the provenance files and the identity used by
+`--resume` in `cookbooks/collection/collection_provenance.md`, and the capture position, tensor
+layout and row indices in `cookbooks/collection/activations.md` (including a historical MuSiQue
 partition diagram).
 
 The metadata of the finished production run (`natural_4b_full`: summaries,
@@ -86,7 +86,7 @@ committed under `results/collection/`. The labels, the partition manifest and
 the frozen question-to-partition mapping are committed under
 `results/behavior/behavior_v011_split80_10_10_20261006/`. Tensors and
 `interactions.jsonl` stay in S3. Re-runs of these historical experiments take
-their partitions from that mapping; see `docs/labels/behavior_v01.md`, "Re-running the
+their partitions from that mapping; see `cookbooks/labels/behavior_v01.md`, "Re-running the
 collection". New mixed-dataset runs use their own prepared manifest and exported
 membership instead.
 
@@ -95,7 +95,7 @@ the research partitions. For SAE and probe work use an exported partition run
 instead: `scripts/archive/single_machine_collection/export_partition_activations.py` writes the same layout under
 a new run name with the partition (train, validation, test) in place of the
 source split, following the frozen `split_manifest.csv`. See
-`docs/labels/behavior_v01.md`, section "Keeping evaluation honest".
+`cookbooks/labels/behavior_v01.md`, section "Keeping evaluation honest".
 
 ## Collection condition policy
 

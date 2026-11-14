@@ -19,14 +19,21 @@ from __future__ import annotations
 
 import contextlib
 import time
+from collections.abc import Iterator
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 import torch
 from torch import Tensor
 
+if TYPE_CHECKING:
+    from mas_sae.intervention.experiment.config import InterventionConfig
+    from mas_sae.intervention.experiment.episodes import Episode
+
 
 @dataclass
 class SolverModel:
+    """The Solver as collection configured it, its model, and the module name of the edited layer."""
     solver: object          # mas_sae.agents.solver.Solver, configured as in collection
     model: torch.nn.Module
     site: str               # module name of the edited layer, e.g. model.language_model.layers.25
@@ -34,10 +41,13 @@ class SolverModel:
 
     @property
     def layer_module(self) -> torch.nn.Module:
+        """The module at ``site``: the layer whose output is edited."""
         return dict(self.model.named_modules())[self.site]
 
 
-def load_solver(config) -> SolverModel:
+def load_solver(config: InterventionConfig) -> SolverModel:
+    """Load the Solver model and agent from ``config.solver`` (``max_new_tokens`` defaults to 64 if
+    the spec does not set it) and find the module name of layer ``config.layer``."""
     from mas_sae.activations.sites import resolve_solver_sites
     from mas_sae.agents.solver import Solver
     from mas_sae.models.roles import configure_agent, load_spec, resolve_role_spec
@@ -52,6 +62,8 @@ def load_solver(config) -> SolverModel:
 
 @dataclass
 class Generation:
+    """One generated A2 and what was recorded with it: prompt hash, generated token ids, the
+    first-token log-probabilities, the edit size as applied (None without an edit) and wall time."""
     answer: str
     prompt_sha256: str | None
     generated_token_ids: list[int]
@@ -62,9 +74,11 @@ class Generation:
 
     @property
     def first_token_id(self) -> int | None:
+        """The first generated token id; None if nothing was generated."""
         return self.generated_token_ids[0] if self.generated_token_ids else None
 
     def logprob_of(self, token_id: int | None) -> float | None:
+        """log p of ``token_id`` as the first generated token; None if ``token_id`` is None."""
         return None if token_id is None else float(self.first_token_logprobs[token_id])
 
 
@@ -148,7 +162,10 @@ class PrefillCache:
         return self.output[0, -1]
 
     @contextlib.contextmanager
-    def capture(self):
+    def capture(self) -> Iterator[PrefillCache]:
+        """Context manager around one plain generation: its prefill runs normally while each layer
+        up to L records its key/value cache update and its output. On exit, raises RuntimeError
+        unless the prefill reached every one of those layers, then keeps them for ``replay``."""
         updates, outputs = {}, {}
 
         def wrap(i, forward):
@@ -180,7 +197,11 @@ class PrefillCache:
         self.cache_updates, self.output = [updates[i] for i in range(n)], outputs[n - 1]
 
     @contextlib.contextmanager
-    def replay(self):
+    def replay(self) -> Iterator[PrefillCache]:
+        """Context manager around a later generation of the captured prompt: its prefill makes the
+        recorded cache updates instead of computing layers 0..L, and layer L returns its recorded
+        output (forward hooks on it still run). Raises RuntimeError if nothing was captured or a
+        captured layer was skipped, ValueError if the prefill's shape is not the captured prompt's."""
         if self.output is None:
             raise RuntimeError("Capture a generation before replaying it.")
         replayed, last = set(), len(self.layers) - 1
@@ -233,7 +254,7 @@ def _generation(solver_model: SolverModel, answer: str, logprobs: FirstTokenLogp
                       first_token_logprobs=logprobs.logprobs, applied_relative_size=applied, seconds=seconds)
 
 
-def generate_baseline(solver_model: SolverModel, episode) -> tuple[Generation, PrefillCache]:
+def generate_baseline(solver_model: SolverModel, episode: Episode) -> tuple[Generation, PrefillCache]:
     """The plain A2 (no SAE, no edit), recording layers 0..L of its prefill for the episode's other conditions."""
     prefill = PrefillCache(solver_model.model, solver_model.site)
     start = time.perf_counter()
@@ -242,7 +263,7 @@ def generate_baseline(solver_model: SolverModel, episode) -> tuple[Generation, P
     return _generation(solver_model, answer, logprobs, None, time.perf_counter() - start), prefill
 
 
-def generate_with_activation(solver_model: SolverModel, episode, x: Tensor, x_new: Tensor,
+def generate_with_activation(solver_model: SolverModel, episode: Episode, x: Tensor, x_new: Tensor,
                              prefill: PrefillCache | None) -> Generation:
     """A2 with the final prompt activation ``x`` replaced by ``x_new``.
 

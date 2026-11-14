@@ -1,3 +1,8 @@
+"""Minimal Claude client on Amazon Bedrock (``invoke_model`` with the Anthropic Messages body).
+
+Used by the Claude labelers (stage-2 behavior labels, intervention and causal-replay labels),
+feature interpretation and synthetic question generation.
+"""
 import json
 from dataclasses import dataclass
 
@@ -58,7 +63,7 @@ class ClaudeClient:
             Responses may finish before reaching this limit.
         temperature : float, None, optional
             None omits the parameter from the API request.
-            Controls randomnes in generation. Lower values favor more consistent responses.
+            Controls randomness in generation. Lower values favor more consistent responses.
             This is especially useful for controlling the creativity of the model's responses, consider with data generation.
         """
         if not prompt.strip():
@@ -107,7 +112,7 @@ class ClaudeClient:
         )
 
     
-    def close(self):
+    def close(self) -> None:
         """Close the underlying Bedrock client's network connections.
         """
         self._client.close()

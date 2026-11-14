@@ -1,6 +1,8 @@
 """Question membership, origin metadata, and actual row addresses for mixed runs."""
 from collections import Counter
+from collections.abc import Iterable, Sequence
 from pathlib import Path
+from typing import Any
 
 from mas_sae.data.production import MANIFEST_FIELDS, PARTITIONS, _activation_index, _check_indices_are_unique
 from mas_sae.experiments.artifacts import sha256_file, write_json_atomic
@@ -10,7 +12,7 @@ SOURCE_FIELDS = ("dataset_source", "original_id", "original_source_split")
 EXPOSURE_FIELDS = ("in_qc100", "in_development_data")
 
 
-def optional_bool(value):
+def optional_bool(value: str | bool | None) -> bool | None:
     """Unknown exposure history remains unknown rather than becoming false."""
     if value is None or value == "":
         return None
@@ -24,7 +26,8 @@ def optional_bool(value):
 
 
 
-def canonical_partitions(questions, *, storage_split=None):
+def canonical_partitions(questions: Iterable[dict[str, Any]], *,
+                         storage_split: str | None = None) -> dict[str, dict[str, Any]]:
     """Keep permanent membership separate from the storage address of this run."""
     result = {}
     for row in questions:
@@ -44,7 +47,9 @@ def canonical_partitions(questions, *, storage_split=None):
     return result
 
 
-def build_collected_manifest(rows, frozen, *, exclusions=(), coverage="complete"):
+def build_collected_manifest(rows: Sequence[dict[str, Any]], frozen: dict[str, dict[str, Any]], *,
+                             exclusions: Sequence[dict[str, Any]] = (),
+                             coverage: str = "complete") -> dict[str, dict[str, Any]]:
     """Construct addresses from actual records, never from master dataset positions."""
     if coverage not in {"complete", "subset"}:
         raise ValueError("coverage must be complete or subset")
@@ -70,7 +75,9 @@ def build_collected_manifest(rows, frozen, *, exclusions=(), coverage="complete"
     return result
 
 
-def write_run_tables(output_dir, frozen, partitions, exclusions):
+def write_run_tables(output_dir: str | Path, frozen: dict[str, dict[str, Any]],
+                     partitions: Sequence[str],
+                     exclusions: Sequence[dict[str, Any]]) -> dict[str, dict[str, Any]]:
     """Write final addresses and hashes after the exported records are normalized."""
     from mas_sae.data.production import write_manifest, write_partitions
     root = Path(output_dir)

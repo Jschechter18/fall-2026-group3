@@ -3,8 +3,9 @@
 Two protocols, both restricted to the DEVELOPMENT partitions (``test`` and ``intervention`` are
 sealed and can never be requested):
 
-  holdout  fit the probe on `train`, rank layers on `validation`   (the contract; used by
-           configs/layer_selection_full9.yaml, the authoritative run)
+  holdout  fit the probe on `train`, rank layers on `validation`   (the contract; used by the
+           final configs/layer_selection/layer_selection_mixed_final_001.yaml and the earlier
+           configs/layer_selection_full9.yaml)
   cv       question-grouped CV over `train` + `validation`          (NOT the contract: it fits on
            validation rows; no config uses it)
 
@@ -27,6 +28,7 @@ import logging
 import platform
 import sys
 import warnings
+from collections.abc import Callable, Sequence
 from dataclasses import asdict, dataclass, field, fields
 from pathlib import Path
 
@@ -65,6 +67,12 @@ PROVENANCE_PACKAGES = ("numpy", "pandas", "scikit-learn", "scipy", "torch", "pyy
 
 @dataclass
 class LayerSelectionConfig:
+    """Settings of one layer-selection run (stage 3), read from YAML by ``from_yaml``.
+
+    Data paths are relative to ``capstone_data_root``. The defaults describe the earlier full
+    nine-layer run; the final config (configs/layer_selection/layer_selection_mixed_final_001.yaml)
+    sets its own data paths, the Claude binary contract and the baselines.
+    """
     # Defaults match configs/layer_selection_full9.yaml: the official full nine-layer export
     # (activations and interactions from the same export) and the Behavior v0.1.2 package.
     capstone_data_root: Path = Path(".")
@@ -126,10 +134,13 @@ class LayerSelectionConfig:
 
     @property
     def class_names(self) -> tuple[str, str]:
+        """(target 1, target 0): ``target_labels`` when set, else ``DEFAULT_CLASSES``."""
         return tuple(self.target_labels) if self.target_labels else DEFAULT_CLASSES
 
     @classmethod
     def from_yaml(cls, path: Path) -> "LayerSelectionConfig":
+        """Load a config file. Unknown keys, an unknown ``protocol`` or ``permutation_layers``, and an
+        inconsistent binary contract (``target_labels`` / ``label_column``) raise ValueError."""
         with open(path) as f:
             raw = yaml.safe_load(f) or {}
         unknown = set(raw) - {f.name for f in fields(cls)}
@@ -172,7 +183,7 @@ def _metadata_model(C: float, seed: int) -> Pipeline:
     ])
 
 
-def positive_scores(model, X, positive: str) -> np.ndarray:
+def positive_scores(model: Pipeline, X: np.ndarray, positive: str) -> np.ndarray:
     """Decision scores that increase toward ``positive``. A binary ``decision_function`` points toward
     ``classes_[1]``, and string classes sort alphabetically (``adopted_critic`` < ``not_adopted``),
     so the raw scores can point the wrong way."""
@@ -180,7 +191,7 @@ def positive_scores(model, X, positive: str) -> np.ndarray:
     return scores if model.classes_[1] == positive else -scores
 
 
-def raw_unit_weights(model, positive: str) -> tuple[np.ndarray, float]:
+def raw_unit_weights(model: Pipeline, positive: str) -> tuple[np.ndarray, float]:
     """(w, b) of a scaler + logistic probe in raw activation units, oriented toward ``positive``:
     ``X @ w + b`` equals ``positive_scores(model, X, positive)``."""
     scaler, clf = model.named_steps["scale"], model.named_steps["clf"]
@@ -229,7 +240,9 @@ def _fit_counting_warnings(make_model, X, y, groups, cfg, progress_desc=None):
     return model, C, sum(issubclass(w.category, ConvergenceWarning) for w in caught)
 
 
-def oof_predict(make_model, X, y, groups, folds, c_grid, inner_folds, seed):
+def oof_predict(make_model: Callable[[float], Pipeline], X: np.ndarray, y: np.ndarray,
+                groups: np.ndarray, folds: list[tuple[np.ndarray, np.ndarray]], c_grid: Sequence[float],
+                inner_folds: int, seed: int) -> tuple[np.ndarray, int, list[float]]:
     """Out-of-fold predictions. Scaler/vectorizer AND C are refit inside every outer fold."""
     y, groups = np.asarray(y), np.asarray(groups)
     pred = np.empty(len(y), dtype=y.dtype)
@@ -354,7 +367,10 @@ def _permuted_layers(out, layer_matrices, cfg) -> list[str]:
     return list(layer_matrices) if cfg.permutation_layers == "all" else [out["top_layer_by_balanced_accuracy"]]
 
 
-def compare_layers(layer_matrices, y, groups, texts, cfg, subgroups=None, units=None, metadata=None) -> dict:
+def compare_layers(layer_matrices: dict[str, np.ndarray], y: np.ndarray, groups: np.ndarray,
+                   texts: np.ndarray | None, cfg: LayerSelectionConfig,
+                   subgroups: np.ndarray | None = None, units: np.ndarray | None = None,
+                   metadata: np.ndarray | None = None) -> dict:
     """`cv` protocol: grouped CV over the given rows (all from development partitions). ``units`` are
     what label-shuffle controls permute (questions); they default to ``groups``."""
     y, groups = np.asarray(y), np.asarray(groups)
@@ -375,8 +391,10 @@ def compare_layers(layer_matrices, y, groups, texts, cfg, subgroups=None, units=
     return out
 
 
-def compare_layers_holdout(layer_matrices, y, groups, is_fit, texts, cfg, subgroups=None, units=None,
-                           metadata=None) -> dict:
+def compare_layers_holdout(layer_matrices: dict[str, np.ndarray], y: np.ndarray, groups: np.ndarray,
+                           is_fit: np.ndarray, texts: np.ndarray | None, cfg: LayerSelectionConfig,
+                           subgroups: np.ndarray | None = None, units: np.ndarray | None = None,
+                           metadata: np.ndarray | None = None) -> dict:
     """`holdout` protocol: fit on the rows where ``is_fit`` is True, score on all the others.
 
     ``groups`` (families) are never split by the holdout, the inner CV or the bootstrap; ``units``
@@ -504,7 +522,8 @@ def _distinct(labels: pd.DataFrame, column: str) -> list[str]:
     return sorted(labels[column].dropna().astype(str).unique().tolist()) if column in labels else []
 
 
-def load_inputs(cfg: LayerSelectionConfig, cols: bd.Columns | None = None):
+def load_inputs(cfg: LayerSelectionConfig,
+                cols: bd.Columns | None = None) -> tuple[pd.DataFrame, dict, bd.Columns]:
     """Read, align and filter everything except the activation tensors."""
     cols = cols or bd.Columns(target=cfg.target_column, eligible=cfg.eligible_column, label=cfg.label_column)
     if "REPLACE_ME" in str(cfg.manifest_csv) or "REPLACE_ME" in str(cfg.labels_csv):
@@ -576,7 +595,7 @@ def breakdowns(res: dict, y_eval: np.ndarray, fields: dict[str, np.ndarray], pos
     return pd.DataFrame(rows)
 
 
-def save_probes(models: dict, layer_names, positive: str, out_dir: Path) -> dict[str, str]:
+def save_probes(models: dict, layer_names: list[str], positive: str, out_dir: Path) -> dict[str, str]:
     """Each layer's fitted probe as raw-unit weights toward ``positive`` (``X @ w + b`` = its score)."""
     out_dir.mkdir()
     hashes = {}
@@ -592,6 +611,14 @@ def save_probes(models: dict, layer_names, positive: str, out_dir: Path) -> dict
 
 
 def run(cfg: LayerSelectionConfig, cols: bd.Columns | None = None) -> Path:
+    """Compare every configured layer (and the baselines) under ``cfg.protocol`` and return the new
+    timestamped folder under ``output_dir``.
+
+    Writes ``layer_comparison.csv`` (one row per candidate), ``layer_selection_summary.json``
+    (comparison, diagnostics, config and provenance) and ``rows_and_folds.csv`` (the exact rows
+    used). A holdout run also writes ``breakdowns.csv`` and, for a binary target, each layer's
+    probe under ``probes/``.
+    """
     selected, diag, cols = load_inputs(cfg, cols)
     y = selected["target_name"].to_numpy()
     response = selected[cols.response].astype(str).to_numpy() if cols.response in selected else None

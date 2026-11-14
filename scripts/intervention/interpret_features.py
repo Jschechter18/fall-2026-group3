@@ -144,6 +144,7 @@ def as_bool(value) -> bool:
 
 @dataclass(frozen=True)
 class Feature:
+    """One targeted feature: its representation, index, intervention set and probe coefficient."""
     representation: str
     feature: int
     feature_set: str              # "adoption" or "retention": the intervention set it belongs to
@@ -151,6 +152,8 @@ class Feature:
 
 
 def selected_features(feature_sets: dict) -> list[Feature]:
+    """Every targeted feature in feature_sets.json: per representation, the adoption set then the
+    retention set, in file order."""
     features = []
     for representation, entry in feature_sets.items():
         for feature_set in ("adoption", "retention"):
@@ -173,7 +176,8 @@ def load_representations(config: FeatureSelectionConfig, feature_sets: dict) -> 
 
 
 @torch.no_grad()
-def feature_values(sae, activations: np.ndarray, features: list[int], batch_size: int = 1024) -> np.ndarray:
+def feature_values(sae: torch.nn.Module, activations: np.ndarray, features: list[int],
+                   batch_size: int = 1024) -> np.ndarray:
     """episodes × features: each feature's value in each episode. Only the selected columns are kept,
     so the full (episodes × 16k) code matrix is never held in memory."""
     batches = []
@@ -290,7 +294,7 @@ class LogitLens:
         return repr(self.tokenizer.decode([token_id]))     # repr keeps leading spaces visible
 
 
-def feature_direction(sae, feature: int) -> torch.Tensor:
+def feature_direction(sae: torch.nn.Module, feature: int) -> torch.Tensor:
     """The direction 'more of this feature' adds to the activation (for raw neurons, the unit vector)."""
     return sae_feature_directions(sae, [feature])[0]
 
@@ -306,11 +310,13 @@ SYSTEM_PROMPT = (
 
 
 def shorten(text: str) -> str:
+    """Whitespace collapsed and cut to MAX_TEXT_CHARACTERS (marked with " …"), for Claude's prompts."""
     text = " ".join(str(text).split())
     return text if len(text) <= MAX_TEXT_CHARACTERS else text[:MAX_TEXT_CHARACTERS].rstrip() + " …"
 
 
 def render_episode(number: int, episode: pd.Series) -> str:
+    """One numbered episode as prompt text: question, A1, C1 and A2 (each shortened) and its label."""
     return (f"Episode {number}\n"
             f"  Question: {shorten(episode.question)}\n"
             f"  A1 (Solver's first answer): {shorten(episode.a1)}\n"
@@ -333,6 +339,8 @@ def high_and_low_episodes(values: np.ndarray, count: int, seed: int) -> tuple[np
 
 
 def describe_prompt(high: pd.DataFrame, low: pd.DataFrame) -> str:
+    """The describe request: the HIGH and LOW episodes, and a request for the one-sentence concept that
+    separates them, with a confidence, as JSON."""
     high_text = "\n\n".join(render_episode(i + 1, row) for i, (_, row) in enumerate(high.iterrows()))
     low_text = "\n\n".join(render_episode(i + 1, row) for i, (_, row) in enumerate(low.iterrows()))
     return (
@@ -345,6 +353,8 @@ def describe_prompt(high: pd.DataFrame, low: pd.DataFrame) -> str:
 
 
 def test_prompt(description: str, episodes: pd.DataFrame) -> str:
+    """The test request: Claude's ``description`` and the episodes to rate 0-10 for how active the
+    feature is, as JSON integers in episode order."""
     episode_text = "\n\n".join(render_episode(i + 1, row) for i, (_, row) in enumerate(episodes.iterrows()))
     return (
         f"A feature has been described as: \"{description}\"\n\n"
@@ -482,6 +492,8 @@ class ClaudeJob:
 
 
 def main() -> None:
+    """Questions 1-3 for each selected feature, then question 4 (Claude) for all of them concurrently
+    unless --skip-claude; writes everything to a new folder under OUTPUT_ROOT."""
     args = parse_arguments()
     config = FeatureSelectionConfig.from_yaml(args.feature_selection_config)
     feature_sets = json.loads(args.feature_sets.read_text())
@@ -547,7 +559,11 @@ def main() -> None:
     print(f"Done: {run_dir}")
 
 
-def write_outputs(run_dir: Path, args, config, summary_rows, profile_rows, lens_rows, example_frames) -> None:
+def write_outputs(run_dir: Path, args: argparse.Namespace, config: FeatureSelectionConfig,
+                  summary_rows: list[dict], profile_rows: list[pd.DataFrame], lens_rows: list[dict],
+                  example_frames: list[pd.DataFrame]) -> None:
+    """Write the CSVs listed in the module docstring and ``run.json`` (inputs, settings, git commit)
+    into ``run_dir``; example_episodes.csv only if Claude was asked."""
     pd.DataFrame(summary_rows).to_csv(run_dir / "feature_summary.csv", index=False)
     pd.concat(profile_rows).to_csv(run_dir / "concept_profiles.csv", index=False)
     pd.DataFrame(lens_rows).to_csv(run_dir / "logit_lens.csv", index=False)
@@ -567,6 +583,7 @@ def write_outputs(run_dir: Path, args, config, summary_rows, profile_rows, lens_
 
 
 def parse_arguments() -> argparse.Namespace:
+    """The command-line options (see the module docstring)."""
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--feature-sets", type=Path, default=FEATURE_SETS)
     parser.add_argument("--feature-selection-config", type=Path, default=FEATURE_SELECTION_CONFIG)

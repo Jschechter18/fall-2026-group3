@@ -1,3 +1,9 @@
+"""JSON Lines and CSV readers/writers for experiment records.
+
+Collection writes its episodes as ``interactions.jsonl`` with ``write_jsonl``; later stages
+read them back with ``read_jsonl``.
+"""
+
 from __future__ import annotations
 
 import csv

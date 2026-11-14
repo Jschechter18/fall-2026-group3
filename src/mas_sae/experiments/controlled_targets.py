@@ -48,6 +48,8 @@ class EntitySubtype(StrEnum):
 
 
 class TargetSource(StrEnum):
+    """Which generator step produced a controlled-incorrect target (see the module docstring)."""
+
     HOP_INTERMEDIATE = "hop_intermediate"
     CONTEXT_SPAN = "context_span"
     LLM_DISTRACTOR = "llm_distractor"
@@ -61,6 +63,9 @@ MAX_TARGET_WORDS = 8
 
 @dataclass(frozen=True)
 class ControlledTarget:
+    """A chosen controlled-incorrect target, its source step and ``type_check`` result
+    (``"pass"`` or ``"unchecked"``)."""
+
     answer: str
     source: TargetSource
     type_check: str

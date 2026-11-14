@@ -1,16 +1,28 @@
+"""The stage-1 Critic: reviews Solver Attempt 1 and produces the feedback Attempt 2 sees.
+
+The natural condition lets the Critic model judge the answer itself (optionally answering blind
+first); the controlled conditions make it argue for a supplied target answer.
+"""
+
 from __future__ import annotations
 
 import json
 from collections.abc import Sequence
 from dataclasses import dataclass, replace
 from enum import StrEnum
+from typing import TYPE_CHECKING, Any
 
 from mas_sae.agents.base import Agent
 from mas_sae.agents.solver import Solver
 from mas_sae.evaluation.scoring import answer_matches
 
+if TYPE_CHECKING:
+    from mas_sae.agents.base import ProcessorProtocol
+
 
 class CriticCondition(StrEnum):
+    """Feedback condition: the Critic's own judgement, or advocacy of the gold or a wrong target."""
+
     NATURAL = "natural"
     CONTROLLED_CORRECT = "controlled_correct"
     CONTROLLED_INCORRECT = "controlled_incorrect"
@@ -27,6 +39,14 @@ class CriticBlindAnswerError(RuntimeError):
 
 @dataclass(frozen=True)
 class CriticFeedback:
+    """One parsed Critic review.
+
+    ``noncommittal`` is True when a natural review lacks a valid verdict or an advocated answer.
+    Controlled reviews from ``Critic.critique`` are never noncommittal; their verdict comes from
+    matching the target against Attempt 1, not from the text. ``raw_output`` is the unparsed
+    generation.
+    """
+
     condition: CriticCondition
     verdict: str | None
     advocated_answer: str | None
@@ -39,6 +59,9 @@ class CriticFeedback:
     blind_answer: str | None = None
 
     def to_solver_text(self) -> str:
+        """The feedback text shown to the Solver: a verdict sentence, then the advocated answer
+        and the explanation when present (for controlled reviews the explanation is the whole
+        generated review). ``blind_answer`` is never included."""
         if self.verdict == "agree":
             verdict_text = "The reviewer agrees with your previous answer."
         elif self.verdict == "disagree":
@@ -226,10 +249,12 @@ def _parse_answer_json(raw_output: str) -> str | None:
 
 
 class Critic(Agent):
+    """Reviewer agent that critiques Solver Attempt 1 under one ``CriticCondition``."""
+
     def __init__(
         self,
-        model,
-        processor,
+        model: Any,
+        processor: ProcessorProtocol,
         max_new_tokens: int = 128,
         *,
         blind_then_compare: bool = False,
@@ -311,6 +336,12 @@ class Critic(Agent):
 
     @staticmethod
     def parse_natural(raw_output: str) -> CriticFeedback:
+        """Parse a natural review from the first JSON object in ``raw_output``.
+
+        ``verdict`` is kept only if it is "agree" or "disagree" (case-insensitive); an empty
+        ``advocated_answer`` becomes None. Missing JSON, verdict or answer makes the feedback
+        ``noncommittal``. Text after the JSON object is ignored.
+        """
         parsed = _extract_first_json_object(raw_output)
 
         if parsed is None:

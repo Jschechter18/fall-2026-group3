@@ -1,3 +1,6 @@
+"""Stage-1 collection loop: choose the questions, run each through ``run_question``, and gather
+episode records, exclusions and per-site activation rows with their indices."""
+
 from __future__ import annotations
 
 import json
@@ -164,11 +167,11 @@ def collect_examples(
     """Collect paired Solver-Critic episodes and activation-row mappings.
 
     Each question is passed once to ``run_question``. That call generates one
-    Solver Attempt 1 and reuses it across natural, controlled-correct, and
-    controlled-incorrect critic conditions. The three resulting records share
-    one Attempt 1 activation index, while each Attempt 2 has its own index.
-    When ``experiment_splits`` is given, all three records of a question also
-    share that question's ``experiment_split``.
+    Solver Attempt 1 and reuses it across the active critic conditions and A2
+    presentations (by default natural, controlled-correct and controlled-incorrect).
+    The resulting records share one Attempt 1 activation index, while each
+    Attempt 2 has its own index. When ``experiment_splits`` is given, all records
+    of a question also share that question's ``experiment_split``.
 
     A question whose treatment cannot be constructed (``run_question`` raises
     ``CriticBlindAnswerError`` or ``ControlledTargetError``) is skipped with

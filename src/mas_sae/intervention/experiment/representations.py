@@ -16,6 +16,7 @@ import hashlib
 import json
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
 import torch
@@ -26,11 +27,15 @@ from mas_sae.intervention.generation import edits
 from mas_sae.intervention.experiment.config import InterventionConfig
 from mas_sae.probe.feature_selection import load_sae, sae_files
 
+if TYPE_CHECKING:
+    from mas_sae.intervention.experiment.config import Representation as RepresentationSpec
+
 LABELS = ("adoption", "retention")
 
 
 @dataclass(frozen=True)
 class FeatureSet:
+    """One feature set of a representation: its features and the unit direction u_S it is steered along."""
     label: str                 # adoption | retention: the label the set is associated with
     source: str                # targeted | random
     draw: int | None           # index in the random draw pool (None for targeted)
@@ -40,6 +45,8 @@ class FeatureSet:
 
 @dataclass
 class Representation:
+    """One representation as the run uses it: the SAE (None for raw activations), its width, its
+    targeted set and pool of random sets per label, each with its direction, and its encoder hash."""
     name: str
     kind: str                  # activations | custom | gemma_scope
     role: str                  # control | primary | exploratory
@@ -51,15 +58,19 @@ class Representation:
 
     @property
     def is_sae(self) -> bool:
+        """True for an SAE, False for raw activations."""
         return self.sae is not None
 
     def feature_set(self, label: str, source: str, draw: int | None) -> FeatureSet:
+        """The targeted set for ``label``, or its random set at pool index ``draw`` (not a draw slot)."""
         return self.targeted[label] if source == "targeted" else self.random[label][draw]
 
     def set_cosine(self) -> float:
+        """cos(u_adoption, u_retention) of the two targeted sets."""
         return edits.set_cosine(self.targeted["adoption"].direction, self.targeted["retention"].direction)
 
-    def to(self, device) -> "Representation":
+    def to(self, device: torch.device | str) -> "Representation":
+        """Move the SAE and every set direction to ``device``, in place; returns self."""
         move = lambda s: FeatureSet(s.label, s.source, s.draw, s.features, s.direction.to(device))
         self.sae = None if self.sae is None else self.sae.to(device)
         self.targeted = {k: move(s) for k, s in self.targeted.items()}
@@ -68,16 +79,17 @@ class Representation:
 
 
 def read_feature_sets(path: Path) -> dict:
+    """``feature_sets.json`` from feature selection: {representation name: its entry}."""
     return json.loads(Path(path).read_text())
 
 
-def checkpoint_sha256(spec) -> dict:
+def checkpoint_sha256(spec: RepresentationSpec) -> dict:
     """sha256 of each file a representation is loaded from, keyed as feature selection recorded them."""
     spec = {"kind": spec.kind, "path": spec.path}
     return {str(p): sha256_file(p) for p in sae_files(spec, Path("."))}
 
 
-def encoder_id(sae) -> str:
+def encoder_id(sae: torch.nn.Module) -> str:
     """Hash of every encoder parameter (all state tensors except the decoder's)."""
     digest = hashlib.sha256()
     for name, tensor in sorted(sae.state_dict().items()):
@@ -87,7 +99,7 @@ def encoder_id(sae) -> str:
     return digest.hexdigest()
 
 
-def load_basis(spec, layer: int) -> tuple[torch.nn.Module | None, int]:
+def load_basis(spec: RepresentationSpec, layer: int) -> tuple[torch.nn.Module | None, int]:
     """(sae, width). Raw activations have no SAE: their width is the length of the center file."""
     if spec.kind == "activations":
         return None, int(np.load(spec.path).shape[0])
@@ -125,7 +137,12 @@ def _directions(sae, width: int, features: list[int], signs: list[int]) -> Tenso
     return edits.sae_feature_directions(sae, features)
 
 
-def build_representation(name: str, spec, entry: dict, sae, width: int, pool_size: int) -> Representation:
+def build_representation(name: str, spec: RepresentationSpec, entry: dict, sae: torch.nn.Module | None,
+                         width: int, pool_size: int) -> Representation:
+    """The Representation for one ``feature_sets.json`` ``entry``, with every set's direction computed.
+
+    Targeted raw neurons are signed by their probe coefficient toward the set's label; SAE features use
+    their unit decoder rows. The random sets are the first ``pool_size`` draws per label, unsigned."""
     def targeted_set(label):
         rows = entry[f"{label}_features"]
         toward = 1 if label == "adoption" else -1          # coefficients are toward adoption

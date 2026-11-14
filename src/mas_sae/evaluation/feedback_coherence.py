@@ -99,11 +99,12 @@ RULES = {
 }
 
 
-def rules_sha256():
+def rules_sha256() -> str:
+    """sha256 of ``RULES`` (every pattern and decision rule) as sorted-key JSON, for provenance."""
     return hashlib.sha256(json.dumps(RULES, sort_keys=True).encode()).hexdigest()
 
 
-def critic_reached_token_budget(telemetry):
+def critic_reached_token_budget(telemetry: dict | None) -> bool:
     """True if any recorded Critic review generation stopped at its token budget."""
     reviews = (telemetry or {}).get("critic_review") or []
     if isinstance(reviews, dict):
@@ -125,7 +126,7 @@ def _affirms(text, answer):
     return False
 
 
-def position_clauses(explanation):
+def position_clauses(explanation: str) -> list[str]:
     """The explanation's statements of the Critic's position."""
     clauses = [m.group(0) for m in POSITION_CLAUSE.finditer(explanation)]
     cues = list(CONCLUSION_CUE.finditer(explanation))
@@ -134,7 +135,7 @@ def position_clauses(explanation):
     return clauses
 
 
-def assess(raw_output, a1, *, telemetry=None):
+def assess(raw_output: str | None, a1: object, *, telemetry: dict | None = None) -> dict:
     """Assess the feedback that reached the Solver.
 
     ``raw_output`` is the Critic's raw review output, parsed with the same

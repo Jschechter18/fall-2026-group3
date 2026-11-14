@@ -18,15 +18,22 @@ baseline samples the whole pool rather than the same few sets.
 from __future__ import annotations
 
 import hashlib
+from collections.abc import Iterable
 from dataclasses import asdict, dataclass
+from typing import TYPE_CHECKING
 
 import numpy as np
 
 from mas_sae.intervention.generation.edits import ARMS
 
+if TYPE_CHECKING:
+    from mas_sae.intervention.experiment.representations import FeatureSet, Representation
+
 
 @dataclass(frozen=True)
 class Condition:
+    """One generation of an episode: the baseline, an SAE's reconstruction splice, or an edit of one
+    representation (arm, targeted set or random draw slot, size r). ``key`` names it in results files."""
     kind: str                        # baseline | reconstruction | edit
     representation: str | None = None
     arm: str | None = None           # decrease | increase | both
@@ -41,6 +48,7 @@ class Condition:
         return "|".join("" if p is None else str(p) for p in parts).rstrip("|")
 
     def as_dict(self) -> dict:
+        """The fields as a dict (copied into each results row)."""
         return asdict(self)
 
 
@@ -54,7 +62,9 @@ def edit_conditions(representation: str, edit_size: float, n_draws: int) -> list
             for source, draw in [("targeted", None), *(("random", k) for k in range(n_draws))]]
 
 
-def study_conditions(representations, edit_size: float, n_draws: int) -> list[Condition]:
+def study_conditions(representations: list[Representation], edit_size: float, n_draws: int) -> list[Condition]:
+    """Every study condition of an episode, in order: the baseline, one reconstruction splice per SAE,
+    then each representation's edits at ``edit_size`` (``edit_conditions``)."""
     conditions = [BASELINE]
     conditions += [Condition("reconstruction", r.name) for r in representations if r.is_sae]
     for r in representations:
@@ -62,7 +72,8 @@ def study_conditions(representations, edit_size: float, n_draws: int) -> list[Co
     return conditions
 
 
-def choose_r_conditions(representations, edit_sizes, n_draws: int) -> list[Condition]:
+def choose_r_conditions(representations: list[Representation], edit_sizes: Iterable[float],
+                        n_draws: int) -> list[Condition]:
     """Baseline, then every edit at every candidate size for the given (primary) SAEs."""
     conditions = [BASELINE]
     for size in edit_sizes:
@@ -85,7 +96,8 @@ def pool_draw(condition: Condition, random_draws: list[int]) -> int | None:
     return random_draws[condition.draw] if condition.source == "random" else None
 
 
-def sets_for(condition: Condition, representation, stored_label: str, random_draws: list[int]):
+def sets_for(condition: Condition, representation: Representation, stored_label: str,
+             random_draws: list[int]) -> tuple[FeatureSet, FeatureSet, str]:
     """(toward, away, edited set name) for an edit condition on an episode with ``stored_label``.
 
     ``toward`` is the set of the label we flip to, ``away`` the stored label's set. For a random
@@ -99,7 +111,7 @@ def sets_for(condition: Condition, representation, stored_label: str, random_dra
     return toward, away, edited
 
 
-def edited_features(condition: Condition, toward, away) -> list[int]:
+def edited_features(condition: Condition, toward: FeatureSet, away: FeatureSet) -> list[int]:
     """The features whose direction an edit moves along."""
     return {"increase": toward.features, "decrease": away.features,
             "both": [*toward.features, *away.features]}[condition.arm]

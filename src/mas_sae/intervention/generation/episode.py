@@ -13,11 +13,19 @@ Per episode:
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import torch
 
 from mas_sae.intervention.generation import edits
 from mas_sae.intervention.experiment.conditions import Condition, edited_features, pool_draw, sets_for
 from mas_sae.intervention.generation.solver import generate_baseline, generate_with_activation
+
+if TYPE_CHECKING:
+    from mas_sae.intervention.experiment.episodes import Episode
+    from mas_sae.intervention.experiment.representations import Representation
+    from mas_sae.intervention.generation.solver import Generation, SolverModel
+    from mas_sae.intervention.run_files.results_file import ResultsFile
 
 
 @torch.no_grad()
@@ -34,8 +42,8 @@ def encode_once(x: torch.Tensor, representations: dict) -> dict:
     return codes
 
 
-def apply_condition(condition: Condition, x: torch.Tensor, rep, stored_label: str, codes: dict,
-                    random_draws: list[int]):
+def apply_condition(condition: Condition, x: torch.Tensor, rep: Representation, stored_label: str, codes: dict,
+                    random_draws: list[int]) -> tuple[torch.Tensor, edits.EditDiagnostics, str | None]:
     """(x', diagnostics, edited set name) for a reconstruction or edit condition. ``x`` is float32;
     ``random_draws`` are the question's pool indices (``conditions.random_draws_for``)."""
     z, reconstruction = codes.get(rep.name, (None, None))
@@ -47,7 +55,8 @@ def apply_condition(condition: Condition, x: torch.Tensor, rep, stored_label: st
     return x + delta, diagnostics, edited_set
 
 
-def make_row(episode, condition: Condition, generation, baseline, diagnostics, edited_set,
+def make_row(episode: Episode, condition: Condition, generation: Generation, baseline: Generation,
+             diagnostics: edits.EditDiagnostics | None, edited_set: str | None,
              random_pool_draw: int | None = None) -> dict:
     """One results-file line: what was generated, under which condition, and how the edit went."""
     return {
@@ -71,7 +80,9 @@ class BaselineMismatch(RuntimeError):
     """This worker's baseline of one episode differs from prepare's: the run worker excludes that episode."""
 
 
-def require_same_baseline(baseline, prepared: dict, episode) -> None:
+def require_same_baseline(baseline: Generation, prepared: dict, episode: Episode) -> None:
+    """Raise BaselineMismatch unless ``baseline`` has the prompt hash, answer and first token of
+    prepare's baseline row ``prepared`` for this episode."""
     differs = [name for name, ours, theirs in (("prompt", baseline.prompt_sha256, prepared["prompt_sha256"]),
                                                ("answer", baseline.answer, prepared["answer"]),
                                                ("first token", baseline.first_token_id, prepared["first_token_id"]))
@@ -81,7 +92,8 @@ def require_same_baseline(baseline, prepared: dict, episode) -> None:
                                f"({', '.join(differs)}); its edits would not be comparable.")
 
 
-def generate_episode(solver_model, episode, conditions: list[Condition], representations: dict, results,
+def generate_episode(solver_model: SolverModel, episode: Episode, conditions: list[Condition],
+                     representations: dict, results: ResultsFile,
                      random_draws: list[int], prepared_baseline: dict | None = None,
                      use_prefill_cache: bool = True) -> int:
     """Generate every condition of ``episode`` not yet in ``results``. Returns how many were generated.

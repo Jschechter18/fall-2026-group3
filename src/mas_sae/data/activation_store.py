@@ -1,3 +1,10 @@
+"""Local ``.pt`` storage for activation matrices.
+
+Stage-1 collection writes each layer's activations through this store
+(``layer_NN/<split>_attempt{1,2}.pt`` and the stacked ``<split>.pt``); the probe, SAE and export
+code read them back.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -52,6 +59,8 @@ class ActivationStore:
         split: str,
         activations: torch.Tensor,
     ) -> None:
+        """Write a 2-D (num_vectors x input_dim) tensor to ``<location>/<split>.pt``, detached on
+        CPU; creates the directory and overwrites an existing file."""
         self._validate(activations)
 
         activations = (
@@ -76,6 +85,11 @@ class ActivationStore:
         self,
         split: str,
     ) -> torch.Tensor:
+        """Load ``<location>/<split>.pt`` on CPU (``weights_only``) and check it is a 2-D tensor.
+
+        Raises FileNotFoundError when the file is missing, TypeError when it does not hold a
+        tensor and ValueError when the tensor is not 2-D.
+        """
         path = self._split_path(split)
 
         if not path.is_file():

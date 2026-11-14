@@ -1,9 +1,12 @@
 """Layer selection under the 6 Oct split contract (development partitions only).
 
-Uses the official full nine-layer export and Behavior v0.1.2 labels:
+The final run (README, stage 3) used the mixed_final_001 collection and its Claude labels:
 
-    python scripts/layer_selection/layer_selection.py --config configs/layer_selection_full9.yaml --inspect   # FIRST
-    python scripts/layer_selection/layer_selection.py --config configs/layer_selection_full9.yaml             # fit train, rank validation
+    python scripts/layer_selection/layer_selection.py --config configs/layer_selection/layer_selection_mixed_final_001.yaml --inspect   # FIRST
+    python scripts/layer_selection/layer_selection.py --config configs/layer_selection/layer_selection_mixed_final_001.yaml             # fit train, rank validation
+
+Without ``--config`` it reads configs/layer_selection_full9.yaml, the earlier run on the full
+nine-layer export with Behavior v0.1.2 labels.
 """
 
 import argparse
@@ -17,6 +20,8 @@ from mas_sae.probe.layer_selection import LayerSelectionConfig, inspect_inputs, 
 
 
 def main() -> None:
+    """Run layer selection for ``--config`` and print the comparison, or with ``--inspect`` only
+    check the inputs."""
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--config", type=Path, default=Path("configs/layer_selection_full9.yaml"))

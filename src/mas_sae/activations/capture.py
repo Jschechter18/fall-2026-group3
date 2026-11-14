@@ -1,3 +1,9 @@
+"""Forward hooks that record Solver activations during stage-1 collection.
+
+Each capture keeps the final prompt-token hidden state of the first forward call (the prefill
+pass of ``generate``), detached to CPU float32, one row per batch example.
+"""
+
 from __future__ import annotations
 
 from contextlib import ExitStack
@@ -133,6 +139,10 @@ class MultiSiteCapture:
 
     @property
     def activations(self) -> dict[str, torch.Tensor]:
+        """Captured (batch x hidden_dim) tensors keyed by module name.
+
+        Raises RuntimeError if any site recorded nothing.
+        """
         result: dict[str, torch.Tensor] = {}
 
         for capture in self._captures:

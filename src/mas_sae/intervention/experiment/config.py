@@ -18,6 +18,8 @@ ALTERNATIVES = ("greater", "two-sided")
 
 @dataclass(frozen=True)
 class Inputs:
+    """The experiment's input files, all read-only: stored episodes, their collected contexts, the
+    stored-label run folder and the feature sets. Each file's sha256 is recorded in frozen_run.json."""
     interactions: str        # stored intervention episodes (question, A1, C1, stored A2)
     contexts: str            # the exact paragraphs each question was collected with
     stored_labels: str       # the Claude labeling run that produced the stored labels
@@ -26,6 +28,8 @@ class Inputs:
 
 @dataclass(frozen=True)
 class Representation:
+    """One configured representation: its kind, the checkpoint folder (for raw activations, the
+    center file) and its role in the analysis. Must match the path feature selection used."""
     kind: str                # activations | custom | gemma_scope (as in feature selection)
     path: str
     role: str                # control | primary | exploratory
@@ -33,6 +37,8 @@ class Representation:
 
 @dataclass(frozen=True)
 class Experiment:
+    """Episode and shard counts, the edit size r and its choose-r candidates, feature-set and
+    random-draw pool sizes, the baseline label-match threshold and the seed."""
     number_of_episodes: int
     number_of_shards: int
     edit_size: float | None  # r: |Δ| = r·|x|. None until choose-r has been run and r chosen.
@@ -47,6 +53,8 @@ class Experiment:
 
 @dataclass(frozen=True)
 class Labeling:
+    """Where the A2s are labeled (AWS profile and region for Bedrock) and how many requests run at
+    once. The labeler itself (model, prompt, settings) comes from the stored-label run."""
     aws_profile: str = "school"
     region: str = "us-east-1"
     concurrency: int = 32
@@ -67,12 +75,15 @@ class Analysis:
 
 @dataclass(frozen=True)
 class Machine:
+    """The minimum GPU memory and free disk the preflight requires."""
     min_gpu_memory_gb: float = 20.0
     min_free_disk_gb: float = 10.0
 
 
 @dataclass(frozen=True)
 class InterventionConfig:
+    """The whole experiment config, built and validated by ``parse_config``. Its ``as_dict()`` is
+    frozen into ``frozen_run.json`` by prepare; ``run_id`` stays None until choose-r creates the run."""
     layer: int
     partition: str
     inputs: Inputs
@@ -87,6 +98,7 @@ class InterventionConfig:
 
     @property
     def run_dir(self) -> Path:
+        """<output_root>/<run_id>. Raises ValueError while run_id is not set."""
         if self.run_id is None:
             raise ValueError("run_id is not set: run choose-r to create a run, then set run_id in the config.")
         return self.output_root / self.run_id
@@ -96,6 +108,7 @@ class InterventionConfig:
         return {k: v for k, v in asdict(self).items() if k not in ("output_root", "run_id")}
 
     def names_with_role(self, role: str) -> list[str]:
+        """Names of the configured representations with ``role``, in config order."""
         return [name for name, r in self.representations.items() if r.role == role]
 
 
@@ -119,11 +132,16 @@ def _section(cls, raw, where: str):
 
 
 def load_config(path: Path) -> InterventionConfig:
+    """Read the YAML config at ``path`` and validate it (``parse_config``)."""
     raw = yaml.safe_load(Path(path).read_text()) or {}
     return parse_config(raw, source=str(path))
 
 
 def parse_config(raw: dict, source: str = "config") -> InterventionConfig:
+    """Build an InterventionConfig from a parsed YAML mapping; ``source`` names it in errors.
+
+    Raises ValueError for the retired ``output_dir`` key, unknown or missing keys (``labeling``,
+    ``machine`` and ``run_id`` may be left out), and, all at once, every problem ``validate`` finds."""
     if "output_dir" in raw:
         raise ValueError(f"{source}: output_dir was replaced by output_root (the parent folder) and run_id "
                          "(the run's folder inside it, created by choose-r). Set output_root to the old "

@@ -8,7 +8,8 @@ from .core import merge_run, split_run
 from .dataset import prepare_manifest
 
 
-def parser():
+def parser() -> argparse.ArgumentParser:
+    """Build the ``prepare`` / ``merge`` / ``split`` command-line parser."""
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
     prepare = commands.add_parser("prepare", help="Reserve intervention membership and divide all questions into work chunks.")
@@ -23,7 +24,9 @@ def parser():
     return parser
 
 
-def main():
+def main() -> None:
+    """Run one subcommand. ``prepare`` writes a new manifest and refuses to overwrite one;
+    ``merge`` and ``split`` print the directory they publish."""
     args = parser().parse_args()
     if args.command == "prepare":
         ensure_output_available(args.output)
