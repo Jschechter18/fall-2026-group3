@@ -1,26 +1,30 @@
-Multi-agent large language model (LLM) systems increasingly rely on one model
-to critique another, yet behavioral outcomes alone do not reveal how the
-receiving model represents and uses that feedback. This project investigates
-whether sparse autoencoders (SAEs) expose interpretable internal features
-associated with feedback uptake. We construct a controlled Solver--Critic
-pipeline in which a Gemma 3 4B instruction-tuned Solver answers a mixture of
-MuSiQue and synthetic multi-hop questions, receives an independently generated
-recommendation from a Qwen3 4B instruction-tuned Critic, and then chooses
-whether to adopt the Critic's answer or retain its own. The final core corpus
-contains 91,063 episodes across the training, validation, and test partitions;
-a separately collected intervention partition contains another 10,105
-episodes. We
-cache Solver residual-stream activations, represent them with pretrained and
-customized SAEs, and use regularized probes to identify sparse features that
-distinguish Adoption from Retention. We evaluate those features through their
-activating examples, predictive performance, control probes, random-feature
-baselines, and held-out causal interventions. In a balanced intervention set
-of 995 episodes, targeted edits based on the LLM-edited SAE produced flip rates
-of 11.56--13.37\%, compared with 2.78--3.79\% for norm-matched random edits;
-the differences remained significant after Holm correction. These results
-show that selected sparse directions contain behaviorally relevant and
-causally effective information about feedback uptake. They do not, by
-themselves, establish that every selected feature has a simple human-readable
-meaning. The central contribution is therefore an evidence-based framework
-for evaluating feature interpretability by combining semantic inspection,
-held-out prediction, and controlled causal testing.
+This project investigates whether sparse autoencoders (SAEs) expose
+interpretable internal features associated with feedback uptake in a
+controlled Solver--Critic pipeline. A Gemma 3 4B instruction-tuned Solver
+answers a mixture of MuSiQue and synthetic multi-hop questions. A Qwen3 4B
+instruction-tuned Critic first forms an answer without seeing the Solver's
+answer; the Solver then receives both candidate answers. The primary analysis
+focuses on episodes labeled Adoption or Retention according to whether the
+Solver adopts the Critic's answer or retains its own. The final core corpus
+contains 91,063 episodes across the training, validation, and test partitions,
+and a separately
+collected intervention partition contains 10,105 episodes. We cache the
+Solver's Layer 25 residual-stream activation at the final prompt token,
+represent it with a custom $L_1$ SAE and pretrained Gemma Scope SAE variants,
+and fit regularized probes on training data to identify sparse features that
+distinguish Adoption from Retention on validation data. Feature evidence
+includes activating examples, held-out predictive performance, permutation
+tests, matched random-feature controls, and interventions on a partition sealed
+during feature selection. In an exploratory experiment on a nearly balanced
+995-episode intervention cohort (498 Adoption and 497 Retention episodes),
+targeted edits using an LLM-edited pretrained SAE produced pooled flip rates of
+11.56--13.37\%, compared with 2.78--3.79\% for matched random-feature edits.
+All three targeted-versus-random differences survived Holm correction. These
+results show that the selected directions can change the judged feedback-uptake
+outcome more often than matched random directions under this intervention
+protocol. Because the LLM-edited SAE experiment was exploratory and its edits
+also increased off-target outputs, the result does not by itself establish a
+simple human-readable meaning for each selected feature. The central
+contribution is an evidence-based framework for evaluating feature
+interpretability by combining semantic inspection, held-out prediction, and
+controlled causal testing.
