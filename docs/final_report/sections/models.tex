@@ -1,10 +1,115 @@
 \chapter{The Models}
 
 \section{Solver and Critic}
-% Gemma and Qwen sources, versions, and characteristics.
+\label{sec:solver-critic}
+
+Each episode involves two instruction-tuned models of the same size from
+different families (Table~\ref{tab:model-roles}). The Solver is Gemma~3 4B
+IT~\cite{gemmateam2025gemma3}. It answers the question (A1), reads the
+Critic's feedback, and answers again (A2). Activations are collected from the
+Solver only, at nine decoder layers (4, 8, 17, 25 and 29--33). We chose
+Gemma~3 because Gemma Scope~2, the Gemma~3 release of Gemma
+Scope~\cite{lieberum2024gemmascope}, provides pretrained sparse autoencoders
+for the instruction-tuned Gemma~3 models, and because a 4B model fits on a
+single A10G GPU.
+
+The Critic is Qwen3-4B-Instruct-2507~\cite{yang2025qwen3}. It works in two
+steps. It first answers the question on its own from the supporting
+paragraphs, without seeing A1. It then compares that answer with A1 and
+returns a verdict (agree or disagree), the answer it recommends (C1), and a
+short explanation. A third role, the Validator, reuses the Solver's checkpoint
+to judge whether the final answer matches the gold answer or one of its
+aliases. It scores correctness only and plays no part in the behavior labels.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Models in the final collection. All three roles run in bfloat16
+    with greedy decoding at pinned Hugging Face revisions.}
+    \label{tab:model-roles}
+    \begin{tabular}{lllp{4.6cm}}
+        \toprule
+        Role & Model & Revision & Output (token limit) \\
+        \midrule
+        Solver    & \texttt{google/gemma-3-4b-it}        & \texttt{093f9f38} & \raggedright A1 and A2 (64) \tabularnewline
+        Critic    & \texttt{Qwen/Qwen3-4B-Instruct-2507} & \texttt{cdbee75f} & \raggedright Blind answer, then verdict, C1 and explanation (1,024) \tabularnewline
+        Validator & \texttt{google/gemma-3-4b-it}        & \texttt{093f9f38} & \raggedright YES or NO against the gold answer (4) \tabularnewline
+        \bottomrule
+    \end{tabular}
+\end{table}
+% Source: configs/collection/distributed_final.yaml (run mixed_final_001).
 
 \section{Rationale for Using Different Models}
-% Jafari's suggestion, reduced automatic agreement, and downstream effects.
+\label{sec:two-models}
+
+The proposal used Gemma~3 for both roles, with different prompts. A first
+200-question run showed the problem with this design: reviewing its own
+answer, Gemma repeated that answer in 179 of 183 reviews, so A2 almost never
+changed. Dr.~Jafari suggested using two different models: models from
+different families solve problems differently, so they are less likely to
+agree automatically. We tested this before the production collection. On the same 100 MuSiQue
+questions and the same recorded Solver first answers, Gemma~3 4B and Qwen3 4B
+each acted as the Critic (Table~\ref{tab:critic-comparison}).
+
+With Gemma as the Critic, the Critic almost always returned the Solver's own
+answer: in 92.9--96.8\% of usable questions across five prompt and
+token-budget variants, including one that told it to keep its own position.
+When asked to answer blind first, Gemma often reached a different answer, but
+after seeing A1 it kept that answer at most once (0 of 46, 1 of 46, 1 of 49).
+Fixing the Critic's recommendation to its blind answer did move the Solver (57
+of 100 changed their answer), but it removes the Critic's review, so we did
+not adopt it. With Qwen as the Critic, the Critic agreed with the Solver far
+less often, kept its blind answer in 46 of 62 cases, and the Solver changed
+its answer in 52--64 of 100 questions. Final exact accuracy was 18--19\% in
+all four arms, so the change created disagreement without making the answers
+better or worse. A first Qwen run at 128 tokens was cut off in 71 of 100
+outputs, so we raised the Critic's budget. It is 1,024 tokens in the final
+collection, which uses Qwen with the blind-first protocol.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Critic validation on 100 MuSiQue questions with the same recorded
+    Solver first answers (256-token Critic budget). \emph{Copied A1}: the
+    Critic recommended the Solver's own answer. \emph{Kept blind answer}:
+    among questions where the Critic's blind answer differed from A1, how often
+    it kept that answer after seeing A1. Development data, not part of the
+    final collection.}
+    \label{tab:critic-comparison}
+    \begin{tabular}{llrrrr}
+        \toprule
+        Critic & Protocol & Copied A1 & Kept blind answer & Solver changed & Accuracy \\
+        \midrule
+        Gemma~3 4B & One step   & 94/98 (95.9\%) & --             & 20/100 & 18\% \\
+        Gemma~3 4B & Blind first & 92/99 (92.9\%) & 1/49 (2.0\%)   & 15/100 & 19\% \\
+        Qwen3 4B   & One step   & 37/89 (41.6\%) & --             & 52/100 & 19\% \\
+        Qwen3 4B   & Blind first & 29/91 (31.9\%) & 46/62 (74.2\%) & 64/100 & 19\% \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+% Source: notebooks/collection/experiment_analysis_inputs/critic_comparison_100q.csv
+% (September 2026; the 128-token Gemma variants are in the same file).
+
+The roles followed from the research question. The Solver is the model whose
+activations we study, so it had to come from the family with pretrained
+sparse autoencoders, Gemma~3. The Critic only has to give independent
+feedback. Qwen3 4B gave by far the most independent reviews in the test above
+and matches the Solver's size.
+
+The choice shaped later decisions in three ways:
+\begin{itemize}
+    \item \textbf{Activations come from the Solver only.} The Critic has a
+    different architecture, so the SAEs, probes and interventions all concern
+    Gemma, and the Critic's feedback is part of the Solver's input.
+    \item \textbf{The two models phrase answers differently}, for example a
+    full sentence against a bare name, or a title or article added or dropped.
+    Matching A2 to A1 or C1 by text often failed, which is one reason the
+    labels moved from text rules to a semantic judge
+    (Section~\ref{sec:labeling}).
+    \item \textbf{A disagreeing Critic was not enough to produce Retention.}
+    With free-form feedback, the Solver still adopted the Critic's answer in
+    91.7\% of the Adoption and Retention episodes (rule-based labels), which
+    led to the candidate presentation
+    (Section~\ref{sec:problems}).
+\end{itemize}
 
 \section{Sparse Autoencoder Sources}
 % Pretrained and custom SAE details.
