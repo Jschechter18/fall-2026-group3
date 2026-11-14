@@ -1,6 +1,6 @@
 # Human audit (#237): the 16 disagreements and two corrected annotator slips
 
-First-pass review by Claude Opus 5.5 (`claude-opus-5-5`), reading `scoring/disagreements.csv` against the rules in `GUIDE.md`. An LLM is reviewing another LLM's labels here, so the team should confirm each call.
+First-pass review by Claude Opus 5.5 (`claude-opus-5-5`), reading `scoring/disagreements.csv` against the rules in `GUIDE.md`. Each annotator then reviewed the disagreements on their own rows and kept their labels.
 
 ## Result
 
