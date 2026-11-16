@@ -324,6 +324,7 @@ in generation.
 \end{table}
 
 \subsection{Feature Interpretation}
+\label{sec:res-interpretation}
 
 To describe what the selected features respond to, each was profiled on the
 25,556 train episodes in three ways:
@@ -569,4 +570,68 @@ answers. \emph{Lesson:} the probe is far more sensitive than generation, so
 the edit size must be chosen from generated answers on a held-out pilot, and
 Out must be reported alongside flips. Both became part of the final protocol
 (Sections~\ref{sec:causal-methods} and~\ref{sec:metrics}).
+
 \section{Overall Answer to the Research Question}
+\label{sec:res-overall}
+
+The research question asked whether sparse autoencoders can identify
+human-interpretable features in the Solver's residual stream that explain and
+causally influence whether it adopts or resists feedback. The answer is
+partial. No SAE beat raw activations, either at predicting the decision or at
+steering it. The selected SAE features did predict the decision and did shift
+it beyond chance when edited at a matched size, but they do not read as a
+mechanism of deference. Table~\ref{tab:overall-answer} gives the verdict for
+each part of the question.
+
+\begin{table}[htbp]
+    \centering
+    \small
+    \caption{Verdict for each part of the research question. Every number is
+    reported earlier in this chapter, in the section given.}
+    \label{tab:overall-answer}
+    \begin{tabular}{>{\raggedright\arraybackslash}p{0.15\textwidth}
+                    >{\raggedright\arraybackslash}p{0.17\textwidth}
+                    >{\raggedright\arraybackslash}p{0.58\textwidth}}
+        \toprule
+        Part of the question & Verdict & Key evidence \\
+        \midrule
+        Explain (predict) & Yes, but below raw activations &
+        Probe balanced accuracy was 0.773 for the $L_1$ SAE and 0.706 for the
+        pretrained SAEs, against 0.843 for raw activations; all exceeded the
+        text-only (0.623) and pre-feedback (0.597) baselines. Ablating the ten
+        selected SAE features moved predicted acceptance by 21 to 40 points,
+        whereas ablating ten raw neurons had no detectable effect
+        (Section~\ref{sec:res-predictive}). \\
+        \addlinespace
+        Causally influence & Yes, but small and conditional &
+        Targeted edits beat equal-size random edits in four of nine
+        Holm-corrected tests, all for the pretrained family, by 1.6 to 2.5
+        percentage points. Flips were mostly switches to the other candidate.
+        The effects were stronger away from Adoption than toward it,
+        concentrated in low-confidence episodes, and carried by MuSiQue (three
+        of nine tests significant) rather than synthetic questions (none).
+        Raw-activation edits steered more strongly but left 10.1\% of answers
+        outside both candidates in the suppression arm
+        (Section~\ref{sec:res-causal}). \\
+        \addlinespace
+        Human-interpretable & Not as deference features &
+        The selected features mostly tracked the type of answer the Critic gave
+        and the candidates' order. Adoption was the strongest property for only
+        4 of 80 features. The $L_1$ features were the easiest to describe
+        (median validation correlation 0.77, against 0.38 for the pretrained
+        features) but were the weakest causal handles
+        (Section~\ref{sec:res-interpretation}). \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+What the SAEs add is not predictive power but a sparse, size-controlled place
+to intervene. Ten features, edited at $0.2\lVert x\rVert$, changed the
+Solver's choice beyond chance while rarely breaking its answer, which raw
+edits of the same size did not achieve. What the results do not establish is
+that these features are the mechanism of feedback uptake. The evidence is
+consistent with features that encode the context the decision depends on,
+such as what kind of answer the Critic proposed and where it appeared, rather
+than the decision to defer itself. The Discussion chapter interprets this
+result and sets out its limits, including the single layer, the single token
+position, and the single model studied.
