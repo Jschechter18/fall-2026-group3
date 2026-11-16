@@ -673,7 +673,19 @@ Here, $N$ is the number of examples, $d=2{,}560$ is the residual-stream width,
 $m=12{,}888$ is the custom dictionary width, and $z_i$ is the sparse latent
 vector. Decoder columns are constrained to unit $L_2$ norm after each optimizer
 step so that feature magnitude cannot be changed simply by increasing decoder
-length.
+length. Figure~\ref{fig:sae-architecture} traces one batch through these steps.
+
+\begin{figure}[!htb]
+    \centering
+    \includegraphics[width=0.5\textwidth]{figures/sae_architecture.pdf}
+    \caption{Forward pass of the custom SAEs. A batch of $B$ Layer 25
+    activations of width $d=2{,}560$ is divided by the frozen training RMS,
+    encoded into $m=12{,}888$ latents, sparsified, decoded, and rescaled to the
+    original activation units. The ReLU shown is the $L_1$ SAE's nonlinearity;
+    the TopK SAE instead keeps the $k=128$ largest nonnegative latents per
+    example.}
+    \label{fig:sae-architecture}
+\end{figure}
 
 \subsection{Custom SAE Training}
 
