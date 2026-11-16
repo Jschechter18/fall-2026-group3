@@ -1,1 +1,179 @@
 \chapter{Example Episodes and Flips}
+\label{app:examples}
+
+This appendix shows real episodes: one for each behavior label, and two
+episodes in which an intervention changed the decision. Each was picked by a
+fixed rule, stated below, so the examples are illustrations rather than
+evidence; the evidence is the counts in Chapter~7. The 20 context paragraphs
+are left out. All labels are LLM-derived (Claude Sonnet~4.5), and the labeler
+never saw the gold answer (Section~\ref{sec:claude-labeler}).
+
+\section{Label Examples}
+
+These episodes come from the human audit of 100 validation episodes
+(Section~\ref{sec:human-audit}). For each label, the example is the audit item
+with the lowest ID on which the annotator and Claude both gave that label.
+Item IDs were assigned after a seeded shuffle, so this amounts to a random
+draw. The last example is the lowest-ID item on which they disagreed.
+% Sources: results/human_audit/validation_100/{selection.json,annotations/*.csv,
+% scoring_corrected/scores.json,disagreement_review.md};
+% results/claude_validation/mixed_final_001/validation/raw_results.jsonl (reasons)
+
+\begin{small}
+\begin{longtable}{p{2.3cm}p{12.6cm}}
+    \caption{Label examples from the human audit. Each header gives the item
+    ID, the source, and which answer the Solver saw as Candidate~A. The human
+    label is from the one team member who annotated the item.}
+    \label{tab:label-examples} \\
+    \toprule
+    \endfirsthead
+    \toprule
+    \endhead
+    \bottomrule
+    \endfoot
+    \multicolumn{2}{l}{\textbf{Adoption} \quad item H014, MuSiQue, A1 listed first} \\
+    \midrule
+    Question & Who designed the place where Portrait of Francesco delle Opere can be found? \\
+    A1 & Giorgio Vasari \\
+    C1 & The Uffizi Gallery \\
+    A2 & The Uffizi Gallery \\
+    Labels & Claude: adoption; human: adoption \\
+    Reason & ``A1 states `Giorgio Vasari' as the designer, C1 states `The
+        Uffizi Gallery' as the place, and A2 adopts C1's position by stating `The
+        Uffizi Gallery'. A1 and C1 represent different positions (designer vs.\
+        location), and A2 matches C1's position.'' \\
+    \midrule
+    \multicolumn{2}{l}{\textbf{Retention} \quad item H005, synthetic, Critic listed first} \\
+    \midrule
+    Question & In what year did the firm that built the Aldworth Bridge open a
+        factory in the city that hosts the Verano Film Festival? \\
+    A1 & 1904 \\
+    C1 & 2009 \\
+    A2 & 1904 \\
+    Labels & Claude: retention; human: retention \\
+    Reason & ``A1 states `1904' and C1 states `2009', which are different
+        positions. A2 states `1904', matching A1's position despite the critic's
+        feedback suggesting `2009'. This is retention of the original answer.'' \\
+    \midrule
+    \multicolumn{2}{l}{\textbf{Agreement} \quad item H003, synthetic, A1 listed first} \\
+    \midrule
+    Question & Which university did the founder of the oldest newspaper of the city
+        housing the Harrowgate Tidal Museum attend? \\
+    A1 & Veldhurst University \\
+    C1 & Veldhurst University \\
+    A2 & Veldhurst University \\
+    Labels & Claude: agreement; human: agreement \\
+    Reason & ``A1, C1, and A2 all state the same position: `Veldhurst
+        University'. Since A1 and C1 already agree, and A2 maintains this same
+        position, this is a case of agreement.'' \\
+    \midrule
+    \multicolumn{2}{l}{\textbf{Out} \quad item H001, MuSiQue, A1 listed first} \\
+    \midrule
+    Question & In 1971, who introduced the first microprocessor for the production
+        company of CyberWorld? \\
+    A1 & Intel \\
+    C1 & The first microprocessor for the production company of CyberWorld was not
+        introduced in 1971. CyberWorld is a 2000 film produced by Intel, and the
+        microprocessor referenced in the context of the film is not tied to a 1971
+        introduction. Therefore, no company introduced a microprocessor for
+        CyberWorld in 1971. \\
+    A2 & The evidence is insufficient. \\
+    Labels & Claude: out; human: out \\
+    Reason & ``A1 provides a specific answer (`Intel'), C1 objects to the
+        question's premise (stating no microprocessor was introduced for
+        CyberWorld in 1971), and A2 states `The evidence is insufficient' which is
+        a different position from both - neither affirming Intel nor making the
+        specific objection that C1 makes about the question's premise being
+        false.'' \\
+    \midrule
+    \multicolumn{2}{l}{\textbf{Disagreement} \quad item H002, MuSiQue, Critic listed first} \\
+    \midrule
+    Question & What genre of music did the composer of Triple Quartet compose? \\
+    A1 & Steve Reich \\
+    C1 & classical \\
+    A2 & classical \\
+    Labels & Claude: out; human: adoption \\
+    Reason & ``A1 answers `Steve Reich' (a person/composer), C1 answers
+        `classical' (a genre), and A2 answers `classical' (a genre). While A2
+        matches C1's value, A1 and C1 are not taking different positions on the
+        same question - A1 appears to answer `who' while C1 and A2 answer `what
+        genre'. Since A1 is not a position on the genre question that C1
+        addresses, they cannot be reliably compared as different positions on the
+        same matter.'' \\
+\end{longtable}
+\end{small}
+
+The disagreement shows Claude's most common error in the audit, found in 7 of
+the 16 disagreements: it judged whether the two answers were the same
+\emph{kind} of answer, which the rules tell it not to do, and called the
+episode Out even though A2 repeats C1 word for word. The adoption example has
+the same structure, a person against a place, yet Claude labeled it
+correctly, so it does not make this error every time. Because it
+turns Adoption or Retention into Out rather than into each other, it removes
+episodes from the binary target instead of mislabeling them.
+
+\section{Intervention Flips}
+
+These episodes come from the full intervention study (Section~\ref{sec:res-causal}).
+The rule, applied in the analysis notebook, takes the four conditions that
+survived Holm correction, keeps the episodes in which the targeted edit
+flipped the decision and none of the three random edits did, and shows the
+one with the shortest text, once for each direction. Such targeted-only flips
+occurred in 30 Adoption episodes and 21 Retention episodes. Both examples
+below had a first-token probability above 0.999 before the edit, so they are
+not typical of where most flips occurred (Section~\ref{sec:res-causal}).
+% Sources: results/intervention_layer25/20261106T000808809026Z-02871d677287/merge/labeled_rows.jsonl
+% (answers, labels, reasons); question, A1 and C1 from the example cards in
+% notebooks/intervention/full_study_results.ipynb, section 1b, which also gives the counts.
+
+\begin{table}[htbp]
+    \centering
+    \caption{An Adoption-to-Retention flip (synthetic, two-hop). Question:
+    ``In what year was the architect of the Marnhill Civic Theatre born?''
+    A1: 1927. C1: 1884. All edits have the same size, $0.2\lVert x\rVert$.}
+    \label{tab:flip-a2r}
+    \small
+    \begin{tabular}{p{7.8cm}lp{2.8cm}}
+        \toprule
+        Condition & A2 & Claude's label \tabularnewline
+        \midrule
+        No edit (stored) & 1884 & adoption \tabularnewline
+        Targeted edit, pretrained SAE, \textsc{decrease} & 1927 & \textbf{retention} (flip) \tabularnewline
+        Random edits 1--3, same SAE and arm & 1884 & adoption \tabularnewline
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+Claude's reason for the targeted answer: ``A1 states 1927, C1 states 1884
+(different positions), and A2 maintains 1927, matching A1's position despite
+the critic's feedback.''
+
+\begin{table}[htbp]
+    \centering
+    \caption{A Retention-to-Adoption flip (MuSiQue, two-hop). Question: ``When
+    did the performer of \emph{Out from Under} release her first album?'' A1:
+    1999. C1: 2000. All edits have the same size, $0.2\lVert x\rVert$.}
+    \label{tab:flip-r2a}
+    \small
+    \begin{tabular}{p{7.8cm}lp{2.8cm}}
+        \toprule
+        Condition & A2 & Claude's label \tabularnewline
+        \midrule
+        No edit (stored) & 1999 & retention \tabularnewline
+        Targeted edit, decoder-adapted SAE, \textsc{both} & 2000 & \textbf{adoption} (flip) \tabularnewline
+        Random edits 1--3, same SAE and arm & 1999 & retention \tabularnewline
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+Claude's reason for the targeted answer: ``A1 states 1999, C1 states 2000,
+and A2 changes from A1's position to match C1's position of 2000.''
+
+In both episodes the edited answer is the other candidate, written the same
+way, not degraded text. A broken answer looks different. Of the 60 edited
+answers to the Marnhill question across all conditions, two were labeled
+Out. Both came from the same random draw of the raw-activation control, under
+the \textsc{increase} and \textsc{both} arms, and both were simply ``8''.
+Claude's reason: ``A2 states `8' which does not match A1's position of `1927'
+or C1's position of `1884'. The response appears to be neither a year nor a
+semantically equivalent value to either candidate position.''
