@@ -1,2 +1,27 @@
 \chapter{Conclusion}
-% Concise synthesis of the research question, evidence, and implications.
+\label{chap:conclusion}
+
+We asked whether sparse autoencoders can identify human-interpretable features
+in a language model's residual stream that explain and causally influence
+whether the model adopts or resists feedback. For a Gemma~3 4B Solver
+answering multi-hop questions with feedback from a Qwen3 4B Critic, the answer
+is: partly.
+
+The Solver's decision is readable at layer~25 once it has seen the feedback,
+and SAE features carry much of that signal, although less than the raw
+activations. Editing the selected features of the pretrained SAE family
+changed the decision more often than equal-size random edits, in four of nine
+prespecified tests, by 1.6 to 2.5 percentage points. The effect is small,
+mostly pushes the Solver from adopting to retaining, and in a post hoc split
+appeared on the natural MuSiQue questions rather than the synthetic ones. The features are
+not, however, interpretable as feedback uptake itself. They mostly encode the
+kind of answer the Critic gave, and the features that were easiest to describe
+were the weakest causal handles. SAEs in this setting reveal variables the
+decision depends on, not the decision.
+
+The study's main contribution is a pipeline and an evaluation framework that
+keep these kinds of evidence apart: reconstruction, prediction, meaning and
+causal effect, each tested against matched controls. The earlier designs,
+whose effects disappeared once reconstruction, random and equal-size controls
+were added, show why each control is needed. A feature that predicts a
+behavior, or one that can steer it, is not yet an explanation of it.
