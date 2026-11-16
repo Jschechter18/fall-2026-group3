@@ -1,10 +1,246 @@
 \chapter{Discussion}
+\label{chap:discussion}
 
 \section{Interpretation of Findings}
+
+The results separate four kinds of evidence: whether the SAE preserves the
+activation, whether its features predict the decision, what those features
+respond to, and whether editing them changes the decision. The SAE features
+pass the second and fourth tests only partly, and the third test shows that
+they are not simple ``deference features''.
+
+\paragraph{The decision is readable after the feedback, not before.} A probe
+on layer~25 predicts whether the Solver will adopt the Critic's answer with
+0.843 balanced accuracy, well above probes on the visible text (0.623), on
+metadata such as candidate order and data source (0.525), and on the Solver's
+state before it saw the feedback (0.597). The decision therefore depends on
+how the model processes the feedback, not only on surface features of the
+prompt. The SAE bases keep most but not all of this signal: 0.773 for the
+custom $L_1$ SAE and 0.706 for the pretrained family
+(Table~\ref{tab:probe-performance}). Some of what a dense probe reads is lost
+when the activation is rewritten as sparse features.
+
+\paragraph{The selected features encode the inputs to the decision more than
+the decision itself.} For only 4 of the 80 selected SAE features was ``the
+Solver adopted'' the episode property they tracked most strongly. Most
+tracked the kind of answer the Critic gave: a date for 11 of the 20 pretrained
+features, and an objection that the question cannot be answered for 9 of the
+20 $L_1$ features (Section~\ref{sec:res-predictive}). Their correlation with
+the decision itself was about $\pm0.1$. A plausible reading is that the Solver
+decides from properties of the two candidates, and the probe found the
+features that represent those properties. The features are relevant to the
+decision without being a description of it.
+
+\paragraph{The causal effect is real but small, and it works by tipping close
+decisions.} In the prespecified tests, targeted edits of the pretrained and
+decoder-adapted SAE features flipped 1.6 to 2.5 percentage points more
+decisions than random edits of the same size, and four of the nine tests
+survived Holm correction (Table~\ref{tab:primary-causal}). The flips were
+fluent switches to the other candidate, not broken text, and they came mainly
+from episodes where the Solver was less certain of its answer. Effects were
+stronger when pushing the Solver away from adopting than toward it. We read
+this as evidence that the selected directions take part in the decision, but
+as one small contribution among many: the decision is not controlled by ten
+features.
+
+\paragraph{Interpretability and causal leverage pulled in opposite
+directions.} The custom $L_1$ features were the easiest to describe (median
+validation correlation of Claude's descriptions 0.77, against 0.38 for the
+pretrained features), yet they were the weakest steering handles. Part of the
+reason is geometric: the $L_1$ Adoption and Retention directions are closely
+aligned (cosine 0.754), so they largely encode the same thing with opposite
+signs, and the arm that combines them cancels. The pretrained features were
+harder to name but steered best. A feature that is easy to explain from its
+activating examples is therefore not necessarily one through which the model
+acts.
+
+\paragraph{The raw basis steers harder; the SAE basis edits more cleanly.}
+Equal-size edits along probe-weighted raw neurons gave larger point effects,
+up to $+4.1$ points, but the strongest raw edit left 10.1\% of answers outside
+both candidates. Only one of nine post hoc comparisons found raw significantly
+ahead of an SAE. The SAE features buy selectivity, not strength.
+
+\paragraph{The LLM-edited SAE mostly shows the strength of contrastive
+directions.} The exploratory LLM-edited SAE produced the largest effects of
+any representation ($+8.5$ to $+9.6$ points). Its own controls explain most
+of this. A mechanical edit that rotates the same 20 decoder rows toward the
+train mean difference between Adoption and Retention reached $+6.2$ to $+6.6$
+points, while rotating them by the same angles in random directions reached
+only $+0.6$ to $+1.4$.
+% Source: results/intervention_llm_edited_layer25/20261112T005617641082Z-f48aae4eb4fa/merge/table_P_primary.md
+The large effect comes mostly from moving the features toward a contrastive
+steering direction, and it raised Out answers to 7--12\%
+(Section~\ref{sec:res-causal}). It shows that the decision can be steered
+along a learned direction; it does not show that the edited features have a
+clearer meaning.
+
+\paragraph{Probe-based checks overstate causal effects.} The earlier designs
+(Section~\ref{sec:res-exploratory}) showed the same pattern repeatedly: an
+edit of 1\% of the activation norm moved the probe's prediction by 2.5 points
+but left generated answers unchanged, and probe-scored flips appeared even
+when no feature was edited. The offline ablation in
+Section~\ref{sec:res-predictive} is useful for choosing features, but only
+generation measures what the model does.
+
 \section{Comparison with Prior Work}
+
+Our results agree with recent evaluations that set SAEs against strong
+baselines. Probes on SAE features fell short of probes on raw activations, as
+in the sparse-probing case study of Kantamneni et al.\
+\cite{kantamneni2025useful}, and raw directions steered at least as strongly
+as SAE features, in line with AxBench \cite{wu2025axbench}. Korznikov et al.\
+found that random baselines can approach trained SAEs on several measures
+\cite{korznikov2026sanity}. In our study, random-feature edits of the same
+size accounted for most of the flips that targeted edits produced, which is
+why every effect is reported as targeted minus random.
+
+Arad et al.\ find that SAE steering works much better when features are
+selected for their effect on the output rather than for the inputs they
+respond to
+\cite{arad2025steering}. Our selection used probe weights, an input-side
+criterion, and it produced features that were describable but steered weakly.
+The trade-off we observed between description quality and steering strength
+is consistent with their argument. Feature-absorption studies make a related
+point: a feature can look coherent in its top examples and still fail to track
+the concept consistently \cite{chanin2024absorption}. Scoring each description
+on held-out episodes, as we did, guards against this but does not remove it.
+
+On the behavioral side, our pipeline reproduced known patterns of model
+feedback. When Gemma reviewed its own answer, it repeated that answer in 179
+of 183 reviews, consistent with the limits of intrinsic self-correction
+\cite{huang2024selfcorrect}. Under free-form feedback the Solver adopted the
+Critic's answer in 91.7\% of disagreements, and under the candidate format it
+adopted wrong corrections more often than right ones
+(Section~\ref{sec:problems}), echoing sycophancy findings in which models
+follow an expressed view at the cost of accuracy \cite{sharma2024sycophancy}.
+What this study adds is an internal view: the uptake decision is linearly
+readable at layer~25, but the readable signal is mostly about the form of the
+Critic's answer. Finally, the strength of the mechanical edit, which moves
+features toward a mean-difference direction, matches the success of
+contrastive activation addition \cite{panickssery2023caa}.
+
 \section{Threats to Validity}
-% LLM judge, synthetic-data shift, broken-output flips, and edit size.
+
+\paragraph{The LLM judge.} All behavior labels, including the labels of edited
+generations, come from Claude Sonnet~4.5. On 100 audited validation episodes,
+human and Claude labels agreed on 84 ($\kappa = 0.787$), and no episode was
+labeled Adoption on one side and Retention on the other
+(Section~\ref{sec:human-audit}). The audit did not cover edited generations,
+which may be less typical than the stored answers. Two facts limit this risk:
+most flips were fluent choices of the other candidate, and Out answers, the
+class Claude labels least precisely, are reported separately and never count
+as flips.
+
+\paragraph{The synthetic data shift the distribution.} Synthetic questions
+supply 61\% of the binary episodes but produce a disagreement far less often
+than MuSiQue questions (27.4\% against 62.7\%), and their hop mix differs
+(Section~\ref{sec:synthetic-data}). The probes therefore learn mostly from
+synthetic examples. In a post hoc split, the causal effects appeared on
+MuSiQue episodes (three tests surviving Holm, $n = 371$) and not on synthetic
+episodes (none, $n = 612$). This is reassuring for the natural questions but
+means the synthetic data added volume to the probes without adding causal
+evidence. We cannot tell whether synthetic decisions are simply more certain
+or whether the features represent the two sources differently; the split was
+not prespecified.
+
+\paragraph{Candidate order and source.} Listing the Critic's answer first
+raised Adoption by 6.4 points on MuSiQue and lowered it by 8.1 points on
+synthetic questions (Table~\ref{tab:order-final}). On their own, order and
+source predict the decision poorly (metadata probe 0.525), but the two
+strongest $L_1$ Adoption features were tied most closely to which candidate
+was listed first. Some selected features therefore encode presentation rather
+than uptake, and the causal effects have not been broken down by order.
+
+\paragraph{Broken outputs.} An edit can change the label by degrading the
+answer instead of changing the choice. We separated switches from Out answers,
+and restricting the analysis to answers that chose a candidate left the SAE
+effects essentially unchanged. The raw-activation control and the LLM-edited
+SAE did raise Out rates, so their larger effects are partly of this kind.
+Seventeen episodes were excluded because a random edit produced an empty
+answer that could not be labeled.
+
+\paragraph{Edit size.} All primary edits used one size, 20\% of the activation
+norm, chosen on a 50-episode pilot by a prespecified rule. The earlier clamped
+design showed how unequal edit sizes can manufacture a 73-point effect, and
+equal-size matching removes that confound. With a single size, however, we do
+not know how the effect grows with the edit.
+
+\paragraph{Deference or discrimination.} The study cannot fully separate a
+Solver that defers to any recommendation from one that recognizes good
+feedback (Section~\ref{sec:problems}). The controlled conditions that would
+have fixed whether the Critic was right were dropped, and natural feedback
+leaves the Critic's correctness confounded with question difficulty. The
+observation that the Solver adopted wrong corrections more often than right
+ones argues against discrimination, but it is an association, not a
+controlled test, and it was measured with the rule-based labels.
+
+\paragraph{Multiple comparisons.} The primary claim rests on nine prespecified
+tests with Holm correction. The results by direction, by source and for the
+LLM-edited SAE are secondary or exploratory, and the $L_1$ \textsc{decrease}
+arm narrowly missed correction ($p_{\mathrm{Holm}} = 0.051$). We do not count
+these as confirmed effects.
+
 \section{Limitations}
-% Single layer, last token, model size, compute, and dataset scope.
+
+Section~\ref{sec:model-limitations} lists the limits that come from the
+models: their size, the single layer and token position, the imperfect SAE
+reconstruction, limited compute, and greedy decoding. The study design adds
+four more.
+
+\begin{itemize}
+    \item \textbf{A binary target.} The analysis explains the Solver's choice
+    only when the two answers differ. Agreement episodes, about 64\% of the
+    collection (Table~\ref{tab:final-labels}), and Out answers fall outside
+    the target.
+    \item \textbf{One feature-selection rule.} Each set holds the ten features
+    ranked highest by mean absolute SHAP value on the probe. Other rules,
+    especially ones that rank features by their effect on generation, could
+    find stronger handles.
+    \item \textbf{One intervention site and one edit size.} Edits were applied
+    once, at the final prompt token, at a single relative norm.
+    \item \textbf{One task family and one hosted judge.} All questions are
+    short-answer multi-hop questions in the MuSiQue format, and regenerating
+    the labels requires the same pinned version of a hosted model that the
+    team does not control.
+\end{itemize}
+
 \section{Implications for Other Researchers}
+
+\begin{itemize}
+    \item \textbf{Measure effects in generation.} Probe-scored ablations are
+    useful for choosing features but can overstate causal effects by an order
+    of magnitude or more.
+    \item \textbf{Use matched controls from the start.} Reconstruction-only
+    passes, equal-size random edits and a separate count of broken answers
+    each exposed an apparent effect in our earlier designs that was not a
+    changed decision. The clamped design alone reported a 73-point effect.
+    \item \textbf{Randomize presentation and report by source.} Candidate
+    order shifted adoption by several points in opposite directions in the two
+    sources, and pooling hid it.
+    \item \textbf{Do not equate interpretability with control.} The most
+    describable features steered least; both properties need their own test.
+    \item \textbf{Audit the labels and pilot the behavior.} A frozen judge
+    with recorded settings and a blind human audit made the LLM-derived labels
+    usable. Small pilots caught protocols that would have wasted a full
+    collection: free-form feedback produced almost no Retention, and a Critic
+    reviewing its own model's answer copied it.
+\end{itemize}
+
 \section{Next Steps}
+
+The following extensions would address the main open questions. None has
+been run.
+
+\begin{itemize}
+    \item Restore controlled conditions in which the Critic is known to be
+    right or wrong, to separate deference from discrimination.
+    \item Select features by their measured effect on generation rather than
+    by probe weight, following Arad et al.\ \cite{arad2025steering}.
+    \item Edit at every generated token and at more than one layer, and test
+    several edit sizes to measure a dose--response curve.
+    \item Prespecify the analysis by data source and candidate order, with a
+    larger MuSiQue intervention set.
+    \item Add a contrastive mean-difference direction as a raw steering
+    baseline, since the mechanical edit suggests it is a strong comparator.
+    \item Repeat the study with larger Solvers and other model families.
+\end{itemize}
