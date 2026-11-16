@@ -1,1 +1,190 @@
 \chapter{Repository and Reproduction Instructions}
+\label{app:reproducibility}
+\begingroup\raggedright
+
+The code, configurations and run records are in the project repository,
+\url{https://github.com/Jschechter18/fall-2026-group3}. Table~\ref{tab:pipeline-stages}
+gives an overview of the pipeline stages. This appendix gives the commands for
+each stage, the folder of the final run each one produced, and what has to be
+retrieved separately because it is not in Git. The software environment,
+seeds and provenance records are described in the last section of the
+methodology chapter, and all settings are listed in
+Appendix~\ref{app:hyperparameters}.
+
+\section{Setup}
+
+{\footnotesize
+\begin{verbatim}
+git clone https://github.com/Jschechter18/fall-2026-group3.git
+cd fall-2026-group3
+conda env create -f environment.yml   # Python 3.11, environment "capstone"
+conda activate capstone
+python -m pip install -e .
+export PYTHONPATH=src
+\end{verbatim}
+}
+
+The models are read from Hugging Face at the pinned revisions. Synthetic
+generation and every labeling step call Claude through Amazon Bedrock.
+Collection and the intervention runs need a GPU with at least 20~GB of memory.
+Setup details are in \path{cookbooks/setup.md}.
+
+\section{What the Repository Contains}
+
+The repository holds the code (\path{src/mas_sae/} and \path{scripts/}), the
+configurations (\path{configs/}), the run records and smaller results
+(\path{results/}: labels, probe and feature-selection outputs, intervention
+tables and labeled answers), the analysis notebooks (\path{notebooks/}) and
+this report (\path{docs/final_report/}). Large files are not in Git: the
+MuSiQue copies and synthetic records (\path{data/}), the collected episodes
+and activations (\path{artifacts/collection/mixed_final_001/}), SAE weights
+and activation caches. They are kept in the project's artifact storage and
+must be retrieved before the stages that read them. Every run record stores
+the hashes of its inputs, so a retrieved file can be checked against the run
+that used it.
+
+\section{Reproducing the Study}
+
+Each stage reads the outputs of the previous one. Partitions are fixed in
+stage~1 and respected by every later stage.
+
+\paragraph{0. Data.} MuSiQue is downloaded once. Synthetic generation makes
+paid API calls and is run once.
+
+{\footnotesize
+\begin{verbatim}
+python scripts/data/get_musique_dataset.py
+python -u scripts/data/generate_synthetic_musique.py --config configs/data/opus5_v3_full.yaml
+\end{verbatim}
+}
+\noindent Final output: \path{data/MuSiQue/synthetic/runs/opus5-v3-full-001/}.
+
+\paragraph{1. Collection.} \texttt{<run\_dir>/collection.yaml} is a copy of
+\path{configs/collection/distributed_final.yaml}. Each worker collects its own
+chunks.
+
+{\footnotesize
+\begin{verbatim}
+python scripts/collection/distributed_collection.py prepare \
+    --config <run_dir>/collection.yaml --num-chunks <N> --output <run_dir>/manifest.json
+python scripts/collection/collect_activations.py \
+    --config <run_dir>/collection.yaml --manifest <run_dir>/manifest.json --chunk <K ...>
+python scripts/collection/distributed_collection.py merge --manifest <run_dir>/manifest.json
+python scripts/collection/distributed_collection.py split \
+    --manifest <run_dir>/manifest.json --config <run_dir>/collection.yaml
+\end{verbatim}
+}
+\noindent Final output: \path{artifacts/collection/mixed_final_001/prepared/}.
+
+\paragraph{2. Behavior labels.} One labeling run per partition, then an export
+of the train and validation labels for the probes.
+
+{\footnotesize
+\begin{verbatim}
+R=artifacts/collection/mixed_final_001/prepared/results/mixed_final_001
+L=results/claude_validation/mixed_final_001
+python scripts/labels/run_claude_validation.py \
+    --episodes $R/<partition>/interactions.jsonl \
+    --partition <partition> --output $L/<partition>
+python scripts/labels/export_final_labels_for_probes.py \
+    --claude-runs $L/train $L/validation --full-results $R \
+    --layout partitioned --output results/behavior/mixed_final_001_claude_probe
+\end{verbatim}
+}
+\noindent Final outputs: \path{results/claude_validation/mixed_final_001/}
+(one folder per partition) and \path{results/behavior/mixed_final_001_claude_probe/}.
+
+\paragraph{3. Layer selection.}
+
+{\footnotesize
+\begin{verbatim}
+python scripts/layer_selection/layer_selection.py \
+    --config configs/layer_selection/layer_selection_mixed_final_001.yaml
+\end{verbatim}
+}
+\noindent Final output:
+\path{results/layer_selection_mixed_final_001_quick/20261102T201434082931Z/}.
+This run used a copy of this configuration with the label-shuffle control
+switched off (\texttt{n\_permutations: 0}); the copy is not in the repository.
+
+\paragraph{4. SAEs.} The custom SAEs are tuned on the baseline grid, and the
+chosen trial is trained to completion. The pretrained SAE is downloaded and
+then adapted; adding \texttt{--train full} gives the exploratory full
+fine-tune.
+
+{\footnotesize
+\begin{verbatim}
+python scripts/sae/train_sae.py --hp-tune \
+    --config configs/sae/layer_25_mixed_final_001_baselines.yaml
+python scripts/sae/train_sae.py --epochs 200 \
+    --finish-run results/sae/musique/tuning/layer_25/<study_id>/trials/<trial>
+P=results/sae/pretrained/gemma-scope-2-4b-it
+A=artifacts/collection/mixed_final_001/prepared/activations/mixed_final_001
+hf download google/gemma-scope-2-4b-it \
+    --include "resid_post_all/layer_25_width_16k_l0_big/*" --local-dir $P
+python scripts/sae/finetune_pretrained_sae.py \
+    --sae-dir $P/resid_post_all/layer_25_width_16k_l0_big \
+    --activations-dir $A/layer_25 \
+    --layer 25 \
+    --probe-config configs/feature_selection/feature_selection_mixed_final_001_layer25.yaml
+\end{verbatim}
+}
+\noindent Final outputs:
+\begin{itemize}
+    \item $L_1$ SAE: \path{results/sae/musique/runs/layer_25/20261102T182346930753Z-150e78c341c6}
+    \item TopK SAE: \path{results/sae/musique/runs/layer_25/20261102T182749413400Z-150e78c341c6}
+    \item Decoder-adapted SAE: \path{results/sae/decoder_finetuning/20261104T164310458065Z/best}
+    \item Fully fine-tuned SAE: \path{results/sae/full_finetuning/20261104T151230848807Z/best}
+\end{itemize}
+
+\paragraph{5. Feature selection.} The second command adds the full pool of
+random draws to a copy of the run's feature sets.
+
+{\footnotesize
+\begin{verbatim}
+python scripts/feature_selection/feature_selection.py \
+    --config configs/feature_selection/feature_selection_intervention_layer25.yaml
+python scripts/intervention/build_feature_set_pool.py \
+    results/feature_selection_intervention_layer25/20261105T025730344698Z \
+    results/feature_selection_intervention_layer25/20261105T025730344698Z_pool
+\end{verbatim}
+}
+\noindent Final output:
+\path{results/feature_selection_intervention_layer25/20261105T025730344698Z_pool/feature_sets.json}.
+
+\paragraph{6. Intervention.} The edit size is chosen on the pilot before the
+run is frozen. Each shard runs on its own GPU.
+
+{\footnotesize
+\begin{verbatim}
+C=configs/intervention/intervention.yaml
+python scripts/intervention/run_intervention.py choose-r --config $C
+python scripts/intervention/run_intervention.py prepare  --config $C
+python scripts/intervention/run_intervention.py run      --config $C --shard <K>
+python scripts/intervention/run_intervention.py merge    --config $C
+\end{verbatim}
+}
+\noindent Final output:
+\path{results/intervention_layer25/20261106T000808809026Z-02871d677287/merge/}.
+
+\paragraph{7. Analysis.} The edit-size pilot, the main results and the
+feature interpretation are in
+\path{notebooks/intervention/choose_edit_size_pilot_analysis.ipynb},
+\path{notebooks/intervention/full_study_results.ipynb} and
+\path{notebooks/intervention/feature_interpretation.ipynb}. The interpretation
+reads \path{results/feature_interpretation_layer25/20261106T221912476834Z},
+written by \path{scripts/intervention/interpret_features.py}. The exploratory
+LLM-edited SAE is analyzed in
+\path{notebooks/intervention/llm_edited_sae_analysis.ipynb}.
+
+\section{Building This Report}
+
+{\footnotesize
+\begin{verbatim}
+latexmk -cd -pdf -interaction=nonstopmode -halt-on-error docs/final_report/main.tex
+\end{verbatim}
+}
+\noindent The PDF is written to \path{docs/final_report/main.pdf}. The figures
+are included as PDF files from \path{docs/final_report/figures/} and
+\path{docs/final_report/build_figures/}.
+\par\endgroup
