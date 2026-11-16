@@ -52,17 +52,14 @@ testing whether editing those features changes the decision.
 
 \begin{figure}[htbp]
     \centering
-    \fbox{\parbox[c][2.2in][c]{0.9\textwidth}{\centering
-        \textbf{[Placeholder: end-to-end pipeline diagram]}\\[0.5em]
-        MuSiQue + synthetic questions $\rightarrow$ Solver attempt~1
-        $\rightarrow$ Critic (blind, then compare) $\rightarrow$ Solver
-        attempt~2 with candidates $\rightarrow$ Claude labels and Layer-25
-        activations $\rightarrow$ question-family splits $\rightarrow$ layer
-        selection $\rightarrow$ SAEs $\rightarrow$ feature selection
-        $\rightarrow$ causal intervention}}
-    \caption{End-to-end experimental pipeline. Each arrow is a frozen,
-    hash-recorded artifact boundary; test and intervention partitions are not
-    read until the stages that are allowed to use them.}
+    \includegraphics[width=\textwidth]{figures/pipeline_overview.pdf}
+    \caption{End-to-end experimental pipeline. Phase~1 builds the labeled
+    interaction dataset, phase~2 chooses the layer, SAEs and features on train
+    and validation, and phase~3 tests the chosen features on held-out
+    intervention episodes; test and intervention partitions are not read until
+    the stages that are allowed to use them. Colors mark the model in each
+    step: Gemma Solver (blue), Qwen Critic (orange) and Claude judge
+    (purple).}
     \label{fig:pipeline-overview}
 \end{figure}
 
