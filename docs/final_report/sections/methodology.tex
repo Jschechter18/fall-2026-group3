@@ -746,7 +746,23 @@ cached once for the training and validation partitions. Only the decoder and
 reconstruction bias were optimized against the interaction activations. This
 preserves feature firing patterns and probe inputs while testing whether a
 decoder fitted to the study distribution reconstructs and steers more
-effectively.
+effectively. Figure~\ref{fig:gemma-scope-architecture} shows which parameters
+are frozen and which are trained. Unlike the custom SAEs
+(Figure~\ref{fig:sae-architecture}), the pretrained SAE reads raw activations,
+with no input scaling or output rescaling.
+
+\begin{figure}[!htb]
+    \centering
+    \includegraphics[width=0.64\textwidth]{figures/gemma_scope_sae.pdf}
+    \caption{Forward pass of the pretrained Gemma Scope 2 SAE. The encoder maps
+    $d=2{,}560$ raw Layer 25 activations to $m=16{,}384$ preactivations, and
+    JumpReLU keeps a latent only if it exceeds that feature's learned threshold
+    $\theta$. In decoder-only adaptation, the encoder, encoder bias, and
+    thresholds stay frozen, and only the decoder and reconstruction bias are
+    trained, so the selected features keep the same identities before and
+    after adaptation.}
+    \label{fig:gemma-scope-architecture}
+\end{figure}
 
 Decoder adaptation used seed 42, batches of 256, learning rate $10^{-5}$, a
 maximum of 10 epochs, and early-stopping patience of five. The run manifest

@@ -1,0 +1,73 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="Gemma Scope 2 SAE" id="gemmaScopeSAE">
+    <mxGraphModel dx="1217" dy="757" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="act" parent="1" style="rounded=0;whiteSpace=wrap;labelBackgroundColor=none;fillColor=#76608a;fontColor=#ffffff;strokeColor=#432D57;html=1;" value="LLM Activation" vertex="1">
+          <mxGeometry height="50" width="100" x="110" y="125" as="geometry" />
+        </mxCell>
+        <mxCell id="recon" parent="1" style="rounded=0;whiteSpace=wrap;labelBackgroundColor=none;fillColor=#76608a;fontColor=#ffffff;strokeColor=#432D57;html=1;" value="Reconstructed Activation" vertex="1">
+          <mxGeometry height="50" width="100" x="110" y="545" as="geometry" />
+        </mxCell>
+        <mxCell id="enc" parent="1" style="rounded=0;whiteSpace=wrap;labelBackgroundColor=none;fontColor=#ffffff;fillColor=#647687;strokeColor=#314354;html=1;" value="Linear Encoder&lt;br&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;W_enc, b_enc&lt;/font&gt;" vertex="1">
+          <mxGeometry height="60" width="120" x="290" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="jump" parent="1" style="rounded=0;whiteSpace=wrap;labelBackgroundColor=none;fontColor=#ffffff;fillColor=#647687;strokeColor=#314354;html=1;" value="JumpReLU&lt;br&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;per-feature threshold θ&lt;/font&gt;" vertex="1">
+          <mxGeometry height="60" width="120" x="290" y="260" as="geometry" />
+        </mxCell>
+        <mxCell id="sparse" parent="1" style="rounded=0;whiteSpace=wrap;labelBackgroundColor=none;fontColor=#ffffff;fillColor=#647687;strokeColor=#314354;dashed=1;html=1;" value="Sparse Feature Space" vertex="1">
+          <mxGeometry height="60" width="120" x="290" y="400" as="geometry" />
+        </mxCell>
+        <mxCell id="dec" parent="1" style="rounded=0;whiteSpace=wrap;labelBackgroundColor=none;fontColor=#ffffff;fillColor=#a0522d;strokeColor=#6D1F00;html=1;" value="Linear Decoder&lt;br&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;W_dec, b_dec&lt;/font&gt;" vertex="1">
+          <mxGeometry height="60" width="120" x="290" y="540" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" edge="1" parent="1" source="act" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;entryX=0;entryY=0.5;entryDx=0;entryDy=0;html=1;" target="enc" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" edge="1" parent="1" source="enc" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="jump" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" edge="1" parent="1" source="jump" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="sparse" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" edge="1" parent="1" source="sparse" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="dec" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" edge="1" parent="1" source="dec" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;entryX=1;entryY=0.5;entryDx=0;entryDy=0;html=1;" target="recon" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="s1" parent="1" style="text;whiteSpace=wrap;align=center;verticalAlign=middle;labelBackgroundColor=none;html=1;" value="(B, d)" vertex="1">
+          <mxGeometry height="30" width="60" x="220" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="s2" parent="1" style="text;whiteSpace=wrap;align=center;verticalAlign=middle;labelBackgroundColor=none;html=1;" value="(B, m)" vertex="1">
+          <mxGeometry height="30" width="60" x="350" y="210" as="geometry" />
+        </mxCell>
+        <mxCell id="s3" parent="1" style="text;whiteSpace=wrap;align=center;verticalAlign=middle;labelBackgroundColor=none;html=1;" value="(B, m)" vertex="1">
+          <mxGeometry height="30" width="60" x="350" y="350" as="geometry" />
+        </mxCell>
+        <mxCell id="s4" parent="1" style="text;whiteSpace=wrap;align=center;verticalAlign=middle;labelBackgroundColor=none;html=1;" value="(B, m)" vertex="1">
+          <mxGeometry height="30" width="60" x="350" y="485" as="geometry" />
+        </mxCell>
+        <mxCell id="s5" parent="1" style="text;whiteSpace=wrap;align=center;verticalAlign=middle;labelBackgroundColor=none;html=1;" value="(B, d)" vertex="1">
+          <mxGeometry height="30" width="60" x="220" y="535" as="geometry" />
+        </mxCell>
+        <mxCell id="lg1" parent="1" style="rounded=0;whiteSpace=wrap;fillColor=#647687;strokeColor=#314354;html=1;" value="" vertex="1">
+          <mxGeometry height="20" width="20" x="470" y="130" as="geometry" />
+        </mxCell>
+        <mxCell id="lg1t" parent="1" style="text;whiteSpace=wrap;align=left;verticalAlign=middle;labelBackgroundColor=none;html=1;" value="Frozen in decoder-only adaptation" vertex="1">
+          <mxGeometry height="30" width="220" x="500" y="125" as="geometry" />
+        </mxCell>
+        <mxCell id="lg2" parent="1" style="rounded=0;whiteSpace=wrap;fillColor=#a0522d;strokeColor=#6D1F00;html=1;" value="" vertex="1">
+          <mxGeometry height="20" width="20" x="470" y="165" as="geometry" />
+        </mxCell>
+        <mxCell id="lg2t" parent="1" style="text;whiteSpace=wrap;align=left;verticalAlign=middle;labelBackgroundColor=none;html=1;" value="Trained in decoder-only adaptation" vertex="1">
+          <mxGeometry height="30" width="220" x="500" y="160" as="geometry" />
+        </mxCell>
+        <mxCell id="note" parent="1" style="text;whiteSpace=wrap;align=left;verticalAlign=top;labelBackgroundColor=none;fontSize=11;html=1;" value="d = 2,560 (Layer 25 residual stream)&lt;br&gt;m = 16,384 features, target L0 = 120&lt;br&gt;No input scaling or output rescaling:&lt;br&gt;the SAE reads raw activations." vertex="1">
+          <mxGeometry height="70" width="240" x="470" y="205" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
