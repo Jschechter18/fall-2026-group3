@@ -1,9 +1,99 @@
 \chapter{Data and Exploratory Data Analysis}
 
 \section{MuSiQue}
-% Source, rationale, characteristics, fields, and limitations.
+
+MuSiQue supplied the natural-language base of the dataset. The original
+collection began from 22,355 candidate questions across the source train and
+validation splits. After collection-time exclusions, 22,332 natural episodes
+were available in the earlier MuSiQue-only run. Each record contains the
+question, supporting passages, reference answer and aliases, hop count, Solver
+answer, Critic answer, and the Solver's post-feedback answer. Question-family
+identifiers were retained so related questions could not cross experimental
+partitions.
+
+The final mixed collection did not use every earlier natural episode. Its core
+train, validation, and test manifests contain 19,921 MuSiQue episodes, while
+the independently collected intervention manifest contains another 2,211.
+These manifest counts, rather than the size of the earlier MuSiQue-only run,
+define the data used in the final analyses.
+
+Before augmentation, we profiled the source train and validation splits to
+characterize their reasoning coverage. Figure~\ref{fig:musique-coverage} shows
+that the splits have similar hop distributions, while also revealing that some
+reasoning graph shapes are substantially rarer than the dominant composition.
+This imbalance motivated explicit targeting of two-, three-, and four-hop
+structures during synthetic-data generation.
+
+\begin{figure}[p]
+    \centering
+    \includegraphics[width=\textwidth]{build_figures/split_hop_graph_distribution.pdf}
+    \caption{Reasoning-depth, graph-shape, and reuse coverage in the original
+    MuSiQue train and validation splits. Counts and percentages describe the
+    source benchmark before synthetic augmentation; they are not the final
+    mixed-corpus distribution.}
+    \label{fig:musique-coverage}
+\end{figure}
 
 \section{Exploratory Data Analysis}
+
+The natural collection produced many Agreement cases in which the Solver and
+Critic already occupied the same answer position, leaving fewer informative
+Adoption and Retention examples. The final Claude labels for the 91,063 core
+episodes contain 16,302 Adoption, 15,704 Retention, 58,661 Agreement, 357 Out,
+and 39 technical labeling failures. The primary behavioral probe uses Adoption
+and Retention only; Agreement and Out cases remain useful for diagnostics but
+do not define the binary target.
+
+The source-data analysis also quantified the amount and composition of text
+presented to the Solver. As Figure~\ref{fig:musique-input-size} illustrates,
+input size varies with reasoning depth and is driven primarily by paragraph
+content rather than the question itself. These measurements informed prompt
+construction and the computational budget for activation collection. They are
+reported as raw words because exact token counts depend on the model-specific
+tokenizer and serialized prompt.
+
+\begin{figure}[p]
+    \centering
+    \includegraphics[width=\textwidth]{build_figures/solver_input_word_length_profile.pdf}
+    \caption{Raw Solver-input length in the original MuSiQue train and
+    validation splits, including the question and all paragraph titles and
+    text. Prompt instructions and generated Solver or Critic responses are
+    excluded.}
+    \label{fig:musique-input-size}
+\end{figure}
+
+Figure~\ref{fig:musique-context-profile} separates supporting evidence from
+distractor context. Supporting passages occupy only part of the 20-paragraph
+context and appear across paragraph positions, requiring the Solver to select
+evidence rather than rely on a fixed location. The answer-occurrence audit also
+highlights why normalized aliases and semantic outcome labeling are preferable
+to unnormalized exact string matching alone.
+
+\begin{figure}[p]
+    \centering
+    \includegraphics[width=\textwidth]{build_figures/support_distractor_context_profile.pdf}
+    \caption{Supporting- and distractor-context characteristics in the
+    original MuSiQue train and validation splits. Answer occurrence uses
+    normalized phrase matching and should not be interpreted as semantic
+    entailment.}
+    \label{fig:musique-context-profile}
+\end{figure}
+
+Finally, Figure~\ref{fig:musique-answer-profile} summarizes canonical answer
+lengths, aliases, surface forms, and normalization sensitivity. The prevalence
+of aliases and normalization-sensitive answers supports the use of reference
+aliases and a structured judge when assigning behavioral outcomes.
+
+\begin{figure}[p]
+    \centering
+    \includegraphics[width=\textwidth]{build_figures/answer_type_and_scoring_profile.pdf}
+    \caption{Answer forms and scoring-sensitivity indicators in the original
+    MuSiQue train and validation splits. The analysis precedes synthetic
+    augmentation and characterizes the natural source data only.}
+    \label{fig:musique-answer-profile}
+\end{figure}
+
+\clearpage
 
 \section{Problems Identified}
 \label{sec:problems}
@@ -143,9 +233,11 @@ problem. MuSiQue's answerable training and validation questions yielded only
 comes from defects in the dataset rather than from the Solver: garbled
 composed questions, gold answers that do not fit the question, and paragraphs
 that do not state the relation they are cited for. In a 100-question control
-sample the Critic refused to answer 17\% of MuSiQue questions. To obtain more
-and cleaner disagreement, we generated synthetic questions in the MuSiQue
-format.
+sample the Critic refused to answer 17\% of MuSiQue questions. MuSiQue is also
+mostly two-hop (Figure~\ref{fig:musique-coverage}), which limits control over
+reasoning depth, and resampling it would not create new disagreements. To
+obtain more and cleaner disagreement, we generated synthetic questions in the
+MuSiQue format.
 
 \section{Synthetic Data}
 \label{sec:synthetic-data}
@@ -153,9 +245,17 @@ format.
 The synthetic questions had one job: to add Adoption and Retention episodes
 that come from real reasoning disagreements, ideally a wrong first answer that
 the Critic can correct, without MuSiQue's defects. The generation procedure is
-described in Section~\ref{sec:synthetic-generation}. This section covers what
-the questions had to look like and how we checked that they served their
-purpose.
+described in Section~\ref{sec:synthetic-generation} and is reproducible from
+\path{scripts/data/generate_synthetic_musique.py},
+\path{configs/data/opus5_v3_full.yaml}, and the accompanying synthetic-data
+notebook. This section covers what the questions had to look like and how we
+checked that they served their purpose.
+
+Synthetic questions were an augmentation source, not additional observations
+of the original MuSiQue benchmark. They are therefore tracked with a distinct
+\texttt{dataset\_source}, stable question-family identifier, generation seed,
+and dataset version. This distinction is also used in breakdown analyses so a
+model cannot appear to generalize merely by exploiting source-specific cues.
 
 \subsection{Required Characteristics}
 
@@ -213,14 +313,14 @@ and Retention share from 16\% to 35\% on the same questions (exact McNemar
 test, $p < 0.001$), mainly by making the Solver's first answer wrong more
 often (A1 accuracy fell from 78\% to 65\%). A replication on 100 new questions
 moved in the same direction but was inconclusive: from 18\% to 27\%
-(+9 points, 95\% CI $-0.5$ to $+18.5$; $p = 0.093$).
-% TODO (Raye): state in Section 6.3 which filler paragraphs the final
-% synthetic set (synthetic-final-001) uses.
+(+9 points, 95\% CI $-0.5$ to $+18.5$; $p = 0.093$). Related fillers were
+adopted for the final synthetic set (Section~\ref{sec:synthetic-generation}).
 % Sources: reports/tables/synthetic_pilot/; results/experiments/holdout100_filler_paired/summary.json
 
 \subsection{Synthetic Questions in the Final Dataset}
 
-The final collection contains 79,036 synthetic episodes, spread almost evenly
+The final collection (Table~\ref{tab:final-dataset-composition}) contains
+79,036 synthetic episodes, spread almost evenly
 over the six hop types (12,928--13,303 each). MuSiQue contributes 22,132
 episodes, 70\% of them two-hop. The synthetic questions are therefore harder
 in structure, with far more three- and four-hop questions, while individual
@@ -229,5 +329,39 @@ validity that we examine in the discussion, and Section~\ref{sec:results-labels}
 compares the labels of the two sources.
 
 \section{Final Dataset}
-% Episode counts, conditions, class balance, splits, and question-family
-% grouping used to prevent leakage.
+
+Table~\ref{tab:final-dataset-composition} reports the authoritative manifest
+counts. The core representation-learning and probe corpus contains 91,063
+episodes: 19,921 MuSiQue and 71,142 synthetic. The separately collected
+intervention partition adds 10,105 episodes, producing 101,168 collected
+episodes across the complete final study. The intervention experiments use a
+further behavior-eligible subset of that partition rather than all 10,105
+episodes.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Final episode counts by partition and dataset source. The core
+    total is used for representation learning and held-out prediction; the
+    intervention partition was collected separately and remained sealed during
+    model and feature selection.}
+    \label{tab:final-dataset-composition}
+    \begin{tabular}{lrrr}
+        \toprule
+        Partition & MuSiQue & Synthetic & Total \\
+        \midrule
+        Train & 15,931 & 56,915 & 72,846 \\
+        Validation & 1,993 & 7,112 & 9,105 \\
+        Test & 1,997 & 7,115 & 9,112 \\
+        Core total & 19,921 & 71,142 & 91,063 \\
+        Intervention & 2,211 & 7,894 & 10,105 \\
+        Complete study & 22,132 & 79,036 & 101,168 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+Partition assignment occurred at the question-family level, not at the episode
+row level. All conditions and candidate-order variants associated with a family
+therefore remain in one partition. Training can influence SAE parameters and
+probe fitting; validation supports checkpoint and hyperparameter selection;
+test supports final predictive evaluation; and intervention remains sealed
+until causal testing.

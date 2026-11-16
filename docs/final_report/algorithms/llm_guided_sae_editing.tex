@@ -1,0 +1,35 @@
+\begin{algorithm}[H]
+\caption{Constrained LLM-guided SAE decoder editing}
+\label{alg:llm-guided-sae-editing}
+\begin{algorithmic}[1]
+\Require Original decoder $W_{\mathrm{dec}}^{(0)}$; 10 Adoption features $A$;
+10 Retention features $R$; train-only sandbox data; action and steering budgets
+\Ensure Auditable edited SAE and matched mechanical and random controls
+\State Lock the encoder, thresholds, unselected rows, and decoder-row lengths
+\State Start a no-network sandbox with train data, fixed codes, diagnostics, and \textsc{ApplyEdit}
+\State Give the LLM the task and constraints, but no validation, test, intervention, or control results
+\While{the LLM has not returned \textsc{Done} and no budget limit is reached}
+    \State Receive one action: a Python snippet, \textsc{SteerTest}, or \textsc{Done}
+    \If{the action proposes a row edit $(j,w_j')$}
+        \State Check $j\in A\cup R$, finite values, and the required row shape
+        \State Check $|\lVert w_j'\rVert_2/\lVert w_j^{(0)}\rVert_2-1|\le10^{-4}$
+        \State Check $\cos(w_j',w_j^{(0)})\ge0.95$
+        \If{every constraint passes}
+            \State Accept the edit; record its rationale and hash; report diagnostics
+        \Else
+            \State Reject the edit and leave the authoritative decoder unchanged
+        \EndIf
+    \ElsIf{the action is \textsc{SteerTest} and budget remains}
+        \State Test the current edit on the fixed train-only steering cohort
+        \State Return flip and candidate-margin summaries to the LLM
+    \Else
+        \State Execute the permitted diagnostic snippet or record a protocol error
+    \EndIf
+\EndWhile
+\State Replay accepted edits onto $W_{\mathrm{dec}}^{(0)}$ and save an auditable SAE
+\State Build a mechanical control by rotating the same rows toward the class-mean direction
+\State Build a random control using the LLM edit's angles and random orthogonal directions
+\State Verify that both controls satisfy the same length and cosine constraints
+\State \Return LLM-edited, mechanical-control, and random-control SAEs
+\end{algorithmic}
+\end{algorithm}

@@ -140,11 +140,433 @@ activations, and only at the last prompt token
 recorded. Analyses that need other positions, or the Critic's side of the
 exchange, would require a new collection.
 \section{Objective 2: SAE Representation}
-% SAE comparison and layer-selection results.
+
+We compared two SAEs trained directly on the study distribution with a frozen
+Gemma Scope SAE and a decoder-adapted version of that pretrained model.  The
+custom models used the same 2,560-dimensional Layer~25 input and
+12,888-feature dictionary, so their reconstruction and sparsity statistics are
+directly comparable.  The pretrained dictionary contained 16,384 features and
+was evaluated in the activation units expected by its released checkpoint;
+its raw MSE is therefore reported separately rather than compared numerically
+with the RMS-normalized custom-model loss.
+
+\subsection{Custom SAE Training}
+
+Both models learned most rapidly in their first few epochs.  The TopK SAE
+stopped at epoch~54 under the minimum-improvement and patience rule, with its
+lowest validation loss occurring at epoch~51.  The L1 SAE continued improving
+through the 200-epoch limit, so its final checkpoint was retained.  Its
+training and validation variance explained were 92.3\% and
+89.2\%, respectively, a 3.1-percentage-point difference.  The
+corresponding TopK values were 92.3\% and 91.9\%, giving nearly identical
+training reconstruction but better validation transfer.
+
+The two sparsity mechanisms produced different operating points
+(Table~\ref{tab:sae-custom-results}).  On the sealed test split, TopK explained
+91.9\% of activation variance with exactly 128 active features per example.
+L1 explained 89.1\% while using only 50.8 active features on average.  Thus,
+L1 reduced per-example activity by 60.3\% relative to TopK, at a cost of 2.7
+percentage points of test variance explained.  This is the central tradeoff
+between the custom models: TopK favored reconstruction fidelity, whereas L1
+produced the smaller active set.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Frozen-checkpoint results for the custom SAEs. Reconstruction MSE
+    is in RMS-normalized activation units. ``Inactive'' is the fraction of
+    dictionary features that never fired on the indicated split; it is not the
+    complement of per-example activity.}
+    \label{tab:sae-custom-results}
+    \begin{tabular}{llrrrr}
+        \toprule
+        Model & Split & MSE & Variance explained & Mean $L_0$ & Inactive \\
+        \midrule
+        L1 & Validation & 0.002830 & 89.17\% & 50.64 & 45.82\% \\
+        L1 & Test       & 0.002835 & 89.15\% & 50.76 & 45.40\% \\
+        TopK & Validation & 0.002119 & 91.89\% & 128.00 & 91.45\% \\
+        TopK & Test       & 0.002124 & 91.87\% & 128.00 & 91.35\% \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+The dictionary-level activity result qualifies the apparent sparsity
+advantage.  Although TopK activates only 128 features for each example, 91.3\%
+of its dictionary never fired on the test split.  L1 used fewer features per
+example but distributed those activations across a much larger portion of the
+dictionary, leaving 45.4\% inactive.  Per-example $L_0$ and dictionary
+coverage therefore measure different properties and neither alone establishes
+that one representation is more interpretable.
+
+\subsection{Pretrained and Decoder-Adapted SAE}
+
+The frozen pretrained SAE transferred poorly to the project distribution,
+explaining 22.5\% of validation variance with an MSE of 6,343.5 in its native
+activation units.  Refitting only the reconstruction bias raised variance
+explained to 51.2\%, showing that a substantial component of the mismatch was
+a distribution-level offset.  The selected epoch-10 decoder-and-bias
+checkpoint further reduced validation MSE to 1,689.1 and raised variance
+explained to 79.4\% (Table~\ref{tab:sae-pretrained-results}).  This was a 73.4\% MSE
+reduction relative to the frozen checkpoint.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Validation reconstruction for the pretrained SAE variants. MSE is
+    in the pretrained model's native activation units. The encoder and its
+    feature activations are identical across all three rows.}
+    \label{tab:sae-pretrained-results}
+    \begin{tabular}{lrrl}
+        \toprule
+        Variant & MSE & Variance explained & Trainable parameters \\
+        \midrule
+        Frozen pretrained & 6,343.5 & 22.46\% & None \\
+        Bias-only baseline & 3,992.4 & 51.20\% & Reconstruction bias \\
+        Decoder adapted & 1,689.1 & 79.35\% & Decoder and bias \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+Because adaptation froze the encoder weights, encoder bias, and JumpReLU
+thresholds, it did not change which pretrained features fired or the values
+provided to the feature-selection probe.  The gain therefore isolates improved
+reconstruction of this study's residual stream from improved discovery of
+feature identities.  Decoder adaptation made the pretrained representation a
+stronger reconstruction baseline and a preserved-basis steering comparator.
+
+Overall, no SAE dominated every criterion.  TopK gave the best custom-model
+reconstruction, L1 gave the lowest per-example activity and broader dictionary
+coverage, and decoder adaptation preserved pretrained feature identities while
+substantially correcting reconstruction mismatch.  These representation-level
+results did not define the downstream model set by reconstruction error alone.
+TopK was excluded from final downstream tasking; the predictive and causal
+experiments used the L1 custom SAE and the pretrained family, including its
+adapted variants.
 \section{Objective 3: Predictive Features}
-% Probe performance, controls, random draws, and feature interpretation.
+\label{sec:res-predictive}
+
+\subsection{Probe Performance}
+
+Every representation supported an above-chance probe of the Solver's
+upcoming decision, but none matched the raw activations
+(Table~\ref{tab:probe-performance}). The raw layer-25 probe reached 0.843
+balanced accuracy. The custom $L_1$ SAE reached 0.773, and the pretrained
+family reached about 0.706. The pretrained and decoder-adapted SAEs share an
+encoder and therefore give identical probe results; adapting the decoder
+changes reconstruction, not which features fire. All SAE probes clearly
+exceeded the text-only (0.623), metadata (0.525), and pre-feedback (0.597)
+baselines from Section~\ref{sec:layer-selection}. The SAE features therefore
+carry decision information that is not visible in the prompt text and that
+depends on the feedback, although the sparse bases lose part of what a dense
+linear probe can read. This gap is consistent with reports that SAE-based
+probes often fall short of probes on raw activations
+\cite{kantamneni2025useful}, and the project did not require SAEs to win this
+comparison, only that their features carry enough signal to be selected.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Feature-selection probe on validation. ``Live'' counts latents
+    that fire at least once on train. $L_0$ is the mean number of active
+    latents per validation example, and FVE is the fraction of variance
+    explained by the reconstruction. $^\dagger$Exploratory.}
+    \label{tab:probe-performance}
+    \begin{tabular}{lrrrr}
+        \toprule
+        Representation & Live / total & $L_0$ & FVE & Balanced acc.\ [95\% CI] \\
+        \midrule
+        Raw activations & 2,560 / 2,560 & --- & 1.000 & 0.843 [0.830, 0.856] \\
+        Custom $L_1$ SAE & 6,515 / 12,888 & 46.6 & 0.883 & 0.773 [0.758, 0.787] \\
+        Pretrained SAE & 3,991 / 16,384 & 112.0 & 0.238 & 0.706 [0.690, 0.722] \\
+        Decoder-adapted SAE & 3,991 / 16,384 & 112.0 & 0.770 & 0.706 [0.690, 0.722] \\
+        Fully fine-tuned SAE$^\dagger$ & 3,942 / 16,384 & 105.1 & 0.628 & 0.707 [0.691, 0.723] \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsection{Offline Ablation Check}
+
+Zeroing the ten targeted features moved the readout's predicted acceptance
+far more than zeroing matched random features for every SAE
+(Table~\ref{tab:offline-ablation};
+Figure~\ref{fig:appendix-feature-selection-proxy}). For the $L_1$ SAE,
+targeted ablation lowered predicted acceptance by 40.4 percentage points,
+whereas the mean random ablation raised it by 0.1. The decoder-adapted SAE
+showed $-21.0$ against $-1.3$. Every SAE's targeted effect had $p\approx10^{-4}$, the
+smallest value the permutation test can report. Two results limit how this
+should be read. First, the frozen pretrained SAE's reconstruction alone
+lowered predicted acceptance from 50.5\% to 25.0\%, reflecting its 0.238
+variance explained on this distribution, and its random draws were very
+spread out (5th--95th percentile 15.4--37.6\%). Decoder adaptation restored
+the unablated rate to 51.0\%. Second, ablating the ten top-ranked raw neurons
+had no detectable effect ($-0.17$ percentage points, $p=0.39$). The decision
+signal in the raw basis is spread over many neurons, so removing ten of them
+changes little, whereas the SAE bases concentrate it enough for a ten-feature
+set to matter. This favors the SAE bases for targeted intervention, but the check
+is still a probe proxy. Section~\ref{sec:res-causal} tests the same features
+in generation.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Offline ablation on validation: change in probe-predicted
+    acceptance (percentage points) relative to each representation's
+    unablated reconstruction. Random is the mean over 100 matched draws.
+    Observed validation acceptance is 51.0\%. $^\dagger$Exploratory.}
+    \label{tab:offline-ablation}
+    \begin{tabular}{lrrr}
+        \toprule
+        Representation & Unablated & Random $\Delta$ & Targeted $\Delta$ [95\% CI] \\
+        \midrule
+        Raw activations & 50.5\% & $+0.1$ & $-0.2$ [$-0.6$, $+0.2$] \\
+        Custom $L_1$ SAE & 50.5\% & $+0.1$ & $-40.4$ [$-41.2$, $-39.5$] \\
+        Pretrained SAE & 25.0\% & $-0.3$ & $-9.4$ [$-9.8$, $-9.0$] \\
+        Decoder-adapted SAE & 51.0\% & $-1.3$ & $-21.0$ [$-21.4$, $-20.6$] \\
+        Fully fine-tuned SAE$^\dagger$ & 50.8\% & $-1.5$ & $-9.4$ [$-9.8$, $-9.1$] \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsection{Feature Interpretation}
+
+To describe what the selected features respond to, each was profiled on the
+25,556 train episodes in three ways:
+\begin{itemize}[nosep]
+    \item jointly regressing its activation on twelve episode properties, such
+    as the Critic's answer type, candidate order, and the Solver's decision;
+    \item projecting its decoder direction through Gemma's unembedding (a logit
+    lens);
+    \item asking Claude Sonnet~4.5 to describe it from 30 train episodes, then
+    scoring that description by its Spearman correlation with the feature's
+    activation on 20 validation episodes.
+\end{itemize}
+
+The selected features mostly track \emph{what kind of answer the Critic gave},
+not deference itself. Across the 80 SAE features, ``the Solver adopted'' was
+the strongest property for only four. For eleven of the twenty pretrained
+features the strongest property was that the Critic's answer is a date. For
+nine of the twenty $L_1$ features it was that the Critic said the question
+cannot be answered. The correlation of feature activation with the decision
+itself was modest, averaging about $\pm0.1$ (pretrained Adoption and
+Retention sets $+0.075$ and $-0.087$; $L_1$ sets $+0.121$ and $-0.061$).
+Some individual features read naturally:
+\begin{itemize}[nosep]
+    \item Pretrained feature 4409 fires on 85\% of episodes, tracks the Critic
+    objecting that the question cannot be answered, and promotes tokens such as
+    ``option(s)''.
+    \item The $L_1$ Retention features 3399 and 8893 track the Solver keeping
+    its answer despite such an objection and promote ``unable'' and
+    ``insufficient''.
+\end{itemize}
+Others capture shortcuts. The two top $L_1$ Adoption features, 8677 and 4455,
+are most strongly tied to whether the Critic's answer was listed as candidate
+A, with opposite signs.
+
+The $L_1$ features were also easier to describe. Their Claude descriptions
+achieved a median validation correlation of 0.77, against 0.38 for the
+pretrained features and 0.35 for the fully fine-tuned features. As
+Section~\ref{sec:res-causal} shows, this ordering is reversed for steering:
+the more interpretable $L_1$ features were the weaker causal handles.
+
 \section{Objective 4: Causal Tests}
-% Intervention and control results; switch/broken flips; examples.
-\section{Earlier Exploratory Runs}
-% Layer 33 and layer 25 steering and lessons learned.
+\label{sec:res-causal}
+
+Of the 1,000 study episodes, 983 were analyzed. Seventeen were excluded
+because an edited generation was empty and could not be labeled, and all of
+those empty generations came from random-direction edits. The unedited replay
+reproduced the stored response and label for all 1,000 episodes. The analyzed
+cohort contains 496 episodes whose stored decision was Adoption and 487 whose
+stored decision was Retention.
+
+\subsection{Primary Results}
+
+Targeted edits flipped the Solver's decision more often than equal-size
+random edits for the two pretrained-family SAEs, and the primary claim holds:
+four of the nine prespecified tests survived Holm correction
+(Table~\ref{tab:primary-causal}). For the pretrained SAE, the \textsc{both}
+arm raised the flip rate from 3.7\% under random edits to 6.2\% ($+2.5$
+percentage points, $p_{\mathrm{Holm}}=0.004$). The \textsc{decrease} arm
+added 1.7 points ($p_{\mathrm{Holm}}=0.037$). The decoder-adapted SAE
+behaved almost identically, with $+2.0$ points for \textsc{both}
+($p_{\mathrm{Holm}}=0.007$) and $+1.6$ points for \textsc{decrease}
+($p_{\mathrm{Holm}}=0.039$). Its \textsc{increase} arms were positive but did
+not survive correction. The custom $L_1$ SAE's \textsc{decrease} arm was the
+largest single estimate ($+1.8$ points) but narrowly missed correction
+($p_{\mathrm{Holm}}=0.051$). Its \textsc{increase} and \textsc{both} arms were
+null.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Primary causal tests ($n=983$, $r=0.2$). Flip rates are
+    percentages of episodes. Random is the mean over three matched draws per
+    episode. $\Delta$ is targeted minus random in percentage points, with a
+    paired bootstrap 95\% CI. $p$-values are one-sided, Holm-adjusted over the
+    nine tests. Bold rows survive at $\alpha=0.05$.}
+    \label{tab:primary-causal}
+    \begin{tabular}{llrrrr}
+        \toprule
+        SAE & Arm & Targeted & Random & $\Delta$ [95\% CI] & $p_{\mathrm{Holm}}$ \\
+        \midrule
+        Custom $L_1$ & decrease & 6.7 & 4.9 & $+1.8$ [$+0.4$, $+3.3$] & 0.051 \\
+        Custom $L_1$ & increase & 5.6 & 5.6 & $+0.0$ [$-1.3$, $+1.3$] & 0.999 \\
+        Custom $L_1$ & both & 6.4 & 6.5 & $-0.1$ [$-1.7$, $+1.4$] & 0.999 \\
+        \textbf{Pretrained} & \textbf{decrease} & 5.1 & 3.4 & $+1.7$ [$+0.4$, $+2.9$] & \textbf{0.037} \\
+        Pretrained & increase & 3.9 & 2.7 & $+1.2$ [$+0.2$, $+2.1$] & 0.051 \\
+        \textbf{Pretrained} & \textbf{both} & 6.2 & 3.7 & $+2.5$ [$+1.1$, $+3.9$] & \textbf{0.004} \\
+        \textbf{Decoder-adapted} & \textbf{decrease} & 4.9 & 3.3 & $+1.6$ [$+0.4$, $+2.9$] & \textbf{0.039} \\
+        Decoder-adapted & increase & 4.2 & 3.1 & $+1.1$ [$+0.0$, $+2.3$] & 0.092 \\
+        \textbf{Decoder-adapted} & \textbf{both} & 5.6 & 3.6 & $+2.0$ [$+0.7$, $+3.4$] & \textbf{0.007} \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+The effects are real but small. Even the strongest arm flips about one
+additional episode in forty beyond what an equally large random edit does.
+None of the nine prespecified between-SAE contrasts survived correction; the
+closest was $L_1$ versus pretrained on the \textsc{both} arm ($-2.6$ points,
+$p_{\mathrm{Holm}}=0.059$). No between-arm contrast within an SAE survived
+either. One geometric fact explains the null $L_1$ \textsc{both} arm. Its
+Adoption and Retention directions are highly aligned (cosine 0.754, against
+0.128 for the pretrained SAE), so their difference
+$u_{\mathrm{toward}}-u_{\mathrm{away}}$ cancels most of what either set
+represents.
+
+The raw-activation control produced larger targeted-minus-random effects
+($+4.0$, $+1.7$, and $+4.1$ points for \textsc{decrease}, \textsc{increase}, and
+\textsc{both}), but at a cost: its targeted \textsc{decrease} edit left 10.1\%
+of answers outside both candidates. In a post hoc comparison, the raw basis
+significantly exceeded an SAE only once in nine tests (raw minus $L_1$ on
+\textsc{both}, $+4.2$ points, $p_{\mathrm{Holm}}=0.004$). The selected SAE
+features steer less strongly than probe-weighted neurons but disrupt
+generation much less.
+
+\subsection{Direction, Switches, and Broken Answers}
+
+Effects were stronger when pushing the Solver away from adopting than toward
+it (Figure~\ref{fig:appendix-directional-strata}). Averaged over the nine SAE
+rows, targeted-minus-random was $+1.7$ points for Adoption-to-Retention and
+$+0.9$ for Retention-to-Adoption. Within-representation Holm tests confirmed
+this pattern: $L_1$ \textsc{decrease} on Adoption episodes ($+4.0$ points,
+$p_{\mathrm{Holm}}=0.006$) and pretrained \textsc{both} on Adoption episodes
+($+3.4$, $p_{\mathrm{Holm}}=0.023$) survived, and no SAE row survived in the
+Retention-to-Adoption direction. The $L_1$ SAE's near-miss in the pooled
+test is thus a one-directional effect diluted by a null in the other
+direction.
+
+Flips were usually switches rather than broken answers. Targeted SAE edits
+produced few Out answers. The highest were the pretrained and decoder-adapted
+\textsc{decrease} arms, at 2.6\% and 3.9\% (against 0.6\% under their random
+edits) (Figure~\ref{fig:appendix-out-rate}). Restricting the analysis to
+answers that chose one of the two candidates left the SAE effects essentially
+unchanged: pretrained \textsc{both} stayed at $+2.5$ points and decoder-adapted
+\textsc{decrease} went from $+1.6$ to $+1.8$
+(Figure~\ref{fig:appendix-non-out-robustness}). The effects are also not
+driven by a few unstable episodes, since the three most-flipped episodes
+account for only 5.5\% of targeted flips
+(Figure~\ref{fig:appendix-flip-distribution}). They are concentrated where the
+Solver was least certain: most episodes had a baseline first-token
+probability of at least 0.999, and the flips and the targeted-random gap came
+mainly from the less confident remainder
+(Figure~\ref{fig:appendix-confidence-sensitivity}).
+
+Two examples show what a switch looks like. In an Adoption-to-Retention
+example, for the question ``In what year was the architect of the Marnhill
+Civic Theatre born?'', the Solver first answered 1927, the Critic proposed
+1884, and the stored second answer adopted 1884. The pretrained
+\textsc{decrease} edit produced 1927, while all three random edits produced
+1884. In a Retention-to-Adoption example, ``When did the performer of
+\emph{Out from Under} release her first album?'', the Solver kept 1999 against
+the Critic's 2000. The decoder-adapted \textsc{both} edit produced 2000, and
+all random edits kept 1999. In both cases the edited answer is a fluent choice
+of the other candidate, not degraded text.
+
+\subsection{Reconstruction Control}
+
+Passing the activation through an SAE without editing it changed some
+decisions. Reconstruction-only flip rates were 1.6--2.2\% for Adoption
+episodes and 1.6--2.3\% for Retention episodes across the four SAEs, against
+0\% for the unedited replay. The custom $L_1$ SAE had the smallest relative
+reconstruction error (0.049) but not the fewest flips, so flip rates did not
+simply track reconstruction error. These rates set a noise floor for how
+sensitive the decision is to small perturbations at this position. They do
+not contaminate the edit effects, because edits were applied to the original
+activation rather than to the reconstruction, and every comparison is
+against random edits of the same size.
+
+\subsection{Exploratory Comparisons}
+
+The fully fine-tuned SAE did not differ reliably from the pretrained SAE
+(differences of $-1.3$ to $+0.8$ points, none significant;
+Figure~\ref{fig:appendix-full-finetuning}). The LLM-edited pretrained SAE
+gave the largest targeted-minus-random effects of any representation
+($+8.5$ to $+9.6$ points) and beat its mechanical-rotation control by 2.2 to
+3.0 points (Holm $p\le0.005$). The comparison with Out rates qualifies this
+(Figure~\ref{fig:appendix-llm-edit-flips-vs-out}). The LLM edit's targeted Out
+rate was 7--12\% against 2.5--7.5\% for the mechanical edit, and most extra Out
+answers were ``The evidence is insufficient.'' The LLM-designed directions
+push generation harder rather than aiming it more precisely. Finally, in a
+post hoc split by data source, three tests survived Holm on MuSiQue episodes
+($n=371$) and none on synthetic episodes ($n=612$). The causal effects
+therefore rest mainly on the natural questions.
+
+\section{Earlier Exploratory Runs: Layer 33 and Layer 25 Steering}
+\label{sec:res-exploratory}
+
+The final protocol is the fourth causal design we ran. The earlier runs used
+an older collection, rule-based behavior labels, and custom SAEs trained
+before layer selection had identified layer~25. Their numbers are not
+comparable to the final results, and we report them because each one
+determined a design choice.
+
+\paragraph{Probe-scored suppression (October 6 and 14).} The first pipeline
+zeroed or amplified ($z\mapsto3z+1$) individual SAE latents and read the
+outcome from a probe applied to the re-encoded latents rather than from
+generation. These runs most likely used the layer-33 custom SAE that was the
+initial single-layer benchmark, although their configuration does not record
+the layer. The ``flip rate'' under reconstruction alone (0.63 and 0.23 in the
+two runs) was as large as under targeted suppression or amplification
+(0.61--0.63 and 0.23--0.27) and as under random features. The apparent
+effects came entirely from passing through the SAE. \emph{Lesson:} every
+causal comparison needs a reconstruction control and a random control, and
+outcomes should be measured in generation.
+
+\paragraph{Zero-ablation in generation (October 18).} We then zeroed the
+targeted features at layers 25 and 33 while the Solver generated its answer,
+on 517 episodes whose baseline replay matched exactly. At layer~25, $L_1$
+targeted ablation reduced acceptance by 29.6 points (95\% CI 25.3--33.7).
+However, the edit removed 93\% of the activation norm, against 0.8\% for
+random ablations, and the outputs were broken rather than switched. Of 458
+episodes that originally adopted, 83 produced a third answer, 70 were
+unresolved, and only one actually retained the Solver's first answer. 6.96\%
+of all answers were empty, and others degenerated into strings such as
+``ikorododododo''. At layer~33, no SAE showed a targeted effect. \emph{Lesson:}
+zeroing a dominant feature set is a large, uncontrolled perturbation. Zero
+ablation was kept only as the offline probe check of
+Section~\ref{sec:feature-selection}, and broken outputs had to be reported
+separately from decision changes.
+
+\paragraph{Clamped steering (October 20).} The next design clamped each
+targeted feature to a multiple $s\in\{-2,+2,+5\}$ of its mean active value,
+with seven frequency-matched random draws per condition. At layer~25 the $L_1$
+SAE appeared to steer powerfully, $+73.0$ points targeted-minus-random (95\%
+CI 68.8--76.8), with $+25.3$ at layer~33, while the pretrained SAE showed
+nothing. An audit traced the large effects to edit size. Targeted edits were
+8--37 times larger in norm than random ones: for $L_1$ at layer~25, $2.83$
+versus $0.08\lVert x\rVert$ at $s=-2$. One always-on feature supplied 86\%
+(layer~25) or 91\% (layer~33) of the set's activation, negative clamps went
+far outside the observed range, and answers almost never changed for edits
+below about $0.4\lVert x\rVert$. \emph{Lesson:} targeted and random edits must
+have equal size, and feature magnitude must not determine edit size. This led
+to unit-direction edits with a fixed $r\lVert x\rVert$ and a larger pool of
+random draws.
+
+\paragraph{Equal-size edits (November 3).} With edit sizes matched, a TopK
+SAE run at layer~25 showed that turning all ten selected features off still
+reduced acceptance ($-5.1$ points, $p_{\mathrm{Holm}}<0.001$) but required an
+edit of 86\% of $\lVert x\rVert$. A matched 1\% edit moved the probe by $-2.5$
+points but left generated answers unchanged ($+0.01$). This run introduced
+the explicit split of flips into \emph{switches} (a change to the other
+candidate) and \emph{broken} answers (a change to Out). It showed that the
+all-off edit produced a real switch toward Retention together with broken
+answers, while removing the single dominant feature produced mostly broken
+answers. \emph{Lesson:} the probe is far more sensitive than generation, so
+the edit size must be chosen from generated answers on a held-out pilot, and
+Out must be reported alongside flips. Both became part of the final protocol
+(Sections~\ref{sec:causal-methods} and~\ref{sec:metrics}).
 \section{Overall Answer to the Research Question}

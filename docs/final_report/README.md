@@ -24,9 +24,16 @@ latexmk -cd -C final_report/main.tex
 
 - `sections/`: front matter and report chapters
 - `appendices/`: supporting material
+- `equations/`: reusable LaTeX equations included by report sections
+- `algorithms/`: reusable LaTeX pseudocode included by methodology sections
 - `figures/`: report-ready figures
+- `build_figures/`: LaTeX-compatible derivatives generated from the SVG sources
 - `tables/`: generated or hand-authored LaTeX tables
 - `references.bib`: consolidated bibliography
 
 Update the title-page commands near the top of `main.tex` when the final title,
 team members, course, advisor, and submission date are confirmed.
+
+The authoritative figure sources in `figures/` are SVG files only. Because
+pdfLaTeX cannot include SVG directly, `build_figures/` contains generated PDF
+derivatives used during compilation; these are not the editable source figures.

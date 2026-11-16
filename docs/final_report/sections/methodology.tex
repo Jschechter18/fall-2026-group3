@@ -41,9 +41,164 @@ recommendation is still Adoption. Correctness against the gold answer is
 recorded separately and is not part of the target.
 
 \section{Pipeline Overview}
-% Include the end-to-end pipeline figure.
+\label{sec:pipeline}
+
+The study is organized as a single forward pipeline in which every stage
+consumes frozen, hashed outputs from the stage before it
+(Figure~\ref{fig:pipeline-overview}). The pipeline has three phases: building
+an interaction dataset in which the Solver either adopts or resists feedback,
+finding where and in which sparse features that decision is represented, and
+testing whether editing those features changes the decision.
+
+\begin{figure}[htbp]
+    \centering
+    \fbox{\parbox[c][2.2in][c]{0.9\textwidth}{\centering
+        \textbf{[Placeholder: end-to-end pipeline diagram]}\\[0.5em]
+        MuSiQue + synthetic questions $\rightarrow$ Solver attempt~1
+        $\rightarrow$ Critic (blind, then compare) $\rightarrow$ Solver
+        attempt~2 with candidates $\rightarrow$ Claude labels and Layer-25
+        activations $\rightarrow$ question-family splits $\rightarrow$ layer
+        selection $\rightarrow$ SAEs $\rightarrow$ feature selection
+        $\rightarrow$ causal intervention}}
+    \caption{End-to-end experimental pipeline. Each arrow is a frozen,
+    hash-recorded artifact boundary; test and intervention partitions are not
+    read until the stages that are allowed to use them.}
+    \label{fig:pipeline-overview}
+\end{figure}
+
+\paragraph{Dataset construction.} Questions come from two sources: MuSiQue
+\cite{trivedi2022musique}, downloaded from the pinned Hugging Face revision,
+and synthetic multi-hop questions generated as described in
+Section~\ref{sec:synthetic-generation}. Each question is run through a
+three-step interaction. The Gemma Solver first answers from the supplied
+paragraphs (attempt~1). The Qwen Critic then answers the same question without
+seeing the Solver's answer, and afterwards compares its own answer with the
+Solver's and states which answer it recommends. Finally, the Solver receives
+both answers as labeled candidates, its own previous answer and the reviewer's
+recommendation, and answers again (attempt~2). The order of the two candidates
+is randomized and balanced within each source, hop count, and partition so that
+position cannot stand in for the decision. All generation is greedy. The prompts
+and turn structure are given in Section~6.4 and Appendix~A.
+
+\paragraph{Labels and activations.} While generating attempt~2, a forward hook
+on the Solver records the residual stream at the final prompt token for layers
+4, 8, 17, 25, and 29--33, before any answer token has been produced (Section~6.6).
+Each attempt-2 answer is then labeled by a Claude judge as Adoption,
+Retention, Agreement, or Out (Section~6.5). Only disagreement episodes, in
+which the Solver had to choose between its own answer and the Critic's,
+enter the binary Adoption-versus-Retention analyses.
+
+\paragraph{Partitions.} Ten percent of question families are first reserved
+as an intervention partition (seed 42). The remainder is split 80/10/10 into
+train, validation, and test (seed 43), stratified by data source and hop group.
+Every downstream model is fit on train and chosen on validation. The
+intervention partition is used only by the causal experiment.
+
+\paragraph{Analysis.} The analysis stages answer the four research objectives
+in order. A layer-selection probe compares candidate layers on validation and
+fixes the layer used everywhere else (Section~\ref{sec:layer-selection}).
+Sparse autoencoders are trained on, or adapted to, that layer's activations
+(Section~6.8). A feature-selection probe on each SAE's latents chooses ten
+Adoption and ten Retention features (Section~\ref{sec:feature-selection}).
+Finally, a causal intervention re-runs the Solver's second turn on held-out
+episodes with those features' directions edited and compares the result with
+equal-size random edits (Sections~\ref{sec:causal-methods}
+and~\ref{sec:metrics}). Table~\ref{tab:pipeline-stages} lists the entry point
+and output of each stage.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Pipeline stages, entry points, and frozen outputs. Paths are
+    relative to the repository root.}
+    \label{tab:pipeline-stages}
+    \small
+    \begin{tabular}{p{0.2\textwidth}p{0.38\textwidth}p{0.34\textwidth}}
+        \toprule
+        Stage & Entry point & Frozen output \\
+        \midrule
+        Synthetic data & \texttt{scripts/data/generate\_synthetic\_musique.py} & accepted synthetic records \\
+        Collection & \texttt{scripts/collection/distributed\_collection.py}, \texttt{collect\_activations.py} & episodes and per-layer activations \\
+        Labeling & \texttt{scripts/labels/run\_claude\_validation.py} & four-class labels per partition \\
+        Layer selection & \texttt{scripts/layer\_selection/layer\_selection.py} & per-layer probe comparison \\
+        SAE training & \texttt{scripts/sae/train\_sae.py}, \texttt{finetune\_pretrained\_sae.py} & SAE checkpoints \\
+        Feature selection & \texttt{scripts/feature\_selection/feature\_selection.py} & targeted and random feature sets \\
+        Intervention & \texttt{scripts/intervention/run\_intervention.py} & labeled edited generations, tables \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
 \section{Synthetic Data Generation}
 \label{sec:synthetic-generation}
+
+MuSiQue alone did not provide enough disagreement episodes, especially at
+higher hop counts (Chapter~5). We therefore generated additional
+MuSiQue-style questions. The aim was not to imitate MuSiQue's surface text but
+to reproduce its structure: a question that can only be answered by chaining
+facts found in separate supporting paragraphs, surrounded by distracting
+paragraphs, so that the Solver and Critic can plausibly disagree.
+
+\paragraph{Generator and prompt.} Questions were generated with Claude Opus~5
+through Amazon Bedrock using prompt protocol v3. The system prompt asks for
+diverse, internally consistent multi-hop QA examples and requires a JSON-only
+reply. Each request names one of six MuSiQue hop shapes (2-hop; two 3-hop
+shapes; three 4-hop shapes) and includes a worked example of that shape. Shapes
+are requested in rotation, which gives equal counts per shape and therefore
+about one-sixth 2-hop, two-sixths 3-hop, and three-sixths 4-hop questions. The
+generated paragraphs are the only ground truth, so the subject matter is free
+and need not be factually accurate about the real world. The prompt requires
+the following:
+\begin{itemize}[nosep]
+    \item each reasoning step is one direct relation, and every step is needed
+    to reach the answer;
+    \item the question does not reveal any intermediate answer;
+    \item there is one supporting paragraph of three to five sentences per hop;
+    \item answers are short and come with acceptable aliases;
+    \item there are three topically related distractor paragraphs that neither
+    contradict the evidence nor answer the question.
+\end{itemize}
+If a response fails validation, one repair request returns the rejected output
+and the specific errors to the model.
+
+\paragraph{Assembly.} Code, not the model, builds the final record. Each
+example is padded to 20 paragraphs with filler paragraphs taken from MuSiQue
+train. Fillers that repeat a title or mention the answer are skipped. The
+paragraphs are shuffled, and their indices, supporting-paragraph flags, and
+question identifiers are assigned deterministically, so the model cannot place
+supporting evidence in a predictable position.
+
+\paragraph{Checks.} Each candidate passes structural validation: the hop shape
+must match the request, every step must refer to valid earlier steps, every
+supporting paragraph and step must be used, the final answer must be
+consistent, and the paragraph counts must be correct. Exact duplicates, after
+Unicode (NFKC), case, and whitespace normalization, are rejected against
+MuSiQue train and validation and against earlier accepted generations. These
+checks establish that a record is well formed. They do not establish factual
+correctness, that every hop is truly necessary, or semantic uniqueness, so the
+synthetic records are treated as a structurally controlled supplement rather
+than a curated benchmark.
+
+\paragraph{Pilot and filler choice.} Before full generation, a 100-question
+pilot compared synthetic questions with MuSiQue questions under the same
+interaction pipeline. With random fillers, only 16\% of synthetic questions
+produced a disagreement episode (Adoption or Retention), against 56\% for
+MuSiQue. Replacing them with topically related fillers chosen by TF-IDF
+similarity raised the synthetic rate to 35\% (McNemar $p<0.001$). Fillers that
+look relevant make the reading task harder and the two models more likely to
+diverge. Related fillers were adopted after the pilot. Filler titles in the
+final intervention contexts are topically related to their questions, which
+is consistent with this choice, although the swap step is not recorded in the
+final release's metadata.
+
+\paragraph{Scale.} The full run targeted 13,334 questions per hop shape
+(80,004 in total), with seed 42 and a per-request seed derived from it. Model
+outputs themselves are not bit-reproducible, so the accepted records, not the
+generation call, are the frozen artifact. The final collection contains 79,036
+synthetic episodes: 71,142 in the train, validation, and test partitions and
+7,894 in the intervention partition. Synthetic questions still produce
+disagreement less often than MuSiQue questions (27.4\% versus 62.9\% of
+episodes in the core partitions). Their contribution is volume and control
+over hop depth rather than a higher disagreement rate. Adoption and Retention
+were nearly balanced in the resulting corpus without any resampling.
 \section{Solver--Critic Forward Pass}
 \label{sec:forward-pass}
 
@@ -394,16 +549,542 @@ untouched, so information the model reads from them is unchanged.
 % final prompt token); prompt lengths from the validation interactions.jsonl telemetry.
 
 \section{Layer Selection Probe}
+\label{sec:layer-selection}
+
+SAEs are trained for one layer, and training and steering at every layer was
+beyond our compute budget. The layer was therefore chosen with a linear probe
+\cite{alain2016probes}: if the Solver's upcoming Adoption-or-Retention
+decision is linearly readable from a layer's residual stream before any answer
+token is generated, that layer is a reasonable place to look for features
+involved in the decision.
+
+\paragraph{Probe.} For each candidate layer the input is the attempt-2
+final-prompt-token activation and the target is Adoption (1) versus Retention
+(0). Activations are standardized and passed to a logistic-regression probe
+with an $L_2$ penalty and balanced class weights. The regularization strength
+$C$ is chosen from $\{10^{-3},10^{-2},\dots,10^{2}\}$ by three-fold
+cross-validation within the train partition. The folds are stratified by label
+and grouped by question family, the score is balanced accuracy, and ties go to
+the smaller $C$. A fixed $C$ was avoided because, with thousands of input
+dimensions and few positives, an unsuitable value can collapse the probe to
+predicting a single class. The candidate layers were 4, 8, 17, 25, and 29--33,
+which span early, middle, and late layers with denser coverage of the late
+layers where an earlier benchmark (Section~\ref{sec:res-exploratory}) had been
+run.
+
+\paragraph{Leakage control.} The probe is fit on train (25,556 episodes:
+13,015 Adoption, 12,541 Retention) and layers are ranked on validation (3,227
+episodes: 1,645 Adoption, 1,582 Retention). Test and intervention partitions
+are not read. Partitions are built from whole question families, and the code
+stops if a family appears on both the fit and evaluation sides. Inner folds
+and bootstrap resamples are grouped by family as well.
+
+\paragraph{Metrics.} The primary metric is balanced accuracy, whose chance
+level is 0.5 regardless of class balance. This mattered because an earlier,
+free-form version of the dataset was 91\% Adoption, where plain accuracy would
+have rewarded a constant predictor. AUROC is reported as a threshold-free
+complement. Uncertainty is estimated with 1,000 family-grouped bootstrap
+resamples, and every layer is compared with the best layer by a paired
+bootstrap difference on the same resamples. The selection rule recommends a
+layer only if it is best, is separated from every other layer (paired
+difference CI excludes zero), and has a CI lower bound above chance. Two
+non-activation baselines go through the same pipeline: a text-only probe on
+TF-IDF features of the question, the Solver's first answer, the Critic's
+answer, and the candidate order; and a metadata probe on candidate order,
+correctness cell, data source, and hop group. A layer is only useful if it
+beats what the visible text already reveals.
+
+\paragraph{Results.} Layer~25 had the highest balanced accuracy (0.843;
+95\% CI 0.830--0.856) and AUROC (0.927), and every paired difference against
+it excluded zero (Table~\ref{tab:layer-selection}). Accuracy rose from the
+early layers to a peak at layer~25 and then declined steadily through
+layer~33. The best layer exceeded the text-only baseline by 0.220 (95\% CI
+0.200--0.241) and the metadata baseline by 0.318, so the decision is not merely
+recoverable from question wording, answer strings, or candidate order. Layer~8
+was no better than the text-only baseline, which suggests that early layers
+mostly encode the surface content of the prompt.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Layer-selection probe on the validation partition ($n=3{,}227$).
+    $\Delta$ is the paired bootstrap difference in balanced accuracy relative
+    to layer~25.}
+    \label{tab:layer-selection}
+    \begin{tabular}{lrrr}
+        \toprule
+        Input & Balanced acc.\ [95\% CI] & AUROC & $\Delta$ vs.\ L25 \\
+        \midrule
+        Layer 25 & 0.843 [0.830, 0.856] & 0.927 & --- \\
+        Layer 17 & 0.828 [0.816, 0.842] & 0.918 & $-0.014$ \\
+        Layer 29 & 0.818 [0.805, 0.831] & 0.896 & $-0.025$ \\
+        Layer 30 & 0.807 [0.793, 0.820] & 0.884 & $-0.036$ \\
+        Layer 31 & 0.799 [0.785, 0.813] & 0.878 & $-0.044$ \\
+        Layer 32 & 0.796 [0.781, 0.810] & 0.873 & $-0.046$ \\
+        Layer 33 & 0.790 [0.775, 0.804] & 0.871 & $-0.053$ \\
+        Layer 8 & 0.623 [0.606, 0.640] & 0.671 & $-0.220$ \\
+        Layer 4 & 0.607 [0.592, 0.623] & 0.654 & $-0.236$ \\
+        Text-only baseline & 0.623 [0.606, 0.639] & 0.670 & $-0.220$ \\
+        Metadata baseline & 0.525 [0.507, 0.541] & 0.532 & $-0.318$ \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+Two further checks support the choice. First, when the same probe is applied
+to attempt-1 activations, recorded before the Solver has seen the Critic, layer~25
+reaches only 0.597 balanced accuracy, and all layers fall between 0.569 and
+0.597. Most of the signal at attempt~2 therefore depends on the feedback rather
+than on a fixed property of the question. Second, layer~25's accuracy was
+similar across subgroups: MuSiQue 0.828 and synthetic 0.851, and 0.835--0.855
+across 2-, 3-, and 4-hop questions. An earlier run on the previous
+rule-based labels also ranked layer~25 first, although with only 58 validation
+negatives it could not separate layer~25 from its neighbors. Layer~25 was
+therefore fixed for all SAE, feature-selection, and intervention work.
+
+One planned control was not run. A label-shuffle control in the style of Hewitt and
+Liang~\cite{hewitt2019control}, which would measure how much probe accuracy reflects
+probe capacity rather than the representation, is implemented but was disabled
+in the committed run because of its compute cost. The baselines above
+partly cover the same concern, but the probe results should be read as
+readability rather than selectivity.
 \section{SAE Training}
-% Reconstruction objective; pretrained, custom, and decoder-only fine-tuning;
-% define the MIT side experiment before drafting.
+
+\subsection{Training Data and Preprocessing}
+
+The custom SAEs were trained on the Solver's Layer 25 residual-post activations
+from the second Solver turn. Each example is the 2,560-dimensional activation
+at the final prompt token, immediately before the Solver generates its response
+to the candidate answers. The training, validation, test, and intervention
+partitions follow the question-family split defined before feature selection.
+Only the training partition updates SAE parameters. Validation activations are
+used for checkpoint and hyperparameter selection. The test partition is
+evaluated only after model selection, and the intervention partition remains
+outside SAE fitting and selection.
+
+All inputs are normalized by one scalar root-mean-square value computed over
+every element of the training activation matrix. The same frozen value is used
+for all partitions, avoiding split-specific normalization. Decoder outputs are
+rescaled to the original activation units before they are inserted into the
+Solver. The full encoding, reconstruction, and training objectives are given
+below.
+
+\input{equations/sae_training_objectives}
+
+Here, $N$ is the number of examples, $d=2{,}560$ is the residual-stream width,
+$m=12{,}888$ is the custom dictionary width, and $z_i$ is the sparse latent
+vector. Decoder columns are constrained to unit $L_2$ norm after each optimizer
+step so that feature magnitude cannot be changed simply by increasing decoder
+length.
+
+\subsection{Custom SAE Training}
+
+We trained two custom architectures with the same encoder--decoder dimensions
+and data but different sparsity mechanisms. Both used tied encoder--decoder
+initialization, Adam optimization, shuffled batches of 256, seed 42, and a
+maximum of 200 epochs. A ReduceLROnPlateau scheduler reduced the learning rate
+by a factor of ten after five validation epochs without improvement. Training
+stopped after 20 epochs without an absolute validation-loss improvement greater
+than $10^{-4}$, while the checkpoint with the lowest observed validation loss
+was retained.
+
+For the $L_1$ SAE, the encoder applies a nonnegative activation and the loss
+adds the mean absolute latent activation with coefficient $\lambda$. The sweep
+tested $\lambda\in\{1,2,3\}$ at learning rate $10^{-4}$; the selected model
+uses $\lambda=2$. For the TopK SAE, the main path retains exactly the $k$
+largest nonnegative activations per example. At learning rate
+$3\times10^{-4}$, the sweep compared AuxK models with $k=64$ and $k=128$ and
+a $k=128$ ablation without AuxK. The selected model uses $k=128$ and an AuxK
+coefficient of $1/128$. Up to 512 features that had not activated
+on the main path within the preceding 10,000 training examples were eligible
+to reconstruct the detached residual. This auxiliary signal reduces the chance
+that inactive features receive no useful gradient, but it does not contribute
+to validation loss or activate features in the main TopK representation
+\cite{gao2025scaling}.
+
+We did not automatically select the lowest scalar loss across both sparsity
+families because their losses are not directly comparable. Instead, one
+checkpoint per family was chosen from its validation tradeoff among
+reconstruction error, variance explained, mean active features, and dictionary
+coverage. For a frozen checkpoint, variance explained and average activity are
+defined as
+
+\input{equations/sae_evaluation_metrics}
+
+where $\bar{x}_{\mathrm{train}}$ is the training-set mean activation. Feature
+firing frequencies were also recorded as the fraction of examples for which a
+latent was positive. After selection, the exact best checkpoint was reloaded
+and evaluated without updating weights or inactivity counters.
+
+TopK was retained as a training and representation-quality comparison but was
+not carried into the final downstream feature-selection and causal tasking.
+The final downstream configuration used the $L_1$ custom SAE and members of
+the pretrained SAE family.
+
+Algorithm~\ref{alg:custom-sae-training} summarizes the shared training loop and
+the branch between the two sparsity mechanisms.
+
+\input{algorithms/custom_sae_training}
+
+\subsection{Pretrained SAE and Decoder-Only Adaptation}
+
+The external baseline is the frozen Layer 25 Gemma Scope 2 JumpReLU SAE
+described in Chapter~4. Because it was trained on a broader distribution, we
+also ran a decoder-only adaptation experiment. The pretrained encoder weights,
+encoder bias, and JumpReLU thresholds were frozen; their latent activations were
+cached once for the training and validation partitions. Only the decoder and
+reconstruction bias were optimized against the interaction activations. This
+preserves feature firing patterns and probe inputs while testing whether a
+decoder fitted to the study distribution reconstructs and steers more
+effectively.
+
+Decoder adaptation used seed 42, batches of 256, learning rate $10^{-5}$, a
+maximum of 10 epochs, and early-stopping patience of five. The run manifest
+records SHA-256 hashes of the source SAE parameters, activation tensors, probe
+configuration, and cached encoder features. A separate full-fine-tuning mode
+was implemented as an exploratory comparison, but updating the encoder changes
+the feature basis and therefore weakens one-to-one comparison with the
+pretrained feature identities. The decoder-only model is the cleaner adaptation
+for analyses that require the same selected latents before and after fitting.
+
+Algorithm~\ref{alg:decoder-only-adaptation} gives the adaptation and integrity
+checks used for the pretrained SAE.
+
+\input{algorithms/decoder_only_adaptation}
+
+\subsection{Exploratory LLM-Guided SAE Editing}
+
+Inspired by the MIT CSAIL ``Sparks of Weight-Space Programming'' demonstration
+\cite{takehi2026sparks}, we conducted a post-hoc side experiment asking whether
+an LLM could improve causal steering by directly editing selected SAE decoder
+directions without gradient training. This experiment is exploratory and is
+not included in the prespecified primary comparison.
+
+Claude received train-partition measurements and a locked-down Python sandbox,
+but no validation, test, intervention, or final causal results. It could inspect
+the pretrained SAE and the 10 Adoption and 10 Retention features selected by
+the probe, then propose edits to only those 20 decoder rows. Encoder parameters,
+thresholds, decoder-row lengths, and every unselected row remained fixed. Each
+edited row was constrained to cosine similarity of at least 0.95 with its
+original direction. No optimizer, backpropagation, or automated parameter
+search was permitted.
+
+Two controls separated LLM reasoning from generic weight perturbation. A
+mechanical edit rotated the same rows toward class-mean activation directions
+using a fixed formula, and a random edit applied the same row-wise rotation
+angles toward random orthogonal directions. All three edited SAEs then entered
+the same held-out feature-selection and intervention pipeline. This design
+tests whether an LLM-designed direction offers value beyond a deterministic
+behavioral direction or an equal-size random modification; it does not imply
+that the resulting decoder features acquired a complete semantic
+interpretation.
+
+The constrained interaction, authoritative host checks, and construction of
+the two matched controls are summarized in
+Algorithm~\ref{alg:llm-guided-sae-editing}.
+
+\input{algorithms/llm_guided_sae_editing}
 \section{Feature Selection Probe}
-% Probe, ablation check, selectivity controls, random draws, and dominant feature.
+\label{sec:feature-selection}
+
+The feature-selection stage turns each SAE into two small sets of candidate
+causal features: ten Adoption features and ten Retention features. It is run
+separately on each representation, namely the custom $L_1$ SAE, the frozen
+pretrained SAE, the decoder-adapted SAE, the exploratory fully fine-tuned SAE,
+and, as a non-sparse baseline, the 2,560 raw residual-stream dimensions.
+
+\paragraph{Probe and ranking.} Train and validation activations are encoded
+with each SAE. Latents that never fire on train are dropped, which leaves 6,515
+of 12,888 $L_1$ latents and 3,991 of 16,384 pretrained latents. The probe is
+the layer-selection probe applied to latents instead of activations:
+standardized inputs, balanced class weights, an $L_2$ penalty, and $C$ chosen
+by family-grouped three-fold cross-validation on train. Features are ranked on
+train by mean absolute SHAP value \cite{lundberg2017shap}. For a linear probe on
+standardized inputs this equals $|\beta_j|\cdot\mathbb{E}|\tilde z_j|$, the
+coefficient magnitude times the feature's typical standardized activation, so
+the ranking rewards features that both carry weight and actually fire. The ten
+highest-ranked features with a positive coefficient form the Adoption set, and
+the ten highest-ranked with a negative coefficient form the Retention set.
+Choosing both directions lets the causal experiment push the decision either
+way. Raw dimensions are treated as a pseudo-SAE in which each "latent" is a
+neuron minus its train mean, so the same code applies to them.
+
+\paragraph{Offline ablation check.} Before any generation, an offline
+ablation tests whether the selected features carry the probe's signal. A
+separate readout probe is trained on raw train activations. It predicts
+acceptance from a full activation vector and reaches 0.843 balanced accuracy on
+validation. For each validation episode the readout is applied to three
+versions of the activation: the SAE reconstruction, the reconstruction with
+the targeted features set to zero, and the reconstruction with a random
+feature set set to zero. Random sets are drawn 100 times per label. Each
+targeted feature is replaced by a feature drawn from the 50 live latents
+closest to it in log firing frequency, excluding both targeted sets. For raw
+dimensions the matching uses per-neuron standard deviation instead. The effect
+is the change in mean predicted acceptance relative to the unablated
+reconstruction. Its 95\% CI comes from a family-clustered paired bootstrap and
+its $p$-value from a two-sided sign-flip permutation test with 10,000
+permutations. A sensitivity version adds each SAE's reconstruction error
+back, so that the reference is the original activation rather than the
+reconstruction. This check is a proxy: it measures what a probe predicts, not
+what the Solver generates, and it is used only to confirm that selection
+picked up signal. The causal claims rest on the generation experiments in
+Section~\ref{sec:causal-methods}.
+
+\paragraph{The dominant-feature problem.} Earlier versions of this stage
+exposed a problem that shaped the final design. In the first custom $L_1$ SAEs,
+one always-on feature dominated the targeted set. At layer~25, feature 7025
+fired on 100\% of examples with a mean activation near 46 and supplied 86\% of
+the set's summed activation. At layer~33, feature 8023 played the same role
+(91\%). Zeroing or clamping the set therefore made targeted edits 8--37 times
+larger in norm than random edits, and the measured effects followed edit size
+rather than feature identity (Section~\ref{sec:res-exploratory}). An
+interim fix matched random controls on decoded contribution as well as firing
+frequency, and analyzed the dominant feature on its own and the set without
+it. The final design removes the problem: each selected feature contributes
+only its unit-norm decoder direction, and the total edit size is fixed as a
+fraction of the activation norm (Section~\ref{sec:causal-methods}). How
+strongly a feature fires can no longer inflate the size of an edit. In the final
+run, the selection signal is not concentrated in one feature: the top-ranked
+$L_1$ feature carries 3.0\% of the total absolute SHAP mass, and the top 20
+together carry 16.3\%.
+
+As in layer selection, no shuffled-label control probe was trained on SAE
+latents. Selectivity is instead assessed with the matched random feature sets,
+the raw-activation baseline, and, at the layer level, the text, metadata, and
+pre-feedback baselines.
+
 \section{Causality Experiments}
-% Ablation, suppression, amplification, edit-norm controls, mechanical versus
-% LLM-guided edits, raw-activation controls, and reconstruction control.
+\label{sec:causal-methods}
+
+The causal question is whether changing the selected features' contribution
+to the Solver's residual stream changes whether it adopts the Critic's answer,
+and whether it does so more than an equally large change in random
+directions. The final design came out of three earlier designs, each of which
+failed in an informative way (Section~\ref{sec:res-exploratory}):
+\begin{itemize}[nosep]
+    \item Zeroing the selected features mostly broke generation rather than
+    changing the decision, so ablation is kept only as the offline check in
+    Section~\ref{sec:feature-selection}.
+    \item Clamped suppression and amplification produced targeted edits far
+    larger than their random controls, which confounded feature identity with
+    edit size.
+    \item Equal-size edits at very small magnitudes moved the probe but not
+    the generated answers.
+\end{itemize}
+The final experiment therefore uses fixed-size directional steering edits
+with matched random controls, applied during real generation.
+
+\paragraph{Where and how the edit is applied.} All edits are made to the
+Solver's layer-25 residual stream at the final prompt token of the attempt-2
+prefill, the position used for layer and feature selection. A forward hook
+replaces that single vector $x$ with $x'=x+\Delta$. Earlier positions and all
+decoding steps are not edited, and the hook refuses to edit if the activation
+it receives differs from the one the edit was computed from. Generation is
+greedy with up to 64 new tokens, matching collection. Because only one
+position is edited, a null result means that the features are not causally
+used at this position, not that they are irrelevant elsewhere.
+
+\paragraph{Edit directions and size.} For SAE feature $i$, the direction
+$d_i$ is the unit-normalized decoder contribution
+$\mathrm{dec}(e_i)-\mathrm{dec}(0)$. For a raw dimension it is the
+corresponding basis vector, signed by the probe coefficient. A feature set $S$
+is summarized by one direction,
+\begin{equation}
+    u_S = \frac{\sum_{i\in S} d_i}{\left\lVert \sum_{i\in S} d_i \right\rVert},
+\end{equation}
+and every edit has the same norm, $\lVert\Delta\rVert = r\lVert x\rVert$
+with $r=0.2$. Arms are defined relative to the episode's stored decision.
+Write $u_{\mathrm{toward}}$ for the set of the opposite label and
+$u_{\mathrm{away}}$ for the set of the stored label. Then
+\begin{align}
+    \textsc{increase}:\;& \Delta = +r\lVert x\rVert\, u_{\mathrm{toward}},\\
+    \textsc{decrease}:\;& \Delta = -r\lVert x\rVert\, u_{\mathrm{away}},\\
+    \textsc{both}:\;& \Delta = r\lVert x\rVert\,
+        \frac{u_{\mathrm{toward}}-u_{\mathrm{away}}}
+             {\lVert u_{\mathrm{toward}}-u_{\mathrm{away}}\rVert}.
+\end{align}
+The increase and decrease arms correspond to the amplification and
+suppression of the outline, recast as steering edits of fixed size. Unlike
+zeroing, the decrease arm is never a no-op when the features happen not to be
+firing. The \textsc{both} arm is a single edit of size $r$, not $2r$. Edits
+are added to the original activation $x$, not to its SAE reconstruction, so no
+reconstruction error enters an edit condition. Across all conditions the
+achieved $\lVert\Delta\rVert/\lVert x\rVert$ averaged 0.2000 (range
+0.196--0.204).
+
+\paragraph{Random controls.} Each targeted edit is paired with edits along
+random feature sets built by the same matching rules as in
+Section~\ref{sec:feature-selection}: frequency-matched latents for SAEs and
+standard-deviation-matched neurons for raw activations. Draws come from a
+fixed pool of 100. Each question receives three distinct draws, chosen by
+hashing the seed and question identifier, so draws are reproducible and
+spread across the pool. Random edits use the same $r$, arm formula, and unit
+normalization, so targeted and random conditions differ only in direction.
+
+\paragraph{Choosing the edit size.} The edit size could not be set from the
+probe. The readout's prediction flips at roughly 0.0007\% of $\lVert x\rVert$,
+and random directions alone move it at 1--2.5\%, which is far smaller than
+anything that changes generated text. Instead, $r$ was chosen from real
+generations on a 50-episode pilot, intervention positions 1,001--1,050, which
+are disjoint from the study cohort. The candidates were
+$r\in\{0.02,0.05,0.10,0.20,0.30,0.50\}$. The prespecified rule picks the
+smallest $r$ at which at least one SAE's targeted-minus-random CI lies above
+zero, while keeping both out-of-candidate and degenerate answers below 5\%.
+Only $r=0.2$ met it (pretrained SAE, increase arm, $+4.7$ percentage points,
+95\% CI $+0.7$ to $+9.3$, no out-of-candidate answers). No arm met it at
+$r=0.3$ or $0.5$, where the custom $L_1$ SAE's out-of-candidate rate reached
+16--36\%.
+
+\paragraph{Conditions.} Each study episode is regenerated under 65
+conditions: an unedited baseline replay; four reconstruction controls in
+which an SAE's reconstruction $\mathrm{dec}(\mathrm{enc}(x))$ replaces $x$
+without any edit; and 60 edit conditions (five representations $\times$ three
+arms $\times$ one targeted plus three random sets). The custom $L_1$,
+pretrained, and decoder-adapted SAEs form the primary family. Raw activations
+are a control, testing whether an SAE basis adds anything beyond the
+probe-weighted neurons, and the fully fine-tuned SAE is exploratory. The
+reconstruction controls measure how many flips the SAE pass-through alone
+causes. They define a noise floor but are not subtracted from edit effects,
+since edit conditions never use the reconstruction.
+
+\paragraph{LLM-guided and mechanical edits.} The exploratory LLM-edited
+pretrained SAE and its mechanical and random-rotation controls (Section~6.8,
+Algorithm~\ref{alg:llm-guided-sae-editing}) were passed through this protocol
+unchanged: same selected features, $r$, draw pool, and episode order. The
+comparison therefore isolates the effect of changed decoder directions.
+
 \section{Metrics and Statistical Analysis}
-% Flip definition, switch/broken split, confidence intervals, random baselines,
-% and multiple-comparison handling.
+\label{sec:metrics}
+
+\paragraph{Flips.} Every regenerated attempt-2 answer is labeled by the same
+judge that produced the stored labels: Claude Sonnet~4.5 with the same
+prompt, checked by hash before labeling starts. Each answer is labeled on its
+own, without the judge knowing the condition. An answer identical to the
+stored answer reuses the stored label. A condition \emph{flips} an episode
+when the new label is the opposite of the stored decision: Adoption to
+Retention, or Retention to Adoption. Agreement and Out labels do not count as
+flips and are reported separately. Out (an answer that is neither candidate,
+including ``the evidence is insufficient'') is the final run's measure of a
+\emph{broken} answer, as opposed to a \emph{switch}. Reporting flip rates
+together with Out rates distinguishes an edit that changes the decision from
+one that derails generation. An earlier run split these two outcomes
+explicitly (Section~\ref{sec:res-exploratory}). If labeling an episode's
+answer still fails after one retry, the whole episode is excluded from every
+condition. A failure is never counted as a decision.
+
+\paragraph{Effects and intervals.} For a representation and arm, the effect
+is the paired difference
+\begin{equation}
+    \hat\Delta = \frac{1}{n}\sum_{q=1}^{n}
+    \left(F_q^{\mathrm{targeted}} - \frac{1}{3}\sum_{k=1}^{3}F_{q,k}^{\mathrm{random}}\right),
+\end{equation}
+where $F\in\{0,1\}$ indicates a flip and $q$ indexes episodes. It is reported
+in percentage points. 95\% confidence intervals are percentile bootstrap
+intervals over episodes (10,000 resamples). $p$-values come from a paired
+sign-flip permutation test with 10,000 permutations, using
+$p=(1+\#\{\text{as or more extreme}\})/(1+10{,}000)$, so the smallest
+reportable value is about $10^{-4}$.
+
+\paragraph{Test families.} Multiplicity was fixed before the study cohort was
+run. The primary family contains nine one-sided tests (targeted greater than
+random): three SAEs (custom $L_1$, pretrained, decoder-adapted) times three
+arms, pooled across both decision directions and corrected with the Holm
+procedure \cite{holm1979simple} at $\alpha=0.05$. The primary claim, that some
+SAE feature set steers feedback uptake more than matched random directions, is
+supported if at least one test survives. Secondary analyses are separate
+two-sided Holm families: results by direction (Adoption-to-Retention versus
+Retention-to-Adoption) within each representation, prespecified between-SAE
+contrasts, and between-arm contrasts. The raw-activation control, the fully
+fine-tuned SAE, the LLM-edited SAEs, the source split (MuSiQue versus
+synthetic), the analysis excluding Out answers, and the confidence strata are
+exploratory or post hoc and are labeled as such where reported.
 \section{Experimental Setup and Reproducibility}
-% Hardware, runtime, seeds, configs, versions, run checks, and commit recording.
+
+\subsection{Hardware and Software Environment}
+
+Individual GPU jobs for collection, activation extraction, SAE training, and
+causal replay used NVIDIA A10G devices with 23~GiB of device memory. Collection
+and causal intervention were distributed across multiple workers; each worker
+used one GPU. The
+recorded machine used four CPU cores and approximately 15.4~GiB of system
+memory for the exploratory SAE-editing workflow. The project environment is
+defined for Python~3.11 and PyTorch~2.13, with Transformers~5.x, Datasets,
+scikit-learn, SciPy, pandas, NumPy, and SAE Lens. Rather than relying only on
+the environment specification, individual run manifests record the resolved
+package versions; for example, the final collection provenance records
+PyTorch~2.13.0, Transformers~5.17.0, and Datasets~5.0.1.
+
+Model inference used bfloat16 on the GPU. The model and dataset sources were
+pinned to immutable Hugging Face revisions:
+
+\begin{itemize}
+    \item Gemma Solver: \texttt{093f9f388b31de276ce2de164bdc2081324b9767};
+    \item Qwen Critic: \texttt{cdbee75f17c01a7cc42f958dc650907174af0554};
+    \item MuSiQue: \texttt{c8f4f8c9465fb69d31a8eae894c3fd509c4ca321}.
+\end{itemize}
+
+Causal replay used greedy decoding with at most 64 new tokens, ensuring that a
+fixed prompt and model state could be checked against the originally stored
+response.
+
+\subsection{Randomness and Partition Integrity}
+
+Seed 42 was fixed for collection sampling, SAE initialization and shuffling,
+probe resampling, random-feature controls, and intervention ordering unless a
+run explicitly records a different seed. The final dataset split used seed 43.
+Question families, rather than
+individual episodes, define the train, validation, test, and intervention
+partitions. The code treats test and intervention partitions as sealed during
+layer and feature selection. Edit-size selection used a designated 50-episode
+pilot at intervention positions 1,001--1,050; those episodes were disjoint from
+the 1,000-episode intervention study cohort. The study cohort was therefore not
+used to choose a layer, SAE checkpoint, feature set, edit direction, or edit
+size.
+
+Random controls are stored or deterministically regenerated from the frozen
+seed and episode identifiers. Completed outputs are resumed rather than
+regenerated, which prevents partial distributed runs from silently changing
+previous model responses. Evaluation scripts also record excluded episodes and
+technical labeling failures instead of replacing them with newly sampled
+examples.
+
+\subsection{Configuration and Provenance Records}
+
+Every major stage is driven by a versioned YAML configuration. Output
+directories are run-specific and normally refuse to overwrite an existing
+run. Run records store the complete command, Git commit, hashes of uncommitted
+tracked code, configuration hash, model and SAE specifications, label-policy
+version, and SHA-256 hashes of the input artifacts. Feature-selection outputs
+also hash every SAE file they read. Consequently, a later causal run can verify
+that the selected features refer to the same checkpoint rather than another
+file with the same human-readable name.
+
+Collection provenance records the ordered question manifest, dataset revision,
+resolved model revisions, package versions, and available GPUs. SAE runs store
+their full hyperparameters, learning-rate history, best epoch, checkpoint,
+split-level reconstruction metrics, and feature firing frequencies. Causal
+runs additionally freeze the episode IDs, conditions, feature sets, random
+draws, edit size, and analysis settings before distributed workers begin.
+
+\subsection{Run-Consistency Checks}
+
+The causal pipeline performs a plain replay before applying any activation
+edit. It compares the regenerated prompt hash, response, first token, and
+behavior label with the stored collection artifacts. If baseline agreement
+falls below the configured threshold, the run stops before generating edited
+conditions. Distributed workers must reproduce the successful preflight; shard
+sets with missing, duplicated, or incompatible conditions are rejected during
+merge.
+
+The pipeline also rejects mismatched SAE hashes, changed label protocols,
+incompatible feature-reference files, and arms generated under different
+frozen settings. Generated rows record the actual edit norm, reconstruction
+error, number of active and edited features, token budget status, and elapsed
+generation time. These checks do not remove all sources of nondeterminism, but
+they make discrepancies visible and prevent results from different model,
+code, label, or intervention states from being combined silently.
+
+The repository contains the configurations, scripts, lightweight summaries,
+and exact run identifiers needed to trace every reported result. Large model
+weights, activation tensors, and SAE checkpoints are stored separately because
+of their size; reproduction requires retrieving the artifacts whose hashes are
+recorded in the manifests. Appendix~E provides the command sequence and
+artifact locations used to reconstruct the analysis.
