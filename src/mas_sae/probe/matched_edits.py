@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Sequence
 from pathlib import Path
 
 import numpy as np
@@ -23,7 +24,8 @@ from mas_sae.utils.versioning import create_versioned_run_dir
 logger = logging.getLogger(__name__)
 
 
-def direction_scores(delta, X, w):
+def direction_scores(delta: np.ndarray, X: np.ndarray,
+                     w: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Readout-score change per unit relative dose; zero edits are explicitly invalid."""
     norm = np.linalg.norm(np.asarray(delta, dtype=np.float64), axis=1)
     xnorm = np.linalg.norm(np.asarray(X, dtype=np.float64), axis=1)
@@ -34,7 +36,7 @@ def direction_scores(delta, X, w):
     return shift, norm, scale, valid
 
 
-def validate_source(source, cfg, current):
+def validate_source(source: dict, cfg: fs.FeatureSelectionConfig, current: dict) -> None:
     """Refuse stale rankings or changed data, dictionaries, target, or grouping."""
     for key in ('labels_sha256', 'manifest_sha256', 'excluded_episodes_file_sha256',
                 'input_sha256', 'sae_sha256'):
@@ -46,7 +48,19 @@ def validate_source(source, cfg, current):
             raise ValueError(f'Source run config differs: {key}')
 
 
-def run(cfg, source_run: Path, doses=(0.01, 0.025, 0.05, 0.1), config_path=None):
+def run(cfg: fs.FeatureSelectionConfig, source_run: Path,
+        doses: Sequence[float] = (0.01, 0.025, 0.05, 0.1), config_path: Path | None = None) -> Path:
+    """Re-score a finished feature-selection run (``source_run``) at equal edit sizes; return the new
+    folder ``<output_dir>/matched_edits/<timestamp>``.
+
+    ``cfg`` must be the config that run used: its inputs, SAE files and settings are checked against
+    the run's summary, and the raw readout is refit at the run's saved C on the fit rows. Each edit
+    direction (an SAE's targeted or matched-random ablation, decode(ablated) - decode(z), which keeps
+    the reconstruction error; the negative readout direction; a random direction) is rescaled per row
+    to ``dose`` times that row's activation norm and scored through the linear readout; zero edits
+    are excluded. ``doses`` are positive fractions. Writes ``readout.npz``, ``matched_effects.csv``,
+    ``edit_norms.csv``, prediction ``.npz`` files and ``matched_edit_summary.json``.
+    """
     doses = np.asarray(doses, dtype=float)
     if not len(doses) or not np.all(np.isfinite(doses) & (doses > 0)):
         raise ValueError('Doses must be finite positive fractions, e.g. 0.01 0.025 0.05 0.1.')

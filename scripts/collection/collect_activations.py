@@ -1,3 +1,12 @@
+"""Stage-1 collection worker: run the Solver-Critic episodes and save Solver activations.
+
+With ``--manifest`` (the mixed distributed run) it processes the selected work chunks of a
+prepared manifest into ``<manifest dir>/chunks/``. Without it (legacy single-split runs) it
+collects one MuSiQue split in resumable checkpoints and writes the final outputs under
+``data/activations/<run_name>/`` and ``results/collection/<run_name>/<source_split>/``.
+``collection.protocol_version`` selects the Critic and target capabilities (``PROTOCOLS``).
+"""
+
 from __future__ import annotations
 
 import argparse

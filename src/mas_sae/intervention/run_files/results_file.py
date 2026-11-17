@@ -16,10 +16,12 @@ logger = logging.getLogger(__name__)
 
 
 def row_key(row: dict) -> tuple[str, str]:
+    """(episode_id, condition key): a row's identity in a results file."""
     return row["episode_id"], row["condition"]
 
 
 def cut_unfinished_last_line(path: Path) -> None:
+    """Truncate the file after its last newline, dropping a partial line left by an interrupted write."""
     data = path.read_bytes()
     if data and not data.endswith(b"\n"):
         keep = data.rfind(b"\n") + 1
@@ -29,6 +31,7 @@ def cut_unfinished_last_line(path: Path) -> None:
 
 
 def read_rows(path: Path) -> list[dict]:
+    """Every line of a JSONL results file, parsed. Raises ValueError at the first line that is not JSON."""
     rows = []
     for number, line in enumerate(Path(path).read_text().splitlines(), 1):
         try:
@@ -39,6 +42,9 @@ def read_rows(path: Path) -> list[dict]:
 
 
 class ResultsFile:
+    """One append-only results file, opened for resuming: created if missing, an interrupted last
+    line cut, its rows loaded. Raises ValueError if an (episode, condition) appears twice."""
+
     def __init__(self, path: Path):
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -50,9 +56,11 @@ class ResultsFile:
             raise ValueError(f"{self.path} has the same (episode, condition) more than once.")
 
     def has(self, episode_id: str, condition_key: str) -> bool:
+        """Whether the (episode, condition) row is already in the file."""
         return (episode_id, condition_key) in self.keys
 
     def append(self, row: dict) -> None:
+        """Append one row and fsync it before returning. Raises ValueError if its key is already there."""
         if row_key(row) in self.keys:
             raise ValueError(f"{self.path} already has {row_key(row)}.")
         with self.path.open("a") as f:

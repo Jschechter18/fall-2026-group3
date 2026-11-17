@@ -1,13 +1,23 @@
 # src/mas_sae/data/musique.py
+"""MuSiQue loading, seeded question sampling and question-level split assignment.
+
+Stage-1 input: loads MuSiQue-format records (from the Hub or a local JSONL), parses hop
+type/group from question ids, and assigns question ids to splits or partitions with
+hop-stratified, seeded, largest-remainder cuts. ``mas_sae.data.production`` builds the frozen
+research partitions on top of ``assign_experiment_splits``.
+"""
 
 import json
 import math
 import random
 import re
 from pathlib import Path
-from typing import Any, NotRequired, TypedDict, cast
+from typing import TYPE_CHECKING, Any, NotRequired, TypedDict, cast
 
 from datasets import load_dataset
+
+if TYPE_CHECKING:
+    from datasets import Dataset
 
 
 MUSIQUE_DATASET_ID = "dgslibisey/MuSiQue"
@@ -37,7 +47,7 @@ def download_musique(output_dir: Path) -> tuple[Path, Path]:
 
     Parameters
     ----------
-    output_dir : Path, optional
+    output_dir : Path
         Output directory where the MuSiQue dataset will be saved
 
     Returns
@@ -75,7 +85,7 @@ def load_musique_split(
     *,
     revision: str | None = None,
     path: str | Path | None = None,
-):
+) -> "list[dict[str, Any]] | Dataset":
     """Load MuSiQue-format JSONL locally, or a source split from the Hub.
 
     Local paths are relative to the working directory; ``source_split``
@@ -430,7 +440,7 @@ def assign_experiment_splits(
     """Assign every question id to exactly one split.
 
     Assignment is done at question level, never at episode level, so the
-    three critic episodes generated from one question always share a split.
+    episodes generated from one question always share a split.
     Within each hop group the ids are shuffled with ``seed`` and cut by
     ``proportions`` (largest-remainder rounding), so each split keeps the
     sample's hop mix.

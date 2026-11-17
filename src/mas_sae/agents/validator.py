@@ -1,3 +1,8 @@
+"""LLM answer-equivalence check of the Solver's final answer against the gold answer.
+
+Run on every stage-1 episode's Attempt 2 and recorded as ``validator_final_correct``.
+"""
+
 from __future__ import annotations
 
 from collections.abc import Iterable
@@ -9,6 +14,8 @@ from mas_sae.agents.base import Agent, ProcessorProtocol
 
 @dataclass
 class ValidatorVerdict:
+    """Parsed validator reply: True for YES, False for NO, None when the first word is neither."""
+
     is_correct: bool | None
     raw_output: str
 
@@ -53,6 +60,8 @@ class Validator(Agent):
         aliases: Iterable[str],
         candidate: str,
     ) -> str:
+        """The YES/NO equivalence prompt. ``question`` is accepted but not shown to the model;
+        a single string in ``aliases`` is treated as one alias, and no aliases render as "none"."""
         _ = question
 
         if isinstance(aliases, str):
@@ -73,6 +82,10 @@ class Validator(Agent):
         aliases: Iterable[str],
         candidate: str,
     ) -> ValidatorVerdict:
+        """Ask the model whether ``candidate`` matches the gold answer or an alias.
+
+        Only the first word of the reply is read, after stripping punctuation.
+        """
         raw = self._generate(
             self.build_prompt(
                 question,

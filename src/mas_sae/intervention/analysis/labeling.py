@@ -22,11 +22,17 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from mas_sae.evaluation import claude_validator as cv
 from mas_sae.experiments.artifacts import sha256_json
 from mas_sae.experiments.records import read_jsonl
 from mas_sae.utils.versioning import create_versioned_run_dir
+
+if TYPE_CHECKING:
+    from mas_sae.intervention.experiment.config import Labeling
+    from mas_sae.intervention.experiment.episodes import Episode
+    from mas_sae.models.claude import ClaudeClient, ClaudeResult
 
 PRESENTATION = "candidates"
 LABEL_ROUNDS = 2            # the first attempt and one retry of every failed request
@@ -34,6 +40,7 @@ LABEL_ROUNDS = 2            # the first attempt and one retry of every failed re
 
 @dataclass(frozen=True)
 class LabelerProtocol:
+    """The stored-label run's labeler settings, reused for every new label (``read_protocol``)."""
     model_id: str
     client: str
     max_tokens: int
@@ -45,6 +52,7 @@ class LabelerProtocol:
 
 
 def read_protocol(labels_dir: Path) -> LabelerProtocol:
+    """The labeler recorded in a stored-label run folder's ``run_settings.json`` and ``summary.json``."""
     settings = json.loads((Path(labels_dir) / "run_settings.json").read_text())
     summary = json.loads((Path(labels_dir) / "summary.json").read_text())
     return LabelerProtocol(
@@ -70,7 +78,9 @@ def protocol_problems(protocol: LabelerProtocol) -> list[str]:
     return problems
 
 
-def create_client(protocol: LabelerProtocol, labeling_config):
+def create_client(protocol: LabelerProtocol, labeling_config: Labeling) -> ClaudeClient:
+    """A Bedrock ClaudeClient for the protocol's model, with the configured AWS profile and region, a
+    connection pool of ``concurrency`` and adaptive retries (up to 8 attempts)."""
     import boto3
     from botocore.config import Config
     from mas_sae.models.claude import ClaudeClient
@@ -80,7 +90,7 @@ def create_client(protocol: LabelerProtocol, labeling_config):
                                       retries={"mode": "adaptive", "max_attempts": 8}))
 
 
-def labeling_request(episode, answer: str) -> dict:
+def labeling_request(episode: Episode, answer: str) -> dict:
     """What Claude sees: the stored question, A1 and C1, the candidates display, and the new A2. Nothing else."""
     return {"question_id": episode.question_id, "question": episode.question,
             "solver_attempt_1": episode.solver_attempt_1, "critic_advocated_answer": episode.critic_advocated_answer,
@@ -162,10 +172,13 @@ class StubClaudeClient:
     def __init__(self, model: str):
         self.model = model
 
-    def close(self):
+    def close(self) -> None:
+        """Nothing to close."""
         pass
 
-    def generate(self, prompt: str, **kwargs):
+    def generate(self, prompt: str, **kwargs: object) -> ClaudeResult:
+        """Label the A2 in the prompt's trailing JSON payload by text match (see the class docstring).
+        Other arguments are ignored."""
         from mas_sae.models.claude import ClaudeResult
         payload = json.loads(prompt[prompt.rindex("\n{") + 1:])
         a2 = payload["A2"].lower()

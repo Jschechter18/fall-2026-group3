@@ -1,7 +1,10 @@
 """The epoch loop (keep the best eligible epoch) and checkpoint writing."""
 
+from __future__ import annotations
+
 import logging
 import math
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import torch
@@ -16,10 +19,22 @@ from .evaluation import evaluate_splits
 from .reporting import paired_stats
 from .selection import _format, eligibility, within_l0
 
+if TYPE_CHECKING:
+    import argparse
+    from pathlib import Path
+
+    from mas_sae.sae.pretrained import JumpReLUSAE
+
+    from .data import Split
+    from .trainers import DecoderOnlyTrainer, FullTrainer
+
 logger = logging.getLogger(__name__)
 
 
-def train(args, model, source, trainer, splits, original, sae_config, out, device):
+def train(args: argparse.Namespace, model: JumpReLUSAE, source: JumpReLUSAE,
+          trainer: DecoderOnlyTrainer | FullTrainer, splits: dict[str, Split],
+          original: dict[str, dict[str, Any]], sae_config: dict, out: Path,
+          device: str | torch.device) -> int:
     """Train for up to args.epochs and save the best epoch to out/best. Returns the best epoch number.
 
     Choosing the best epoch:
@@ -82,7 +97,7 @@ def train(args, model, source, trainer, splits, original, sae_config, out, devic
     return best_epoch
 
 
-def save_model(model, sae_config, destination):
+def save_model(model: JumpReLUSAE, sae_config: dict, destination: Path) -> None:
     """Write params.safetensors + config.json in the Gemma Scope layout (loadable as kind: gemma_scope)."""
     destination.mkdir(parents=True, exist_ok=True)
     save_file({name: value.detach().cpu().contiguous() for name, value in model.state_dict().items()},

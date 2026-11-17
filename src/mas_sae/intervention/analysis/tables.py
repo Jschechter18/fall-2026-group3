@@ -8,6 +8,9 @@ first. Strata are pooled for Tables P, 2 and D: an arm's two strata are mirror i
 
 from __future__ import annotations
 
+from collections.abc import Iterable
+from typing import TYPE_CHECKING
+
 import numpy as np
 import pandas as pd
 
@@ -16,6 +19,9 @@ from mas_sae.intervention.experiment.conditions import Condition
 from mas_sae.intervention.generation.edits import ARMS
 from mas_sae.intervention.experiment.episodes import OPPOSITE, STRATA
 
+if TYPE_CHECKING:
+    from mas_sae.intervention.experiment.config import Analysis
+
 ARM_NAMES = {("adoption", "decrease"): "decrease adoption features",
              ("adoption", "increase"): "increase retention features",
              ("retention", "decrease"): "decrease retention features",
@@ -23,14 +29,19 @@ ARM_NAMES = {("adoption", "decrease"): "decrease adoption features",
 
 
 def arm_name(stratum: str, arm: str) -> str:
+    """The arm's name within a stratum, e.g. adoption + increase is "increase retention features";
+    "both" keeps its name."""
     return ARM_NAMES.get((stratum, arm), arm)
 
 
 def stratum_name(stratum: str) -> str:
+    """The stratum as "stored → target", e.g. "adoption → retention"."""
     return f"{stratum} → {OPPOSITE[stratum]}"
 
 
 def ci_text(result: dict) -> str:
+    """Δ and its 95% CI in pp from a ``stats.paired_difference`` result, as "Δ [low, high]", signed,
+    one decimal."""
     lo, hi = result["ci95_pp"]
     return f"{result['delta_pp']:+.1f} [{lo:+.1f}, {hi:+.1f}]"
 
@@ -38,42 +49,50 @@ def ci_text(result: dict) -> str:
 class Outcomes:
     """Flip outcomes and telemetry of labeled rows, looked up by (episode, condition)."""
 
-    def __init__(self, rows: list[dict], edit_size: float, n_draws: int, plan):
+    def __init__(self, rows: list[dict], edit_size: float, n_draws: int, plan: Analysis):
         self.rows = {(r["episode_id"], r["condition"]): r for r in rows}
         self.stratum = {r["episode_id"]: r["stored_label"] for r in rows}
         self.edit_size, self.n_draws, self.plan = edit_size, n_draws, plan
 
     def episodes(self, stratum: str | None = None) -> list[str]:
+        """Sorted episode ids, optionally only those whose stored label is ``stratum``."""
         return sorted(e for e, s in self.stratum.items() if stratum is None or s == stratum)
 
     def flips(self, condition: Condition, episodes: list[str]) -> np.ndarray:
+        """Per episode, in order: 1.0 if the condition's label is the opposite of the stored label,
+        else 0.0."""
         rows = [self.rows[(e, condition.key)] for e in episodes]
         return np.array([r["label"] == OPPOSITE[r["stored_label"]] for r in rows], float)
 
     def _edit(self, rep, arm, source, draw=None) -> Condition:
         return Condition("edit", rep, arm, source, draw, self.edit_size)
 
-    def targeted(self, rep: str, arm: str, episodes) -> np.ndarray:
+    def targeted(self, rep: str, arm: str, episodes: list[str]) -> np.ndarray:
+        """Per episode, the flip of the targeted edit at the run's edit size."""
         return self.flips(self._edit(rep, arm, "targeted"), episodes)
 
-    def random(self, rep: str, arm: str, episodes) -> np.ndarray:
+    def random(self, rep: str, arm: str, episodes: list[str]) -> np.ndarray:
         """Per question, the mean flip over the random draws."""
         return np.mean([self.flips(self._edit(rep, arm, "random", k), episodes) for k in range(self.n_draws)], axis=0)
 
-    def delta(self, rep: str, arm: str, episodes) -> np.ndarray:
+    def delta(self, rep: str, arm: str, episodes: list[str]) -> np.ndarray:
+        """Per question, targeted flip − mean random flip: the paired value the tests compare."""
         return self.targeted(rep, arm, episodes) - self.random(rep, arm, episodes)
 
-    def logprob_shift(self, rep: str, arm: str, episodes) -> float:
+    def logprob_shift(self, rep: str, arm: str, episodes: list[str]) -> float:
         """Mean change in log p(baseline's first token), targeted − mean of random draws."""
         lp = lambda c: np.array([self.rows[(e, c.key)]["baseline_first_token_logprob"] for e in episodes], float)
         random = np.mean([lp(self._edit(rep, arm, "random", k)) for k in range(self.n_draws)], axis=0)
         return float(np.mean(lp(self._edit(rep, arm, "targeted")) - random))
 
-    def test(self, a, b, alternative: str) -> dict:
+    def test(self, a: np.ndarray, b: np.ndarray, alternative: str) -> dict:
+        """``stats.paired_difference`` of a − b, with the plan's bootstrap and permutation counts
+        and seed 0."""
         return stats.paired_difference(a, b, alternative, self.plan.n_bootstrap, self.plan.n_permutations, seed=0)
 
 
 def with_holm(results: list[dict]) -> list[dict]:
+    """Each result with ``p_holm`` added, Holm-adjusted across ``results`` as one family."""
     adjusted = stats.holm([r["p_value"] for r in results])
     return [{**r, "p_holm": p} for r, p in zip(results, adjusted)]
 
@@ -128,7 +147,7 @@ def reference_rows(o: Outcomes, saes: list[str]) -> pd.DataFrame:
     return pd.DataFrame(out)
 
 
-def table_2(o: Outcomes, pairs, family: str) -> pd.DataFrame:
+def table_2(o: Outcomes, pairs: Iterable[tuple[str, str]], family: str) -> pd.DataFrame:
     """Between-SAE contrasts, strata pooled, one row per arm: Δ_A − Δ_B, Holm within the family."""
     episodes, tests = o.episodes(), []
     for a, b in pairs:

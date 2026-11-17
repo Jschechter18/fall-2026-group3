@@ -1,3 +1,9 @@
+"""Schema and validation of the stage-1 collection YAML (``configs/collection/``).
+
+``load_collection_config`` validates every section and returns the parsed mapping unchanged;
+the TypedDicts below document its shape.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -23,6 +29,8 @@ SUPPORTED_SAMPLING_STRATEGIES = ("first_n", "random", "stratified", "listed")
 
 
 class ModelConfig(TypedDict):
+    """Legacy ``model`` section: one checkpoint id used for all three roles."""
+
     id: str
 
 
@@ -56,6 +64,9 @@ class ExperimentSplitConfig(TypedDict):
 
 
 class DatasetConfig(TypedDict):
+    """MuSiQue ``dataset`` section: one source split, read from the Hub (``revision`` must be a
+    full commit SHA) or a local JSONL ``path`` (not both), with optional sampling and split."""
+
     source_split: str
     num_questions: int
     revision: NotRequired[str]
@@ -65,6 +76,13 @@ class DatasetConfig(TypedDict):
 
 
 class ManifestDatasetConfig(TypedDict):
+    """Distributed-collection ``dataset`` section, used when ``inputs`` is present.
+
+    ``inputs`` lists the versioned question files, ``intervention`` reserves questions by
+    ``fraction`` or ``question_ids_file``, and ``split.proportions`` covers exactly
+    ``train`` / ``validation`` / ``test``.
+    """
+
     inputs: list[dict[str, Any]]
     intervention: dict[str, Any]
     split: dict[str, Any]
@@ -98,6 +116,9 @@ class OutputConfig(TypedDict):
 
 
 class CollectionConfig(TypedDict):
+    """A validated collection YAML: ``roles`` (or the legacy ``model``), the dataset section in
+    MuSiQue or manifest form, collection settings, and output naming."""
+
     model: NotRequired[ModelConfig]
     roles: NotRequired[dict[str, Any]]
     dataset: DatasetConfig | ManifestDatasetConfig

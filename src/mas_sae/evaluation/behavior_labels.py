@@ -29,14 +29,20 @@ complete A2; first-token eligibility is a separate, narrower subset. No model
 or person judges any new text, and lexical differences remain candidate
 conflicts rather than proven semantic disagreements.
 """
+from __future__ import annotations
+
 from collections import Counter
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 import csv
 import hashlib
 import json
 import re
 from types import MappingProxyType
-from typing import Mapping
+from typing import TYPE_CHECKING, Mapping
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 from mas_sae.evaluation import behavior, feedback_coherence
 from mas_sae.evaluation.scoring import normalize_answer
@@ -206,7 +212,8 @@ class CandidateRules:
     max_answer_words: int
     letter_pattern: re.Pattern
 
-    def definition(self):
+    def definition(self) -> dict:
+        """Everything that decides these rules' output, as plain data for ``LabelPolicy.definition``."""
         return {"a2_presentation": self.a2_presentation,
                 "max_answer_words": self.max_answer_words,
                 "equivalence_method": "question_aliases_conservative_text_v1",
@@ -240,11 +247,12 @@ class LabelPolicy:
             object.__setattr__(self, name, MappingProxyType(dict(getattr(self, name))))
 
     @property
-    def has_overlay(self):
+    def has_overlay(self) -> bool:
+        """True when any of the three override sets is non-empty."""
         return bool(self.premise_overrides or self.refusal_overrides or self.a2_nonanswer_overrides)
 
     @property
-    def a2_presentations(self):
+    def a2_presentations(self) -> tuple[str | None, ...]:
         """The recorded ``a2_presentation`` values this policy labels. Rules without
         candidate rules were written for the feedback prompt."""
         if self.candidate_rules is None:
@@ -252,13 +260,13 @@ class LabelPolicy:
         return (self.candidate_rules.a2_presentation,)
 
     @property
-    def input_fields(self):
+    def input_fields(self) -> tuple[str, ...]:
         """The episode fields this policy's labels depend on."""
         if self.candidate_rules is None:
             return LABEL_INPUT_FIELDS
         return LABEL_INPUT_FIELDS + CANDIDATE_INPUT_FIELDS
 
-    def definition(self):
+    def definition(self) -> dict:
         """Everything that decides this policy's output, as plain data for provenance."""
         def rules(overrides):
             return [[name, p.pattern, p.flags] for name, p in overrides.items()]
@@ -273,7 +281,8 @@ class LabelPolicy:
             definition["candidate_rules"] = self.candidate_rules.definition()
         return definition
 
-    def definition_sha256(self):
+    def definition_sha256(self) -> str:
+        """sha256 of ``definition()`` as sorted-key JSON, recorded with runs that use the policy."""
         return hashlib.sha256(json.dumps(self.definition(), sort_keys=True).encode()).hexdigest()
 
 
@@ -302,7 +311,7 @@ DEFAULT_POLICY_NAME = "v0.1.1"
 DEFAULT_POLICY = POLICIES[DEFAULT_POLICY_NAME]
 
 
-def answer_kind(text):
+def answer_kind(text: object) -> str:
     """Classify one piece of text as 'answer', 'nonanswer', 'uncertain' or 'missing'."""
     kind = behavior.answer_kind(text)
     if kind in ("answer", "uncertain") and EXTRA_NONANSWER.search(text.replace("’", "'")):
@@ -387,7 +396,8 @@ def _matching_rules(text, patterns):
     return [name for name, pattern in patterns.items() if pattern.search(text)]
 
 
-def override_feedback(current, advocated_answer, policy):
+def override_feedback(current: str, advocated_answer: object,
+                      policy: LabelPolicy) -> tuple[str, list[str]]:
     """Return (feedback_type, rules fired) for the Critic's advocated answer under ``policy``.
 
     "unresolved" is kept as is. An explicit premise rejection overrides "answer"
@@ -405,7 +415,7 @@ def override_feedback(current, advocated_answer, policy):
     return current, []
 
 
-def a2_nonanswer_rules(text, policy):
+def a2_nonanswer_rules(text: object, policy: LabelPolicy) -> list[str]:
     """Names of the policy's A2 non-answer patterns that match."""
     return _matching_rules(text, policy.a2_nonanswer_overrides)
 
@@ -532,7 +542,7 @@ def _first_token_eligibility(row, chosen, behavior_reasons):
     return distinct, aligned, reasons
 
 
-def classify_candidate(row, policy=DEFAULT_POLICY):
+def classify_candidate(row: Mapping, policy: LabelPolicy = DEFAULT_POLICY) -> dict:
     """Label one episode under ``policy``. Returns a new dict and does not change the row.
 
     The base rules compute the facts. When the policy has an overlay, one generic
@@ -625,10 +635,11 @@ def classify_candidate(row, policy=DEFAULT_POLICY):
     return label
 
 
-def assemble_labels(feedback_type, a1_kind, a2_kind, critic_kind,
-                    a1_vs_critic, a2_vs_a1, a2_vs_critic,
-                    critic_unresolved, critic_premise, critic_refusal, *,
-                    rule_version=DEFAULT_POLICY.version, extra_reasons=()):
+def assemble_labels(feedback_type: str, a1_kind: str, a2_kind: str, critic_kind: str,
+                    a1_vs_critic: str, a2_vs_a1: str, a2_vs_critic: str,
+                    critic_unresolved: bool, critic_premise: bool, critic_refusal: bool, *,
+                    rule_version: str = DEFAULT_POLICY.version,
+                    extra_reasons: Iterable[str] = ()) -> dict:
     """Derive the Solver response, eligibility and targets from the Critic type and text facts.
 
     ``classify_candidate`` computes the facts, applies any overlay, and calls this,
@@ -672,8 +683,9 @@ def assemble_labels(feedback_type, a1_kind, a2_kind, critic_kind,
     }
 
 
-def write_labels(path, rows):
-    """Write one CSV row per question. Each row needs ``label`` and ``partition``.
+def write_labels(path: str | Path, rows: list[dict]) -> None:
+    """Write one CSV row per question. Each row needs ``question_id``, ``source_split``,
+    ``partition``, ``solver_behavior`` and a ``label`` dict.
 
     A list is joined with ';' and None is left blank.
     """
@@ -689,7 +701,7 @@ def write_labels(path, rows):
                              row["partition"], row["solver_behavior"]] + values)
 
 
-def read_labels(path):
+def read_labels(path: str | Path) -> dict[str, dict]:
     """Read labels.csv back as {question_id: label}, with the types ``write_labels`` was given."""
     labels = {}
     with open(path, newline="") as f:
@@ -722,7 +734,7 @@ def read_labels(path):
     return labels
 
 
-def label_counts(rows):
+def label_counts(rows: list[dict]) -> dict:
     """Label counts for a group of labelled rows. Target counts use eligible rows only."""
     feedback_by_response = Counter()
     lexical_v2_to_candidate = Counter()

@@ -1,19 +1,29 @@
 """Reconstruction quality and sparsity, and the bias-only reference point."""
 
+from __future__ import annotations
+
 import copy
+from typing import TYPE_CHECKING, Any
 
 import torch
 
 from .data import features_for, iterate_batches
 
+if TYPE_CHECKING:
+    from mas_sae.sae.pretrained import JumpReLUSAE
 
-def evaluate_splits(model, splits, batch_size, device):
+    from .data import Split
+
+
+def evaluate_splits(model: JumpReLUSAE, splits: dict[str, Split], batch_size: int,
+                    device: str | torch.device) -> dict[str, dict[str, Any]]:
     """evaluate() on every split. Returns {'train': metrics, 'validation': metrics}."""
     return {name: evaluate(model, split, batch_size, device) for name, split in splits.items()}
 
 
 @torch.no_grad()
-def evaluate(model, split, batch_size, device):
+def evaluate(model: JumpReLUSAE, split: Split, batch_size: int,
+             device: str | torch.device) -> dict[str, Any]:
     """Reconstruction quality and sparsity of `model` on one split.
 
     Returns {'n', 'mse', 'variance_explained', 'l0', 'dead_fraction'}, plus 'probe_cohort' (n, mse,
@@ -59,13 +69,14 @@ class ReconstructionTotals:
         self.squared_error = 0.0
         self.squared_from_mean = 0.0
 
-    def add(self, squared_error, squared_from_mean):
+    def add(self, squared_error: torch.Tensor, squared_from_mean: torch.Tensor) -> None:
         """Add per-example values for one batch."""
         self.n += len(squared_error)
         self.squared_error += squared_error.sum().item()
         self.squared_from_mean += squared_from_mean.sum().item()
 
-    def metrics(self, n_dims):
+    def metrics(self, n_dims: int) -> dict[str, float | None]:
+        """{'n', 'mse' (per activation dimension), 'variance_explained' (None if no spread)}."""
         variance_explained = (1 - self.squared_error / self.squared_from_mean
                               if self.squared_from_mean > 0 else None)
         return {'n': self.n, 'mse': self.squared_error / (self.n * n_dims),
@@ -73,7 +84,8 @@ class ReconstructionTotals:
 
 
 @torch.no_grad()
-def with_bias_only_fix(model, train_split, batch_size, device):
+def with_bias_only_fix(model: JumpReLUSAE, train_split: Split, batch_size: int,
+                       device: str | torch.device) -> JumpReLUSAE:
     """A copy of `model` whose decoder bias absorbs the mean train reconstruction error.
 
     This is the cheapest possible adaptation: one constant shift, fitted on train only. If fine-tuning

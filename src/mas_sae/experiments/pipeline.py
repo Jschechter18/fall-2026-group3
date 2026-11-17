@@ -1,3 +1,9 @@
+"""One stage-1 question: Solver Attempt 1, Critic feedback per condition, Solver Attempt 2.
+
+Activations are captured at the candidate sites for Attempt 1 (once per question) and for every
+Attempt 2; each episode record carries the answers, Critic output, labels and validator verdict.
+"""
+
 from __future__ import annotations
 
 from collections.abc import Iterable, Sequence

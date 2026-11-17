@@ -1,14 +1,32 @@
 """Epoch-boundary state for continuing an SAE trial without restarting it."""
 
+from __future__ import annotations
+
 import random
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
 import torch
 
+if TYPE_CHECKING:
+    from mas_sae.sae.callbacks.checkpointing import CheckpointEvaluatorCallback
+    from mas_sae.sae.callbacks.early_stopping import EarlyStoppingCallback
+    from mas_sae.sae.model_runner import ModelRunner
 
-def save_training_state(path, runner, scheduler, checkpoint_evaluator,
-                        early_stopping, history, stopped):
+
+def save_training_state(path: str | Path, runner: ModelRunner,
+                        scheduler: torch.optim.lr_scheduler.ReduceLROnPlateau,
+                        checkpoint_evaluator: CheckpointEvaluatorCallback,
+                        early_stopping: EarlyStoppingCallback, history: list[dict],
+                        stopped: bool) -> None:
+    """Write everything needed to resume after this epoch to `path` (last_checkpoint.pt).
+
+    Saves model, optimizer and scheduler state, the best-checkpoint and early-stopping counters,
+    the epoch history and stopped flag, the runner's activity counters, the RNG states (Python,
+    NumPy, torch, and CUDA/MPS when available) and the device type. The file is written to a
+    .pt.tmp sibling and then renamed over `path`, so `path` is never left half-written.
+    """
     state = {
         "model": runner.model.state_dict(),
         "optimizer": runner.optimizer.state_dict(),
@@ -28,7 +46,14 @@ def save_training_state(path, runner, scheduler, checkpoint_evaluator,
     temporary.replace(path)
 
 
-def restore_training_state(state, runner, scheduler, checkpoint_evaluator, early_stopping):
+def restore_training_state(state: dict, runner: ModelRunner,
+                           scheduler: torch.optim.lr_scheduler.ReduceLROnPlateau,
+                           checkpoint_evaluator: CheckpointEvaluatorCallback,
+                           early_stopping: EarlyStoppingCallback) -> None:
+    """Load a save_training_state() dict back into freshly built objects, including RNG state.
+
+    The epoch history and stopped flag are not restored here; train_sae reads them from `state`.
+    """
     runner.model.load_state_dict(state["model"])
     runner.optimizer.load_state_dict(state["optimizer"])
     scheduler.load_state_dict(state["scheduler"])
@@ -40,7 +65,7 @@ def restore_training_state(state, runner, scheduler, checkpoint_evaluator, early
     restore_rng_state(state)
 
 
-def capture_rng_state():
+def capture_rng_state() -> dict:
     """Capture RNG state in a weights-only-loadable representation."""
     numpy_state = np.random.get_state(legacy=True)
     if not isinstance(numpy_state, tuple):
@@ -54,7 +79,7 @@ def capture_rng_state():
     }
 
 
-def restore_rng_state(state):
+def restore_rng_state(state: dict) -> None:
     """Restore RNG state captured at a committed training boundary."""
     random.setstate(state["python_rng"])
     numpy_state = state["numpy_rng"]

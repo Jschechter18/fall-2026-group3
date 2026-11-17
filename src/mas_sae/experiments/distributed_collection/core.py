@@ -1,6 +1,10 @@
 """Local collection, merge, and export. AWS CLI handles file transport."""
+from __future__ import annotations
+
+from collections.abc import Iterable, Mapping
 import json
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 from mas_sae.data.partition_adapter import canonical_partitions, build_collected_manifest, write_run_tables
 from mas_sae.data.production import export_partition_activations, write_partitions
@@ -13,8 +17,17 @@ from mas_sae.experiments.provenance import experiment_compatibility
 from mas_sae.experiments.records import read_jsonl, write_jsonl
 from .dataset import assign_families, collection_settings, read_manifest, split_settings
 
+if TYPE_CHECKING:
+    import torch
 
-def check_config(manifest, config):
+    from mas_sae.agents.critic import Critic
+    from mas_sae.agents.solver import Solver
+    from mas_sae.agents.validator import Validator
+
+
+def check_config(manifest: dict[str, Any], config: Mapping[str, Any]) -> None:
+    """Raise unless ``config`` matches the prepared manifest: its frozen split settings, its
+    worker-independent collection settings (``collection_settings``) and its run name."""
     if "split" not in manifest:
         raise ValueError("Prepared manifest has no frozen split settings; prepare a new run")
     if split_settings(config) != manifest["split"]:
@@ -25,7 +38,8 @@ def check_config(manifest, config):
         raise ValueError("Run name differs from the prepared manifest")
 
 
-def chunk_directory(manifest_path, chunk):
+def chunk_directory(manifest_path: str | Path, chunk: dict[str, Any]) -> Path:
+    """Working directory of one chunk: ``<manifest dir>/chunks/<chunk_id as 6 digits>``."""
     return Path(manifest_path).parent / "chunks" / f"{chunk['chunk_id']:06d}"
 
 
@@ -42,9 +56,11 @@ def _check_completed(root, manifest, chunk):
     return complete
 
 
-def collect_manifest_chunks(manifest_path, manifest, chunks, *, config, resolved_config,
-                            model, solver, critic, validator, candidate_sites, type_checked_target,
-                            resume=False):
+def collect_manifest_chunks(manifest_path: str | Path, manifest: dict[str, Any],
+                            chunks: Iterable[dict[str, Any]], *, config: Mapping[str, Any],
+                            resolved_config: dict[str, Any], model: torch.nn.Module, solver: Solver,
+                            critic: Critic, validator: Validator, candidate_sites: list[str],
+                            type_checked_target: bool, resume: bool = False) -> None:
     """One model load can process several work chunks, with durable batch checkpoints."""
     check_config(manifest, config)
     experiment = experiment_compatibility(resolved_config, candidate_sites)
@@ -94,7 +110,16 @@ def collect_manifest_chunks(manifest_path, manifest, chunks, *, config, resolved
             "chunk_id": chunk["chunk_id"], "experiment": experiment, "files": _file_facts(root)}, overwrite=False)
 
 
-def merge_run(manifest_path):
+def merge_run(manifest_path: str | Path) -> Path:
+    """Merge every completed chunk into ``<manifest dir>/merged/`` and return that path.
+
+    Checks each chunk's ``complete.json``, file hashes and worker provenance against the
+    manifest, and each record's seed, question text, storage split (``all``) and candidate order.
+    Requires one episode per successful question and identical records at every activation site.
+    Activation indices are rebuilt over the whole run (``merge_checkpoint_paths``) and written
+    under run name ``raw``, split ``all``; ``collection.json`` records the sites, file facts,
+    collected ids, exclusion records and worker provenance. Published atomically.
+    """
     manifest_path = Path(manifest_path)
     manifest = read_manifest(manifest_path)
     expected = {f"{c['chunk_id']:06d}" for c in manifest["chunks"]}
@@ -169,7 +194,17 @@ def merge_run(manifest_path):
     return destination
 
 
-def split_run(manifest_path, config):
+def split_run(manifest_path: str | Path, config: Mapping[str, Any]) -> Path:
+    """Assign train/validation/test to the merged run and publish ``<manifest dir>/prepared/``.
+
+    Non-intervention questions are assigned by family (``split_group_id``) with the manifest's
+    frozen split proportions and seed, stratified by source, hop group and candidate order;
+    intervention membership was fixed at ``prepare``. Writes ``partitions.csv`` and ``split.json``,
+    then exports ``<run_name>`` (train/validation/test) and ``<run_name>_intervention``, each with
+    activations regrouped by partition, per-partition ``interactions.jsonl`` and
+    ``exclusions.jsonl``, run tables (``write_run_tables``) and ``intervention_question_ids.json``;
+    the intervention run also gets ``contexts.jsonl`` with the question payloads. Returns the path.
+    """
     manifest_path = Path(manifest_path)
     manifest = read_manifest(manifest_path)
     check_config(manifest, config)

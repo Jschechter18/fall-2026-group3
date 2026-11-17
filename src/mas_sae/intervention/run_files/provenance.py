@@ -14,12 +14,17 @@ import hashlib
 import json
 import subprocess
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from mas_sae.experiments.artifacts import (
     get_git_commit, get_package_version, get_run_command, get_untracked_files, get_untracked_sha256,
     sha256_file, sha256_json,
 )
 from mas_sae.intervention.experiment.representations import checkpoint_sha256
+
+if TYPE_CHECKING:
+    from mas_sae.intervention.experiment.config import InterventionConfig
+    from mas_sae.intervention.generation.solver import SolverModel
 
 CODE_DIRS = ("src", "scripts", "configs")
 PACKAGES = ("torch", "transformers", "numpy", "pandas", "safetensors")
@@ -38,17 +43,23 @@ def code_tree_sha() -> dict:
 
 
 def uncommitted_code_sha256() -> str:
+    """sha256 of ``git diff HEAD`` over src/, scripts/ and configs/: uncommitted changes to tracked code."""
     return hashlib.sha256(_git("diff", "--no-ext-diff", "--binary", "HEAD", "--", *CODE_DIRS).encode()).hexdigest()
 
 
-def input_sha256(config) -> dict:
+def input_sha256(config: InterventionConfig) -> dict:
+    """{path: sha256} of the interactions, contexts and feature sets, and of the stored-label run's
+    run_settings.json, summary.json and raw_results.jsonl."""
     i = config.inputs
     files = [i.interactions, i.contexts, i.feature_sets,
              *(str(Path(i.stored_labels) / f) for f in ("run_settings.json", "summary.json", "raw_results.jsonl"))]
     return {f: sha256_file(f) for f in files}
 
 
-def provenance(config, device_name: str | None) -> dict:
+def provenance(config: InterventionConfig, device_name: str | None) -> dict:
+    """What this machine runs with: git commit, code tree ids, uncommitted and untracked code hashes,
+    package versions, GPU name, Solver spec, command, and input and checkpoint hashes. Workers must
+    match the frozen run on ``IDENTITY_KEYS`` only."""
     return {
         "git_commit": get_git_commit(), "code_tree_sha": code_tree_sha(),
         "uncommitted_code_sha256": uncommitted_code_sha256(),
@@ -61,14 +72,15 @@ def provenance(config, device_name: str | None) -> dict:
     }
 
 
-def device_name(solver_model) -> str | None:
+def device_name(solver_model: SolverModel) -> str | None:
+    """The CUDA device name of the Solver's device, or the device as a string when it is not CUDA."""
     import torch
     device = solver_model.model.device
     return torch.cuda.get_device_name(device) if device.type == "cuda" else str(device)
 
 
-def frozen_content(config, episode_ids: list[str], choose_r_episode_ids: list[str], feature_sets: dict,
-                   condition_keys: list[str], random_draws: dict[str, list[int]]) -> dict:
+def frozen_content(config: InterventionConfig, episode_ids: list[str], choose_r_episode_ids: list[str],
+                   feature_sets: dict, condition_keys: list[str], random_draws: dict[str, list[int]]) -> dict:
     """Everything that defines the experiment, and a hash of each part. ``random_draws`` maps each
     episode id to its pool indices, one per random draw slot."""
     parts = {"config": config.as_dict(), "episode_ids": episode_ids, "choose_r_episode_ids": choose_r_episode_ids,

@@ -1,3 +1,9 @@
+"""Best-validation checkpoint writing during SAE training, and loading those checkpoints back.
+
+load_sae_checkpoint is how later stages (feature selection, intervention) open a trained
+SparseAutoencoder from a run's checkpoints/best_checkpoint.pt.
+"""
+
 import torch
 import json
 from pathlib import Path
@@ -33,12 +39,19 @@ def load_sae_checkpoint(
     return model
 
 class CheckpointEvaluatorCallback:
+    """Keeps checkpoint_dir/best_checkpoint.pt at the epoch with the lowest validation loss.
+
+    The file holds model, optimizer and scheduler state, the epoch and losses, and, for a
+    SparseAutoencoder, the model_config that load_sae_checkpoint needs. best_loss is part of
+    the continuation state saved by training_state.
+    """
+
     def __init__(self, checkpoint_dir: Path):
         self.checkpoint_dir = checkpoint_dir
         self.best_loss = float("inf")
     
     def on_validation_end(self, train_metrics: dict[str, float], val_metrics: dict[str, float], epoch: int,
-                          model: torch.nn.Module, optimizer: torch.optim.Optimizer, scheduler: torch.optim.lr_scheduler.ReduceLROnPlateau):
+                          model: torch.nn.Module, optimizer: torch.optim.Optimizer, scheduler: torch.optim.lr_scheduler.ReduceLROnPlateau) -> None:
         """Evaluate the model checkpoint at the end of a validation epoch and save it if it has the best validation loss so far.
 
         Parameters

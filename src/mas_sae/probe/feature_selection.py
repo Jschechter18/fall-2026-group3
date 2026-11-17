@@ -1,7 +1,8 @@
 """SAE feature selection with linear probes (issue #89), and the offline causal-proxy table.
 
-Uses the same aligned rows as layer selection (official full9 export, Behavior v0.1.2 labels,
-eligible_primary rows; test and intervention are never read):
+Uses the same aligned rows as layer selection (the config's collection and labels: in the final
+run, mixed_final_001 with the Claude label package; eligible_primary rows; test and intervention
+are never read):
 
   1. Encode the real layer activations with each SAE (custom TopK/L1 and pretrained Gemma Scope), and
      optionally with the raw activations themselves (kind `activations`, an ActivationBasis): the
@@ -22,8 +23,10 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Callable
 from dataclasses import asdict, dataclass, field, fields
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -37,6 +40,10 @@ from mas_sae.probe import behavior_data as bd
 from mas_sae.probe import layer_selection as ls
 from mas_sae.probe.cv_eval import balanced_accuracy, bootstrap_ci, grouped_bootstrap_indices
 from mas_sae.utils.versioning import create_versioned_run_dir
+
+if TYPE_CHECKING:
+    from numpy.typing import ArrayLike
+    from sklearn.pipeline import Pipeline
 
 logger = logging.getLogger(__name__)
 
@@ -68,14 +75,15 @@ class ActivationBasis(torch.nn.Module):
     """
     kind = "activations"
 
-    def __init__(self, mean):
+    def __init__(self, mean: ArrayLike):
         super().__init__()
         mean = torch.as_tensor(np.asarray(mean, dtype=np.float32))
         self.encoder, self.decoder = _Shift(-mean), _Shift(mean)
         self.input_dim = self.latent_dim = int(mean.numel())
 
 
-def is_activation_basis(sae) -> bool:
+def is_activation_basis(sae: torch.nn.Module) -> bool:
+    """True for an ``ActivationBasis`` (raw activations as a pseudo-SAE), recognised by its ``kind``."""
     return getattr(sae, "kind", None) == ActivationBasis.kind
 
 
@@ -100,6 +108,12 @@ def ensure_center(spec: dict, root: Path, X_fit: np.ndarray) -> np.ndarray:
 
 @dataclass
 class FeatureSelectionConfig:
+    """Settings of one feature-selection run (stage 5), read from YAML by ``from_yaml``.
+
+    Data paths are relative to ``capstone_data_root``. ``saes`` maps a display name to
+    ``{kind, path}`` (kinds in ``SAE_KINDS``). Rows, labels and partitions are loaded through
+    ``layer_selection_config``, so they are the same rows layer selection uses for ``layer``.
+    """
     # Data paths have no defaults: they come from the config passed to scripts/feature_selection/feature_selection.py.
     capstone_data_root: Path
     activations_dir: str
@@ -135,6 +149,8 @@ class FeatureSelectionConfig:
 
     @classmethod
     def from_yaml(cls, path: Path) -> "FeatureSelectionConfig":
+        """Load a config file. Unknown keys, a missing data path, or an SAE without a known ``kind``
+        and a ``path`` raise ValueError."""
         raw = yaml.safe_load(Path(path).read_text()) or {}
         unknown = set(raw) - {f.name for f in fields(cls)}
         if unknown:
@@ -152,6 +168,8 @@ class FeatureSelectionConfig:
         return cfg
 
     def layer_selection_config(self) -> ls.LayerSelectionConfig:
+        """The matching holdout ``LayerSelectionConfig`` for this one layer (no text baseline), used to
+        load and align rows exactly as layer selection does."""
         return ls.LayerSelectionConfig(
             capstone_data_root=self.capstone_data_root, activations_dir=self.activations_dir,
             results_dir=self.results_dir, labels_csv=self.labels_csv, manifest_csv=self.manifest_csv,
@@ -164,8 +182,9 @@ class FeatureSelectionConfig:
             text_fields=[], seed=self.seed)
 
 
-def load_sae(spec: dict, root: Path, layer: int):
-    """(sae, description) for a custom checkpoint run directory or a Gemma Scope folder."""
+def load_sae(spec: dict, root: Path, layer: int) -> tuple[torch.nn.Module, dict]:
+    """(sae, description) for a custom checkpoint run directory, a Gemma Scope folder, or (kind
+    ``activations``) the raw-activation basis built from a saved mean vector."""
     path = root / spec["path"]
     if spec["kind"] == "activations":
         sae = ActivationBasis(np.load(path))
@@ -182,6 +201,8 @@ def load_sae(spec: dict, root: Path, layer: int):
 
 
 def sae_files(spec: dict, root: Path) -> list[Path]:
+    """The files that define an SAE spec, as hashed for provenance: the center .npy of an
+    ``activations`` basis, a custom run's best checkpoint, or a Gemma Scope folder's two files."""
     path = root / spec["path"]
     if spec["kind"] == "activations":
         return [path]
@@ -266,7 +287,7 @@ def reference_activations(cfg: FeatureSelectionConfig, summary: dict, batch_size
 
 
 @torch.no_grad()
-def latent_stats(sae, X: np.ndarray, batch_size: int = 512) -> dict:
+def latent_stats(sae: torch.nn.Module, X: np.ndarray, batch_size: int = 512) -> dict:
     """Per-latent statistics of ``sae`` on the rows ``X``, as lists indexed by latent id (see ``reference_activations``).
 
     For an ``ActivationBasis`` the latents are centered neurons: ``firing_frequency`` and ``ref`` are
@@ -304,7 +325,7 @@ def latent_stats(sae, X: np.ndarray, batch_size: int = 512) -> dict:
             "decoder_norm": [r(v) for v in dec_norm]}
 
 
-def rank_features(probe, Z_fit: np.ndarray, signed: bool = False) -> pd.DataFrame:
+def rank_features(probe: Pipeline, Z_fit: np.ndarray, signed: bool = False) -> pd.DataFrame:
     """Per-feature coefficient (toward target 1, standardized units) and mean |SHAP| on ``Z_fit``.
 
     ``signed`` latents (an ActivationBasis) have no firing frequency: that column is NaN and the
@@ -322,7 +343,8 @@ def rank_features(probe, Z_fit: np.ndarray, signed: bool = False) -> pd.DataFram
     })
 
 
-def probe_direction(model, live: np.ndarray, sae: ActivationBasis, X_fit, y_fit) -> dict:
+def probe_direction(model: Pipeline, live: np.ndarray, sae: ActivationBasis, X_fit: np.ndarray,
+                    y_fit: np.ndarray) -> dict:
     """The raw-activation probe as one direction in activation space, for the causal replay: ``w``,
     ``b`` with ``X @ w + b`` = the probe's score toward target 1 (zero weight on constant neurons),
     and the difference in class means on the fit rows."""
@@ -334,7 +356,9 @@ def probe_direction(model, live: np.ndarray, sae: ActivationBasis, X_fit, y_fit)
             "diff_means": X_fit[y_fit == 1].mean(0, dtype=np.float64) - X_fit[y_fit == 0].mean(0, dtype=np.float64)}
 
 
-def analyse_sae(name, sae, X_fit, y_fit, g_fit, X_eval, y_eval, g_eval, readout, cfg, q_eval=None) -> dict:
+def analyse_sae(name: str, sae: torch.nn.Module, X_fit: np.ndarray, y_fit: np.ndarray, g_fit: np.ndarray,
+                X_eval: np.ndarray, y_eval: np.ndarray, g_eval: np.ndarray, readout: Pipeline,
+                cfg: FeatureSelectionConfig, q_eval: np.ndarray | None = None) -> dict:
     """``g_fit``/``g_eval`` are the groups no fold or bootstrap splits (families); ``q_eval`` are the
     evaluation question ids for the paired statistics (one row each), clustered by ``g_eval`` when they differ."""
     raw = is_activation_basis(sae)
@@ -427,7 +451,8 @@ def analyse_sae(name, sae, X_fit, y_fit, g_fit, X_eval, y_eval, g_eval, readout,
     }
 
 
-def stats_dict(p, fn) -> dict:
+def stats_dict(p: np.ndarray, fn: Callable[[np.ndarray], dict]) -> dict:
+    """``acceptance_pct`` (mean of ``p`` in percent) merged with ``fn(p)``, its paired statistics."""
     return {"acceptance_pct": 100 * float(p.mean()), **fn(p)}
 
 
@@ -453,6 +478,16 @@ def results_table(observed_pct: float, readout_pct: float, sae_summaries: dict) 
 
 
 def run(cfg: FeatureSelectionConfig, config_path: Path | None = None) -> Path:
+    """Fit the raw readout once, run ``analyse_sae`` for every configured SAE, and return the new
+    timestamped folder under ``output_dir``.
+
+    Writes ``feature_sets.json`` (each SAE's adoption and retention features and every matched
+    random draw: the input to stage 6), ``feature_selection_summary.json`` (results, config and
+    provenance), ``causal_proxy_table.csv``, ``per_row_outcomes.csv`` (one row per evaluation
+    question), per-SAE ``ranking_*.csv`` / ``top_features_*.csv``, a probe-direction ``.npz`` for an
+    ``activations`` basis, and ``causal_proxy_effects.svg``. A missing center file of an
+    ``activations`` basis is written first (``ensure_center``), before inputs are hashed.
+    """
     if not cfg.saes:
         raise ValueError("Configure at least one SAE under `saes`.")
     ls_cfg = cfg.layer_selection_config()

@@ -1,6 +1,7 @@
 """Prepare one mixed question pool without assigning train/validation/test."""
 from __future__ import annotations
 from collections import defaultdict
+from collections.abc import Iterable, Mapping
 import hashlib
 import json
 from pathlib import Path
@@ -106,7 +107,7 @@ def build_master_dataset(inputs: list[dict[str, Any]]) -> dict[str, Any]:
     return {"inputs": input_records, "questions": rows}
 
 
-def collection_settings(config):
+def collection_settings(config: Mapping[str, Any]) -> dict[str, Any]:
     """Settings that must agree across workers; paths and placement are operational."""
     roles = resolve_roles(config)
     roles = {name: {k: v for k, v in spec.items()
@@ -120,14 +121,15 @@ def collection_settings(config):
     return {"roles": roles, "collection": collection}
 
 
-def split_settings(config):
+def split_settings(config: Mapping[str, Any]) -> dict[str, Any]:
     """Resolve export settings now so later config edits cannot reshuffle a run."""
     split = config["dataset"]["split"]
     return {"proportions": dict(split["proportions"]),
             "seed": split.get("seed", config["collection"]["seed"])}
 
 
-def assign_families(questions, proportions, seed, *, candidate_strata=False):
+def assign_families(questions: Iterable[dict[str, Any]], proportions: dict[str, float],
+                    seed: int, *, candidate_strata: bool = False) -> dict[str, str]:
     """Allocate explicit families using the established shuffle and rounding rules."""
     families = defaultdict(list)
     for row in questions:
@@ -142,7 +144,7 @@ def assign_families(questions, proportions, seed, *, candidate_strata=False):
             for rows in families.values() for row in rows}
 
 
-def prepare_manifest(config, *, num_chunks):
+def prepare_manifest(config: Mapping[str, Any], *, num_chunks: int) -> dict[str, Any]:
     """Reserve intervention, then freeze randomness and work slices for every question."""
     settings = collection_settings(config)
     master = build_master_dataset(config["dataset"]["inputs"])
@@ -191,7 +193,9 @@ def prepare_manifest(config, *, num_chunks):
     return {**basis, "manifest_sha256": sha256_json(basis)}
 
 
-def read_manifest(path):
+def read_manifest(path: str | Path) -> dict[str, Any]:
+    """Load a prepared ``manifest.json``; raises ValueError if it no longer matches its
+    ``manifest_sha256``."""
     manifest = json.loads(Path(path).read_text())
     basis = {k: v for k, v in manifest.items() if k != "manifest_sha256"}
     if sha256_json(basis) != manifest.get("manifest_sha256"):
@@ -199,7 +203,10 @@ def read_manifest(path):
     return manifest
 
 
-def select_chunks(manifest, chunk_ids=None):
+def select_chunks(manifest: dict[str, Any],
+                  chunk_ids: Iterable[int] | None = None) -> list[dict[str, Any]]:
+    """The manifest's chunks with ``chunk_ids``, in that order (all chunks when None); raises on
+    an empty, repeated or unknown selection."""
     chunks = {c["chunk_id"]: c for c in manifest["chunks"]}
     selected = list(chunks) if chunk_ids is None else list(chunk_ids)
     if not selected or len(selected) != len(set(selected)) or set(selected) - set(chunks):

@@ -31,48 +31,60 @@ def new_run_id(now: datetime | None = None, commit: str | None = None) -> str:
 
 
 def run_record(run_dir: Path) -> Path:
+    """``run.json``: when and from which commit the run was created."""
     return Path(run_dir) / "run.json"
 
 
 def choose_r_dir(run_dir: Path) -> Path:
+    """``choose_r/``: everything choose-r writes."""
     return Path(run_dir) / "choose_r"
 
 
 def choose_r_episodes(run_dir: Path) -> Path:
+    """``choose_r/episodes.json``: choose-r's episode ids and condition keys."""
     return choose_r_dir(run_dir) / "episodes.json"
 
 
 def choose_r_rows(run_dir: Path) -> Path:
+    """``choose_r/rows.jsonl``: choose-r's generations."""
     return choose_r_dir(run_dir) / "rows.jsonl"
 
 
 def choose_r_report_csv(run_dir: Path) -> Path:
+    """``choose_r/choose_r_report.csv``: the choose-r table. prepare requires it and records its sha256."""
     return choose_r_dir(run_dir) / "choose_r_report.csv"
 
 
 def choose_r_report_md(run_dir: Path) -> Path:
+    """``choose_r/choose_r_report.md``: the report r is chosen from."""
     return choose_r_dir(run_dir) / "choose_r_report.md"
 
 
 def frozen_run(run_dir: Path) -> Path:
+    """``frozen_run.json``: everything a worker must reproduce, written by prepare."""
     return Path(run_dir) / "frozen_run.json"
 
 
 def baseline_rows(run_dir: Path) -> Path:
+    """``baseline.jsonl``: prepare's baseline generation of every study episode."""
     return Path(run_dir) / "baseline.jsonl"
 
 
 def baseline_check(run_dir: Path) -> Path:
+    """``baseline_check.json``: whether the baseline reproduces the stored A2s."""
     return Path(run_dir) / "baseline_check.json"
 
 
 def baseline_mismatches(run_dir: Path) -> Path:
+    """``baseline_mismatches.csv``: the study episodes whose baseline A2 differs from the stored A2."""
     return Path(run_dir) / "baseline_mismatches.csv"
 
 
 def shards(run_dir: Path) -> Path:
+    """``shards.json``: each shard's episode ids and the frozen run's sha256."""
     return Path(run_dir) / "shards.json"
 
 
 def merge_dir(run_dir: Path) -> Path:
+    """``merge/``: labels, tables and summary.json."""
     return Path(run_dir) / "merge"

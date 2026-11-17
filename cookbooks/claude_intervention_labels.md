@@ -54,7 +54,7 @@ coordinator with `scripts/causal_replay.py --label-only RUN` (add `--dry-run`
 to preview without API calls). Model/prompt settings come from the frozen
 stored-label run. Successful judgments resume from the audit cache; technical
 failures stop analysis by default and are retried on the next invocation.
-See `docs/causal_replay/distributed_causal_replay.md` for the complete workflow.
+See `cookbooks/causal_replay/distributed_causal_replay.md` for the complete workflow.
 
 The previously generated `mixed_final_001_intervention_candidate` package is
 rule-based, is no longer referenced by these presets, and is not a substitute

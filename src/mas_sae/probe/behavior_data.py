@@ -43,6 +43,12 @@ class AlignmentError(RuntimeError):
 
 @dataclass
 class Columns:
+    """Column names ``align_episodes`` and ``select_partitions`` read.
+
+    ``partition``, ``source_split`` and ``question_id`` are manifest columns; ``target``, ``eligible``,
+    ``response`` and ``label`` are labels.csv columns, joined on ``episode_id`` when both labels.csv and
+    every episode carry it, else on ``question_id``.
+    """
     partition: str = "partition"
     source_split: str = "source_split"
     target: str = "primary_target"
@@ -56,6 +62,7 @@ class Columns:
 
 
 def read_jsonl(path: Path) -> list[dict]:
+    """One dict per non-blank line of a JSON Lines file."""
     with open(path, encoding="utf-8") as f:
         return [json.loads(line) for line in f if line.strip()]
 

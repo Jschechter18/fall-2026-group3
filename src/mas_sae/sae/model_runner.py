@@ -1,3 +1,10 @@
+"""One epoch of SparseAutoencoder training or evaluation, with losses and feature-activity metrics.
+
+Used by training.train_sae and refinement (stage 4); epoch-to-epoch control (checkpoints, early
+stopping, schedulers) lives with those callers.
+"""
+
+from collections.abc import Callable
 import math
 
 import torch
@@ -12,6 +19,18 @@ import torch.optim as optim
 
 
 class ModelRunner:
+    """Runs epochs of a SparseAutoencoder and returns example-weighted mean losses and diagnostics.
+
+    The loss is reconstruction MSE in input_scale-normalized units, plus sparsity_coefficient times
+    mean |feature| in L1 mode. Training adds aux_coefficient * AuxK loss (TopK only) and
+    weight_l2_coefficient * the summed squared encoder/decoder weights; validation and test omit
+    both. Decoder columns are renormalized after every optimizer step. Training updates
+    training_examples_seen and last_fired_example (per-feature position of the last firing), which
+    drive AuxK eligibility and persistent inactivity; evaluation leaves them untouched. With
+    training_mean, metrics also report variance explained against it. last_feature_frequencies
+    holds the per-feature firing frequencies of the most recent epoch.
+    """
+
     def __init__(
         self, model: SAE, sparsity_coefficient: float, optimizer: optim.Optimizer,
         training_mean: torch.Tensor | None = None,
@@ -320,7 +339,8 @@ class ModelRunner:
             metrics["training_examples_seen"] = self.training_examples_seen
         return metrics
     
-    def train_epoch(self, dataloader: DataLoader, before_optimizer_step=None):
+    def train_epoch(self, dataloader: DataLoader,
+                    before_optimizer_step: Callable[[], None] | None = None) -> dict:
         """Runs one epoch under full training conditions.
 
         Parameters
@@ -349,7 +369,7 @@ class ModelRunner:
         return self._run_epoch(dataloader, training_mode=True,
                                before_optimizer_step=before_optimizer_step)
     
-    def val_epoch(self, dataloader: DataLoader):
+    def val_epoch(self, dataloader: DataLoader) -> dict:
         """Runs one epoch under full validation conditions.
 
         Parameters
@@ -366,7 +386,7 @@ class ModelRunner:
         """
         return self._run_epoch(dataloader, training_mode=False)
     
-    def test(self, dataloader: DataLoader):
+    def test(self, dataloader: DataLoader) -> dict:
         """Runs one full forward pass under full test conditions.
 
         Parameters

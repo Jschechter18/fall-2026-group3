@@ -1,13 +1,20 @@
 """Train/validation activation splits, batching, and feature lookup (cached or encoded live)."""
 
+from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
 import torch
 
 from mas_sae.data.activation_store import ActivationStore
 from mas_sae.experiments.artifacts import sha256_file
+
+if TYPE_CHECKING:
+    import argparse
+
+    from mas_sae.sae.pretrained import JumpReLUSAE
 
 SPLITS = ('train', 'validation')                   # the only activation files ever opened
 
@@ -28,7 +35,7 @@ class Split:
     cache_path: Path | None = None
 
 
-def load_splits(args, model):
+def load_splits(args: 'argparse.Namespace', model: 'JumpReLUSAE') -> dict[str, Split]:
     """Load and check the train and validation activations. Returns {'train': Split, 'validation': Split}."""
     store = ActivationStore(args.activations_dir)
     splits = {}
@@ -48,7 +55,8 @@ def load_splits(args, model):
     return splits
 
 
-def probe_cohort_rows(config_path, args, n_validation):
+def probe_cohort_rows(config_path: Path | None, args: 'argparse.Namespace',
+                      n_validation: int) -> np.ndarray | None:
     """Boolean mask over validation rows: the examples the behaviour probe is evaluated on.
 
     These are the validation rows with usable behaviour labels, as chosen by the feature-selection
@@ -77,7 +85,8 @@ def probe_cohort_rows(config_path, args, n_validation):
     return mask
 
 
-def iterate_batches(activations, batch_size, device, shuffle=False):
+def iterate_batches(activations: torch.Tensor, batch_size: int, device: str | torch.device,
+                    shuffle: bool = False) -> Iterator[tuple[np.ndarray, torch.Tensor]]:
     """Yield (row indices, batch on device). Shuffling uses the torch RNG, so --seed controls it."""
     order = torch.randperm(len(activations)).numpy() if shuffle else np.arange(len(activations))
     for start in range(0, len(activations), batch_size):
@@ -85,7 +94,8 @@ def iterate_batches(activations, batch_size, device, shuffle=False):
         yield rows, activations[rows].to(device).float()
 
 
-def features_for(model, split, rows, batch):
+def features_for(model: 'JumpReLUSAE', split: Split, rows: np.ndarray,
+                 batch: torch.Tensor) -> torch.Tensor:
     """Encoder output for a batch: read from the cache if the split has one (decoder mode), else encoded now."""
     if split.cached_features is not None:
         # Only these rows are read from the memory-mapped file.

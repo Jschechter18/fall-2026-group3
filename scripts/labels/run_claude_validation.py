@@ -20,7 +20,7 @@ an interrupted run in its own output directory instead: rerun the same command
 with ``--resume`` added; it refuses if the settings or selected episodes differ.
 ``--concurrency N`` labels N episodes at once; rows stay in episode order.
 
-Requires AWS Bedrock credentials in ``.env`` (see README).  Use ``--dry-run``
+Requires AWS Bedrock credentials in ``.env`` (see cookbooks/setup.md).  Use ``--dry-run``
 to preview without making API calls.
 
 Usage:
@@ -118,7 +118,8 @@ def positive_int(text: str) -> int:
     return value
 
 
-def parse_args(argv=None):
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    """The command-line options; ``argv`` None reads ``sys.argv``."""
     parser = argparse.ArgumentParser(
         description="Claude behavioral validation for Solver-Critic episodes.",
     )
@@ -316,7 +317,8 @@ def labeling_settings(model_id: str, effort: str, max_tokens: int | None, includ
             "prompt_sha256": prompt_sha256(include_question, presentation), "a2_presentation": presentation}
 
 
-def run_settings(args, episodes_sha256: str, partitions_sha256: str | None, presentation: str | None) -> dict:
+def run_settings(args: argparse.Namespace, episodes_sha256: str, partitions_sha256: str | None,
+                 presentation: str | None) -> dict:
     """What fixes a run's episodes and labels, written to ``run_settings.json`` before any call.
 
     ``--resume`` must reproduce it exactly; ``--concurrency`` is left out because it changes neither.
@@ -373,7 +375,15 @@ def generation_settings(model_id: str, effort: str, max_tokens: int | None) -> d
             "max_tokens": max_tokens or 512, "effort": None}
 
 
-def main(argv=None) -> None:
+def main(argv: list[str] | None = None) -> None:
+    """Select the natural episodes of one partition, label them with Claude and write the run folder.
+
+    ``--output`` receives ``run_settings.json`` and ``selected_episodes.json`` before any call,
+    ``raw_results.jsonl`` as rows complete, ``sessions.jsonl`` (one row per invocation), and at the
+    end ``binary_labels.csv``, ``exclusions.jsonl``, ``excluded_episodes.json`` and ``summary.json``.
+    ``--dry-run`` only prints the selection and prompt sizes. Selection errors, refused resumes and
+    rejected AWS credentials exit with status 1.
+    """
     args = parse_args(argv)
 
     if not args.dry_run and not args.resume:

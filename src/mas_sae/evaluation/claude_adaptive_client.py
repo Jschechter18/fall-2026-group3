@@ -12,11 +12,14 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from botocore.config import Config
 
 from mas_sae.models.claude import ClaudeClient, ClaudeResult
+
+if TYPE_CHECKING:
+    from boto3.session import Session
 
 EFFORTS = ("low", "medium", "high", "xhigh", "max")
 
@@ -32,8 +35,8 @@ def uses_adaptive_thinking(model_id: str) -> bool:
 class AdaptiveThinkingClaudeClient(ClaudeClient):
     """ClaudeClient for Claude 5.x on Bedrock: no temperature, adaptive thinking, explicit effort."""
 
-    def __init__(self, session, *, model_id: str, region: str = "us-east-1", effort: str = "medium",
-                 config: Config | None = None):
+    def __init__(self, session: Session, *, model_id: str, region: str = "us-east-1",
+                 effort: str = "medium", config: Config | None = None):
         if effort not in EFFORTS:
             raise ValueError(f"effort must be one of {EFFORTS}, got {effort!r}")
         super().__init__(session, model_id=model_id, region=region, config=config)

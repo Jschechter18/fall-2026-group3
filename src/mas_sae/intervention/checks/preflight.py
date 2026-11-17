@@ -10,21 +10,27 @@ import json
 import shutil
 import tempfile
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from mas_sae.experiments.artifacts import sha256_file
 from mas_sae.intervention.analysis import labeling
 from mas_sae.intervention.run_files import layout
 from mas_sae.intervention.experiment.representations import checkpoint_sha256, feature_set_problems, load_basis, read_feature_sets
 
+if TYPE_CHECKING:
+    from mas_sae.intervention.experiment.config import InterventionConfig
+
 GPU_STAGES = ("choose-r", "prepare", "run")
 LABELING_STAGES = ("choose-r", "merge")
 
 
 class PreflightError(RuntimeError):
+    """Everything a stage is missing, listed in one message (``run_preflight``)."""
     pass
 
 
-def input_file_problems(config) -> list[str]:
+def input_file_problems(config: InterventionConfig) -> list[str]:
+    """Missing input files, and stored labels made from another interactions file or partition."""
     i = config.inputs
     files = [i.interactions, i.contexts, i.feature_sets,
              *(str(Path(i.stored_labels) / f) for f in ("run_settings.json", "summary.json", "raw_results.jsonl"))]
@@ -38,7 +44,7 @@ def input_file_problems(config) -> list[str]:
     return problems
 
 
-def representation_problems(config) -> list[str]:
+def representation_problems(config: InterventionConfig) -> list[str]:
     """Checkpoints present, with the sha256 feature_sets.json recorded, and valid feature sets."""
     if not Path(config.inputs.feature_sets).is_file():
         return []                                   # reported with the input files
@@ -64,7 +70,7 @@ def representation_problems(config) -> list[str]:
     return problems
 
 
-def solver_weight_problems(config) -> list[str]:
+def solver_weight_problems(config: InterventionConfig) -> list[str]:
     """The pinned revision of the Solver must already be in the local cache: no download mid-run."""
     spec = config.solver
     cache_dir = Path(spec.get("cache_dir", "checkpoints/huggingface"))
@@ -74,7 +80,8 @@ def solver_weight_problems(config) -> list[str]:
     return []
 
 
-def machine_problems(config) -> list[str]:
+def machine_problems(config: InterventionConfig) -> list[str]:
+    """CUDA must be available and the Solver's device must have ``machine.min_gpu_memory_gb``."""
     import torch
     if not torch.cuda.is_available():
         return ["CUDA is not available"]
@@ -86,7 +93,7 @@ def machine_problems(config) -> list[str]:
     return problems
 
 
-def run_problems(config, stage: str) -> list[str]:
+def run_problems(config: InterventionConfig, stage: str) -> list[str]:
     """Which run this is: choose-r may start a new one (run_id null); every other stage needs an existing one."""
     if config.run_id is None:
         if stage == "choose-r":
@@ -99,7 +106,7 @@ def run_problems(config, stage: str) -> list[str]:
     return []
 
 
-def output_problems(config) -> list[str]:
+def output_problems(config: InterventionConfig) -> list[str]:
     """Where this stage writes: the run's folder, or output_root when choose-r is about to create one."""
     out = config.run_dir if config.run_id is not None else Path(config.output_root)
     if config.run_id is not None and not out.is_dir():
@@ -116,14 +123,16 @@ def output_problems(config) -> list[str]:
     return []
 
 
-def labeler_problems(config) -> list[str]:
+def labeler_problems(config: InterventionConfig) -> list[str]:
+    """Why the current Claude labeler is not the stored labels' (``labeling.protocol_problems``)."""
     labels_dir = Path(config.inputs.stored_labels)
     if not (labels_dir / "run_settings.json").is_file() or not (labels_dir / "summary.json").is_file():
         return []                                   # reported with the input files
     return labeling.protocol_problems(labeling.read_protocol(labels_dir))
 
 
-def aws_credential_problems(config) -> list[str]:
+def aws_credential_problems(config: InterventionConfig) -> list[str]:
+    """The configured AWS profile must authenticate (an STS get-caller-identity call)."""
     try:
         import boto3
         session = boto3.Session(profile_name=config.labeling.aws_profile)
@@ -134,7 +143,7 @@ def aws_credential_problems(config) -> list[str]:
     return []
 
 
-def stage_problems(config, stage: str, shard: int | None) -> list[str]:
+def stage_problems(config: InterventionConfig, stage: str, shard: int | None) -> list[str]:
     """What this stage needs from earlier stages."""
     if config.run_id is None:
         return []                                   # no run yet: reported by run_problems
@@ -155,7 +164,8 @@ def stage_problems(config, stage: str, shard: int | None) -> list[str]:
     return problems
 
 
-def run_preflight(config, stage: str, shard: int | None = None, labels_stubbed: bool = False) -> None:
+def run_preflight(config: InterventionConfig, stage: str, shard: int | None = None,
+                  labels_stubbed: bool = False) -> None:
     """Raise one PreflightError listing everything this stage is missing.
 
     ``labels_stubbed`` (smoke runs only) skips the AWS check: no request is sent."""

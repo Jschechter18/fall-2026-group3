@@ -1,4 +1,4 @@
-"""Run map-reduce causal replay; see docs/causal_replay/distributed_causal_replay.md."""
+"""Run map-reduce causal replay; see cookbooks/causal_replay/distributed_causal_replay.md."""
 
 from mas_sae.causal.distributed_cli import main
 

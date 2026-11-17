@@ -1,6 +1,10 @@
 """SAE feature selection (issue #89) and the offline causal-proxy table on real activations of the config's layer.
 
-    python scripts/feature_selection/feature_selection.py --config configs/feature_selection_layer33.yaml
+The final run (README, stage 5):
+
+    python scripts/feature_selection/feature_selection.py --config configs/feature_selection/feature_selection_intervention_layer25.yaml
+
+Without ``--config`` it reads configs/feature_selection_layer33.yaml, an earlier layer-33 run.
 """
 
 import argparse
@@ -14,6 +18,8 @@ from mas_sae.probe.feature_selection import FeatureSelectionConfig, run
 
 
 def main() -> None:
+    """Run feature selection for ``--config`` and print each SAE's probe result and the causal-proxy
+    table, or with ``--matched-from`` re-score that finished run at ``--edit-doses``."""
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--config", type=Path, default=Path("configs/feature_selection_layer33.yaml"))

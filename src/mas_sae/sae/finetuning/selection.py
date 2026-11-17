@@ -1,17 +1,26 @@
 """Checkpoint eligibility: an epoch can be kept only if the fine-tune stayed light."""
 
+from __future__ import annotations
 
-def within_l0(l0, target, tolerance):
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import argparse
+
+
+def within_l0(l0: float, target: float, tolerance: float) -> bool:
     """True if a checkpoint's mean L0 is within a relative tolerance of the original's (target)."""
     return abs(l0 - target) <= tolerance * target
 
 
-def stability_limits(args):
+def stability_limits(args: argparse.Namespace) -> dict[str, float]:
+    """The three stability gates from the command line, as recorded in summary.json."""
     return {'min_activation_correlation': args.min_activation_correlation, 'min_jaccard': args.min_jaccard,
             'max_alive_change': args.max_alive_change}
 
 
-def eligibility(l0, health, target_l0, args):
+def eligibility(l0: float, health: dict, target_l0: float,
+                args: argparse.Namespace) -> tuple[bool, list[str]]:
     """Can this epoch be kept? Returns (eligible, reasons it is not).
 
     The fine-tune should be light, so beyond lowering MSE an epoch must keep:

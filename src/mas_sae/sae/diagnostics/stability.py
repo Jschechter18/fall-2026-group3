@@ -4,12 +4,21 @@ Features are matched by index: fine-tuning starts from the original weights, so 
 descends from original feature i.
 """
 
+from __future__ import annotations
+
+from collections.abc import Callable, Iterable
 import math
+from typing import TYPE_CHECKING
 
 import torch
 from torch.nn.functional import cosine_similarity
 
 from .stats import quantiles
+
+if TYPE_CHECKING:
+    from mas_sae.sae.pretrained import JumpReLUSAE
+
+    from .stats import PairedStats
 
 TAIL_QUANTILES = (0.01, 0.05, 0.1, 0.5)      # for stability the bad tail matters more than the mean
 RATIO_QUANTILES = (0.01, 0.1, 0.5, 0.9, 0.99)
@@ -19,7 +28,9 @@ LINK_CORRELATION = 0.5                       # split/merge: features this correl
 SAME_INDEX_INTACT = 0.9                      # split/merge: a feature this correlated with its own index is intact
 
 
-def lifecycle(paired):
+def lifecycle(paired: PairedStats) -> dict[str, float | None]:
+    """Alive-feature counts before and after, their relative change (None if none was alive before),
+    and how many features died (alive only in the original) or revived (alive only after)."""
     alive_a, alive_b = paired.original.alive(), paired.adapted.alive()
     before, after = int(alive_a.sum()), int(alive_b.sum())
     return {'alive_original': before, 'alive_adapted': after,
@@ -27,7 +38,7 @@ def lifecycle(paired):
             'died': int((alive_a & ~alive_b).sum()), 'revived': int((~alive_a & alive_b).sum())}
 
 
-def frequency_log2_ratio(paired):
+def frequency_log2_ratio(paired: PairedStats) -> torch.Tensor:
     """Per feature: log2(adapted / original firing frequency); nan unless alive in both."""
     freq_a, freq_b = paired.original.frequency(), paired.adapted.frequency()
     both = paired.original.alive() & paired.adapted.alive()
@@ -36,7 +47,8 @@ def frequency_log2_ratio(paired):
     return ratio
 
 
-def weight_drift(original, adapted):
+def weight_drift(original: JumpReLUSAE,
+                 adapted: JumpReLUSAE) -> tuple[dict, dict[str, torch.Tensor]]:
     """Per-feature encoder/decoder cosines and threshold ratios. Returns (summary, per-feature arrays)."""
     encoder = cosine_similarity(original.w_enc.double(), adapted.w_enc.double(), dim=0)   # (d, n): columns
     decoder = cosine_similarity(original.w_dec.double(), adapted.w_dec.double(), dim=1)   # (n, d): rows
@@ -47,7 +59,8 @@ def weight_drift(original, adapted):
     return summary, {'encoder_cosine': encoder, 'decoder_cosine': decoder, 'threshold_ratio': ratio}
 
 
-def stability(paired, original=None, adapted=None):
+def stability(paired: PairedStats, original: JumpReLUSAE | None = None,
+              adapted: JumpReLUSAE | None = None) -> tuple[dict, dict[str, torch.Tensor]]:
     """Returns (summary, per-feature arrays). Weight drift is added when both models are given."""
     correlation, defined = paired.correlation.result()
     corr = correlation[defined]
@@ -76,7 +89,7 @@ def stability(paired, original=None, adapted=None):
     return summary, per_feature
 
 
-def compact_stability(paired):
+def compact_stability(paired: PairedStats) -> dict[str, float | None]:
     """A few stability() numbers, cheap enough to log, and gate checkpoints on, every epoch."""
     correlation, defined = paired.correlation.result()
     jaccard = paired.jaccard()
@@ -92,7 +105,7 @@ class CrossCorrelation:
     Restricted to alive features (a few thousand at most on our data), so the matrix stays small.
     """
 
-    def __init__(self, alive_original, alive_adapted):
+    def __init__(self, alive_original: torch.Tensor, alive_adapted: torch.Tensor):
         self.index_a, self.index_b = alive_original.nonzero().flatten(), alive_adapted.nonzero().flatten()
         device = alive_original.device
         self.n = 0
@@ -100,7 +113,8 @@ class CrossCorrelation:
         self.sum_b, self.sum_bb = (torch.zeros(len(self.index_b), dtype=torch.float64, device=device) for _ in range(2))
         self.sum_ab = torch.zeros(len(self.index_a), len(self.index_b), dtype=torch.float64, device=device)
 
-    def add(self, a, b):
+    def add(self, a: torch.Tensor, b: torch.Tensor) -> None:
+        """Accumulate one batch of full-width original (a) and adapted (b) features."""
         a, b = a[:, self.index_a].double(), b[:, self.index_b].double()
         self.n += len(a)
         self.sum_a += a.sum(0)
@@ -109,7 +123,11 @@ class CrossCorrelation:
         self.sum_bb += b.square().sum(0)
         self.sum_ab += a.T @ b
 
-    def result(self):
+    def result(self) -> torch.Tensor:
+        """(alive original x alive adapted) correlations, rows/columns ordered as index_a/index_b.
+
+        Pairs where either feature never varies get 0, not nan.
+        """
         mean_a, mean_b = self.sum_a / self.n, self.sum_b / self.n
         std_a = (self.sum_aa / self.n - mean_a ** 2).clamp(min=0).sqrt()
         std_b = (self.sum_bb / self.n - mean_b ** 2).clamp(min=0).sqrt()
@@ -119,7 +137,8 @@ class CrossCorrelation:
 
 
 @torch.no_grad()
-def split_merge(pairs, paired):
+def split_merge(pairs: Callable[[], Iterable[tuple[torch.Tensor, torch.Tensor]]],
+                paired: PairedStats) -> tuple[dict, dict[str, torch.Tensor]]:
     """Features that split into several, or merged into one. Returns (summary, per-feature bool arrays).
 
     `pairs()` yields (original features, adapted features) batches over the same examples as `paired`

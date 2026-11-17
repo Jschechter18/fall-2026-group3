@@ -83,7 +83,7 @@ def expand_search_space(config: dict) -> list[tuple[str, Hyperparameters]]:
     return candidates
 
 
-def compare_trials(trials, selection):
+def compare_trials(trials: list[dict], selection: dict) -> dict | None:
     """Annotate a Pareto frontier and, if requested, choose a budget-feasible winner."""
     valid = [trial for trial in trials if trial["status"] == "completed" and all(
         type(trial["validation"].get(key)) in (int, float)

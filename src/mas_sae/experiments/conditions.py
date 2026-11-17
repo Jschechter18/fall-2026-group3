@@ -1,3 +1,10 @@
+"""Which Critic conditions and Attempt 2 presentations a collection run uses.
+
+``OMITTED`` marks a setting absent from the config; omission reproduces the original V1 run
+(all three conditions, feedback presentation) and its record schema. Candidate orders are
+assigned per question from the ids and seed alone, before any generation.
+"""
+
 from enum import Enum
 
 from mas_sae.agents.critic import CriticCondition
@@ -8,7 +15,7 @@ from mas_sae.data.musique import assign_experiment_splits
 OMITTED = object()
 
 
-def resolve_conditions(values=OMITTED):
+def resolve_conditions(values=OMITTED) -> tuple[CriticCondition, ...]:
     """Omission preserves V1; explicit lists must be nonempty and unique."""
     if values is OMITTED:
         return tuple(CriticCondition)
@@ -30,7 +37,7 @@ class A2Presentation(str, Enum):
     CANDIDATES = "candidates"
 
 
-def resolve_presentations(values=OMITTED):
+def resolve_presentations(values=OMITTED) -> tuple[A2Presentation, ...]:
     """Omission keeps the original feedback prompt; explicit lists must be nonempty and unique."""
     if values is OMITTED:
         return (A2Presentation.FEEDBACK,)
@@ -42,7 +49,8 @@ def resolve_presentations(values=OMITTED):
     return presentations
 
 
-def assign_candidate_orders(question_ids, *, seed, hop_groups=None):
+def assign_candidate_orders(question_ids: list[str], *, seed: int,
+                            hop_groups: dict[str, str] | None = None) -> dict[str, str]:
     """Seeded candidate order per question, balanced within each hop group.
 
     Decided from the question ids and the seed alone, before any generation.

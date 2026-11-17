@@ -16,6 +16,7 @@ readout with the Solver's regenerated answer; the table and statistics stay the 
 from __future__ import annotations
 
 import warnings
+from collections.abc import Iterable, Sequence
 
 import numpy as np
 import torch
@@ -32,7 +33,7 @@ from mas_sae.probe.cv_eval import grouped_bootstrap_indices, make_group_folds
 # ----------------------------------------------------------------------------- SAE helpers
 
 @torch.no_grad()
-def encode(sae, X: np.ndarray, batch_size: int = 512) -> np.ndarray:
+def encode(sae: torch.nn.Module, X: np.ndarray, batch_size: int = 512) -> np.ndarray:
     """SAE features for raw activations ``X`` (rows x input_dim), in batches."""
     out = [sae.encoder(torch.from_numpy(X[i:i + batch_size]).float()).numpy()
            for i in range(0, len(X), batch_size)]
@@ -40,21 +41,22 @@ def encode(sae, X: np.ndarray, batch_size: int = 512) -> np.ndarray:
 
 
 @torch.no_grad()
-def decode(sae, Z: np.ndarray, batch_size: int = 512) -> np.ndarray:
+def decode(sae: torch.nn.Module, Z: np.ndarray, batch_size: int = 512) -> np.ndarray:
+    """The SAE's reconstruction of features ``Z`` (rows x latent_dim), in batches, as float32."""
     out = [sae.decoder(torch.from_numpy(Z[i:i + batch_size]).float()).numpy()
            for i in range(0, len(Z), batch_size)]
     return np.concatenate(out).astype(np.float32, copy=False)
 
 
-def ablate(Z: np.ndarray, features) -> np.ndarray:
+def ablate(Z: np.ndarray, features: Iterable[int]) -> np.ndarray:
     """Copy of ``Z`` with the given feature columns set to zero."""
     Z = Z.copy()
     Z[:, list(features)] = 0.0
     return Z
 
 
-def frequency_matched_controls(freq: np.ndarray, targeted, n_draws: int, seed: int,
-                               pool_size: int = 50, exclude=()) -> list[list[int]]:
+def frequency_matched_controls(freq: np.ndarray, targeted: Iterable[int], n_draws: int, seed: int,
+                               pool_size: int = 50, exclude: Iterable[int] = ()) -> list[list[int]]:
     """Random feature sets the same size as ``targeted``: each targeted feature is replaced by a
     random live, non-targeted feature among the ``pool_size`` with the closest training firing
     frequency, so the control removes about as much activity as the targeted ablation. ``exclude``
@@ -75,8 +77,9 @@ def frequency_matched_controls(freq: np.ndarray, targeted, n_draws: int, seed: i
     return draws
 
 
-def contribution_matched_controls(freq: np.ndarray, contribution: np.ndarray, targeted, n_draws: int, seed: int,
-                                  pool_size: int = 50, exclude=(), freq_tolerance: float = 1.25) -> list[list[int]]:
+def contribution_matched_controls(freq: np.ndarray, contribution: np.ndarray, targeted: Iterable[int],
+                                  n_draws: int, seed: int, pool_size: int = 50, exclude: Iterable[int] = (),
+                                  freq_tolerance: float = 1.25) -> list[list[int]]:
     """Like ``frequency_matched_controls``, but matched on decoded contribution as well: each targeted
     feature is replaced by a random feature among those firing within a factor ``freq_tolerance`` as
     often as it does, the ``pool_size`` of them nearest in log decoded contribution. ``contribution`` is
@@ -112,7 +115,8 @@ def contribution_matched_controls(freq: np.ndarray, contribution: np.ndarray, ta
     return draws
 
 
-def match_quality(freq: np.ndarray, contribution: np.ndarray, targeted, draws) -> list[dict]:
+def match_quality(freq: np.ndarray, contribution: np.ndarray, targeted: Sequence[int],
+                  draws: Sequence[Sequence[int]]) -> list[dict]:
     """How closely each random control matches its targeted feature: one row per (draw, position), with
     both features' firing frequency and decoded contribution and the control / targeted ratios."""
     freq, contribution = np.asarray(freq, float), np.asarray(contribution, float)
@@ -132,8 +136,8 @@ def _readout_model(C: float, seed: int) -> Pipeline:
                      ("clf", LogisticRegression(C=C, max_iter=2000, random_state=seed))])
 
 
-def fit_readout(X: np.ndarray, y: np.ndarray, groups: np.ndarray, c_grid, inner_folds: int,
-                seed: int, progress_desc: str | None = None) -> tuple[Pipeline, float]:
+def fit_readout(X: np.ndarray, y: np.ndarray, groups: np.ndarray, c_grid: Sequence[float],
+                inner_folds: int, seed: int, progress_desc: str | None = None) -> tuple[Pipeline, float]:
     """Acceptance readout on raw activations; C chosen by inner grouped CV log loss on these rows
     only (ties go to the smaller C). ``y`` is 1 = accepted the Critic."""
     with warnings.catch_warnings():
@@ -158,6 +162,7 @@ def fit_readout(X: np.ndarray, y: np.ndarray, groups: np.ndarray, c_grid, inner_
 
 
 def p_accept(readout: Pipeline, X: np.ndarray) -> np.ndarray:
+    """The readout's probability of class 1 (accepted the Critic) for each row of ``X``."""
     return readout.predict_proba(X)[:, list(readout.classes_).index(1)]
 
 
@@ -238,7 +243,7 @@ def targeted_vs_random(targeted: np.ndarray, random: np.ndarray, control: np.nda
             "draw_tail_fraction": float((1 + np.sum(np.abs(finite) >= abs(t_effect) - 1e-15)) / (1 + len(finite)))}
 
 
-def holm(p_values) -> list[float]:
+def holm(p_values: Sequence[float]) -> list[float]:
     """Holm step-down adjusted p-values (family-wise error control), in the input order."""
     p = np.asarray(p_values, float)
     order = np.argsort(p)
