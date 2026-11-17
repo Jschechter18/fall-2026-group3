@@ -52,17 +52,13 @@ testing whether editing those features changes the decision.
 
 \begin{figure}[htbp]
     \centering
-    \fbox{\parbox[c][2.2in][c]{0.9\textwidth}{\centering
-        \textbf{[Placeholder: end-to-end pipeline diagram]}\\[0.5em]
-        MuSiQue + synthetic questions $\rightarrow$ Solver attempt~1
-        $\rightarrow$ Critic (blind, then compare) $\rightarrow$ Solver
-        attempt~2 with candidates $\rightarrow$ Claude labels and Layer-25
-        activations $\rightarrow$ question-family splits $\rightarrow$ layer
-        selection $\rightarrow$ SAEs $\rightarrow$ feature selection
-        $\rightarrow$ causal intervention}}
-    \caption{End-to-end experimental pipeline. Each arrow is a frozen,
-    hash-recorded artifact boundary; test and intervention partitions are not
-    read until the stages that are allowed to use them.}
+    \includegraphics[width=\textwidth,height=0.82\textheight,keepaspectratio]
+    {build_figures/pipeline_overview.pdf}
+    \caption{End-to-end experimental pipeline. MuSiQue and synthetic questions
+    are split by question family, then run through the natural Solver--Critic
+    interaction. The Solver's attempt-2 activations are cached and each answer
+    is labeled by Claude. These feed layer selection, SAE training, feature
+    selection, and the causal intervention.}
     \label{fig:pipeline-overview}
 \end{figure}
 
