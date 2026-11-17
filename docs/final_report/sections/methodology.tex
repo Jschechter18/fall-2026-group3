@@ -203,8 +203,20 @@ were nearly balanced in the resulting corpus without any resampling.
 \label{sec:forward-pass}
 
 Each episode runs four generations and one correctness check, in a fixed
-order (Table~\ref{tab:turns}). The models never see each other's internal
-states; they communicate only through text inserted into the next prompt.
+order (Figure~\ref{fig:agent-architecture} and Table~\ref{tab:turns}). The
+models never see each other's internal states; they communicate only through
+text inserted into the next prompt.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\textwidth]{figures/agent_architecture.pdf}
+    \caption{The Solver--Critic--Validator loop for one episode. The Critic
+    answers before it sees A1 and then compares its answer with A1. Only its
+    recommended answer, C1, reaches the Solver's second attempt. Only the
+    Validator sees the gold answer. Behavior labels are assigned afterwards by the Claude judge
+    (Section~\ref{sec:labeling}).}
+    \label{fig:agent-architecture}
+\end{figure}
 
 \begin{table}[htbp]
     \centering
