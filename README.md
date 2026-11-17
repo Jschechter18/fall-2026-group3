@@ -331,8 +331,7 @@ pytest
 │   └── fig/                      # Demo figures
 ├── docs/                         # Project documents
 │   ├── diagrams/                 # Editable (.drawio) + SVG figures
-│   └── research_paper/           # Research paper source and materials
-│       ├── Latex/                # LaTeX paper source (figures come from reports/figures/)
+│   └── research_paper/           # Research paper materials
 │       ├── Word/                 # Word version of the paper
 │       └── references/           # Reference PDFs for the literature review
 ├── documents/                    # Literature PDFs
