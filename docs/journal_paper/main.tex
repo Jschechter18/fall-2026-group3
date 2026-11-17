@@ -1,0 +1,163 @@
+%% Journal manuscript for Neural Computing and Applications (Springer).
+%% Built on the Springer Nature LaTeX template, Version 3.1 (December 2024).
+%% The untouched template, sample article, and user manual are kept in
+%% sn-article-template/ for reference.
+%%
+%% Springer asks for ONE .tex file: do not \input{} or \include{} other
+%% .tex files. Figures go in figures/ and are uploaded as separate files.
+%%
+%% Build (from this directory):
+%%   latexmk -pdf -interaction=nonstopmode -halt-on-error main.tex
+
+%%=====================================================================%%
+%% Document class
+%%   pdflatex          required by Springer's submission systems
+%%   sn-mathphys-num   numbered citations [1]; the class picks the
+%%                     matching .bst file, so do NOT add \bibliographystyle
+%%   lineno            add for line numbers in the margin (review copies)
+%%   referee           add for double line spacing
+%% Other reference styles: sn-basic, sn-mathphys-ay, sn-vancouver-num,
+%% sn-vancouver-ay, sn-apa, sn-chicago, sn-aps, sn-nature.
+%% TODO: confirm NCA's required reference style in its author guidelines.
+%%=====================================================================%%
+\documentclass[pdflatex,sn-mathphys-num]{sn-jnl}
+
+%%%% Packages (the class already loads hyperref and natbib)
+\usepackage{graphicx}%
+\usepackage{multirow}%
+\usepackage{amsmath,amssymb,amsfonts}%
+\usepackage{amsthm}%
+\usepackage{mathrsfs}%
+\usepackage[title]{appendix}%
+\usepackage{xcolor}%
+\usepackage{textcomp}%
+\usepackage{manyfoot}%
+\usepackage{booktabs}%
+\usepackage{algorithm}%
+\usepackage{algorithmicx}%
+\usepackage{algpseudocode}%
+\usepackage{listings}%
+
+\graphicspath{{figures/}}
+
+\theoremstyle{thmstylethree}%
+\newtheorem{definition}{Definition}%
+
+\raggedbottom
+
+\begin{document}
+
+%%=====================================================================%%
+%% Title and authors
+%%=====================================================================%%
+%% \title[<short running title>]{<full title>}
+\title[Adopt or Retain?]{Adopt or Retain? Testing Sparse Autoencoder Features
+as Explanations of Feedback Uptake in a Language Model}
+
+%% Mark the corresponding author with \author* (exactly one).
+%% TODO: choose the corresponding author, fill in emails, and confirm
+%% author order.
+\author[1]{\fnm{Author} \sur{1}}\email{TODO@gwu.edu}
+\author[1]{\fnm{Author} \sur{2}}\email{TODO@gwu.edu}
+\author[1]{\fnm{Author} \sur{3}}\email{TODO@gwu.edu}
+\author[1]{\fnm{Author} \sur{4}}\email{TODO@gwu.edu}
+%% TODO: decide whether the advisor is listed as a co-author.
+%% \author[1]{\fnm{Amir} \sur{Jafari}}\email{TODO@gwu.edu}
+
+\affil[1]{\orgdiv{Data Science Program}, \orgname{The George Washington
+University}, \orgaddress{\city{Washington}, \state{DC}, \country{USA}}}
+
+%%=====================================================================%%
+%% Abstract and keywords
+%% TODO: check NCA's abstract word limit and keyword count.
+%%=====================================================================%%
+\abstract{TODO: Abstract 250 - 450 words}
+
+
+\keywords{sparse autoencoders, mechanistic interpretability, feedback uptake,
+activation steering, large language models}
+
+\maketitle
+
+%%=====================================================================%%
+%% Main text
+%%=====================================================================%%
+\section{Introduction}\label{sec:introduction}
+
+TODO JOSH
+
+\section{Related work}\label{sec:related-work}
+
+TODO RAYE
+
+\section{Methods}\label{sec:methods}
+
+\subsection{Solver--Critic pipeline and data}\label{subsec:pipeline-data}
+
+TODO ISRAEL
+
+\subsection{Sparse autoencoders}\label{subsec:saes}
+
+TODO JOSH
+
+\subsection{Prediction probes}\label{subsec:probes}
+
+TODO RAYE
+
+\subsection{Causal interventions}\label{subsec:interventions}
+
+TODO RAYE
+
+\section{Results}\label{sec:results}
+
+TODO ISRAEL
+
+\section{Discussion}\label{sec:discussion}
+
+TODO JOSH
+
+\section{Conclusion}\label{sec:conclusion}
+
+TODO JOSH
+
+%%=====================================================================%%
+%% Back matter
+%%=====================================================================%%
+\backmatter
+
+\bmhead{Acknowledgements}
+
+TODO ISRAEL
+
+%% Springer requires every heading below. Write "Not applicable" for any
+%% heading that does not apply; do not delete headings.
+\section*{Declarations}
+
+\begin{itemize}
+\item \textbf{Funding:} TODO.
+\item \textbf{Competing interests:} TODO.
+\item \textbf{Ethics approval and consent to participate:} TODO.
+\item \textbf{Consent for publication:} TODO.
+\item \textbf{Data availability:} TODO.
+\item \textbf{Materials availability:} TODO.
+\item \textbf{Code availability:} TODO.
+\item \textbf{Author contribution:} TODO.
+\end{itemize}
+
+%%=====================================================================%%
+%% Appendices (delete the environment if none are needed)
+%%=====================================================================%%
+\begin{appendices}
+
+\section{TODO appendix title}\label{secA1}
+
+TODO ISRAEL
+
+\end{appendices}
+
+%%=====================================================================%%
+%% References: entries live in references.bib
+%%=====================================================================%%
+\bibliography{references}
+
+\end{document}
