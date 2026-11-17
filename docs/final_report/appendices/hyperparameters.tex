@@ -1,1 +1,107 @@
 \chapter{Hyperparameters and Configurations}
+\label{app:hyperparameters}
+
+This appendix lists the settings of every stage of the final study, read from
+the frozen configuration files and run records named in each block. Settings
+given in the main text are referenced rather than repeated: the token limits
+per turn (Table~\ref{tab:turns}), the labeler settings
+(Table~\ref{tab:labeler-settings}), and the pinned model revisions and
+software versions (the last section of the methodology chapter). Seed 42 is
+used throughout unless stated otherwise.
+
+\begin{small}
+\begin{longtable}{p{4.6cm}p{10.2cm}}
+    \caption{Settings of the final study by stage. The file named in each
+    stage heading is the source of its values.}
+    \label{tab:hyperparameters} \\
+    \toprule
+    Setting & Value \\
+    \midrule
+    \endfirsthead
+    \toprule
+    Setting & Value \\
+    \midrule
+    \endhead
+    \bottomrule
+    \endfoot
+
+    \multicolumn{2}{p{14.8cm}}{\textbf{Synthetic questions} \quad \path{configs/data/opus5_v3_full.yaml}} \\
+    \midrule
+    Generator & Claude Opus~5 (\texttt{us.anthropic.claude-opus-5}), prompt version v3 \\
+    Hop shapes & 2hop, 3hop1, 3hop2, 4hop1, 4hop2, 4hop3, requested in rotation \\
+    Target & 13,334 accepted questions per shape (80,004 in total); at most 16,000 requests per shape \\
+    Paragraphs & 3 related distractors per question; padded to 20 paragraphs with MuSiQue train fillers \\
+    Repair & One repair request after a failed validation \\
+    Deduplication & Normalized exact match (NFKC, case, whitespace) against MuSiQue train and validation and earlier accepted questions \\
+    Dataset audit & Disabled (\texttt{dataset\_audit: false}) \\
+    Concurrency, seed & 256 workers; seed 42 \\
+    \midrule
+
+    \multicolumn{2}{p{14.8cm}}{\textbf{Collection} \quad \path{configs/collection/distributed_final.yaml}} \\
+    \midrule
+    Inputs & MuSiQue train and validation (\texttt{clean-local-v1}); synthetic release \texttt{synthetic-final-001} \\
+    Protocol & v2: the Critic answers blind, then compares; natural condition only; candidate presentation for A2 \\
+    Models & Solver and Validator Gemma~3 4B IT; Critic Qwen3-4B-Instruct-2507; bfloat16; greedy decoding \\
+    Token limits & Solver 64, Critic 1,024, Validator 4 \\
+    Candidate order & Assigned at random per question, balanced within hop type \\
+    Activation layers & 4, 8, 17, 25, 29, 30, 31, 32, 33 (residual stream, final prompt token) \\
+    Partitions & Intervention: 10\% of question families (seed 42); the rest split 80/10/10 into train, validation and test (seed 43) \\
+    \midrule
+
+    \multicolumn{2}{p{14.8cm}}{\textbf{Behavior labels} \quad \path{results/claude_validation/mixed_final_001/*/run_settings.json}} \\
+    \midrule
+    Labeler & Claude Sonnet~4.5, temperature 0, at most 512 output tokens, prompt \texttt{claude\_binary\_v3\_candidates} \\
+    Retries & Up to 3 identical requests when a reply cannot be parsed \\
+    \midrule
+
+    \multicolumn{2}{p{14.8cm}}{\textbf{Layer-selection probe} \quad \path{configs/layer_selection/layer_selection_mixed_final_001.yaml}} \\
+    \midrule
+    Target & Adoption (1) versus Retention (0); other labels excluded \\
+    Input & Solver activation before A2 (\texttt{\{split\}\_attempt2.pt}) at each of the nine layers \\
+    Probe & $L_2$-regularized logistic regression on standardized inputs, balanced class weights \\
+    $C$ grid & 0.001, 0.01, 0.1, 1, 10, 100, chosen by 3-fold grouped cross-validation on train \\
+    Grouping & \texttt{split\_group\_id} (question family) \\
+    Fit and evaluation & Fit on train, evaluated on validation; 1,000 bootstrap resamples \\
+    Label-shuffle control & 100 permutations in the config; the committed run set 0, so the control was not run (Section~\ref{sec:layer-selection}) \\
+    Baselines & Text: question, A1, Critic answer, candidate order. Metadata: candidate order, correctness cell, source, hop group \\
+    \midrule
+
+    \multicolumn{2}{p{14.8cm}}{\textbf{Custom SAEs} \quad \path{configs/sae/layer_25_mixed_final_001_baselines.yaml} and each run's \path{config.json}} \\
+    \midrule
+    Input & Layer 25, width 2,560, divided by one training RMS (643.6) \\
+    Dictionary & 12,888 latents; tied initialization; decoder columns kept at unit $L_2$ norm \\
+    Optimization & Batch 256; at most 200 epochs; early stopping after 20 epochs without a validation-loss gain above $10^{-4}$; learning-rate patience 5 \\
+    $L_1$ SAE (used downstream) & Learning rate $10^{-4}$; sparsity coefficient 2.0, chosen from 1, 2 and 3 \\
+    TopK SAE & Learning rate $3\times10^{-4}$; $k = 128$; auxiliary loss with $k_{\mathrm{aux}} = 512$ and coefficient $1/128$ \\
+    \midrule
+
+    \multicolumn{2}{p{14.8cm}}{\textbf{Pretrained SAEs} \quad \path{results/sae/decoder_finetuning/20261104T164310458065Z/manifest.json}} \\
+    \midrule
+    Source & Gemma Scope~2, \path{google/gemma-scope-2-4b-it}, \path{resid_post_all/layer_25_width_16k_l0_big}; 16,384 JumpReLU latents \\
+    Decoder adaptation & Decoder and reconstruction bias trained; encoder and thresholds frozen; learning rate $10^{-5}$; batch 256; at most 10 epochs; patience 5 \\
+    Full fine-tune (exploratory) & All parameters; learning rate $10^{-5}$ (encoder $10^{-6}$); $L_0$ coefficient 0.1 with tolerance 0.1; batch 256; at most 5 epochs \\
+    \midrule
+
+    \multicolumn{2}{p{14.8cm}}{\textbf{Feature selection} \quad \path{configs/feature_selection/feature_selection_intervention_layer25.yaml}} \\
+    \midrule
+    Probe & As for layer selection, with $C$ from 0.001, 0.01, 0.1, 1, 10 and 3 grouped inner folds \\
+    Ranking & Mean absolute SHAP value on train \\
+    Feature sets & Top 10 Adoption and top 10 Retention features per representation \\
+    Random controls & 100 random draws per set, matched on log firing frequency \\
+    Tests & 1,000 bootstrap resamples; 10,000 permutations \\
+    \midrule
+
+    \multicolumn{2}{p{14.8cm}}{\textbf{Intervention} \quad \path{configs/intervention/intervention.yaml}} \\
+    \midrule
+    Site & Layer 25, final prompt token of the A2 prompt \\
+    Cohort & 1,000 study episodes (positions 1--1,000 of the seeded order); 50 pilot episodes (1,001--1,050) for choosing the edit size \\
+    Edit size & $r = 0.2$, so $\lVert\Delta\rVert = 0.2\lVert x\rVert$, chosen on the pilot (Section~\ref{sec:causal-methods}) \\
+    Arms & \textsc{decrease}, \textsc{increase}, \textsc{both} \\
+    Targeted features & 10 per set \\
+    Random edits & 3 distinct draws per episode from the first 100 matched draws \\
+    Replay check & At least 98\% of baseline labels must match the stored labels \\
+    Primary analysis & 9 one-sided tests (3 SAEs $\times$ 3 arms) with Holm correction \\
+    Resampling & 10,000 bootstrap resamples; 10,000 permutations \\
+    Shards & 4, one per GPU \\
+\end{longtable}
+\end{small}
