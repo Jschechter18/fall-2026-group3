@@ -1,0 +1,136 @@
+\chapter{Introduction}
+\label{chap:introduction}
+
+\section{Motivation}
+
+Large language models (LLMs) are increasingly used as components of
+multi-agent systems in which models critique, debate, verify, or revise one
+another's outputs. Such systems can improve factuality and reasoning by
+combining multiple model responses~\cite{du2024debate}. Their reliability,
+however, depends on more than whether a Critic can generate a plausible
+recommendation. The receiving model must determine whether that recommendation
+should change its answer. Blind adoption can propagate incorrect feedback,
+whereas indiscriminate resistance can prevent useful correction. Research on
+self-correction and sycophancy has shown that a model's willingness to revise
+is not equivalent to reliable error correction
+~\cite{huang2024selfcorrect,sharma2024sycophancy}.
+
+Behavioral evaluation can determine whether a Solver changed its answer, but
+it cannot explain how the Solver internally represented the feedback or which
+parts of that representation contributed to its decision. A hidden activation
+may correlate with Adoption because it represents disagreement, uncertainty,
+answer identity, presentation order, or merely a downstream consequence of
+the decision. This creates a central problem for mechanistic interpretability:
+finding a predictive internal signal is not the same as identifying a feature
+with a coherent meaning or demonstrating that the signal participates in the
+model's computation.
+
+Sparse autoencoders (SAEs) provide one approach to this problem. An SAE
+decomposes a dense model activation into a larger collection of sparsely active
+features. Compared with individual residual-stream dimensions, these features
+may isolate more coherent patterns in the model's representation
+~\cite{cunningham2023sparse,gao2025scaling}. Sparsity alone, however, does not
+guarantee interpretability. A useful feature interpretation should be
+supported by semantically coherent activating examples, generalize to held-out
+interactions, distinguish the target behavior from nuisance variables, and
+make correct predictions about what will happen when the feature is modified.
+
+This project studies feature interpretability through the concrete behavioral
+case of feedback uptake. A Gemma Solver first answers a multi-hop question, a
+Qwen Critic first answers without seeing the Solver's answer, and the Solver
+then receives both answers as labeled candidates before generating a revised
+response. Claude-based outcome labeling distinguishes Adoption, Retention,
+Agreement, and Out cases; the primary binary analysis uses only Adoption and
+Retention. We then examine the Solver's Layer 25 residual-stream activations
+with SAEs, predictive probes, feature-level analyses, and held-out
+interventions. Feedback uptake is therefore not only the behavior being
+modeled; it is a testbed for asking whether sparse features provide evidence
+that is semantically meaningful, behaviorally relevant, and causally useful.
+
+\section{Research Question and Objectives}
+
+The primary research question is:
+
+\begin{quote}
+Can sparse autoencoders identify human-interpretable features in a language
+model's residual stream that explain and causally influence whether the model
+adopts or resists feedback?
+\end{quote}
+
+We address this question through four objectives:
+
+\begin{enumerate}
+    \item Build a controlled Solver--Critic interaction pipeline and a
+    leakage-aware dataset of behavioral outcomes and Solver activations.
+
+    \item Represent feedback-processing activations using pretrained and
+    interaction-specific SAEs, and evaluate whether those representations
+    preserve the underlying residual-stream information with useful sparsity.
+
+    \item Identify and interpret sparse features that predict Adoption versus
+    Retention on validation data, using activating examples, regularized probe
+    performance, permutation tests, nuisance-property profiles, and matched
+    random-feature draws to evaluate their meaning and specificity.
+
+    \item Test whether selected sparse features are causally involved in
+    feedback uptake by decreasing or increasing their contribution during
+    intervention-partition forward passes and comparing the resulting behavior
+    with reconstruction-only passes, matched random-feature edits, and a
+    raw-activation control at the same relative edit norm.
+\end{enumerate}
+
+These objectives separate several claims that are often conflated. SAE
+reconstruction evaluates whether the representation preserves information;
+probing evaluates whether that information predicts a behavior; semantic
+analysis evaluates whether a feature admits a stable human-readable
+description; and intervention evaluates whether the feature or direction can
+influence the behavior. Evidence at one level does not automatically establish
+the others.
+
+\section{Contributions}
+
+This project makes the following contributions:
+
+\begin{itemize}
+    \item A reproducible Solver--Critic pipeline that records feedback-uptake
+    behavior and residual-stream activations under a controlled
+    candidate-presentation protocol.
+
+    \item A labeled interaction dataset that distinguishes Adoption,
+    Retention, Agreement, and outputs that cannot support a reliable binary
+    interpretation, with question-family grouping to reduce data leakage.
+
+    \item A comparison of a custom-trained $L_1$ SAE, a pretrained Gemma Scope
+    SAE, and adapted variants at the selected Solver layer, Layer~25.
+
+    \item A feature-discovery workflow combining regularized probes,
+    held-out validation metrics, permutation tests, matched random-feature
+    controls, and semantic inspection rather than treating probe coefficients
+    as explanations by themselves.
+
+    \item Held-out causal evaluations that compare targeted suppression and
+    amplification with equal-relative-norm random-feature edits, SAE
+    reconstruction-only conditions, and a raw-activation baseline while also
+    reporting Agreement and Out outcomes alongside intended label flips.
+
+    \item An explicit account of the limits of feature interpretation: causal
+    effectiveness supports behavioral relevance, but human interpretability
+    additionally requires coherent semantic evidence and robustness across
+    examples and controls.
+\end{itemize}
+
+\section{Report Roadmap}
+
+Chapter~2 introduces transformer residual streams, mechanistic
+interpretability, sparse autoencoders, and LLM feedback behavior. Chapter~3
+reviews related work on SAE feature evaluation, representation engineering,
+sycophancy, and multi-hop question answering. Chapters~4 and~5 describe the
+models, MuSiQue data, exploratory analysis, synthetic-data development, and
+the final interaction dataset. Chapter~6 presents the experimental pipeline,
+labeling procedure, activation collection, SAE training, feature-selection
+protocol, interpretation criteria, causal interventions, and statistical
+controls. Chapter~7 reports the behavioral, representational, predictive, and
+causal results. Chapter~8 evaluates what those results do and do not establish
+about feature interpretability, discusses threats to validity and limitations,
+and identifies directions for future work. Chapter~9 concludes by answering
+the research question in light of the combined evidence.

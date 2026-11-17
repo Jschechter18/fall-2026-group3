@@ -1,0 +1,118 @@
+\documentclass[11pt]{report}
+
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage[table]{xcolor}
+\usepackage{etoolbox}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{enumitem}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage[hidelinks,hypertexnames=false]{hyperref}
+
+\algrenewcommand\algorithmicrequire{\textbf{Require:}}
+\algrenewcommand\algorithmicensure{\textbf{Ensure:}}
+
+\definecolor{tablegray}{HTML}{EEEEEE}
+% With a one-row header, leave the first data row white and shade every
+% second data row. Tables with multirow headers can override the start row.
+\AtBeginEnvironment{tabular}{\rowcolors{3}{tablegray}{white}}
+\AtBeginEnvironment{longtable}{\rowcolors{3}{tablegray}{white}}
+
+\graphicspath{{figures/}}
+
+\newcommand{\reporttitle}{Adopt or Retain?}
+\newcommand{\reportsubtitle}{Testing Sparse Autoencoder Features as Explanations\\
+    of Feedback Uptake in a Language Model}
+% Authors are listed alphabetically by surname.
+\newcommand{\reportauthors}{%
+    Raye Hazel Oji\\[0.4em]
+    Israel Omoniyi\\[0.4em]
+    Joshua Schechter}
+\newcommand{\reportcourse}{DATS 6501: Data Science Capstone}
+\newcommand{\reportprogram}{Master of Science in Data Science}
+\newcommand{\reportinstitution}{The George Washington University}
+\newcommand{\reportadvisor}{Dr.\ Amir Jafari}
+\newcommand{\reportdate}{December 2026}
+
+\hypersetup{
+    pdftitle={Adopt or Retain? Testing Sparse Autoencoder Features as
+        Explanations of Feedback Uptake in a Language Model},
+    pdfauthor={Raye Hazel Oji, Israel Omoniyi, Joshua Schechter},
+    pdfsubject={DATS 6501 Data Science Capstone final report},
+    pdfkeywords={sparse autoencoders, mechanistic interpretability,
+        feedback uptake, activation steering, Gemma}
+}
+
+\begin{document}
+
+\begin{titlepage}
+    \centering
+    {\large\scshape \reportinstitution\par}
+    \vspace{0.3em}
+    {\normalsize \reportprogram\par}
+    \vspace*{1.4in}
+    \rule{\linewidth}{1pt}\par
+    \vspace{0.9em}
+    {\Huge\bfseries \reporttitle\par}
+    \vspace{0.7em}
+    {\LARGE \reportsubtitle\par}
+    \vspace{0.9em}
+    \rule{\linewidth}{1pt}\par
+    \vspace{0.9in}
+    {\large\itshape Final report by\par}
+    \vspace{0.8em}
+    {\Large \reportauthors\par}
+    \vfill
+    {\large \reportcourse\par}
+    \vspace{0.3em}
+    {\large Advisor: \reportadvisor\par}
+    \vspace{1.2em}
+    {\large \reportdate\par}
+\end{titlepage}
+
+\pagenumbering{roman}
+\tableofcontents
+\listoffigures
+\listoftables
+\input{sections/glossary}
+
+\clearpage
+\chapter*{Abstract}
+\addcontentsline{toc}{chapter}{Abstract}
+\input{sections/abstract}
+
+\clearpage
+\pagenumbering{arabic}
+\input{sections/introduction}
+\input{sections/background}
+\input{sections/related_work}
+\input{sections/models}
+\input{sections/data_eda}
+\input{sections/methodology}
+\input{sections/results}
+\input{sections/discussion}
+\input{sections/conclusion}
+\input{sections/author_contributions}
+
+\clearpage
+\begingroup
+\small
+\bibliographystyle{plain}
+\bibliography{references}
+\endgroup
+
+\appendix
+\input{appendices/prompts}
+\input{appendices/hyperparameters}
+\input{appendices/examples}
+\input{appendices/additional_results}
+\input{appendices/reproducibility}
+
+\end{document}

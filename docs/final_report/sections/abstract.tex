@@ -1,0 +1,31 @@
+No sparse autoencoder (SAE) we tested beat raw activations at predicting
+whether a language model adopts or resists feedback, but SAE features did
+provide small, size-controlled causal handles on that decision. This project
+asks whether SAEs can identify human-interpretable features in a model's
+residual stream that explain and causally influence feedback uptake. In a
+controlled Solver--Critic pipeline, a Gemma 3 4B instruction-tuned Solver
+answers MuSiQue and synthetic multi-hop questions, a Qwen3 4B Critic proposes
+its own answer, and the Solver then chooses between the two candidates.
+Episodes are labeled Adoption or Retention by a Claude judge that agrees with
+blind human labels on 84 of 100 audited episodes (Cohen's $\kappa=0.787$).
+The core corpus contains 91,063 episodes, and a separate intervention
+partition of 10,105 episodes is sealed during feature selection. We cache the
+Solver's Layer 25 residual-stream activation at the final prompt token and
+represent it with a custom $L_1$ SAE and pretrained Gemma Scope SAE variants.
+Regularized probes on raw activations reached 0.843 balanced accuracy, against
+0.773 for the $L_1$ SAE and 0.706 for the pretrained SAEs; all exceeded
+text-only and pre-feedback baselines. On 983 held-out episodes, editing ten
+selected features at a fixed size of $0.2\lVert x\rVert$ flipped the decision
+more often than equal-size random edits in four of nine Holm-corrected tests,
+all for the pretrained SAE family, by 1.6 to 2.5 percentage points. Flips were
+mostly fluent switches to the other candidate rather than broken answers, and
+the effects came mainly from MuSiQue rather than synthetic questions.
+Equal-size raw-activation edits steered more strongly, but in the suppression
+arm they left 10.1\% of answers outside both candidates. The selected features mostly tracked the
+type of answer the Critic gave and the candidates' order rather than deference
+itself, and the most describable features were the weakest causal handles.
+SAEs therefore offered cleaner, sparser intervention targets, but not better
+prediction or a readable mechanism of feedback uptake. The central
+contribution is a framework that evaluates feature interpretability by
+combining human-validated labels, held-out prediction, semantic inspection,
+and size-matched causal controls.

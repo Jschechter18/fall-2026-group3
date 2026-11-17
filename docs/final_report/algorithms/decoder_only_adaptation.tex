@@ -1,0 +1,35 @@
+\begin{algorithm}[H]
+\caption{Decoder-only adaptation of the pretrained SAE}
+\label{alg:decoder-only-adaptation}
+\begin{algorithmic}[1]
+\Require Pretrained JumpReLU SAE $f$; training activations $X_{\mathrm{train}}$;
+validation activations $X_{\mathrm{val}}$; epochs $E$; batch size $B$; learning rate $\eta$
+\Ensure Adapted decoder with unchanged encoder features and thresholds
+\State Load $f$ and digest $(W_{\mathrm{enc}},b_{\mathrm{enc}},\theta)$
+\State Freeze $W_{\mathrm{enc}}$, $b_{\mathrm{enc}}$, and JumpReLU thresholds $\theta$
+\For{$S\in\{X_{\mathrm{train}},X_{\mathrm{val}}\}$}
+    \State Cache $Z_S\gets\operatorname{JumpReLU}(W_{\mathrm{enc}}S+b_{\mathrm{enc}};\theta)$ once
+\EndFor
+\State Evaluate the untouched SAE and bias-only recentered baseline
+\State Initialize Adam over only $(W_{\mathrm{dec}},b_{\mathrm{dec}})$
+\State Save the untouched model as eligible epoch 0
+\For{$e=1$ to $E$}
+    \For{each shuffled minibatch $(Z,X)$ from the cached training codes}
+        \State $\widehat{X}\gets W_{\mathrm{dec}}Z+b_{\mathrm{dec}}$
+        \State $\mathcal{L}\gets\operatorname{MSE}(\widehat{X},X)$
+        \State Update only $(W_{\mathrm{dec}},b_{\mathrm{dec}})$ with Adam
+    \EndFor
+    \State Evaluate validation reconstruction using the cached validation codes
+    \If{validation MSE is lower than the best eligible MSE}
+        \State Save the decoder and reconstruction bias; reset patience
+    \Else
+        \State Increment the early-stopping counter
+    \EndIf
+    \If{the counter reaches the patience limit}
+        \State \textbf{break}
+    \EndIf
+\EndFor
+\State Reload the best checkpoint and verify the encoder digest is unchanged
+\State \Return adapted SAE, provenance manifest, and before--after metrics
+\end{algorithmic}
+\end{algorithm}
