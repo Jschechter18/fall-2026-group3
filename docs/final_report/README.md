@@ -31,8 +31,9 @@ latexmk -cd -C final_report/main.tex
 - `tables/`: generated or hand-authored LaTeX tables
 - `references.bib`: consolidated bibliography
 
-Update the title-page commands near the top of `main.tex` when the final title,
-team members, course, advisor, and submission date are confirmed.
+The title, authors (alphabetical by surname), course, advisor, and submission
+date are set by the title-page commands near the top of `main.tex`; the PDF
+metadata is set in the `\hypersetup` block below them.
 
 The authoritative figure sources in `figures/` are SVG files only. Because
 pdfLaTeX cannot include SVG directly, `build_figures/` contains generated PDF
