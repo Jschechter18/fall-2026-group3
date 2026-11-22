@@ -4,7 +4,8 @@
 %% sn-article-template/ for reference.
 %%
 %% Springer asks for ONE .tex file: do not \input{} or \include{} other
-%% .tex files. Figures go in figures/ and are uploaded as separate files.
+%% .tex files. Keep every file flat in this directory (no subfolders):
+%% figures sit next to main.tex and are uploaded as separate files.
 %%
 %% Build (from this directory):
 %%   latexmk -pdf -interaction=nonstopmode -halt-on-error main.tex
@@ -37,8 +38,6 @@
 \usepackage{algorithmicx}%
 \usepackage{algpseudocode}%
 \usepackage{listings}%
-
-\graphicspath{{figures/}}
 
 \theoremstyle{thmstylethree}%
 \newtheorem{definition}{Definition}%
@@ -98,7 +97,167 @@ TODO ISRAEL
 
 \subsection{Sparse autoencoders}\label{subsec:saes}
 
-TODO JOSH
+We use sparse autoencoders (SAEs) to decompose the models internal representations into a sparse latent space. The purpose
+of this transformation is to obtain features that are more nearly monosemantic-that is, features intended to represent
+more specific and interpretable concepts than the original dense representation dimensions. We subsequently identify latent
+features that are associated with adoption or retention outcomes. These associations server as a feature-screening step
+rather than evidence of causality. Selected candidate features are then evaluated using the causal-analysis pipeline
+described in TODO: FILL THIS IN (\ref{sec:methods}).
+
+The experiments used two principle SAE models: custom trained L1 and pretrained Gemma Scope.
+
+\subsubsection{Custom SAE}
+
+The custome SAE was traind to reconstruct the original model activations while encouraging sparse latent representations.
+Sparsity was imposed using an L1 penalty on the latent features. The training objective combined reconstruction error with
+the sparsity penalty:
+
+\begin{equation}
+    \mathcal{L}_{L_1}
+    = \frac{1}{Nd}\sum_{i=1}^{N}
+      \left\lVert\tilde{x}_i-\hat{\tilde{x}}_i\right\rVert_2^2
+      + \lambda\frac{1}{Nm}\sum_{i=1}^{N}\lVert z_i\rVert_1 .
+\end{equation}
+
+where $x_i$ are the inputs and $z_i$ the latent features. $\lambda$ controls sparsity.
+
+The architecture is shown in Figure \ref{fig:sae-architecture}.
+
+%% TODO: write real captions and reference these with \ref{fig:...}.
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.6\linewidth]{sae_architecture}
+\caption{TODO: custom SAE architecture.}\label{fig:sae-architecture}
+\end{figure}
+
+\subsubsection{Pretrained Gemma Scope SAE}
+
+The Gemma Scope SAE is pretrained on a large dataset, and is used in two ways in our
+experiment, first as is, second with a fine-tuned decoder on our data. The remaining parameters
+were held fixed during our fine-tuning. This approach retained the pretrained feature representation
+while adapting the mapping from latent features back to the activation space. 
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.75\linewidth]{gemma_scope_sae}
+\caption{TODO: pretrained Gemma Scope SAE.}\label{fig:gemma-scope-sae}
+\end{figure}
+
+\begin{align}
+    s_{\mathrm{RMS}}
+    &= \sqrt{\frac{1}{Nd}\sum_{i=1}^{N}\sum_{j=1}^{d}x_{ij}^{2}},
+    & \tilde{x}_i &= \frac{x_i}{s_{\mathrm{RMS}}}, \\
+    a_i
+    &= W_{\mathrm{enc}}\tilde{x}_i+b_{\mathrm{enc}},
+    & z_i &= g(a_i), \\
+    \hat{\tilde{x}}_i
+    &= W_{\mathrm{dec}}z_i+b_{\mathrm{dec}},
+    & \hat{x}_i &= s_{\mathrm{RMS}}\hat{\tilde{x}}_i .
+\end{align}
+
+For the $L_1$ model, $g(a)=\operatorname{ReLU}(a)$ and the training objective is
+
+\begin{equation}
+    \mathcal{L}_{L_1}
+    = \frac{1}{Nd}\sum_{i=1}^{N}
+      \left\lVert\tilde{x}_i-\hat{\tilde{x}}_i\right\rVert_2^2
+      + \lambda\frac{1}{Nm}\sum_{i=1}^{N}\lVert z_i\rVert_1 .
+\end{equation}
+
+For the TopK model, $g(a)=\operatorname{TopK}(\operatorname{ReLU}(a),k)$ and
+
+\begin{equation}
+    \mathcal{L}_{\mathrm{TopK}}
+    = \mathcal{L}_{\mathrm{rec}} + \alpha\mathcal{L}_{\mathrm{AuxK}},
+\end{equation}
+
+where $\mathcal{L}_{\mathrm{AuxK}}$ reconstructs the detached main-path residual
+using eligible inactive features and is applied during training only.
+
+
+\begin{algorithm}[H]
+\caption{Custom L1 or TopK--AuxK SAE training}
+\label{alg:custom-sae-training}
+\begin{algorithmic}[1]
+\Require Training activations $X_{\mathrm{train}}$; validation activations $X_{\mathrm{val}}$;
+sparsity mode $q\in\{L_1,\mathrm{TopK}\}$; dictionary width $m$; maximum epochs $E$;
+batch size $B$; learning rate $\eta$
+\Ensure Frozen SAE checkpoint with the lowest main-path validation loss
+\State $s_{\mathrm{RMS}}\gets\sqrt{\operatorname{mean}(X_{\mathrm{train}}^2)}$
+\State Initialize tied encoder--decoder weights and normalize every decoder column
+\State Initialize Adam, the plateau scheduler, inactivity counters, and early stopping
+\For{$e=1$ to $E$}
+    \For{each shuffled minibatch $X\subset X_{\mathrm{train}}$ of size $B$}
+        \State $\widetilde{X}\gets X/s_{\mathrm{RMS}}$
+        \State $A\gets W_{\mathrm{enc}}\widetilde{X}+b_{\mathrm{enc}}$
+        \If{$q=L_1$}
+            \State $Z\gets\operatorname{ReLU}(A)$
+            \State $\mathcal{L}\gets\mathcal{L}_{\mathrm{rec}}+\lambda\operatorname{mean}(|Z|)$
+        \Else
+            \State $P\gets\operatorname{ReLU}(A)$; $Z\gets\operatorname{TopK}(P,k)$
+            \State Update each feature's last main-path firing position from $Z$
+            \State $J\gets$ features inactive for at least $w$ training examples
+            \If{$J\ne\emptyset$ and the inactivity warm-up is complete}
+                \State $Z_{\mathrm{aux}}\gets
+                \operatorname{TopK}(P|_J,\min(k_{\mathrm{aux}},|J|))$
+                \State $R\gets(\widetilde{X}-\widehat{\widetilde{X}})\text{.detach}()$
+                \State $\mathcal{L}\gets\mathcal{L}_{\mathrm{rec}}+
+                \alpha\operatorname{MSE}(W_{\mathrm{dec}}Z_{\mathrm{aux}},R)$
+            \Else
+                \State $\mathcal{L}\gets\mathcal{L}_{\mathrm{rec}}$
+            \EndIf
+        \EndIf
+        \State Update SAE parameters with Adam using $\nabla\mathcal{L}$
+        \State Renormalize every decoder column to unit $L_2$ norm
+    \EndFor
+    \State Evaluate the main-path objective on $X_{\mathrm{val}}$ without AuxK
+    \State Update the scheduler and save any new lowest-loss checkpoint
+    \If{validation loss has no significant improvement for the patience window}
+        \State \textbf{break}
+    \EndIf
+\EndFor
+\State Reload and freeze the lowest-loss checkpoint
+\State \Return frozen SAE and split-level reconstruction and activity metrics
+\end{algorithmic}
+\end{algorithm}
+
+
+\begin{algorithm}[H]
+\caption{Decoder-only adaptation of the pretrained SAE}
+\label{alg:decoder-only-adaptation}
+\begin{algorithmic}[1]
+\Require Pretrained JumpReLU SAE $f$; training activations $X_{\mathrm{train}}$;
+validation activations $X_{\mathrm{val}}$; epochs $E$; batch size $B$; learning rate $\eta$
+\Ensure Adapted decoder with unchanged encoder features and thresholds
+\State Load $f$ and digest $(W_{\mathrm{enc}},b_{\mathrm{enc}},\theta)$
+\State Freeze $W_{\mathrm{enc}}$, $b_{\mathrm{enc}}$, and JumpReLU thresholds $\theta$
+\For{$S\in\{X_{\mathrm{train}},X_{\mathrm{val}}\}$}
+    \State Cache $Z_S\gets\operatorname{JumpReLU}(W_{\mathrm{enc}}S+b_{\mathrm{enc}};\theta)$ once
+\EndFor
+\State Evaluate the untouched SAE and bias-only recentered baseline
+\State Initialize Adam over only $(W_{\mathrm{dec}},b_{\mathrm{dec}})$
+\State Save the untouched model as eligible epoch 0
+\For{$e=1$ to $E$}
+    \For{each shuffled minibatch $(Z,X)$ from the cached training codes}
+        \State $\widehat{X}\gets W_{\mathrm{dec}}Z+b_{\mathrm{dec}}$
+        \State $\mathcal{L}\gets\operatorname{MSE}(\widehat{X},X)$
+        \State Update only $(W_{\mathrm{dec}},b_{\mathrm{dec}})$ with Adam
+    \EndFor
+    \State Evaluate validation reconstruction using the cached validation codes
+    \If{validation MSE is lower than the best eligible MSE}
+        \State Save the decoder and reconstruction bias; reset patience
+    \Else
+        \State Increment the early-stopping counter
+    \EndIf
+    \If{the counter reaches the patience limit}
+        \State \textbf{break}
+    \EndIf
+\EndFor
+\State Reload the best checkpoint and verify the encoder digest is unchanged
+\State \Return adapted SAE, provenance manifest, and before--after metrics
+\end{algorithmic}
+\end{algorithm}
+
 
 \subsection{Prediction probes}\label{subsec:probes}
 
