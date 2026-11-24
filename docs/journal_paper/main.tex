@@ -116,8 +116,8 @@ Each SAE input was a $d=2{,}560$-dimensional residual-post activation from Layer
 before generation of the second Solver response. Each example therefore contributed one activation vector representing the Solver's state after receiving
 the candidate answers and before producing its response.
 
-The Solver used \texttt{google/gemma-3-4b-it} (revision \texttt{093f9f388b31de276ce2de164bdc2081324b9767}). Layer indices are zero-based, so Layer 25
-denotes the output of the 26th transformer block. We selected this layer by comparing Adoption-versus-Retention logistic-regression probes across nine 
+The Solver used \texttt{google/gemma-3-4b-it} \cite{gemmateam2025gemma3} (revision \texttt{093f9f388b31de276ce2de164bdc2081324b9767}). Layer indices are zero-based, so Layer 25
+denotes the output of the 26th transformer block. We selected this layer by comparing Adoption-versus-Retention logistic-regression probes \cite{alain2016probes} across nine 
 candidate layers, with regularization tuned using question-family-grouped cross-validation within the training partition. Layer 25 achieved 
 the highest validation balanced accuracy and was fixed for subsequent analyses. Test and intervention data were excluded from selection.
 
@@ -192,7 +192,7 @@ preventing the model from reducing the latent penalty merely by
 increasing decoder magnitudes.
 
 
-We trained models with $\lambda\in\{1,2,3\}$ and selected $\lambda=2$. Training used Adam with a learning rate $10^{-4}$, shuffled minibatches of 256 examples, seed 42,
+We trained models with $\lambda\in\{1,2,3\}$ and selected $\lambda=2$. Training used Adam \cite{kingma2015adam} with a learning rate $10^{-4}$, shuffled minibatches of 256 examples, seed 42,
 and a maximum of 200 epochs. A plateau scheduler reduced the learning rate by a factor of ten with a patience of five. Early stopping used a patience of 20 and an absolute validation-loss 
 improvement threshold of $10^{-4}$. The checkpoint with the lowest observed validation objective was retained, including improvements smaller than the early-stopping threshold.
 
