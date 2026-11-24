@@ -31,6 +31,13 @@ if TYPE_CHECKING:
     from mas_sae.intervention.experiment.episodes import Episode
 
 
+def _layer_cache(kwargs: dict):
+    """The key/value cache a decoder layer was called with, or None. transformers 5.24 renamed the
+    keyword from ``past_key_values`` to ``cache``; earlier releases use the old name."""
+    cache = kwargs.get("cache")
+    return kwargs.get("past_key_values") if cache is None else cache
+
+
 @dataclass
 class SolverModel:
     """The Solver as collection configured it, its model, and the module name of the edited layer."""
@@ -172,7 +179,7 @@ class PrefillCache:
             def capturing_forward(hidden_states, *args, **kwargs):
                 if i in outputs:                             # a decode step
                     return forward(hidden_states, *args, **kwargs)
-                cache = kwargs.get("past_key_values")
+                cache = _layer_cache(kwargs)
                 if cache is None:
                     raise ValueError("The prefill ran without a key/value cache.")
                 real_update = cache.update
@@ -214,7 +221,7 @@ class PrefillCache:
                     raise ValueError("This prefill is not the captured prompt.")
                 replayed.add(i)
                 a, kw = self.cache_updates[i]
-                kwargs["past_key_values"].update(*a, **kw)
+                _layer_cache(kwargs).update(*a, **kw)
                 # layers below L return their input unchanged: only layer L's output is ever read
                 return self.output.clone() if i == last else hidden_states
             return replaying_forward
