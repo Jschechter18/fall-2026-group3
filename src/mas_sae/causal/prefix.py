@@ -16,6 +16,13 @@ import contextlib
 import torch
 
 
+def _layer_cache(kwargs: dict):
+    """The key/value cache a decoder layer was called with, or None. transformers 5.24 renamed the
+    keyword from ``past_key_values`` to ``cache``; earlier releases use the old name."""
+    cache = kwargs.get("cache")
+    return kwargs.get("past_key_values") if cache is None else cache
+
+
 class PrefixCache:
     """Layers 0..L of one prompt's prefill, for the decoder layer ``site`` (``<layer list>.<L>``)."""
 
@@ -46,7 +53,7 @@ class PrefixCache:
                     return real(hidden_states, *args, **kwargs)
                 if hidden_states.ndim != 3 or hidden_states.shape[0] != 1 or hidden_states.shape[1] < 2:
                     raise ValueError(f"Expected a single-prompt prefill, got {tuple(hidden_states.shape)}.")
-                cache = kwargs.get("past_key_values")
+                cache = _layer_cache(kwargs)
                 if cache is None:
                     raise ValueError("The prefill ran without a cache; nothing can be reused.")
                 update = cache.update
@@ -94,7 +101,7 @@ class PrefixCache:
                     raise ValueError("This prefill is not the captured prompt.")
                 used.add(i)
                 a, kw = self.updates[i]
-                kwargs["past_key_values"].update(*a, **kw)
+                _layer_cache(kwargs).update(*a, **kw)
                 # below L the output is never read: layer L returns the captured one
                 return self.output.clone() if i == last else hidden_states
             return forward
