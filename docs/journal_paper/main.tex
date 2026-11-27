@@ -83,7 +83,47 @@ activation steering, large language models}
 %%=====================================================================%%
 \section{Introduction}\label{sec:introduction}
 
-TODO JOSH
+Large language models (LLMs) are increasingly used in multi-agent systems in which one model critiques, verifies, or revises another model's output.
+Such interactions can improve factuality and reasoning \cite{du2024debate}, but their reliability depends on how the receiving model handles the feedback.
+Adopting incorrect feedback propagates errors, and resisting correct feedback prevents useful correction. Prior work has shown that a model's willingness
+to revise is not the same as reliable error correction \cite{huang2024selfcorrect,sharma2024sycophancy}. Behavioral evaluation can show whether a model
+changed its answer, but not how the model represented the feedback or what drove its decision. An internal signal that predicts adoption may reflect
+disagreement, uncertainty, the type of answer proposed, the order in which answers were presented, or a downstream consequence of the decision itself.
+
+Sparse autoencoders (SAEs) offer one approach to this problem. An SAE decomposes a dense model activation into a larger set of sparsely active features,
+which may isolate more coherent patterns than individual neurons \cite{cunningham2023sparse,gao2025scaling}. Sparsity does not, however, guarantee that a
+feature has a single meaning or that it influences behavior. Recent evaluations have found that SAE features often fail to outperform simpler baselines on
+probing and steering tasks \cite{kantamneni2025useful,wu2025axbench}. It therefore remains unclear whether SAE features found in a feedback setting provide
+explanations that are predictive, semantically coherent, and causally relevant at the same time.
+
+We studied this question through feedback uptake in a controlled Solver--Critic pipeline. A Gemma~3 4B instruction-tuned Solver \cite{gemmateam2025gemma3}
+answered multi-hop questions from MuSiQue \cite{trivedi2022musique} and a synthetic question set. A Qwen3 4B Critic \cite{yang2025qwen3} answered the same
+question independently, and the Solver then received both answers as labeled candidates before giving a second response. Each episode was labeled as
+Adoption, when the Solver switched to the Critic's answer, or Retention, when it kept its own. Labels came from an LLM judge validated against a blind human
+audit. We represented the Solver's Layer 25 residual-stream activation with three SAEs: a custom $L_1$ SAE, a frozen pretrained Gemma Scope 2 SAE
+\cite{mcdougall2025gemmascope2}, and a decoder-adapted version of the pretrained SAE. Features that predicted the decision on validation data were treated
+as hypotheses and tested by editing them on a separate intervention partition that was excluded from feature selection. We asked whether SAEs can identify
+human-interpretable features that explain and causally influence whether the Solver adopts or retains feedback.
+
+The answer is partly. Regularized probes on raw activations predicted Adoption versus Retention better than any SAE representation (0.843 balanced accuracy,
+compared with 0.773 for the $L_1$ SAE and 0.706 for the pretrained SAEs). Editing selected features of the pretrained SAEs changed the decision more often
+than equal-size random edits in four of nine Holm-corrected tests, by 1.6 to 2.5 percentage points. The selected features, however, mostly tracked the type
+of answer the Critic gave and the order of the candidates rather than deference itself, and the features that were easiest to describe were the weakest
+causal handles.
+
+The main contributions of this paper are:
+\begin{itemize}
+\item A reproducible Solver--Critic pipeline and labeled dataset that pair feedback-uptake behavior with Solver activations, grouped by question family to
+prevent leakage between feature selection and intervention data.
+\item An evaluation framework that tests reconstruction, prediction, semantic meaning, and causal effect separately, each against matched controls:
+random-feature draws, equal-size random edits, reconstruction-only passes, and raw-activation edits.
+\item Evidence that, in this setting, SAEs gave cleaner and sparser intervention targets than raw activations, but neither better prediction nor a readable
+mechanism of feedback uptake.
+\end{itemize}
+
+Section~\ref{sec:related-work} reviews related work on SAE evaluation, activation steering, and feedback behavior. Section~\ref{sec:methods} describes the
+pipeline, data, SAEs, probes, and interventions. Section~\ref{sec:results} reports the results, Section~\ref{sec:discussion} discusses what they do and do
+not establish, and Section~\ref{sec:conclusion} concludes.
 
 \section{Related work}\label{sec:related-work}
 
